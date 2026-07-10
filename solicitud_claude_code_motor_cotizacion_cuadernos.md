@@ -253,10 +253,98 @@ Solo después de confirmar conmigo que todos los casos de prueba de Litoplan cua
 - **Troqueles en cuadernos:** sí aplican en algunos modelos — falta la tabla de costos/IDs de troquel para cuadernos (no está en el diccionario ni en el Dossier Maestro); se pedirá cuando aparezca en un caso real.
 - **Insertos:** se incluyen ya en esta Fase 1 como parámetro opcional (número de hojas de inserto, con costo de $10 por hoja de levante manual por cuaderno).
 
-**Pendientes por resolver antes de programar** (ver mensaje de seguimiento en el chat):
-1. Medidas físicas (cm) de cada tipo de cuaderno (Escolar, Agenda, Media Carta, Carta, Micro).
-2. Modos de color/tintas que puede llevar el taco cuando está "impreso".
-3. Combinaciones válidas entre tipo de cuaderno y tipo de encuadernación.
-4. Definición exacta de "Costo Base" en la fórmula de libretas Micro.
-5. Regla exacta para elegir $5 o $10 en la variación de Wire-O por hoja física.
-6. Tabla de costos/IDs de troquel para cuadernos (cuando aplique).
+### Corrección del modelo de parámetros — Tamaño vs. Uso (Escolar)
+
+"Tipo de cuaderno" NO es una sola lista de 5 opciones. Son dos parámetros independientes:
+
+1. **Tamaño físico:** Agenda (17x24 cm), Media Carta (21x14 cm), Carta (28x21.5 cm), Micro (ancho/alto variable, libre, < Media Carta).
+2. **Uso — ¿Es Escolar?** (sí/no). Un cuaderno Escolar puede ser tamaño Agenda, Media Carta o Carta (Escolar NO es un tamaño en sí mismo).
+
+Esto determina la encuadernación disponible:
+- **Escolar** (cualquier tamaño Agenda/Media Carta/Carta) → 3 opciones: **Grapa / Hilo / Hilo con cinta** (nunca lleva anillado).
+- **No Escolar** → **Anillo Doble O** (nombre correcto; antes referido como "Wire-O") o **Hotmelt lomo rústico**.
+- **Regla de tapa:** si la encuadernación es Anillo Doble O, el cuaderno pasa automáticamente a ser **Tapa Blanda** (no puede llevar tapa dura ni semidura con anillado).
+
+**Pendientes resueltos tras revisar 7 documentos adicionales (Dossiers V3/V7/V8, ERPMIS, Cotizador 4 Tactical):**
+
+1. ~~Medidas físicas~~ — resuelto: Agenda 17x24, Media Carta 21x14, Carta 28x21.5, Micro variable; Escolar es clasificación de uso, no tamaño.
+2. ~~Tapa Dura — en qué caso se usa~~ — resuelto: en **Agenda Ejecutiva** (tapa dura + costura con hilo + lomo armado). Tabla de costura (Base 80 hojas + variación por hoja):
+   - Media Carta: $4.100 base, ±$10.00/hoja
+   - Agenda: $4.400 base, ±$15.00/hoja
+   - Carta: $5.800 base, ±$55.00/hoja
+   - Fórmula: `Costo = Base_80_hojas + ((N_hojas - 80) × variación_por_hoja)`
+   - Espesor del lomo: `N_hojas_tripa × 0.13 mm`
+   - Formato de pliego para carátula continua (4x1): Media Carta 25x35cm, Agenda 42x28cm (1/5 del pliego), Carta 33x50cm (se ajusta al máximo digital).
+   - Tamaños válidos: Media Carta, Agenda, Carta (no aplica a Micro ni Escolar).
+   - **Hotmelt lomo rústico es un producto DISTINTO** (no es lo mismo que Agenda Ejecutiva): $430 COP por unidad, piso mínimo $90.000 — Conde confirmó que se usa "para otros productos como libretas", no está claro aún si también aplica como opción para cuadernos No Escolares (pendiente, ver preguntas).
+3. Modos de color/tintas del taco impreso — resuelto: Blanco 0x0, o Impreso 1x1 (negro/líneas), 1x0, 2x2 (color). Recargo adicional: **Tinta Cuadrícula $20.000 fijo** cuando el taco lleva líneas/cuadrícula impresa.
+4. Matriz tapa/encuadernación — resuelto:
+   - Escolar (Agenda/Media Carta/Carta) → Grapa/Hilo/Hilo con cinta → tapa Semidura o Blanda.
+   - No Escolar → Anillo Doble O → siempre tapa Blanda.
+   - No Escolar → Agenda Ejecutiva (costura) → tapa Dura.
+   - No Escolar → Colbón (pegue) → aplica también a Media Carta y Agenda, no solo Micro (Conde lo confirmó). $250/unidad, piso mínimo $30.000.
+   - Hotmelt: pendiente confirmar si aplica a cuadernos o es exclusivo de otro producto.
+5. ~~Definición de "Costo Base" en libretas Micro~~ — resuelto: no es un número único. Es el costo de referencia a tamaño Media Carta de **cada componente que se reescala** (Armado de Tapa Dura y Anillado Corto), aplicando la fórmula de área dos veces. Fórmula de Anillado Corto: `((Anillado_Base × Lado_Corto) / Lado_Largo) × 1.30` (ejemplo Media Carta ≈ $780/unidad).
+6. ~~Variación Anillo Doble O $5-$10~~ — resuelto, depende del tamaño: Media Carta ±$5.0, Agenda ±$5.5, Carta ±$10.0.
+7. **Guardas — costo variable** — resuelto: el costo variable de guardas es el del **plastificado**, no el papel. El papel de las guardas se cobra aparte con la tabla general de sustratos (Bond/Propalcote) que ya se tiene. Falta confirmar sustrato por defecto y si el plastificado es 1 o 2 caras (ver preguntas).
+8. **Gramaje de insertos** — el más común es Propalcote 150g, pero debe ser un parámetro editable (puede ser 200g, Bristol u otro sustrato de la lista general).
+9. **Sustrato del taco** — Bond 60g/70g son los más comunes (van primero en la lista), pero el sustrato del taco debe ser parámetro editable contra la lista general de sustratos, no una lista cerrada.
+10. **Troquel de tapa para cuadernos** — Conde confirmó que usa el servicio general de troquelado ya documentado (~$35.000, posiblemente $30.000 según el nivel de desgaste del molde) — no requiere tabla propia nueva, se reutiliza el marco general de troquelado. Falta confirmar la unidad de cobro (ver preguntas).
+
+**Resuelto (segunda ronda de preguntas):**
+- **Hotmelt NO aplica a cuadernos tapa dura ni a Agenda Ejecutiva.** Aplica solo a "libretas", y su precio escala según la medida en cm (fórmula exacta pendiente — ver preguntas abiertas). Matriz de encuadernación de Cuadernos queda entonces: Escolar → Grapa/Hilo/Hilo con cinta; No Escolar → Anillo Doble O, Agenda Ejecutiva (costura), Colbón (Media Carta/Agenda/Micro). Hotmelt queda fuera de Cuadernos, es de otro producto (Libretas).
+- **Sustrato de guardas:** por defecto Propalcote/Cote 150g (90% de los casos), editable si el cliente pide diseño personalizado.
+- **Plastificado de guardas:** siempre 1 cara.
+- **Troquel de tapa:** se cobra por millar de tapas o fracción (igual que el resto del sistema de troquelado), tarifa base ~$35.000 (a confirmar si es $35.000 o $30.000 exactos).
+
+**Troquelado de tapa — confirmado:** $35.000 por millar (o fracción), unificado. Es un acabado ADICIONAL opcional que puede tener una tapa (poco común, pero posible) — parámetro "tapa troquelada: sí/no", default no.
+
+### Reestructuración final del modelo — 4 líneas dentro de Cuadernos
+
+El modelo completo de clasificación (independiente del parámetro Tamaño) queda en 4 combinaciones tapa/encuadernación:
+
+**A. Escolar**
+- Tamaños: Agenda, Media Carta, Carta
+- Tapa: Semidura o Blanda
+- Encuadernación: Grapa / Hilo / Hilo con cinta
+- Taco: blanco o impreso
+
+**B. Cuaderno Anillado** (la línea principal — encontrada en Dossier Técnico V3 y Especificación Maestra V8, sección "Cuadernos Anillados (Acabado Suelto)")
+- Tamaños: Media Carta, Agenda, Carta (y tamaños personalizados vía fórmula de escalado, ver abajo)
+- Tapa: Dura, Semidura o Blanda — CONFIRMADO que admite las 3 (la regla anterior de "anillado = siempre tapa blanda" queda descartada)
+- Encuadernación: Anillo Doble O — base 80 hojas: Media Carta $900 (±$5.0/hoja), Agenda $990 (±$5.5/hoja), Carta $1.700 (±$10.0/hoja). Si la tapa es Dura, se suma el armado/forrado: Media Carta $620, Agenda $640, Carta $750.
+- Taco: blanco o impreso
+
+**C. Agenda Ejecutiva**
+- Tamaños: Media Carta, Agenda, Carta
+- Tapa: Dura únicamente (cartón 1.5/2.0mm + forro)
+- Encuadernación: costura con hilo + lomo armado (fórmula Base80 + variación por hoja, espesor de lomo)
+- Taco: blanco o impreso
+
+**D. Libretas** (incluye el sub-tamaño "Micro")
+- Tamaños: Micro, 21x14 (el más habitual), Agenda, o Carta — puede ser cualquiera de los 4, confirmado.
+- Tapa: Dura, Semidura o Blanda (las 3 disponibles). Si es Dura: cartón 1.5mm + guardas SIEMPRE plastificadas.
+- Encuadernación: Anillado (Anillo Doble O, vía fórmula de Anillado Corto) o Pegado (Hotmelt o Colbón)
+- Taco: blanco o impreso
+
+**Fórmula Hotmelt para Libretas — confirmada:** el precio base de $430/unidad está calibrado para 21cm de "pegue" (el lado donde se aplica el pegante, coincide con el ancho de Media Carta — el tamaño más habitual). Escala proporcionalmente según el tamaño real:
+```
+Precio Hotmelt = $430 × (cm_reales_del_lado_de_pegue / 21)
+```
+Piso mínimo $90.000 (por OT, a confirmar si aplica igual que el piso de guardas).
+
+### Fórmula general para tamaños personalizados (cualquier línea)
+
+Confirmado: los cuadernos pueden pedirse en CUALQUIER medida (ej. 20x20cm, 23x12cm), no solo los 3-4 tamaños de catálogo. Regla de escalado — confirmada por Conde:
+
+1. Se toma el tamaño de catálogo (Media Carta 294cm² / Agenda / Carta) **más cercano por área** al tamaño pedido.
+2. Se escala el costo de armado/anillado de ese tamaño de catálogo proporcionalmente:
+```
+Costo_tamaño_custom = Costo_Base_tamaño_más_cercano × (Área_custom / Área_tamaño_más_cercano) × 1.30
+```
+(mismo patrón que ya existía para libretas Micro, generalizado a cualquier línea y cualquier tamaño no estándar).
+
+**Pendientes reales aún sin resolver:**
+- Accesorios de Agenda Ejecutiva (cantoneras, esquineros, elástico de cierre) — no aparece en ningún documento; asumir que no existen salvo que Conde diga lo contrario.
+- Confirmar que el "piso mínimo $90.000" del Hotmelt aplica por OT completa (igual que el piso de guardas de $20.000), no por unidad.
+- Confirmar el área exacta de Agenda (17x24=408cm²) y Carta (28x21.5=602cm²) como referencias de catálogo para la fórmula de escalado (Media Carta ya confirmada en 294cm²/21x14).
