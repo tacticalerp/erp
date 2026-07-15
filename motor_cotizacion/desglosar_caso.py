@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Imprime el desglose completo de un caso en TOTALES DEL PEDIDO (no por
-unidad), con planchas y millares como se ve en una cotizacion real de
-Litoplan, para poder verificar contra el conocimiento de Conde."""
+"""Imprime el desglose completo de un caso en TOTALES DEL PEDIDO, linea
+por linea (caratula, taco, cada inserto, guardas), con planchas y
+millares como se ve en una cotizacion real de Litoplan."""
 
 import sys
 
@@ -9,10 +9,10 @@ from casos_prueba import CASOS, formato_cop
 from cotizador import cotizar_cuaderno
 
 
-def _linea_impresion(nombre, det):
+def _linea_impresion(det):
     if det is None:
+        print("    (sin impresion)")
         return
-    print(f"  {nombre}:")
     if "n_planchas" in det:
         print(f"    {det['n_planchas']} plancha(s) x {formato_cop(det['costo_ctp_unitario'])} = {formato_cop(det['costo_planchas'])}")
         print(f"    {det['n_millares']:.3f} millar(es) x {formato_cop(det['costo_millar_unitario'])} = {formato_cop(det['costo_millares'])}")
@@ -33,29 +33,23 @@ def desglosar(indice):
     print(f"Litoplan (precio real por unidad, sin IVA): {formato_cop(r['litoplan_esperado'])}")
     print(f"Litoplan (TOTAL del pedido, sin IVA): {formato_cop(r['litoplan_esperado'] * cantidad)}")
     print()
-    print("--- CARATULA / TAPA ---")
-    print(f"  Material (carton+forro o cartulina): {formato_cop(r['desglose_directo']['tapa_material'])}")
-    _linea_impresion("Impresion", r["detalle_impresion"].get("tapa_impresion"))
-    print(f"  Armado/forrado: {formato_cop(r['desglose_directo']['tapa_armado_forrado'])}")
-    print(f"  Acabados (plastificado/UV/colaminado/troquel): {formato_cop(r['desglose_directo']['tapa_acabados'])}")
-    print()
-    print("--- TACO / INTERIORES ---")
-    print(f"  Material (papel): {formato_cop(r['desglose_directo']['taco_material'])}")
-    _linea_impresion("Impresion", r["detalle_impresion"].get("taco_impresion"))
-    print()
-    print("--- GUARDAS ---")
-    print(f"  Total: {formato_cop(r['desglose_directo']['guardas'])}")
-    print()
-    if r["detalle_impresion"].get("insertos"):
-        print("--- INSERTOS ---")
-        for i, ins in enumerate(r["detalle_impresion"]["insertos"], 1):
-            print(f"  Inserto {i}: material {formato_cop(ins['material'])} + levante {formato_cop(ins['levante'])}")
-            _linea_impresion(f"  Impresion inserto {i}", ins["impresion"])
-        print(f"  TOTAL insertos: {formato_cop(r['desglose_directo']['insertos'])}")
+
+    for nombre, det in r["detalle_lineas"].items():
+        print(f"--- LINEA: {nombre} ---")
+        print(f"  Material: {formato_cop(det['costo_material'])}")
+        print("  Impresion:")
+        _linea_impresion(det["detalle_impresion"])
+        print(f"  Acabados: {formato_cop(det['costo_acabados'])}")
+        print(f"  TOTAL LINEA: {formato_cop(det['costo_total'])}")
         print()
-    print("--- ARMADO / ENCUADERNACION ---")
-    print(f"  Total: {formato_cop(r['desglose_directo']['armado_encuadernacion'])}")
+
+    print("--- ESTRUCTURAL (armado, carton, encuadernacion) ---")
+    for clave, valor in r["desglose_directo"].items():
+        if clave.startswith("linea_") or clave == "guardas":
+            continue
+        print(f"  {clave}: {formato_cop(valor)}")
     print()
+
     print(f"COSTO DIRECTO TOTAL (insumos y servicios): {formato_cop(r['costo_directo_total'])}")
     print(f"  Fondo de Seguridad ({r['pct_fondo_seguridad']*100:.1f}%): {formato_cop(r['fondo_seguridad_cop'])}")
     print(f"  Diseno: {formato_cop(r['diseno_cop'])}")

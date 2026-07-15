@@ -98,6 +98,17 @@ UV_PARCIAL_PISO_COP = 80_000
 
 TROQUEL_TAPA_COP_POR_MILLAR = 35_000  # acabado adicional opcional, poco comun
 
+# Estampado (Hot Stamping / Foil) - encontrado en el indice maestro, no
+# estaba en el diccionario original de Cuadernos.
+ESTAMPADO_COP_POR_GOLPE = 350
+ESTAMPADO_ARRANQUE_COP = 80_000
+ESTAMPADO_MINIMO_COP = 80_000
+
+# Umbral de Cuadernos Tapa Dura: desde esta cantidad se agrega 1 tinta
+# adicional en el retiro de la caratula (marco para el armado).
+# Confirmado por Conde.
+TAPA_DURA_UMBRAL_TINTA_RETIRO_UNIDADES = 150
+
 # ============================================================
 # TACO / INTERIORES
 # ============================================================
