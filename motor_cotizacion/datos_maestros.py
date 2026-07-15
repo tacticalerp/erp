@@ -152,8 +152,9 @@ ANILLADO_CORTO_FACTOR = 1.30  # para libretas mas pequenas que el catalogo
 # MOTOR DE IMPRESION
 # ============================================================
 
-DIGITAL_MAX_FORMATO_CM = (49, 32)
+DIGITAL_MAX_FORMATO_CM = (33, 50)  # confirmado por Conde: maximo Konica 33x50cm
 DIGITAL_GRAMAJE_MAX = 240
+DIGITAL_PINZA_MM = 5  # se descuenta de un lado en cada uno de los 3 tamanos digitales
 
 DIGITAL_CLIC_COP = {
     "carta": {"color": 750, "negro": 350},          # hoja <= 21.5x28

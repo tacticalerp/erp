@@ -145,7 +145,7 @@ def _clase_formato_digital(ancho, alto):
         return "carta"
     if a <= 25 and b <= 35:
         return "octavo"
-    if a <= 32 and b <= 49:
+    if a <= 33 and b <= 50:
         return "pliego_max"
     return None  # no cabe en digital
 
@@ -171,7 +171,7 @@ def _descuento_volumen_digital(cantidad_unidades):
 DIGITAL_FORMATOS_CM = {
     "carta": (21.5, 28),
     "octavo": (25, 35),
-    "pliego_max": (32, 49),
+    "pliego_max": (33, 50),
 }
 
 
@@ -183,12 +183,17 @@ def costo_impresion_digital(n_paginas, caras, es_color, ancho, alto, cantidad_un
     (carta/octavo/pliego_max) por la maquina - varias paginas chicas
     caben imposicionadas en un mismo clic, igual que el cubicaje de
     offset. Antes se cobraba 1 clic completo por cada pagina chica, lo
-    que disparaba el costo digital muy por encima de offset siempre."""
+    que disparaba el costo digital muy por encima de offset siempre.
+
+    Se descuenta la pinza de la Konica (5mm de un lado) de cada uno de
+    los 3 tamanos antes de cubicar, confirmado por Conde: en pliego_max
+    (33x50) el area util queda en 32.5x49.5."""
     clase = _clase_formato_digital(ancho, alto)
     if clase is None:
         return None
     sheet_w, sheet_h = DIGITAL_FORMATOS_CM[clase]
-    piezas_por_clic = piezas_por_pliego(ancho, alto, sheet_w, sheet_h)
+    margen_cm = D.DIGITAL_PINZA_MM / 10
+    piezas_por_clic = piezas_por_pliego(ancho, alto, sheet_w, sheet_h - margen_cm)
     if piezas_por_clic == 0:
         piezas_por_clic = 1
     n_clics = math.ceil(n_paginas / piezas_por_clic) * caras
