@@ -348,3 +348,147 @@ Costo_tamaño_custom = Costo_Base_tamaño_más_cercano × (Área_custom / Área_
 - Accesorios de Agenda Ejecutiva (cantoneras, esquineros, elástico de cierre) — no aparece en ningún documento; asumir que no existen salvo que Conde diga lo contrario.
 - Confirmar que el "piso mínimo $90.000" del Hotmelt aplica por OT completa (igual que el piso de guardas de $20.000), no por unidad.
 - Confirmar el área exacta de Agenda (17x24=408cm²) y Carta (28x21.5=602cm²) como referencias de catálogo para la fórmula de escalado (Media Carta ya confirmada en 294cm²/21x14).
+
+### Parámetro nuevo descubierto al revisar casos reales — Diseño del taco
+
+Al analizar los primeros casos de Litoplan apareció un parámetro que no estaba en el modelo: el taco impreso puede tener:
+- **Diseño uniforme:** la misma cuadrícula/texto/gráfica se repite en todas las páginas (ej. cuaderno de renglones/cuadrícula estándar).
+- **Diseño único por página:** cada página tiene texto/gráfica distinta, como un libro (ej. cuadernos personalizados de contenido variable).
+
+Esto encarece el costo — en el único par comparable que tenemos (mismo tamaño/hojas/tapa/cantidad similar), diseño único cuesta ~16-17% más que diseño uniforme. El mecanismo exacto (¿más mermas? ¿más tiempo de preprensa? ¿ambos van por digital así que el costo por clic no debería variar?) se validará empíricamente cuando se construya la función de cálculo.
+
+## CASOS DE PRUEBA REALES (Paso 0.3 — de Litoplan, entregados por Conde el 2026-07-14)
+
+Todos los precios son **por unidad, antes de IVA**. Vía de impresión: NO se especifica caso por caso — se calcula automáticamente con las reglas ya definidas (gramaje ≤240g + cantidad + tintas → digital si es más económico, si no offset). "1x1 tintas" = 1 tinta en cada cara (frente y respaldo).
+
+| # | Línea | Tamaño | Tapa | Taco | Diseño taco | Tapa acabado | Guardas | Insertos | Encuadernación | Cant. | Precio/u (sin IVA) |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | Cuaderno Anillado | 24x17 (Agenda) | Dura | 100h Bond 70g, 1x1 | Uniforme | Full color 4x0 + plastificado brillante | Sin impresión | 3, full color 2 caras, cote 150g | Anillo Doble O blanco | 100 | $15.232 |
+| 2 | Cuaderno Anillado | 21x14 (Media Carta) | Dura | 100h Bond 70g, 1x1 | Uniforme | Full color 4x0 + plastificado mate + UV parcial | Sin impresión | Ninguno | Anillo Doble O blanco | 700 | $7.395 |
+| 3 | Cuaderno Anillado | 14x21 (Media Carta) | Dura | 80h Bond 70g, 1x1 | Uniforme | Full color 4x0 + plastificado brillante | Sin impresión | Ninguno | Anillo Doble O blanco | 80 | $11.600 |
+| 4 | Escolar | Carta (28x21.5) | Blanda | 30h Bond 70g, 1x1 | Uniforme | Full color + plastificado brillante | Sin impresión | Ninguno | Hilo sin refuerzo | 100 | $7.980 |
+| 5 | Escolar | 24x17 (Agenda) | Blanda | 50h Bond 70g, 1x1 | Uniforme | Full color + plastificado brillante | Sin impresión | Ninguno | Hilo sin refuerzo | 1300 | $3.065 |
+| 6 | Cuaderno Anillado | 24x17 (Agenda) | Dura | 100h Bond 70g, 1x1 | Único por página | Full color 4x0 + plastificado brillante | Sin impresión | Ninguno | Anillo Doble O blanco | 200 | $17.760 *(corregido, el dato original de $141.060 fue un error)* |
+| 7 | Agenda Ejecutiva | 21x14 (Media Carta) | Dura | 80h Bond 70g, 1x1 | Único por página | Full color 4x0 + plastificado brillante | Sin impresión | Ninguno | Costura por cuadernillos | 100 | $19.800 |
+
+**Cobertura actual:** 7 de los 10-15 casos pedidos. Cubre Cuaderno Anillado (4), Escolar (2), Agenda Ejecutiva (1). Faltan ejemplos de: Libretas (cualquier variante), tapa Semidura, y guardas/insertos con impresión (para validar esos costos).
+
+### Segunda tanda de casos reales (2026-07-14) — correcciones al modelo
+
+**Regla real Tapa Blanda vs Semidura (confirmada, corrige lo anterior):** NO depende del material (Propalcote vs Cartulina). Depende de cuántas capas: **1 sola capa (Propalcote o cualquier cartulina liviana/pesada) = Blanda. Colaminado (2 o más capas pegadas) = Semidura.** Ejemplos reales: tapa Blanda en Cartulina C12 o C18 (una sola capa); tapa Semidura = colaminado de 2 cartulinas C16.
+
+**Costo de Refile (encontrado en Dossier V3 / Especificación V8, sección "Costos Fijos Operativos - Mesa de Acabado" de Cuadernos Anillados):**
+- Cuaderno Anillado: refile estándar **$100/unidad** + limpieza de sobrantes de colbón **$180/unidad** (fijos, por unidad).
+- Escolar: el refile ya viene INCLUIDO dentro del precio de costura (Grapa/Hilo/Hilo con cinta) — sin cargo aparte ("Tarifas de Costura incluyen refile trilateral por taco").
+- Libretas (Hotmelt/Colbón): se suma el costo de refile (mismo estándar) + $35.000 fijo de grafado, ambos automáticos.
+- Agenda Ejecutiva: pendiente confirmar si aplica el mismo refile de $100/unidad de Cuaderno Anillado.
+
+**Insertos y guardas — confirmado con casos reales que son totalmente libres:** insertos vistos en Bond 90g a 2 tintas (no solo Propalcote 150g full color); guardas vistas impresas a full color sin plastificar, y también impresas y plastificadas — el plastificado de guardas es independiente de si llevan impresión o no.
+
+### Casos de prueba 8-10 (pendiente 1 dato para cerrar el caso 8)
+
+| # | Línea | Tamaño | Tapa | Taco | Diseño taco | Tapa acabado | Guardas | Insertos | Encuadernación | Cant. | Precio/u (sin IVA) |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 8 | Libretas | 21x14 (Media Carta) | Semidura (colaminado 2x C16) | 80h Bond 70g, 1x1 | Uniforme | Full color + plastificada | Impresas y plastificadas | Ninguno | Hotmelt | 1000 | $4.240 |
+| 9 | Cuaderno Anillado | 24x17 (Agenda) | Blanda (1 capa Cartulina C18) | 70h Bond 75g, 1x1 | Uniforme | Full color + plastificada mate | Impresas full color, SIN plastificar | 2, a 2 tintas, 2 caras, Bond 90g | Anillo Doble O | 800 | $5.205 |
+| 10 | Libretas | 14x11 (Micro) | Blanda (1 capa Cartulina C12) | 50h Bond 70g, 1x0 | Uniforme | 1 tinta fondo + plastificada mate | Sin impresión | Ninguno | Colbón (refilada) | 500 | $2.230 |
+
+## VERIFICACIÓN FINAL (2026-07-14) — antes de programar
+
+Se hizo una última revisión exhaustiva de los 9 documentos fuente (7 Word + 2 PDF) cruzando cada uno contra el modelo completo. La mayoría de las cifras centrales se confirmaron de forma independiente (punto de equilibrio $74.737.302, MOD $125/min, Costo Estructural $564.48/min, Tinta Cuadrícula $20.000, regla taco en blanco, pliegos 60x90/70x100, descuento -10% con excepciones, plastificado guardas $900/m²). Los 2 PDFs resultaron ser transcripciones de chats de prototipo con Gemini (con motores financieros y nomenclatura que cambian varias veces dentro del mismo chat) — se confirma que no son fuente autoritativa, solo referencia.
+
+**Datos nuevos incorporados directamente (no requieren confirmación, llenan huecos sin contradecir nada ya decidido):**
+- Prueba de preprensa (afectada por el escudo de bajos montos): costo específico de **$25.000** cuando SÍ aplica (se elimina si la OT < $150.000).
+- Área de catálogo para la fórmula de tamaños custom/Micro confirmada en **294 cm²** (= Media Carta 21x14).
+- Carátula continua de **Agenda Ejecutiva** se imprime siempre **4x1** (no 4x0 como el resto de tapas de Cuadernos/Escolar/Cuaderno Anillado).
+- Guardas: el número de guardas es seleccionable (0, 1 o 2), no siempre fijo.
+- Troquel: además del servicio de troquelado ($35.000/millar), podría existir un cargo aparte de "desgaste de matriz" (Baja $30k/Media $60k/Alta $120k/Especial $200k) si el troquel de tapa usa el mismo esquema general — no confirmado que aplique a Cuadernos, se deja pendiente hasta que aparezca un caso real con troquel.
+- Vida útil de plancha CtP: 25.000 impresiones — si el tiraje la supera, se duplica el costo de planchas (relevante solo para tirajes muy grandes, ninguno de los 10 casos actuales lo alcanza).
+
+### 5 puntos críticos — resueltos con Conde el 2026-07-14
+
+1. **Precio de Bond 75g y Bond 90g** — no está en el diccionario JSON inicial. Conde indica que existe una lista de precios más completa en los documentos de la carpeta (con más papeles) — pendiente de localizar (ver siguiente sección), aplicando el mismo -10% de descuento ERP.
+2. **Costo del colaminado** (tapa Semidura) — SÍ tiene tarifa propia y separada del plastificado: **$900/m²** (incluye pegante + mano de obra). Distinta de la tarifa de plastificado.
+3. **Tarifa de plastificado — corregida:** **$950/m²** (no $900 como se había registrado antes; $900 corresponde al colaminado, son dos procesos y tarifas distintas). 2 caras = $1.900/m². Cobro mínimo $30.000 (este mínimo general de plastificado es distinto del piso de guardas de $20.000/OT ya confirmado).
+4. **Mecanismo real de "diseño único por página" vs "diseño uniforme"** — SIGUE PENDIENTE, ningún documento lo explica con cifra concreta.
+5. **Refile para Agenda Ejecutiva** — CONFIRMADO: va incluido en el precio de costura, no se cobra aparte.
+6. **Guardas — cuántas por defecto** — CONFIRMADO: siempre 2 (una a cada lado) salvo que se indique lo contrario.
+
+**Bond 75g y 90g — RESUELTO.** Se encontraron en "LISTA DE PRECIO 13 MARZO 2026.pdf" (lista de precios de lista, antes del -10% ERP). Se verificó que esta lista es consistente al 100% con los precios ERP que ya se tenían (ej. Bond 60g 60x90: lista $197 × 0.9 = $177.30, coincide exacto con el dato existente) — confirma que la tabla de sustratos SÍ sale de esta lista con el -10% aplicado:
+
+| Sustrato | Gramaje | Formato | Precio lista | Precio ERP (-10%) |
+|---|---|---|---|---|
+| Bond Importado | 75 gr | 60x90 | $246 | $221.40 |
+| Bond Importado | 75 gr | 70x100 | $319 | $287.10 |
+| Bond Importado | 90 gr | 60x90 | $295 | $265.50 |
+| Bond Importado | 90 gr | 70x100 | $382 | $343.80 |
+
+(El archivo "LISTA DE PRECIO PARA ERP.pdf" no se pudo leer — parece ser un PDF escaneado/imagen sin texto extraíble en este entorno. No fue necesario: la lista de marzo ya trae todo lo que faltaba.)
+
+**Nota menor detectada (no bloqueante):** la lista de marzo muestra Cartón Prensado 1.5mm a **$4.000** de lista y 2mm a **$5.000** de lista — si NO aplica el -10% (como dice el baseline), el precio ERP debería ser $4.000, no los $3.500 que tenía registrados. Puede ser que la lista se haya actualizado después de fijar ese dato. Se deja registrado por si Conde quiere confirmar el valor vigente cuando se use Tapa Dura en los cálculos.
+
+**Pendiente real, todavía sin resolver:** el mecanismo exacto de "diseño único vs uniforme" del taco (punto 4 de la lista anterior) — no aparece cuantificado en ningún documento. Se abordará empíricamente: se construye la función con el resto de reglas confirmadas, se corre contra los 10 casos, y el caso 6 (el único con diseño único) mostrará cuánto falta para cuadrar — ahí se ajusta con la cifra que Conde confirme.
+
+---
+
+## PASO 1 — Primera versión de la función de cálculo (2026-07-15)
+
+Se construyó el motor en Python, en la carpeta `motor_cotizacion/` (`datos_maestros.py` = tablas y constantes, `motor.py` = funciones de cubicaje/impresión/financiero, `cotizador.py` = función principal `cotizar_cuaderno()`, `casos_prueba.py` = los 10 casos reales + comparador, `desglosar_caso.py` = reporte detallado de un caso en formato Litoplan). Python no estaba instalado en el equipo — se instaló vía winget (Python 3.12, oficial de python.org) con autorización de Conde.
+
+### Reglas de negocio nuevas confirmadas durante la construcción y depuración
+
+1. **Escalado de tamaños custom:** confirmado el catálogo de referencia más cercano por área (Media Carta 294cm² es el punto de referencia ya usado en Libretas Micro).
+2. **Colaminado (tapa Semidura):** tarifa propia de **$900/m²** (pegante + mano de obra), distinta del plastificado.
+3. **Plastificado:** tarifa corregida a **$950/m²** (no $900, que es la tarifa de colaminado — son procesos distintos). Piso $30.000/OT (distinto del piso de guardas $20.000/OT).
+4. **UV Parcial:** "arrastra" el plastificado mate de base — NO se cobran los dos por separado, es uno u otro. Piso propio de $80.000/OT.
+5. **Refile:** Cuaderno Anillado $100/unidad + limpieza colbón $180/unidad; Escolar y Agenda Ejecutiva van incluidos en el precio de costura; Libretas (Hotmelt/Colbón) suman refile + $35.000 fijo de grafado.
+6. **Cubicaje de impresión offset — hallazgo central:** el "millar" se cobra por PASADAS DE PLIEGO (cuántos pliegos/medios pliegos pasan por máquina), no por cada hoja chica terminada — varias piezas caben imposicionadas en un mismo pliego. Este fue el bug más grande del primer intento (sobrecobraba brutalmente tanto en offset como en digital).
+7. **Medio pliego real:** no es un tamaño fijo de máquina — sale de partir a la mitad cualquiera de los 2 pliegos madre (70x100→70x50, o 60x90→60x45), se usa el que rinda mejor (menos desperdicio), mismo principio de "cubicaje dinámico" ya usado para papel.
+8. **Pliegue (encuadernación cosida/pegada) vs hoja suelta (anillado):** Escolar, Agenda Ejecutiva, y Libretas con Hotmelt/Colbón PLIEGAN el papel al centro — se monta e imprime por PAREJAS (no como un tamaño doble: se cubica el bloque de la pareja y se multiplica x2 al final para las hojas reales). Cuaderno Anillado y Libretas con Anillo Doble O son hoja suelta, sin pliegue, se monta individual. Ejemplos confirmados por Conde: 21x14 sin pliegue → 10 hojas caben en 70x50; 21x14 con pliegue → 8 hojas (en parejas) caben en 60x45 (el mejor de los dos, menos desperdicio).
+9. **Margen de pinzas:** SÍ se descuenta en el cubicaje de impresión del taco (12mm entrada + 5mm salida = 17mm), aplicado sobre el tamaño real del taco (ver punto 10).
+10. **El taco es más chico que la tapa** (la tapa debe cubrirlo totalmente): ~0.4cm menos por lado. Se usa el tamaño reducido para cubicar el taco, no el tamaño nominal del cuaderno.
+11. **Diseño único por página (taco o insertos con contenido distinto cada uno):** NO se puede reutilizar la misma plancha para tiro/retiro (a diferencia del diseño uniforme). Se necesita 1 plancha por cada "posición" de página que quepa en el medio pliego, y cada plancha corre tantas veces como unidades se pidan. Fórmula: `n_planchas = ceil(páginas_únicas_por_libro / piezas_por_medio_pliego)`, costo = `n_planchas × CTP_medio_pliego + millares(redondeados hacia arriba) × tarifa_millar`.
+12. **Fondo Pleno/Plastón** (fondo sólido cubriendo la pieza, aunque sea a 1 sola tinta): existía en el diccionario original pero nunca se aplicaba. Recargo fijo + 1 plancha adicional, y el recargo depende del tamaño de máquina: medio pliego $90.000, cuarto $50.000, octavo $50.000 (los 3 confirmados por Conde).
+13. **Máquinas chicas (octavo) en OFFSET solo manejan hasta 2 tintas** — policromía (4 tintas) en offset fuerza mínimo cuarto pliego. OJO: esta restricción es solo para OFFSET — en DIGITAL (máquinas Konica) sí se puede policromía en tamaño octavo/pequeño (visto en pantalla real de Litoplan, ver más abajo). Pendiente revisar por qué el comparador digital-vs-offset del motor no está eligiendo digital en estos casos (posible descalibración del costo digital).
+14. **Millares se cobran completos, no proporcionales:** 1.27 millares se factura como 2 millares (redondeo hacia arriba), no 1.27. Aplica en toda tarifa de millar, no solo cuadrícula.
+15. **Insertos:** por defecto se tratan como diseño único por página (cada hoja/cara distinta) en vez de diseño uniforme — así es como normalmente se piden en la práctica.
+
+### Estado de los 10 casos de prueba al cierre de esta sesión
+
+| Caso | Litoplan | Calculado | Diferencia |
+|---|---|---|---|
+| 1. Agenda anillado dura, Q100 | $15.232 | $15.968 | 4.8% |
+| 2. Media Carta anillado dura, Q700 | $7.395 | $7.531 | 1.8% |
+| 3. Media Carta anillado dura, Q80 | $11.600 | $11.110 | -4.2% |
+| 4. Carta escolar blanda, Q100 | $7.980 | $8.026 | 0.6% |
+| 5. Agenda escolar blanda, Q1300 | $3.065 | $3.425 | 11.8% |
+| 6. Agenda anillado diseño único, Q200 | $17.760 | $15.805 | -11.0% |
+| 7. Agenda Ejecutiva, Q100 | $19.800 | $24.242 | 22.4% |
+| 8. Libretas semidura hotmelt, Q1000 | $4.240 | $3.975 | -6.3% |
+| 9. Anillado tapa C18, Q800 | $5.205 | $5.894 | 13.2% |
+| 10. Libretas Micro colbón, Q500 | $2.230 | $2.276 | 2.1% |
+
+8 de 10 casos dentro de ±13%. El caso 7 (Agenda Ejecutiva) es el que más se aleja — pendiente de revisar a fondo (su fórmula de armado es distinta a las demás líneas y se ha tocado menos).
+
+### Hallazgo clave que cierra la sesión: pantalla real de Litoplan
+
+Conde compartió una captura de la pantalla real de captura de datos de Litoplan para un cuaderno Tapa-dura-ANT (tapa dura anillado), 50 unidades, 21x14. Reveló información arquitectónica importante:
+
+- **Cada componente del cuaderno es una LÍNEA independiente y libremente configurable**, con sus propios: páginas, tamaño, cantidad de tintas TIRO y RETIRO por separado, papel/sustrato, laminado/película — igual que armaría cualquier cotización, sin categorías rígidas.
+- Ejemplo real: 1 línea para el taco (160 páginas = 80 hojas×2, Media Carta, 1x1, Bond 70g), 2 líneas de insertos DISTINTAS (una de 6 páginas 4x0 en cote 150g, otra de 1 página 4x0 en adhesivo/sticker — cada una con su propia configuración), y 1 línea para la carátula (Octavo 25x35, 4x0, cote 150g, laminado 1 cara brillante) — impresa en máquina digital Konica de tamaño octavo, confirmando que policromía SÍ puede ir en máquina chica cuando es digital (solo está restringido en offset).
+- Confirma explícitamente el punto de Conde: **"no se puede estandarizar como se estaba haciendo con los insertos, cada parte debe ser opcional según lo solicitado por el cliente"** — el modelo actual (categorías fijas tapa/taco/insertos con una sola configuración cada una) no es suficiente y debe rediseñarse.
+
+### DECISIÓN — próximo paso acordado con Conde
+
+**El modelo de entrada de la función debe reestructurarse: en vez de categorías fijas (tapa, taco, insertos con una config cada una), cada componente del cuaderno (carátula, taco, cada grupo de insertos, etc.) debe ser una LÍNEA independiente y libremente configurable** (páginas, tamaño, tintas tiro/retiro por separado, papel, laminado/película, troquel opcional) — reflejando cómo funciona Litoplan realmente. Esto es indispensable para la exactitud del pedido; dejar categorías rígidas deja espacio a errores graves de cotización.
+
+**Se acordó con Conde:** cerrar esta sesión aquí (ya muy larga) y hacer la reestructuración completa en una sesión nueva, empezando fresco directamente con el rediseño del modelo de entrada.
+
+### Pendientes para la próxima sesión
+
+1. **Reestructurar `cotizar_cuaderno()`** para recibir una lista de líneas libres en vez de categorías fijas (tapa/taco/insertos), cada una con: páginas, tamaño (o heredado del cuaderno), tintas tiro, tintas retiro, papel/sustrato, laminado/película opcional, troquel opcional.
+2. **Aclarar con Conde la regla:** "más de 200 unidades de cuadernos Tapa Dura → 1 tinta adicional en el retiro de la carátula" — Conde confirmó que aplica solo a Cuadernos Tapa Dura sobre 200 unidades, pero el mecanismo/cifra exacta no se pudo confirmar en los documentos (búsqueda exhaustiva sin resultado) — pedirle que lo explique directamente.
+3. **Revisar por qué el comparador digital-vs-offset casi nunca elige digital** — la pantalla real de Litoplan muestra que carátulas chicas en policromía sí van por Konica digital incluso en octavo; el motor actual probablemente tiene el costo digital descalibrado (muy caro) y por eso offset gana siempre en la simulación.
+4. **Precio del troquel y troquelado** — Conde mencionó que lo anexará después (visto en la pantalla real, columna pendiente de llenar).
+5. Seguir cerrando casos 6, 7, 9 con el nuevo modelo una vez reestructurado.
+6. Cartón Prensado 1.5mm/2.0mm: confirmar si el precio vigente es $3.500/$4.500 (como está ahora) o $4.000/$5.000 (según la lista de marzo 2026).
