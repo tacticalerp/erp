@@ -274,8 +274,9 @@ Cuando lleguemos a construir cada una de estas partes, preguntarle a Conde direc
 7. Ruta 3 de fletes para Cuadernos/Agendas: ¿sigue siendo porcentual (4%/3%/2%) o se simplificó a Moto/Vehículo fijo?
 8. Rol "básico" del CRM/cotizador: ¿se descarta definitivamente (quedando solo Comercial/Editor)?
 9. Hub Central: ¿6 módulos (versión que se ha usado todo el proyecto) confirmado como definitivo?
-10. Acabado "Estampado" en el acordeón de Carátula: ¿se agrega como 4ª opción?
+10. ~~Acabado "Estampado" en el acordeón de Carátula~~ — **RESUELTO (2026-07-15):** se agrega Estampado + una opción "Otros" de costeo libre por unidad. Acordeón de Acabados queda: Plastificado / UV Parcial / Troquelado / Estampado / Otros.
 11. "5 papeles más recientes" (mencionado por Conde en el chat, no encontrado en ningún documento): ¿se agrega como requisito nuevo?
+12. **Precios de impresión digital (clic) sin verificar:** solo existen en `dossier.txt`, ningún otro documento los corrobora; la transcripción ERPMIS incluso admite que le faltaban esos precios. Pendiente pedirle a Conde la tabla real de precios por máquina Konica.
 
 ---
 
