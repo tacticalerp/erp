@@ -548,4 +548,20 @@ Usando la calculadora, Conde armó un caso (Agenda Ejecutiva, 24x17cm, 400 unida
 
 Implementado en `motor.py` y `cotizador.py`, portado a `calculadora.html`. Commit `15cfd98`.
 
-**Pendiente:** con este arreglo, el caso 7 (Agenda Ejecutiva) sigue en -26.1% de diferencia frente al valor real ($27.167) — casi sin cambio, porque el problema grande de ese caso no es el cartón sino, probablemente, la fórmula de costura/armado (tabla `COSTURA_AGENDA_EJECUTIVA`), que todavía no se ha validado contra ningún dato real desglosado línea por línea.
+### Ronda de correcciones sobre Agenda Ejecutiva y guardas (2026-07-21, misma sesión)
+
+Con la calculadora visual, Conde probó varios casos de Agenda Ejecutiva y fue destapando errores puntuales, todos corregidos y verificados Python=JS el mismo día:
+
+1. **Guardas plastificado**: tarifa incorrecta ($950/m², piso $30.000 genérico) → corregida a la propia de guardas ($900/m², piso $20.000). Commit `da38915`.
+2. **Armado de Agenda Ejecutiva**: tabla vieja (`COSTURA_AGENDA_EJECUTIVA`, base+variación por hoja) reemplazada por tarifa fija por tamaño (Media Carta $4.000, Agenda $4.300, Carta $5.600/unidad), con descuento por volumen: 0% hasta 199u, 4% en 200u, +1% cada 100u, tope 10% desde 800u. Commits `8872242`, `bc104e1`.
+3. **Transporte de Agenda Ejecutiva se duplica** (viaje adicional a proveedor distante). Commit `8872242`.
+4. **Doble cobro corregido**: el precio de armado de Agenda Ejecutiva YA incluye el forrado de tapa sobre cartón (el documento fuente lo dice explícito). Se estaba cobrando también aparte en "Armado y forrado de tapa (dura)". Commit `b8332c6`.
+5. **Limpieza** extendida a las 4 líneas (antes solo Cuaderno Anillado): $180/u Cuaderno Anillado y Agenda Ejecutiva, $120/u Libretas y Escolar. Commit `90afb41`.
+6. **Levante manual del taco** ($8/hoja) — antes solo se cobraba levante para insertos ($10/hoja), nunca para el taco. Además el levante pasó a ser CONDICIONAL: solo aplica cuando el diseño de esa línea es "único por página" (las hojas cambian) — si es diseño uniforme no hace falta ordenar nada. Commit `71ba23f`.
+7. **HALLAZGO CLAVE — millar mal calculado en impresión "único por página"** (usado para taco/insertos con contenido distinto en cada hoja, típico de agendas con fecha en cada página): el millar se estaba repartiendo entre TODAS las planchas juntas (ej. 25 planchas × 200 copias = 5.000 impresiones → 5 millares). Pero cada plancha es un cambio de máquina/registro independiente — aunque cada una corra menos de 1000 veces, cuenta como mínimo 1 millar CADA UNA (25 planchas = 25 millares, no 5). Además no se aplicaba ninguna merma de alistamiento en esta ruta (existía `merma_offset_hojas()` para policromía/1 tinta pero nunca se llamaba aquí). Commit `82f2e18`.
+
+**Este último punto (7) era el problema de fondo que arrastraba el caso 7 desde el 15-jul.** Con este arreglo, el caso 7 (Agenda Ejecutiva, dato real 100% confirmado: $27.167) pasó de -32.8% (inicio del día) a **-3.0%** — prácticamente calibrado. El caso 6 (cuaderno anillado diseño único) también mejoró de -21.5% a +2.6%.
+
+**Estado de los 10 casos al cierre de esta ronda:** casos 1,2,3,4 entre -9% y -16% (esperado, sin margen real conocido — ver hallazgo del 15-jul); caso 5 +10.7%; caso 6 +2.6%; **caso 7 -3.0%** (el más importante, ya casi exacto); caso 8 -3.5%; **caso 9 +13.8%** (regresión pendiente de revisar, ver más abajo); caso 10 +4.9%.
+
+**Sigue pendiente:** la regresión del caso 9 (pasó de +1.4% a +13.8% al agregar Fondo de Seguridad/Empaque/Transporte/Sherpa el 21-jul) — falta confirmar con Conde si ese caso realmente no llevaba esos cargos o si el screenshot original no mostraba todas las líneas de Litoplan.
