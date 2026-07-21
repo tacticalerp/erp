@@ -119,11 +119,18 @@ def cotizar_cuaderno(
     # Ejecutiva) cuyo largo es el lado "largo" del cuaderno (el que no se
     # dobla, mismo criterio que usa el pliegue) y cuyo ancho es el
     # espesor del taco (taco_hojas x 0.13mm). Confirmado por Conde.
+    # Para Agenda Ejecutiva, el forrado de la tapa YA viene incluido dentro
+    # del precio de armado consolidado (ver ARMADO_AGENDA_EJECUTIVA_COP: el
+    # documento fuente dice explicitamente que ese precio combina Plegado +
+    # Alzado + Costura + "Forrado de la caratula continua sobre el carton").
+    # Cobrarlo aqui tambien seria pagarlo 2 veces. Confirmado por Conde
+    # 2026-07-21. El carton en si (material) SI se sigue cobrando aparte.
     costo_tapa_armado = 0.0
     costo_tapa_carton = 0.0
     if tapa_tipo == "dura":
-        armado_base = D.ARMADO_FORRADO_TAPA_DURA_COP[cat_clave]
-        costo_tapa_armado = armado_base * factor_escala * cantidad
+        if linea_producto != "agenda_ejecutiva":
+            armado_base = D.ARMADO_FORRADO_TAPA_DURA_COP[cat_clave]
+            costo_tapa_armado = armado_base * factor_escala * cantidad
 
         carton_precio = D.CARTON_1_5MM_COP if carton_calibre_mm == 1.5 else D.CARTON_2_0MM_COP
 

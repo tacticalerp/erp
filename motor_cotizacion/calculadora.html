@@ -755,7 +755,9 @@ function cotizarCuaderno(p){
 
   let costoTapaArmado=0, costoTapaCarton=0;
   if(p.tapaTipo==="dura"){
-    costoTapaArmado=ARMADO_FORRADO_TAPA_DURA_COP[catClave]*factorEscala*p.cantidad;
+    if(p.lineaProducto!=="agenda_ejecutiva"){
+      costoTapaArmado=ARMADO_FORRADO_TAPA_DURA_COP[catClave]*factorEscala*p.cantidad;
+    }
     const cartonPrecio=p.cartonCalibreMm===1.5?CARTON_1_5MM_COP:CARTON_2_0MM_COP;
 
     const nTapasPorPliego=piezasPorPliego(p.anchoCm,p.altoCm,70,100);
