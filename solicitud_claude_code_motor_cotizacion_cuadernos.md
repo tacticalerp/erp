@@ -532,6 +532,20 @@ Conde probó un pedido nuevo (1000 Cuad-Tapa-Blanda, Media Carta 14x21) directam
 - `DIGITAL_SEMICORTE_COP` ($1.500/pliego) — cargo de semicorte digital que nunca se cobra hoy en `costo_impresion_digital()`.
 - `OFFSET_RECARGO_PANTONE_COP` ($50.000) — no hay forma de marcar "tinta Pantone" en una línea de impresión.
 - `OFFSET_CTP_VIDA_UTIL_IMPRESIONES` / `OFFSET_CTP_REPETITIVO_PCT` (30% de descuento en plancha si es reimpresión de un trabajo repetido) — el motor no tiene el concepto de "reorden/repetición" todavía.
-- `ESPESOR_LOMO_MM_POR_HOJA` (0.13mm/hoja) — probablemente para una fórmula de anillado "por altura" (grosor del lomo) que se vio en la categoría "78 Acabado x altura" de Litoplan, pero no hay datos reales confirmados todavía para armarla.
 
 Implementado en `motor_cotizacion/datos_maestros.py`, `motor.py`, `cotizador.py`, `desglosar_caso.py` y portado también a `calculadora.html`. Commit `9f8b4f8`.
+
+### CORRECCIÓN (2026-07-21) — el cartón de tapa dura se cortaba al tamaño de montaje de la carátula, no al tamaño final
+
+Usando la calculadora, Conde armó un caso (Agenda Ejecutiva, 24x17cm, 400 unidades, tapa dura, taco 80 hojas) donde el cartón salía en $350.000 — evidentemente muy alto. La causa: el cartón se estaba cubicando contra el tamaño de MONTAJE de la carátula (40x27cm redondeado a 42x28cm — el tamaño inflado por el embone + doblez, pensado para el PAPEL que envuelve el cartón), no contra el tamaño FINAL del cuaderno.
+
+**Corregido:** el cartón de tapa dura ahora son 2 láminas al tamaño final del cuaderno (tapa + contratapa) más, únicamente en Agenda Ejecutiva (línea con lomo/costura), 1 lámina de lomo cuyo largo es el lado más largo del cuaderno y cuyo ancho es el espesor del taco (`taco_hojas × 0.13mm`, dato `ESPESOR_LOMO_MM_POR_HOJA` que ya existía en `datos_maestros.py` pero nunca se había conectado — ahora resuelto). Con el ejemplo de Conde: $175.000 (2 láminas) + $5.224 (lomo) = **$180.224**, contra los $350.000 de antes.
+
+**Confirmado por Conde, sin necesidad de más cambios de código:**
+1. El lomo de cartón solo aplica a Agenda Ejecutiva — Cuaderno Anillado (Anillo Doble O) no lo lleva, porque las argollas conectan directo los 2 cartones.
+2. El largo del lomo = el lado más largo del cuaderno, en el 95% de los casos — se deja fijo así.
+3. Libretas (Hotmelt/Colbón) NO llevan lámina de cartón de lomo — el lomo ahí sale directo de la carátula (el papel impreso hace de lomo, sin pieza estructural rígida). El código ya lo maneja bien porque solo agrega la lámina de lomo cuando `linea_producto == "agenda_ejecutiva"`.
+
+Implementado en `motor.py` y `cotizador.py`, portado a `calculadora.html`. Commit `15cfd98`.
+
+**Pendiente:** con este arreglo, el caso 7 (Agenda Ejecutiva) sigue en -26.1% de diferencia frente al valor real ($27.167) — casi sin cambio, porque el problema grande de ese caso no es el cartón sino, probablemente, la fórmula de costura/armado (tabla `COSTURA_AGENDA_EJECUTIVA`), que todavía no se ha validado contra ningún dato real desglosado línea por línea.
