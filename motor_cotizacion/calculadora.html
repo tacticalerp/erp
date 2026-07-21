@@ -285,6 +285,22 @@ const RECARGO_TINTA_CUADRICULA_MILLAR_COP = 20000;
 const GUARDAS_CANTIDAD_DEFAULT = 2;
 const GUARDAS_PISO_OT_COP = 20000;
 
+const LEVANTE_MANUAL_INSERTO_COP_HOJA = 10;
+const SHERPA_BASE_COP = 20000;
+const SHERPA_COP_POR_PAGINA_INSERTO = 1000;
+const SHERPA_MAXIMO_COP = 40000;
+
+const EMPAQUE_CAJA_COP = 3000;
+const EMPAQUE_CAPACIDAD_CAJA = {
+  media_carta:{escolar:40, no_escolar:35},
+  agenda:{escolar:33, no_escolar:30},
+  carta:{escolar:26, no_escolar:20},
+};
+
+const TRANSPORTE_TRAMOS = [[3000000,0.04],[5000000,0.03],[Infinity,0.02]];
+const TRANSPORTE_DESCUENTO_AGENDA_EJECUTIVA_PRIMER_TRAMO = 0.005;
+const TRANSPORTE_PISO_COP = 45000;
+
 const ANILLO_DOBLE_O = {
   media_carta:{base_80h:900, variacion_hoja:5.0},
   agenda:{base_80h:990, variacion_hoja:5.5},
@@ -338,6 +354,9 @@ const ESCUDO_BAJOS_MONTOS_UMBRAL = 150000;
 const DISENO_COSTO_NORMAL = 40000;
 const DISENO_COSTO_REDUCIDO = 20000;
 const IVA_PCT = 0.19;
+
+const FONDO_SEGURIDAD_TRAMOS = [[500000,0.09],[1000000,0.07],[3000000,0.05],[Infinity,0.03]];
+const FONDO_SEGURIDAD_TRAMO_SUPERIOR_AGENDA_EJECUTIVA = 0.025;
 
 /* ============================================================
    MOTOR (portado 1:1 de motor.py / linea_impresion.py / cotizador.py)
@@ -560,6 +579,38 @@ function disenoYPreprensa(montoOt){
   return [DISENO_COSTO_NORMAL,25000];
 }
 
+function tramoFondoSeguridad(costoFabricacion, lineaProducto){
+  for(const [tope,pct] of FONDO_SEGURIDAD_TRAMOS){
+    if(costoFabricacion<=tope){
+      if(tope===Infinity && lineaProducto==="agenda_ejecutiva") return FONDO_SEGURIDAD_TRAMO_SUPERIOR_AGENDA_EJECUTIVA;
+      return pct;
+    }
+  }
+  return FONDO_SEGURIDAD_TRAMOS[FONDO_SEGURIDAD_TRAMOS.length-1][1];
+}
+
+function costoEmpaque(cantidad, catClave, lineaProducto){
+  const columna = lineaProducto==="escolar" ? "escolar" : "no_escolar";
+  const capacidad = EMPAQUE_CAPACIDAD_CAJA[catClave][columna];
+  const nCajas = Math.ceil(cantidad/capacidad);
+  return nCajas*EMPAQUE_CAJA_COP;
+}
+
+function costoTransporte(baseCop, lineaProducto){
+  for(const [tope,pctOriginal] of TRANSPORTE_TRAMOS){
+    if(baseCop<=tope){
+      let pct = pctOriginal;
+      if(tope===TRANSPORTE_TRAMOS[0][0] && lineaProducto==="agenda_ejecutiva") pct -= TRANSPORTE_DESCUENTO_AGENDA_EJECUTIVA_PRIMER_TRAMO;
+      return Math.max(baseCop*pct, TRANSPORTE_PISO_COP);
+    }
+  }
+  return Math.max(baseCop*TRANSPORTE_TRAMOS[TRANSPORTE_TRAMOS.length-1][1], TRANSPORTE_PISO_COP);
+}
+
+function costoSherpa(totalPaginasInsertos){
+  return Math.min(SHERPA_BASE_COP + SHERPA_COP_POR_PAGINA_INSERTO*totalPaginasInsertos, SHERPA_MAXIMO_COP);
+}
+
 function precioVentaDesdeSubtotal(subtotal,utilidadPct=0.40,ventasPct=0.0,agenciaPct=0.0){
   return subtotal*(1+utilidadPct)*(1+ventasPct)*(1+agenciaPct);
 }
@@ -683,6 +734,10 @@ function cotizarCuaderno(p){
     detalleLineas[clave]=r;
   }
 
+  const lineasInsertos=lineasImpresion.filter(l=>l.rol==="inserto");
+  const totalPaginasInsertos=lineasInsertos.reduce((a,l)=>a+l.hojasPorCuaderno,0);
+  desglose["levante_insertos"]=LEVANTE_MANUAL_INSERTO_COP_HOJA*totalPaginasInsertos*p.cantidad;
+
   const lineaCaratula=lineasImpresion.find(l=>l.rol==="caratula")||null;
 
   let costoTapaArmado=0, costoTapaCarton=0;
@@ -754,7 +809,14 @@ function cotizarCuaderno(p){
 
   const costoDirecto=Object.values(desglose).reduce((a,b)=>a+b,0);
   const [disenoCop] = disenoYPreprensa(costoDirecto);
-  const subtotal=costoDirecto+disenoCop;
+  const fondoSeguridadPct = tramoFondoSeguridad(costoDirecto, p.lineaProducto);
+  const fondoSeguridadCop = costoDirecto*fondoSeguridadPct;
+  const empaqueCop = costoEmpaque(p.cantidad, catClave, p.lineaProducto);
+  const sherpaCop = costoSherpa(totalPaginasInsertos);
+
+  const subtotalPreTransporte = costoDirecto+disenoCop+fondoSeguridadCop+empaqueCop+sherpaCop;
+  const transporteCop = costoTransporte(subtotalPreTransporte, p.lineaProducto);
+  const subtotal = subtotalPreTransporte+transporteCop;
 
   const precioVenta=precioVentaDesdeSubtotal(subtotal,p.utilidadPct,p.ventasPct);
   const iva=precioVenta*IVA_PCT;
@@ -763,7 +825,9 @@ function cotizarCuaderno(p){
 
   const resultado={
     desgloseDirecto:desglose, detalleLineas, costoDirectoTotal:costoDirecto,
-    costoDirectoUnitario:costoDirecto/p.cantidad, disenoCop, subtotal,
+    costoDirectoUnitario:costoDirecto/p.cantidad, disenoCop,
+    fondoSeguridadCop, fondoSeguridadPct, empaqueCop, sherpaCop, transporteCop,
+    subtotal,
     utilidadPct:p.utilidadPct, ventasPct:p.ventasPct,
     precioVentaTotal:precioVenta, precioVentaUnitario, ivaTotal:iva, precioFinalTotal:precioFinal,
     catClave, tamanoMaquinaCaratula,
@@ -1131,6 +1195,7 @@ const ETIQUETAS_DESGLOSE = {
   tapa_carton: "Cartón de tapa (dura)",
   tapa_semidura_segunda_capa: "Segunda capa + colaminado (semidura)",
   guardas: "Guardas",
+  levante_insertos: "Levante manual de insertos",
   armado_encuadernacion: "Armado / encuadernación",
 };
 
@@ -1146,7 +1211,7 @@ function renderResultado(r, p){
     if(!etiqueta){
       etiqueta = clave.startsWith("linea_") ? "Línea: "+clave.slice(6) : clave;
     }
-    if(valor===0 && (clave==="tapa_armado_forrado"||clave==="tapa_carton"||clave==="tapa_semidura_segunda_capa")) continue;
+    if(valor===0 && (clave==="tapa_armado_forrado"||clave==="tapa_carton"||clave==="tapa_semidura_segunda_capa"||clave==="levante_insertos")) continue;
     filas += `<tr><td>${etiqueta}</td><td class="num">${formatoCop(valor)}</td></tr>`;
     const detalle = r.detalleLineas[clave.replace("linea_","")];
     if(detalle){
@@ -1156,6 +1221,10 @@ function renderResultado(r, p){
 
   filas += `<tr class="sub"><td>Costo directo total</td><td class="num">${formatoCop(r.costoDirectoTotal)}</td></tr>`;
   filas += `<tr><td>Diseño / Ajuste</td><td class="num">${formatoCop(r.disenoCop)}</td></tr>`;
+  filas += `<tr><td>Fondo de Seguridad (${(r.fondoSeguridadPct*100).toFixed(1)}%)</td><td class="num">${formatoCop(r.fondoSeguridadCop)}</td></tr>`;
+  filas += `<tr><td>Empaque</td><td class="num">${formatoCop(r.empaqueCop)}</td></tr>`;
+  filas += `<tr><td>Sherpa (muestra de color)</td><td class="num">${formatoCop(r.sherpaCop)}</td></tr>`;
+  filas += `<tr><td>Transporte</td><td class="num">${formatoCop(r.transporteCop)}</td></tr>`;
   filas += `<tr class="sub"><td>Subtotal</td><td class="num">${formatoCop(r.subtotal)}</td></tr>`;
   filas += `<tr class="detalle"><td colspan="2">Precio = Subtotal × (1+${(r.utilidadPct*100).toFixed(0)}% utilidad) × (1+${(r.ventasPct*100).toFixed(0)}% ventas)</td></tr>`;
   filas += `<tr><td>Precio de venta (total pedido)</td><td class="num">${formatoCop(r.precioVentaTotal)}</td></tr>`;

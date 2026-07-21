@@ -380,6 +380,38 @@ def diseno_y_preprensa(monto_ot):
     return D.DISENO_COSTO_NORMAL, D.PREPRENSA_COSTO_NORMAL
 
 
+def costo_empaque(cantidad, cat_clave, linea_producto):
+    """$3.000 por caja de carton, con capacidad segun tamano y si es Escolar
+    o no. Confirmado por Conde (2026-07-21): usar la tabla del Dossier tal
+    cual, aunque el numero de Litoplan no siempre coincida exacto."""
+    columna = "escolar" if linea_producto == "escolar" else "no_escolar"
+    capacidad = D.EMPAQUE_CAPACIDAD_CAJA[cat_clave][columna]
+    n_cajas = math.ceil(cantidad / capacidad)
+    return n_cajas * D.EMPAQUE_CAJA_COP
+
+
+def costo_transporte(base_cop, linea_producto):
+    """Ruta 3 (Cuadernos y Agendas Pesadas): % escalonado sobre el subtotal
+    previo a utilidad/ventas, con piso de $45.000. Agenda Ejecutiva tiene
+    descuento de -0.5% en el primer tramo."""
+    for tope, pct in D.TRANSPORTE_TRAMOS:
+        if base_cop <= tope:
+            if tope == D.TRANSPORTE_TRAMOS[0][0] and linea_producto == "agenda_ejecutiva":
+                pct -= D.TRANSPORTE_DESCUENTO_AGENDA_EJECUTIVA_PRIMER_TRAMO
+            return max(base_cop * pct, D.TRANSPORTE_PISO_COP)
+    return max(base_cop * D.TRANSPORTE_TRAMOS[-1][1], D.TRANSPORTE_PISO_COP)
+
+
+def costo_sherpa(total_paginas_insertos):
+    """Muestra de color entregada al cliente: piso $20.000, sube $1.000 por
+    cada pagina de inserto, tope $40.000. Fija por OT, no escala con la
+    cantidad de cuadernos. Confirmado por Conde (2026-07-21)."""
+    return min(
+        D.SHERPA_BASE_COP + D.SHERPA_COP_POR_PAGINA_INSERTO * total_paginas_insertos,
+        D.SHERPA_MAXIMO_COP,
+    )
+
+
 def precio_venta_desde_subtotal(subtotal, utilidad_pct=0.40, ventas_pct=0.0, agencia_pct=0.0):
     """CORREGIDO (2026-07-15): la formula real de Litoplan NO es un
     divisor (costo / (1-%)) - es una cascada MULTIPLICATIVA de 3

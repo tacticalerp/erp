@@ -54,6 +54,10 @@ IVA_PCT = 0.19
 
 # Fondo de Seguridad de Produccion: tramo decidido sobre el COSTO DE
 # FABRICACION DEL PEDIDO COMPLETO (no el precio de venta, confirmado por Conde).
+# REINCORPORADO al motor 2026-07-21: se habia sacado de la formula porque no
+# aparecia como linea "Fondo de Seguridad" en los casos reales reconstruidos,
+# pero Conde confirmo que SI aplica - en Litoplan aparece repartido bajo las
+# etiquetas genericas "Alce", "Revision" y "Otros" en vez de un solo renglon.
 FONDO_SEGURIDAD_TRAMOS = [
     (500_000, 0.09),
     (1_000_000, 0.07),
@@ -68,6 +72,33 @@ ESCUDO_BAJOS_MONTOS_UMBRAL = 150_000
 DISENO_COSTO_NORMAL = 40_000
 DISENO_COSTO_REDUCIDO = 20_000
 PREPRENSA_COSTO_NORMAL = 25_000  # se elimina (=0) si aplica el escudo
+
+# ============================================================
+# LOGISTICA: EMPAQUE Y TRANSPORTE
+# (Dossier Maestro, seccion 7 - confirmado por Conde 2026-07-21: usar tal
+# cual esta documentado, aunque Litoplan a veces no de el numero exacto)
+# ============================================================
+
+EMPAQUE_CAJA_COP = 3_000  # costo de cada caja de carton
+# Cuantas unidades caben por caja, segun tamano de catalogo y si la linea
+# es Escolar o no (Cuaderno Anillado/Agenda Ejecutiva/Libretas comparten la
+# columna "no_escolar" - solo Escolar tiene su propia columna documentada).
+EMPAQUE_CAPACIDAD_CAJA = {
+    "media_carta": {"escolar": 40, "no_escolar": 35},
+    "agenda": {"escolar": 33, "no_escolar": 30},
+    "carta": {"escolar": 26, "no_escolar": 20},
+}
+
+# Ruta 3 (Cuadernos y Agendas Pesadas): flete calculado como % del subtotal
+# antes de utilidad/ventas. Piso minimo $45.000. Agenda Ejecutiva tiene
+# descuento de -0.5% en el primer tramo (3.5% en vez de 4%).
+TRANSPORTE_TRAMOS = [
+    (3_000_000, 0.04),
+    (5_000_000, 0.03),
+    (float("inf"), 0.02),
+]
+TRANSPORTE_DESCUENTO_AGENDA_EJECUTIVA_PRIMER_TRAMO = 0.005
+TRANSPORTE_PISO_COP = 45_000
 
 # ============================================================
 # TAMANOS DE CATALOGO (cm) y AREA de referencia para escalado
@@ -138,7 +169,16 @@ GUARDAS_CANTIDAD_DEFAULT = 2  # una a cada lado (confirmado por Conde)
 GUARDAS_SUSTRATO_DEFAULT = ("Propalcote", 150)  # 90% de los casos
 GUARDAS_PISO_OT_COP = 20_000  # por toda la OT, no por unidad
 
+# Confirmado por Conde (2026-07-21): sí se cobra, faltaba conectarlo al motor.
 LEVANTE_MANUAL_INSERTO_COP_HOJA = 10  # por hoja de inserto, por cuaderno
+
+# Sherpa: muestra de color impresa que se entrega al cliente antes de tirar
+# el pedido. Confirmado por Conde (2026-07-21): piso $20.000 por OT, sube
+# $1.000 por cada pagina de inserto, tope $40.000 (no es comun entregar
+# TODAS las hojas de muestra en pedidos con muchos insertos, de ahi el tope).
+SHERPA_BASE_COP = 20_000
+SHERPA_COP_POR_PAGINA_INSERTO = 1_000
+SHERPA_MAXIMO_COP = 40_000
 
 # ============================================================
 # ARMADO / ENCUADERNACION

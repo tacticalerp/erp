@@ -101,6 +101,13 @@ def cotizar_cuaderno(
         desglose[f"linea_{clave}"] = r["costo_total"]
         detalle_lineas[clave] = r
 
+    # Levante manual de insertos ($10/hoja de inserto, por cuaderno) -
+    # confirmado por Conde 2026-07-21, estaba definido en datos_maestros
+    # pero nunca se habia conectado al calculo.
+    lineas_insertos = [l for l in lineas_impresion if l.get("rol") == "inserto"]
+    total_paginas_insertos = sum(l["hojas_por_cuaderno"] for l in lineas_insertos)
+    desglose["levante_insertos"] = D.LEVANTE_MANUAL_INSERTO_COP_HOJA * total_paginas_insertos * cantidad
+
     linea_caratula = next((l for l in lineas_impresion if l.get("rol") == "caratula"), None)
 
     # ---------------- ARMADO/FORRADO ESTRUCTURAL DE TAPA ----------------
@@ -189,13 +196,23 @@ def cotizar_cuaderno(
 
     # ---------------- SUBTOTAL Y PRECIO DE VENTA ----------------
     # Diseno Ajuste SI aparece como linea real en las cotizaciones de
-    # Litoplan reconstruidas (~$20.000-$40.000) - se mantiene. Fondo de
-    # Seguridad y Preprensa NO aparecieron como lineas separadas en
-    # ninguno de los 2 casos reales reconstruidos desde cero - se quitan
-    # de la formula hasta confirmar con Conde si aplican en otro lado.
+    # Litoplan reconstruidas (~$20.000-$40.000) - se mantiene.
+    #
+    # Fondo de Seguridad, Empaque, Sherpa y Transporte REINCORPORADOS
+    # 2026-07-21: Conde confirmo que si aplican (Fondo de Seguridad
+    # aparece en Litoplan repartido bajo las etiquetas genericas "Alce",
+    # "Revision" y "Otros", no como una sola linea - por eso no se habian
+    # reconocido antes).
     costo_directo = sum(desglose.values())
     diseno_cop, _preprensa_no_usada = M.diseno_y_preprensa(costo_directo)
-    subtotal = costo_directo + diseno_cop
+    fondo_seguridad_pct = M.tramo_fondo_seguridad(costo_directo, linea_producto)
+    fondo_seguridad_cop = costo_directo * fondo_seguridad_pct
+    empaque_cop = M.costo_empaque(cantidad, cat_clave, linea_producto)
+    sherpa_cop = M.costo_sherpa(total_paginas_insertos)
+
+    subtotal_pre_transporte = costo_directo + diseno_cop + fondo_seguridad_cop + empaque_cop + sherpa_cop
+    transporte_cop = M.costo_transporte(subtotal_pre_transporte, linea_producto)
+    subtotal = subtotal_pre_transporte + transporte_cop
 
     precio_venta = M.precio_venta_desde_subtotal(subtotal, utilidad_pct, ventas_pct)
     iva = precio_venta * D.IVA_PCT
@@ -210,6 +227,11 @@ def cotizar_cuaderno(
         "costo_directo_total": costo_directo,
         "costo_directo_unitario": costo_directo / cantidad,
         "diseno_cop": diseno_cop,
+        "fondo_seguridad_cop": fondo_seguridad_cop,
+        "fondo_seguridad_pct": fondo_seguridad_pct,
+        "empaque_cop": empaque_cop,
+        "sherpa_cop": sherpa_cop,
+        "transporte_cop": transporte_cop,
         "subtotal": subtotal,
         "utilidad_pct": utilidad_pct,
         "ventas_pct": ventas_pct,

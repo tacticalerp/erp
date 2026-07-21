@@ -52,6 +52,10 @@ def desglosar(indice):
 
     print(f"COSTO DIRECTO TOTAL (insumos y servicios): {formato_cop(r['costo_directo_total'])}")
     print(f"  Diseno Ajuste: {formato_cop(r['diseno_cop'])}")
+    print(f"  Fondo de Seguridad ({r['fondo_seguridad_pct']*100:.1f}%): {formato_cop(r['fondo_seguridad_cop'])}")
+    print(f"  Empaque: {formato_cop(r['empaque_cop'])}")
+    print(f"  Sherpa: {formato_cop(r['sherpa_cop'])}")
+    print(f"  Transporte: {formato_cop(r['transporte_cop'])}")
     print(f"SUBTOTAL: {formato_cop(r['subtotal'])}")
     print(f"% utilidad: {r['utilidad_pct']*100:.1f}  |  % ventas: {r['ventas_pct']*100:.1f}")
     print(f"PRECIO DE VENTA calculado (TOTAL, sin IVA): {formato_cop(r['precio_venta_total'])}")
