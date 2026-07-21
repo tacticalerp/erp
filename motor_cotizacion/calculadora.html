@@ -495,10 +495,11 @@ function costoImpresionDigital(nPaginas,caras,esColor,ancho,alto,cantidadUnidade
   const nClics=Math.ceil(nPaginas/piezasPorClic)*caras;
   const precioClic=DIGITAL_CLIC_COP[clase][esColor?"color":"negro"];
   const descuento=descuentoVolumenDigital(cantidadUnidades);
-  const costoClics=nClics*precioClic*(1-descuento);
-  const costoSemicorte=nClics*DIGITAL_SEMICORTE_COP;
-  const total=costoClics+costoSemicorte;
-  return {total, via:"digital", nClics, precioClic, descuentoPct:descuento, costoClics, costoSemicorte};
+  // Nota: el Semicorte Digital (DIGITAL_SEMICORTE_COP) NO aplica aqui -
+  // es un cargo de troquelado sobre adhesivo/vinilo (Gran Formato), no
+  // sobre papel de Cuadernos. Confirmado por Conde 2026-07-22.
+  const total=nClics*precioClic*(1-descuento);
+  return {total, via:"digital", nClics, precioClic, descuentoPct:descuento};
 }
 
 function fraccionPliegoOffset(ancho,alto,esPolicromia=false){

@@ -228,16 +228,14 @@ def costo_impresion_digital(n_paginas, caras, es_color, ancho, alto, cantidad_un
     n_clics = math.ceil(n_paginas / piezas_por_clic) * caras
     precio_clic = D.DIGITAL_CLIC_COP[clase]["color" if es_color else "negro"]
     descuento = _descuento_volumen_digital(cantidad_unidades)
-    costo_clics = n_clics * precio_clic * (1 - descuento)
-    # Semicorte Digital: $1.500 fijo por pliego/clic (confirmado en
-    # documentos, estaba definido en datos_maestros pero nunca se
-    # conectaba al calculo). Corregido 2026-07-22.
-    costo_semicorte = n_clics * D.DIGITAL_SEMICORTE_COP
-    total = costo_clics + costo_semicorte
+    # Nota: el Semicorte Digital ($1.500/pliego, D.DIGITAL_SEMICORTE_COP)
+    # NO aplica aqui - es un cargo de troquelado sobre sustratos adhesivos
+    # o vinilo (Gran Formato / etiquetas), no sobre papel de Cuadernos.
+    # Confirmado por Conde 2026-07-22 (revertido el intento anterior).
+    total = n_clics * precio_clic * (1 - descuento)
     return {
         "total": total, "via": "digital", "n_clics": n_clics,
         "precio_clic": precio_clic, "descuento_pct": descuento,
-        "costo_clics": costo_clics, "costo_semicorte": costo_semicorte,
     }
 
 
