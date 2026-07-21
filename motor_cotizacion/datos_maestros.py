@@ -215,8 +215,18 @@ ARMADO_AGENDA_EJECUTIVA_COP = {
     "agenda": 4300,
     "carta": 5600,
 }
-ARMADO_AGENDA_EJECUTIVA_DESCUENTO_TRAMO_UNIDADES = 200
-ARMADO_AGENDA_EJECUTIVA_DESCUENTO_PCT_POR_TRAMO = 0.05
+# Tabla ajustada por Conde (2026-07-21): tramos de 100 unidades desde 200,
+# +1% cada tramo, tope maximo 10%. Antes de 200 unidades no hay descuento.
+ARMADO_AGENDA_EJECUTIVA_DESCUENTO_TRAMOS = [
+    (199, 0.00),
+    (299, 0.04),
+    (399, 0.05),
+    (499, 0.06),
+    (599, 0.07),
+    (699, 0.08),
+    (799, 0.09),
+    (float("inf"), 0.10),
+]
 
 ESPESOR_LOMO_MM_POR_HOJA = 0.13
 # Refile de Agenda Ejecutiva va INCLUIDO en el precio de costura (confirmado).

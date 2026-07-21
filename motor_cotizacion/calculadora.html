@@ -312,8 +312,9 @@ const REFILE_CUADERNO_ANILLADO_COP = 100;
 const LIMPIEZA_COLBON_CUADERNO_ANILLADO_COP = 180;
 
 const ARMADO_AGENDA_EJECUTIVA_COP = {media_carta:4000, agenda:4300, carta:5600};
-const ARMADO_AGENDA_EJECUTIVA_DESCUENTO_TRAMO_UNIDADES = 200;
-const ARMADO_AGENDA_EJECUTIVA_DESCUENTO_PCT_POR_TRAMO = 0.05;
+const ARMADO_AGENDA_EJECUTIVA_DESCUENTO_TRAMOS = [
+  [199,0.00],[299,0.04],[399,0.05],[499,0.06],[599,0.07],[699,0.08],[799,0.09],[Infinity,0.10],
+];
 const TRANSPORTE_AGENDA_EJECUTIVA_FACTOR = 2;
 
 const ESCOLAR_ENCUADERNACION_COP = {grapa:250, hilo:450, hilo_cinta:650};
@@ -591,8 +592,10 @@ function tramoFondoSeguridad(costoFabricacion, lineaProducto){
 }
 
 function descuentoVolumenArmadoAgendaEjecutiva(cantidad){
-  const nivel=Math.floor((cantidad-1)/ARMADO_AGENDA_EJECUTIVA_DESCUENTO_TRAMO_UNIDADES);
-  return nivel*ARMADO_AGENDA_EJECUTIVA_DESCUENTO_PCT_POR_TRAMO;
+  for(const [tope,pct] of ARMADO_AGENDA_EJECUTIVA_DESCUENTO_TRAMOS){
+    if(cantidad<=tope) return pct;
+  }
+  return ARMADO_AGENDA_EJECUTIVA_DESCUENTO_TRAMOS[ARMADO_AGENDA_EJECUTIVA_DESCUENTO_TRAMOS.length-1][1];
 }
 
 function espesorLomoCm(tacoHojas){

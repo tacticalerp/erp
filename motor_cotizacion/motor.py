@@ -381,11 +381,12 @@ def diseno_y_preprensa(monto_ot):
 
 
 def descuento_volumen_armado_agenda_ejecutiva(cantidad):
-    """Cada 200 unidades adicionales, baja otro 5% (acumulativo, no
-    compuesto): 1-200u sin descuento, 201-400u=5%, 401-600u=10%, etc.
+    """Tramos de 100 unidades desde 200, +1% cada tramo, tope 10%.
     Confirmado por Conde (2026-07-21)."""
-    nivel = (cantidad - 1) // D.ARMADO_AGENDA_EJECUTIVA_DESCUENTO_TRAMO_UNIDADES
-    return nivel * D.ARMADO_AGENDA_EJECUTIVA_DESCUENTO_PCT_POR_TRAMO
+    for tope, pct in D.ARMADO_AGENDA_EJECUTIVA_DESCUENTO_TRAMOS:
+        if cantidad <= tope:
+            return pct
+    return D.ARMADO_AGENDA_EJECUTIVA_DESCUENTO_TRAMOS[-1][1]
 
 
 def espesor_lomo_cm(taco_hojas):
