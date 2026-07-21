@@ -41,6 +41,8 @@ def cotizar_cuaderno(
     guardas_tintas_tiro=0,
     guardas_plastificado=False,
     carton_calibre_mm=1.5,
+    utilidad_pct=0.40,
+    ventas_pct=0.0,
     litoplan_esperado=None,
     nombre_caso="",
 ):
@@ -174,18 +176,17 @@ def cotizar_cuaderno(
 
     desglose["armado_encuadernacion"] = costo_armado
 
-    # ---------------- TOTAL DE FABRICACION Y PRECIO DE VENTA ----------------
+    # ---------------- SUBTOTAL Y PRECIO DE VENTA ----------------
+    # Diseno Ajuste SI aparece como linea real en las cotizaciones de
+    # Litoplan reconstruidas (~$20.000-$40.000) - se mantiene. Fondo de
+    # Seguridad y Preprensa NO aparecieron como lineas separadas en
+    # ninguno de los 2 casos reales reconstruidos desde cero - se quitan
+    # de la formula hasta confirmar con Conde si aplican en otro lado.
     costo_directo = sum(desglose.values())
+    diseno_cop, _preprensa_no_usada = M.diseno_y_preprensa(costo_directo)
+    subtotal = costo_directo + diseno_cop
 
-    pct_fondo = M.tramo_fondo_seguridad(costo_directo, linea_producto)
-    fondo_seguridad_cop = costo_directo * pct_fondo
-
-    diseno_cop, preprensa_cop = M.diseno_y_preprensa(costo_directo)
-
-    costo_total_fabricacion = costo_directo + fondo_seguridad_cop + diseno_cop + preprensa_cop
-
-    divisor = M.divisor_precio_venta(cantidad)
-    precio_venta = costo_total_fabricacion / divisor
+    precio_venta = M.precio_venta_desde_subtotal(subtotal, utilidad_pct, ventas_pct)
     iva = precio_venta * D.IVA_PCT
     precio_final = precio_venta + iva
 
@@ -197,12 +198,10 @@ def cotizar_cuaderno(
         "detalle_lineas": detalle_lineas,
         "costo_directo_total": costo_directo,
         "costo_directo_unitario": costo_directo / cantidad,
-        "divisor_usado": divisor,
-        "pct_fondo_seguridad": pct_fondo,
-        "fondo_seguridad_cop": fondo_seguridad_cop,
         "diseno_cop": diseno_cop,
-        "preprensa_cop": preprensa_cop,
-        "costo_total_fabricacion": costo_total_fabricacion,
+        "subtotal": subtotal,
+        "utilidad_pct": utilidad_pct,
+        "ventas_pct": ventas_pct,
         "precio_venta_total": precio_venta,
         "precio_venta_unitario": precio_venta_unitario,
         "iva_total": iva,

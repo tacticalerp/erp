@@ -75,7 +75,7 @@ PREPRENSA_COSTO_NORMAL = 25_000  # se elimina (=0) si aplica el escudo
 
 TAMANOS_CATALOGO_CM = {
     "media_carta": (21, 14),
-    "agenda": (17, 24),
+    "agenda": (17, 24.5),  # corregido con Litoplan real (era 17,24)
     "carta": (28, 21.5),
 }
 AREA_CATALOGO_REFERENCIA_CM2 = 294  # = Media Carta 21x14, confirmado en docs
@@ -179,7 +179,7 @@ DIGITAL_DESCUENTO_VOLUMEN = [
     (9, 0.0), (50, 0.10), (200, 0.18), (400, 0.26), (float("inf"), 0.30)
 ]
 
-OFFSET_CTP_COP = {"medio_pliego": 21_000, "cuarto": 11_000, "octavo": 9_000}
+OFFSET_CTP_COP = {"medio_pliego": 22_000, "cuarto": 11_000, "octavo": 9_000}  # medio_pliego corregido con Litoplan real (era 21.000)
 OFFSET_CTP_VIDA_UTIL_IMPRESIONES = 25_000
 OFFSET_CTP_REPETITIVO_PCT = 0.30
 

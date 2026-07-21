@@ -104,7 +104,7 @@ CASOS = [
             dict(nombre="Taco", rol="taco", hojas_por_cuaderno=80, sustrato=("Bond", 70),
                  tintas_tiro=1, tintas_retiro=1, diseno="unico_por_pagina", pliegue=True),
         ],
-        litoplan_esperado=19800,
+        litoplan_esperado=27167,  # corregido: el dato original ($19.800) estaba mal, confirmado con Litoplan real (subtotal $1.934.925, total $2.716.700)
     ),
     dict(
         nombre_caso="8. 1000 libretas Media Carta semidura hotmelt",
@@ -130,11 +130,11 @@ CASOS = [
                  acabados=[{"tipo": "plastificado"}]),
             dict(nombre="Taco", rol="taco", hojas_por_cuaderno=70, sustrato=("Bond", 75),
                  tintas_tiro=1, tintas_retiro=1, diseno="uniforme"),
-            dict(nombre="Insertos", rol="inserto", hojas_por_cuaderno=2, sustrato=("Bond", 90),
-                 tintas_tiro=2, tintas_retiro=2, diseno="unico_por_pagina"),
+            dict(nombre="Insertos", rol="inserto", hojas_por_cuaderno=2, sustrato=("Propalcote", 90),
+                 tintas_tiro=4, tintas_retiro=4, diseno="unico_por_pagina"),
         ],
         guardas_tintas_tiro=4, guardas_plastificado=False,
-        litoplan_esperado=5205,
+        litoplan_esperado=5209,  # confirmado con calculo real de Litoplan (subtotal $2.976.625, total $4.167.200)
     ),
     dict(
         nombre_caso="10. 500 libretas Micro 14x11 tapa blanda C12 colbon",

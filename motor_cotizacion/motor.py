@@ -351,21 +351,15 @@ def diseno_y_preprensa(monto_ot):
     return D.DISENO_COSTO_NORMAL, D.PREPRENSA_COSTO_NORMAL
 
 
-def divisor_precio_venta(cantidad, utilidad_pct=None, comision_pct=None,
-                          reduccion_utilidad_lote_grande=0.035):
-    """El divisor 0.56 = 1 - (41% utilidad + 3% comision) es el DEFAULT,
-    pero Conde confirmo que el cotizador debe permitir manipular el
-    margen, y que en pedidos de 500 unidades o mas normalmente se baja
-    el % de utilidad (el sugirio 3-4 puntos; se deja 3.5% como valor
-    inicial a calibrar). Si se pasan utilidad_pct/comision_pct explicitos
-    se usan tal cual (sin el ajuste automatico por cantidad)."""
-    if utilidad_pct is not None or comision_pct is not None:
-        u = utilidad_pct if utilidad_pct is not None else 0.41
-        c = comision_pct if comision_pct is not None else 0.03
-        return 1 - (u + c)
-
-    u = 0.41
-    c = 0.03
-    if cantidad >= 500:
-        u -= reduccion_utilidad_lote_grande
-    return 1 - (u + c)
+def precio_venta_desde_subtotal(subtotal, utilidad_pct=0.40, ventas_pct=0.0, agencia_pct=0.0):
+    """CORREGIDO (2026-07-15): la formula real de Litoplan NO es un
+    divisor (costo / (1-%)) - es una cascada MULTIPLICATIVA de 3
+    porcentajes independientes (utilidad, ventas, agencia), cada uno
+    editable a mano por cotizacion segun cliente/cantidad/complejidad.
+    Confirmado reconstruyendo 2 casos reales desde cero en Litoplan
+    (subtotales $1.934.925->$2.716.700 y $2.976.625->$4.167.200,
+    ambos coinciden con esta formula, no con el divisor). Conde no usa
+    el campo "agencia" (queda en 0 siempre). Los defaults (40% utilidad,
+    0% ventas) son un promedio de los 2 casos reales conocidos - no hay
+    un default fijo real, se ajusta a mano en cada cotizacion."""
+    return subtotal * (1 + utilidad_pct) * (1 + ventas_pct) * (1 + agencia_pct)
