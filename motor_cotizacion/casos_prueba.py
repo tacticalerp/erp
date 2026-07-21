@@ -96,10 +96,10 @@ CASOS = [
         linea_producto="agenda_ejecutiva", ancho_cm=21, alto_cm=14, cantidad=100,
         tapa_tipo="dura", encuadernacion={"tipo": "costura"}, taco_hojas=80,
         lineas_impresion=[
-            # Caratula continua de Agenda Ejecutiva: siempre 4x1, y se
-            # monta/pliega como una sola pieza continua (no 2 sueltas).
+            # Caratula: el motor la monta como pieza continua automaticamente
+            # (con embone por ser tapa dura) - no hace falta pliegue=True aqui.
             dict(nombre="Caratula", rol="caratula", hojas_por_cuaderno=2, sustrato=PROPALCOTE_150,
-                 tintas_tiro=4, tintas_retiro=1, diseno="uniforme", pliegue=True,
+                 tintas_tiro=4, tintas_retiro=1, diseno="uniforme",
                  acabados=[{"tipo": "plastificado"}]),
             dict(nombre="Taco", rol="taco", hojas_por_cuaderno=80, sustrato=("Bond", 70),
                  tintas_tiro=1, tintas_retiro=1, diseno="unico_por_pagina", pliegue=True),

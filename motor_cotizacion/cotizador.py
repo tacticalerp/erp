@@ -79,6 +79,19 @@ def cotizar_cuaderno(
             if l.get("rol") == "caratula" and l.get("tintas_retiro", 0) == 0:
                 l["tintas_retiro"] = 1
 
+    # La caratula SIEMPRE se monta como 1 pieza continua (caratula +
+    # contracaratula juntas, doblando el lado corto x2 - mas el embone
+    # si es tapa Dura), redondeada al tamano de maquina mas chico que
+    # alcance. Confirmado con 2 casos reales de Litoplan (2026-07-16).
+    # Reemplaza el viejo modelo de "2 piezas sueltas" para TODAS las
+    # lineas de producto, no solo Agenda Ejecutiva.
+    montaje_ancho, montaje_alto = M.tamano_montaje_caratula(ancho_cm, alto_cm, tapa_tipo)
+    tamano_maquina_caratula = M.redondear_a_tamano_maquina_caratula(montaje_ancho, montaje_alto)
+    for l in lineas_impresion:
+        if l.get("rol") == "caratula":
+            l["ancho_cm"], l["alto_cm"] = tamano_maquina_caratula
+            l["hojas_por_cuaderno"] = 1  # ya es 1 sola pieza continua
+
     desglose = {}
     detalle_lineas = {}
 
@@ -98,9 +111,8 @@ def cotizar_cuaderno(
         costo_tapa_armado = armado_base * factor_escala * cantidad
 
         carton_precio = D.CARTON_1_5MM_COP if carton_calibre_mm == 1.5 else D.CARTON_2_0MM_COP
-        piezas_tapa = linea_caratula["hojas_por_cuaderno"] if linea_caratula else 2
-        n_por_pliego_carton = M.piezas_por_pliego(ancho_cm, alto_cm, 70, 100)
-        costo_tapa_carton = (carton_precio / max(n_por_pliego_carton, 1)) * piezas_tapa * cantidad
+        n_por_pliego_carton = M.piezas_por_pliego(*tamano_maquina_caratula, 70, 100)
+        costo_tapa_carton = (carton_precio / max(n_por_pliego_carton, 1)) * cantidad
 
     desglose["tapa_armado_forrado"] = costo_tapa_armado
     desglose["tapa_carton"] = costo_tapa_carton
@@ -111,10 +123,9 @@ def cotizar_cuaderno(
     # de colaminado en si (pegante + mano de obra, $900/m2).
     costo_tapa_semidura_extra = 0.0
     if tapa_tipo == "semidura" and linea_caratula is not None:
-        r_capa2 = M.mejor_pliego_para_pieza(ancho_cm, alto_cm, *linea_caratula["sustrato"])
-        piezas = linea_caratula["hojas_por_cuaderno"]
-        costo_tapa_semidura_extra = r_capa2["costo_por_pieza"] * piezas * cantidad
-        area_colaminado_m2 = (M.area_cm2(ancho_cm, alto_cm) * piezas * cantidad) / 10_000
+        r_capa2 = M.mejor_pliego_para_pieza(*tamano_maquina_caratula, *linea_caratula["sustrato"])
+        costo_tapa_semidura_extra = r_capa2["costo_por_pieza"] * cantidad
+        area_colaminado_m2 = (M.area_cm2(*tamano_maquina_caratula) * cantidad) / 10_000
         costo_tapa_semidura_extra += area_colaminado_m2 * D.COLAMINADO_COP_M2
     desglose["tapa_semidura_segunda_capa"] = costo_tapa_semidura_extra
 

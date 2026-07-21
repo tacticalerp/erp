@@ -73,6 +73,35 @@ def piezas_por_medio_pliego_offset(pieza_ancho, pieza_alto, pliegue=False):
     return n_bloques * 2 if pliegue else n_bloques
 
 
+def tamano_montaje_caratula(ancho, alto, tapa_tipo):
+    """La caratula se imprime SIEMPRE como una sola pieza continua
+    (caratula + contracaratula juntas). Si es tapa Dura, se le suma el
+    embone (~1.5cm por lado, papel que envuelve el canto del carton) a
+    ambas dimensiones ANTES de doblar. Confirmado por Conde con ejemplo
+    real: 24x17 dura -> embone da 27x20 -> doblado da 40x27."""
+    corto, largo = sorted((ancho, alto))
+    if tapa_tipo == "dura":
+        corto += D.CARATULA_EMBONE_TAPA_DURA_CM * 2
+        largo += D.CARATULA_EMBONE_TAPA_DURA_CM * 2
+    return (corto * 2, largo)
+
+
+def redondear_a_tamano_maquina_caratula(ancho, alto):
+    """Redondea el montaje de caratula al tamano de maquina mas chico
+    que alcance a cubrirlo, de la lista de formatos conocidos."""
+    a, b = sorted((ancho, alto))
+    candidatos = []
+    for mw, mh in D.CARATULA_TAMANOS_MAQUINA_CM:
+        ma, mb = sorted((mw, mh))
+        if a <= ma and b <= mb:
+            candidatos.append((ma * mb, ma, mb))
+    if not candidatos:
+        return (ancho, alto)  # no hay formato de maquina que alcance, se usa el propio
+    candidatos.sort()
+    _, ma, mb = candidatos[0]
+    return (ma, mb)
+
+
 def mejor_pliego_para_pieza(pieza_ancho, pieza_alto, sustrato_nombre, gramaje):
     """Cubicaje dinamico: evalua 60x90 y 70x100 y devuelve el que rinda
     mas barato por pieza (mas piezas por pliego / precio del pliego)."""

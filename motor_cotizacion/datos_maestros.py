@@ -88,6 +88,21 @@ FACTOR_MANIPULACION_TAMANO_CUSTOM = 1.30
 FORRO_TAPA_DURA = ("Propalcote", 150)
 ARMADO_FORRADO_TAPA_DURA_COP = {"media_carta": 620, "agenda": 640, "carta": 750}
 
+# Montaje de caratula (confirmado por Conde, 2026-07-16): la caratula
+# SIEMPRE se imprime como UNA pieza continua (caratula + contracaratula
+# juntas, doblando el lado corto x2), nunca como 2 piezas sueltas. Si es
+# tapa Dura, antes de doblar se le suma el "embone" (~1.5cm por lado,
+# el papel que envuelve el canto del carton) a AMBAS dimensiones.
+CARATULA_EMBONE_TAPA_DURA_CM = 1.5
+
+# Tamanos de maquina disponibles para redondear el montaje de caratula
+# hacia arriba (el mas chico que alcance a cubrirlo). Verificado contra
+# 2 casos reales de Litoplan + los 3 formatos ya documentados para
+# Agenda Ejecutiva - los 4 numeros salen de esta misma formula.
+CARATULA_TAMANOS_MAQUINA_CM = [
+    (21.5, 28), (25, 35), (33, 50), (42, 28), (50, 70),
+]
+
 # Semidura = colaminado (2+ capas). Blanda = 1 sola capa.
 COLAMINADO_COP_M2 = 900  # incluye pegante + mano de obra (confirmado por Conde)
 PLASTIFICADO_COP_M2 = 950  # 1 cara (corregido de 900 a 950 por Conde)
