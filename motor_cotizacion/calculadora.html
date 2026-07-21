@@ -336,6 +336,7 @@ const DIGITAL_CLIC_COP = {
   pliego_max:{color:1000, negro:550},
 };
 const DIGITAL_MERMA_HOJAS = {policromia:20, negro:10, promedio:18};
+const DIGITAL_SEMICORTE_COP = 1500;
 const DIGITAL_DESCUENTO_VOLUMEN = [[9,0.0],[50,0.10],[200,0.18],[400,0.26],[Infinity,0.30]];
 const DIGITAL_FORMATOS_CM = {carta:[21.5,28], octavo:[25,35], pliego_max:[33,50]};
 
@@ -494,8 +495,10 @@ function costoImpresionDigital(nPaginas,caras,esColor,ancho,alto,cantidadUnidade
   const nClics=Math.ceil(nPaginas/piezasPorClic)*caras;
   const precioClic=DIGITAL_CLIC_COP[clase][esColor?"color":"negro"];
   const descuento=descuentoVolumenDigital(cantidadUnidades);
-  const total=nClics*precioClic*(1-descuento);
-  return {total, via:"digital", nClics, precioClic, descuentoPct:descuento};
+  const costoClics=nClics*precioClic*(1-descuento);
+  const costoSemicorte=nClics*DIGITAL_SEMICORTE_COP;
+  const total=costoClics+costoSemicorte;
+  return {total, via:"digital", nClics, precioClic, descuentoPct:descuento, costoClics, costoSemicorte};
 }
 
 function fraccionPliegoOffset(ancho,alto,esPolicromia=false){
