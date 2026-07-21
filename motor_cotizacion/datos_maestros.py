@@ -197,13 +197,34 @@ ANILLO_DOBLE_O = {
 REFILE_CUADERNO_ANILLADO_COP = 100
 LIMPIEZA_COLBON_CUADERNO_ANILLADO_COP = 180
 
+# REEMPLAZADO 2026-07-21 (ver ARMADO_AGENDA_EJECUTIVA_COP mas abajo): esta
+# tabla (base_80h + variacion por hoja) ya no se usa, Conde dio la tabla
+# correcta de armado por tamano. Se deja aqui solo de referencia historica.
 COSTURA_AGENDA_EJECUTIVA = {
     "media_carta": {"base_80h": 4100, "variacion_hoja": 10.0},
     "agenda": {"base_80h": 4400, "variacion_hoja": 15.0},
     "carta": {"base_80h": 5800, "variacion_hoja": 55.0},
 }
+
+# Armado de Agenda Ejecutiva (confirmado por Conde 2026-07-21): tarifa FIJA
+# por unidad segun tamano (ya no depende de hojas de taco). Con descuento
+# por volumen: cada 200 unidades adicionales, baja otro 5% (acumulativo,
+# no compuesto - ver ARMADO_AGENDA_EJECUTIVA_DESCUENTO_PCT_POR_TRAMO).
+ARMADO_AGENDA_EJECUTIVA_COP = {
+    "media_carta": 4000,
+    "agenda": 4300,
+    "carta": 5600,
+}
+ARMADO_AGENDA_EJECUTIVA_DESCUENTO_TRAMO_UNIDADES = 200
+ARMADO_AGENDA_EJECUTIVA_DESCUENTO_PCT_POR_TRAMO = 0.05
+
 ESPESOR_LOMO_MM_POR_HOJA = 0.13
 # Refile de Agenda Ejecutiva va INCLUIDO en el precio de costura (confirmado).
+
+# Transporte de Agenda Ejecutiva se DUPLICA (viaje adicional a un proveedor
+# distante). Confirmado por Conde 2026-07-21. Se aplica sobre el transporte
+# ya calculado con la Ruta 3 (que ya incluye el -0.5% de esa linea).
+TRANSPORTE_AGENDA_EJECUTIVA_FACTOR = 2
 
 ESCOLAR_ENCUADERNACION_COP = {"grapa": 250, "hilo": 450, "hilo_cinta": 650}
 GRAFADO_ESCOLAR_COP_POR_MILLAR = 35_000

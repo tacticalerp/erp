@@ -190,10 +190,12 @@ def cotizar_cuaderno(
         costo_armado += D.LIMPIEZA_COLBON_CUADERNO_ANILLADO_COP * cantidad
 
     elif linea_producto == "agenda_ejecutiva":
-        tabla = D.COSTURA_AGENDA_EJECUTIVA[cat_clave]
-        costo_unit = tabla["base_80h"] + (taco_hojas - 80) * tabla["variacion_hoja"]
-        costo_unit *= factor_escala
-        costo_armado = costo_unit * cantidad
+        # Tarifa fija por tamano (ya no depende de hojas de taco) con
+        # descuento por volumen cada 200 unidades. Confirmado por Conde
+        # 2026-07-21, reemplaza la tabla base_80h+variacion anterior.
+        costo_unit = D.ARMADO_AGENDA_EJECUTIVA_COP[cat_clave] * factor_escala
+        descuento_vol = M.descuento_volumen_armado_agenda_ejecutiva(cantidad)
+        costo_armado = costo_unit * cantidad * (1 - descuento_vol)
         # Refile incluido en el precio de costura (confirmado por Conde).
 
     elif linea_producto == "libretas":
@@ -233,6 +235,9 @@ def cotizar_cuaderno(
 
     subtotal_pre_transporte = costo_directo + diseno_cop + fondo_seguridad_cop + empaque_cop + sherpa_cop
     transporte_cop = M.costo_transporte(subtotal_pre_transporte, linea_producto)
+    if linea_producto == "agenda_ejecutiva":
+        # Viaje adicional a un proveedor distante - confirmado por Conde.
+        transporte_cop *= D.TRANSPORTE_AGENDA_EJECUTIVA_FACTOR
     subtotal = subtotal_pre_transporte + transporte_cop
 
     precio_venta = M.precio_venta_desde_subtotal(subtotal, utilidad_pct, ventas_pct)

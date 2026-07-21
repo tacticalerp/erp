@@ -311,11 +311,10 @@ const ANILLO_DOBLE_O = {
 const REFILE_CUADERNO_ANILLADO_COP = 100;
 const LIMPIEZA_COLBON_CUADERNO_ANILLADO_COP = 180;
 
-const COSTURA_AGENDA_EJECUTIVA = {
-  media_carta:{base_80h:4100, variacion_hoja:10.0},
-  agenda:{base_80h:4400, variacion_hoja:15.0},
-  carta:{base_80h:5800, variacion_hoja:55.0},
-};
+const ARMADO_AGENDA_EJECUTIVA_COP = {media_carta:4000, agenda:4300, carta:5600};
+const ARMADO_AGENDA_EJECUTIVA_DESCUENTO_TRAMO_UNIDADES = 200;
+const ARMADO_AGENDA_EJECUTIVA_DESCUENTO_PCT_POR_TRAMO = 0.05;
+const TRANSPORTE_AGENDA_EJECUTIVA_FACTOR = 2;
 
 const ESCOLAR_ENCUADERNACION_COP = {grapa:250, hilo:450, hilo_cinta:650};
 const GRAFADO_ESCOLAR_COP_POR_MILLAR = 35000;
@@ -591,6 +590,11 @@ function tramoFondoSeguridad(costoFabricacion, lineaProducto){
   return FONDO_SEGURIDAD_TRAMOS[FONDO_SEGURIDAD_TRAMOS.length-1][1];
 }
 
+function descuentoVolumenArmadoAgendaEjecutiva(cantidad){
+  const nivel=Math.floor((cantidad-1)/ARMADO_AGENDA_EJECUTIVA_DESCUENTO_TRAMO_UNIDADES);
+  return nivel*ARMADO_AGENDA_EJECUTIVA_DESCUENTO_PCT_POR_TRAMO;
+}
+
 function espesorLomoCm(tacoHojas){
   return tacoHojas*ESPESOR_LOMO_MM_POR_HOJA/10;
 }
@@ -802,9 +806,9 @@ function cotizarCuaderno(p){
     costoArmado+=REFILE_CUADERNO_ANILLADO_COP*p.cantidad;
     costoArmado+=LIMPIEZA_COLBON_CUADERNO_ANILLADO_COP*p.cantidad;
   } else if(p.lineaProducto==="agenda_ejecutiva"){
-    const tabla=COSTURA_AGENDA_EJECUTIVA[catClave];
-    let costoUnit=(tabla.base_80h+(p.tacoHojas-80)*tabla.variacion_hoja)*factorEscala;
-    costoArmado=costoUnit*p.cantidad;
+    const costoUnit=ARMADO_AGENDA_EJECUTIVA_COP[catClave]*factorEscala;
+    const descuentoVol=descuentoVolumenArmadoAgendaEjecutiva(p.cantidad);
+    costoArmado=costoUnit*p.cantidad*(1-descuentoVol);
   } else if(p.lineaProducto==="libretas"){
     if(tipoEnc==="anillo_doble_o"){
       const tabla=ANILLO_DOBLE_O[catClave];
@@ -833,7 +837,8 @@ function cotizarCuaderno(p){
   const sherpaCop = costoSherpa(totalPaginasInsertos);
 
   const subtotalPreTransporte = costoDirecto+disenoCop+fondoSeguridadCop+empaqueCop+sherpaCop;
-  const transporteCop = costoTransporte(subtotalPreTransporte, p.lineaProducto);
+  let transporteCop = costoTransporte(subtotalPreTransporte, p.lineaProducto);
+  if(p.lineaProducto==="agenda_ejecutiva") transporteCop *= TRANSPORTE_AGENDA_EJECUTIVA_FACTOR;
   const subtotal = subtotalPreTransporte+transporteCop;
 
   const precioVenta=precioVentaDesdeSubtotal(subtotal,p.utilidadPct,p.ventasPct);

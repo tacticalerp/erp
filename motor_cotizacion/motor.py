@@ -380,6 +380,14 @@ def diseno_y_preprensa(monto_ot):
     return D.DISENO_COSTO_NORMAL, D.PREPRENSA_COSTO_NORMAL
 
 
+def descuento_volumen_armado_agenda_ejecutiva(cantidad):
+    """Cada 200 unidades adicionales, baja otro 5% (acumulativo, no
+    compuesto): 1-200u sin descuento, 201-400u=5%, 401-600u=10%, etc.
+    Confirmado por Conde (2026-07-21)."""
+    nivel = (cantidad - 1) // D.ARMADO_AGENDA_EJECUTIVA_DESCUENTO_TRAMO_UNIDADES
+    return nivel * D.ARMADO_AGENDA_EJECUTIVA_DESCUENTO_PCT_POR_TRAMO
+
+
 def espesor_lomo_cm(taco_hojas):
     """Grosor del lomo = cantidad de hojas del taco x 0.13mm/hoja,
     convertido a cm. Confirmado por Conde (2026-07-21)."""
