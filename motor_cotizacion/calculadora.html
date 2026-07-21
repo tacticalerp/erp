@@ -287,7 +287,7 @@ const GUARDAS_CANTIDAD_DEFAULT = 2;
 const GUARDAS_PLASTIFICADO_COP_M2 = 900;
 const GUARDAS_PISO_OT_COP = 20000;
 
-const LEVANTE_MANUAL_INSERTO_COP_HOJA = 10;
+const LEVANTE_COP_HOJA = {taco:8, inserto:10};
 const SHERPA_BASE_COP = 20000;
 const SHERPA_COP_POR_PAGINA_INSERTO = 1000;
 const SHERPA_MAXIMO_COP = 40000;
@@ -557,7 +557,7 @@ function costoImpresionUnicoPorPagina(paginasUnicas,cantidad,ancho,alto,esColor,
   const costoPlanchas=nPlanchas*OFFSET_CTP_COP.medio_pliego;
   const costoMillares=nMillares*millarRate;
   return {
-    total:costoPlanchas+costoMillares, via:`offset (${nPlanchas} planchas, único)`, nPlanchas,
+    total:costoPlanchas+costoMillares, via:`offset (medio pliego, ${nPlanchas} planchas, único)`, nPlanchas,
     costoCtpUnitario:OFFSET_CTP_COP.medio_pliego, costoPlanchas,
     nMillares, costoMillarUnitario:millarRate, costoMillares,
   };
@@ -749,7 +749,15 @@ function cotizarCuaderno(p){
 
   const lineasInsertos=lineasImpresion.filter(l=>l.rol==="inserto");
   const totalPaginasInsertos=lineasInsertos.reduce((a,l)=>a+l.hojasPorCuaderno,0);
-  desglose["levante_insertos"]=LEVANTE_MANUAL_INSERTO_COP_HOJA*totalPaginasInsertos*p.cantidad;
+
+  let costoLevante=0;
+  for(const l of lineasImpresion){
+    const rol=l.rol;
+    if(LEVANTE_COP_HOJA[rol]!=null && (l.diseno||"uniforme")==="unico_por_pagina"){
+      costoLevante += LEVANTE_COP_HOJA[rol]*l.hojasPorCuaderno*p.cantidad;
+    }
+  }
+  desglose["levante"]=costoLevante;
 
   const lineaCaratula=lineasImpresion.find(l=>l.rol==="caratula")||null;
 
@@ -1223,7 +1231,7 @@ const ETIQUETAS_DESGLOSE = {
   tapa_carton: "Cartón de tapa (dura)",
   tapa_semidura_segunda_capa: "Segunda capa + colaminado (semidura)",
   guardas: "Guardas",
-  levante_insertos: "Levante manual de insertos",
+  levante: "Levante manual (hojas único por página)",
   armado_encuadernacion: "Armado / encuadernación",
 };
 
@@ -1239,7 +1247,7 @@ function renderResultado(r, p){
     if(!etiqueta){
       etiqueta = clave.startsWith("linea_") ? "Línea: "+clave.slice(6) : clave;
     }
-    if(valor===0 && (clave==="tapa_armado_forrado"||clave==="tapa_carton"||clave==="tapa_semidura_segunda_capa"||clave==="levante_insertos")) continue;
+    if(valor===0 && (clave==="tapa_armado_forrado"||clave==="tapa_carton"||clave==="tapa_semidura_segunda_capa"||clave==="levante")) continue;
     filas += `<tr><td>${etiqueta}</td><td class="num">${formatoCop(valor)}</td></tr>`;
     const detalle = r.detalleLineas[clave.replace("linea_","")];
     if(detalle){

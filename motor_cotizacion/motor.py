@@ -339,7 +339,7 @@ def costo_impresion_unico_por_pagina(paginas_unicas, cantidad, ancho, alto, es_c
     costo_millares = n_millares * millar_rate
     total = costo_planchas + costo_millares
     return {
-        "total": total, "via": f"offset ({n_planchas} planchas, unico)", "n_planchas": n_planchas,
+        "total": total, "via": f"offset (medio pliego, {n_planchas} planchas, unico)", "n_planchas": n_planchas,
         "costo_ctp_unitario": D.OFFSET_CTP_COP["medio_pliego"], "costo_planchas": costo_planchas,
         "n_millares": n_millares, "costo_millar_unitario": millar_rate, "costo_millares": costo_millares,
     }

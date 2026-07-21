@@ -101,12 +101,21 @@ def cotizar_cuaderno(
         desglose[f"linea_{clave}"] = r["costo_total"]
         detalle_lineas[clave] = r
 
-    # Levante manual de insertos ($10/hoja de inserto, por cuaderno) -
-    # confirmado por Conde 2026-07-21, estaba definido en datos_maestros
-    # pero nunca se habia conectado al calculo.
     lineas_insertos = [l for l in lineas_impresion if l.get("rol") == "inserto"]
     total_paginas_insertos = sum(l["hojas_por_cuaderno"] for l in lineas_insertos)
-    desglose["levante_insertos"] = D.LEVANTE_MANUAL_INSERTO_COP_HOJA * total_paginas_insertos * cantidad
+
+    # Levante manual: unir/ordenar hoja por hoja despues de imprimir
+    # "unico_por_pagina" (el pliego trae varias paginas distintas juntas,
+    # hay que armar cada cuadernillo en orden). Solo aplica si el diseño
+    # de esa linea es unico_por_pagina - si es uniforme no hace falta.
+    # Tarifa por rol: taco $8/hoja, inserto $10/hoja. Confirmado por
+    # Conde 2026-07-21.
+    costo_levante = 0.0
+    for l in lineas_impresion:
+        rol = l.get("rol")
+        if rol in D.LEVANTE_COP_HOJA and l.get("diseno", "uniforme") == "unico_por_pagina":
+            costo_levante += D.LEVANTE_COP_HOJA[rol] * l["hojas_por_cuaderno"] * cantidad
+    desglose["levante"] = costo_levante
 
     linea_caratula = next((l for l in lineas_impresion if l.get("rol") == "caratula"), None)
 

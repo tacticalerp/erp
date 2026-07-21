@@ -174,8 +174,14 @@ GUARDAS_SUSTRATO_DEFAULT = ("Propalcote", 150)  # 90% de los casos
 GUARDAS_PLASTIFICADO_COP_M2 = 900
 GUARDAS_PISO_OT_COP = 20_000  # piso del plastificado de guardas (no de toda la linea)
 
-# Confirmado por Conde (2026-07-21): sí se cobra, faltaba conectarlo al motor.
-LEVANTE_MANUAL_INSERTO_COP_HOJA = 10  # por hoja de inserto, por cuaderno
+# Levante manual (unir/ordenar hoja por hoja segun su posicion correcta
+# despues de imprimir "unico_por_pagina": el pliego trae varias paginas
+# distintas juntas - ej. paginas 1-8 en un pliego, 9-16 en el siguiente -
+# y hay que armar cada cuadernillo en orden). SOLO aplica cuando el
+# diseño de esa linea es "unico_por_pagina" (las hojas cambian); si es
+# uniforme no hace falta porque todas las hojas son iguales. Tarifa
+# distinta por rol. Confirmado por Conde (2026-07-21).
+LEVANTE_COP_HOJA = {"taco": 8, "inserto": 10}
 
 # Sherpa: muestra de color impresa que se entrega al cliente antes de tirar
 # el pedido. Confirmado por Conde (2026-07-21): piso $20.000 por OT, sube
