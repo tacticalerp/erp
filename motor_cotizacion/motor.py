@@ -329,12 +329,26 @@ def costo_impresion_unico_por_pagina(paginas_unicas, cantidad, ancho, alto, es_c
     distinto cada uno): no se puede reutilizar la misma plancha para
     tiro/retiro. 1 plancha por cada "posicion" de pagina que quepa en el
     medio pliego, y cada plancha corre tantas veces como cuadernos se
-    pidan. Formula y cifras confirmadas por Conde."""
+    pidan.
+
+    CORREGIDO 2026-07-22 (Conde): el millar se cobra POR CADA PLANCHA por
+    separado, no repartido entre todas juntas - cada cambio de plancha es
+    un arranque de maquina independiente, asi que aunque cada plancha
+    corra menos de 1000 veces (ej. 25 planchas x 200 copias = 5.000
+    impresiones en total, pero cada plancha individual solo corre 200
+    veces) cuenta como minimo 1 millar CADA UNA (25 millares, no 5).
+    Tambien se le suma la merma de alistamiento de offset a cada corrida
+    de plancha (antes no se aplicaba nada de merma en esta ruta)."""
     piezas_por_plancha = piezas_por_medio_pliego_offset(ancho, alto, pliegue=pliegue)
     n_planchas = math.ceil(paginas_unicas / max(piezas_por_plancha, 1))
-    n_impresiones = n_planchas * cantidad
+
+    cant_tintas_equiv = 2 if es_color else 1
+    merma = merma_offset_hojas(cantidad, cant_tintas_equiv)
+    impresiones_por_plancha = cantidad + merma
+    millares_por_plancha = math.ceil(impresiones_por_plancha / 1000)
+    n_millares = n_planchas * millares_por_plancha
+
     millar_rate = D.OFFSET_MILLAR_COP["medio_pliego_policromia_4x0"] if es_color else D.RECARGO_TINTA_CUADRICULA_MILLAR_COP
-    n_millares = math.ceil(n_impresiones / 1000)
     costo_planchas = n_planchas * D.OFFSET_CTP_COP["medio_pliego"]
     costo_millares = n_millares * millar_rate
     total = costo_planchas + costo_millares

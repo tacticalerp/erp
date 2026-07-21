@@ -551,9 +551,14 @@ function costoImpresionOffset(nPiezasFinales,cantTintas,esPolicromia,ancho,alto,
 function costoImpresionUnicoPorPagina(paginasUnicas,cantidad,ancho,alto,esColor,pliegue=false){
   const piezasPorPlancha=piezasPorMedioPliegoOffset(ancho,alto,pliegue);
   const nPlanchas=Math.ceil(paginasUnicas/Math.max(piezasPorPlancha,1));
-  const nImpresiones=nPlanchas*cantidad;
+
+  const cantTintasEquiv=esColor?2:1;
+  const merma=mermaOffsetHojas(cantidad,cantTintasEquiv);
+  const impresionesPorPlancha=cantidad+merma;
+  const millaresPorPlancha=Math.ceil(impresionesPorPlancha/1000);
+  const nMillares=nPlanchas*millaresPorPlancha;
+
   const millarRate=esColor?OFFSET_MILLAR_COP.medio_pliego_policromia_4x0:RECARGO_TINTA_CUADRICULA_MILLAR_COP;
-  const nMillares=Math.ceil(nImpresiones/1000);
   const costoPlanchas=nPlanchas*OFFSET_CTP_COP.medio_pliego;
   const costoMillares=nMillares*millarRate;
   return {
