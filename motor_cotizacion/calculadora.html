@@ -309,7 +309,7 @@ const ANILLO_DOBLE_O = {
   carta:{base_80h:1700, variacion_hoja:10.0},
 };
 const REFILE_CUADERNO_ANILLADO_COP = 100;
-const LIMPIEZA_COLBON_CUADERNO_ANILLADO_COP = 180;
+const LIMPIEZA_COP_UNIDAD = {cuaderno_anillado:180, agenda_ejecutiva:180, libretas:120, escolar:120};
 
 const ARMADO_AGENDA_EJECUTIVA_COP = {media_carta:4000, agenda:4300, carta:5600};
 const ARMADO_AGENDA_EJECUTIVA_DESCUENTO_TRAMOS = [
@@ -809,7 +809,6 @@ function cotizarCuaderno(p){
     let costoUnit=(tabla.base_80h+(p.tacoHojas-80)*tabla.variacion_hoja)*factorEscala;
     costoArmado=costoUnit*p.cantidad;
     costoArmado+=REFILE_CUADERNO_ANILLADO_COP*p.cantidad;
-    costoArmado+=LIMPIEZA_COLBON_CUADERNO_ANILLADO_COP*p.cantidad;
   } else if(p.lineaProducto==="agenda_ejecutiva"){
     const costoUnit=ARMADO_AGENDA_EJECUTIVA_COP[catClave]*factorEscala;
     const descuentoVol=descuentoVolumenArmadoAgendaEjecutiva(p.cantidad);
@@ -832,6 +831,7 @@ function cotizarCuaderno(p){
     }
     costoArmado+=REFILE_CUADERNO_ANILLADO_COP*p.cantidad;
   }
+  costoArmado+=LIMPIEZA_COP_UNIDAD[p.lineaProducto]*p.cantidad;
   desglose["armado_encuadernacion"]=costoArmado;
 
   const costoDirecto=Object.values(desglose).reduce((a,b)=>a+b,0);

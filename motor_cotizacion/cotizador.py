@@ -194,7 +194,6 @@ def cotizar_cuaderno(
         costo_unit *= factor_escala
         costo_armado = costo_unit * cantidad
         costo_armado += D.REFILE_CUADERNO_ANILLADO_COP * cantidad
-        costo_armado += D.LIMPIEZA_COLBON_CUADERNO_ANILLADO_COP * cantidad
 
     elif linea_producto == "agenda_ejecutiva":
         # Tarifa fija por tamano (ya no depende de hojas de taco) con
@@ -221,6 +220,11 @@ def cotizar_cuaderno(
             costo_armado = max(D.COLBON_COP_UNIDAD * cantidad, D.COLBON_PISO_OT_COP)
             costo_armado += D.GRAFADO_LIBRETAS_COP_FIJO
         costo_armado += D.REFILE_CUADERNO_ANILLADO_COP * cantidad
+
+    # Limpieza (colbon/residuos), $/unidad segun linea de producto -
+    # aplica a las 4 lineas, no solo a Cuaderno Anillado. Confirmado por
+    # Conde 2026-07-21.
+    costo_armado += D.LIMPIEZA_COP_UNIDAD[linea_producto] * cantidad
 
     desglose["armado_encuadernacion"] = costo_armado
 

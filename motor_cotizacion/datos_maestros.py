@@ -195,7 +195,15 @@ ANILLO_DOBLE_O = {
     "carta": {"base_80h": 1700, "variacion_hoja": 10.0},
 }
 REFILE_CUADERNO_ANILLADO_COP = 100
-LIMPIEZA_COLBON_CUADERNO_ANILLADO_COP = 180
+
+# Limpieza (de colbon/residuos), $/unidad segun linea de producto.
+# Confirmado por Conde 2026-07-21.
+LIMPIEZA_COP_UNIDAD = {
+    "cuaderno_anillado": 180,
+    "agenda_ejecutiva": 180,
+    "libretas": 120,
+    "escolar": 120,
+}
 
 # REEMPLAZADO 2026-07-21 (ver ARMADO_AGENDA_EJECUTIVA_COP mas abajo): esta
 # tabla (base_80h + variacion por hoja) ya no se usa, Conde dio la tabla
