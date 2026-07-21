@@ -167,7 +167,12 @@ RECARGO_TINTA_CUADRICULA_COP = 20_000  # fijo, cuando el taco lleva cuadricula
 
 GUARDAS_CANTIDAD_DEFAULT = 2  # una a cada lado (confirmado por Conde)
 GUARDAS_SUSTRATO_DEFAULT = ("Propalcote", 150)  # 90% de los casos
-GUARDAS_PISO_OT_COP = 20_000  # por toda la OT, no por unidad
+# El plastificado de guardas tiene tarifa PROPIA, distinta del plastificado
+# general ($950/m2, piso $30.000): $900/m2, piso $20.000 (Dossier Tecnico V3
+# y Copia de Dossier Maestro, ambos coinciden). Corregido 2026-07-21 - antes
+# se usaba por error la tarifa generica de plastificado para guardas.
+GUARDAS_PLASTIFICADO_COP_M2 = 900
+GUARDAS_PISO_OT_COP = 20_000  # piso del plastificado de guardas (no de toda la linea)
 
 # Confirmado por Conde (2026-07-21): sí se cobra, faltaba conectarlo al motor.
 LEVANTE_MANUAL_INSERTO_COP_HOJA = 10  # por hoja de inserto, por cuaderno

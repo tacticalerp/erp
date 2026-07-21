@@ -284,6 +284,7 @@ const TAPA_DURA_UMBRAL_TINTA_RETIRO_UNIDADES = 150;
 const RECARGO_TINTA_CUADRICULA_MILLAR_COP = 20000;
 
 const GUARDAS_CANTIDAD_DEFAULT = 2;
+const GUARDAS_PLASTIFICADO_COP_M2 = 900;
 const GUARDAS_PISO_OT_COP = 20000;
 
 const LEVANTE_MANUAL_INSERTO_COP_HOJA = 10;
@@ -777,10 +778,14 @@ function cotizarCuaderno(p){
     nombre:"Guardas", hojasPorCuaderno: p.guardasCantidad!=null?p.guardasCantidad:GUARDAS_CANTIDAD_DEFAULT,
     sustrato:guardasSustrato, tintasTiro:p.guardasTintasTiro||0, tintasRetiro:0,
     diseno:"unico_por_pagina",
-    acabados:p.guardasPlastificado?[{tipo:"plastificado"}]:[],
+    acabados:[],
   };
   const rGuardas=procesarLineaImpresion(lineaGuardas,p.anchoCm,p.altoCm,p.cantidad);
-  const costoGuardasTotal=Math.max(rGuardas.costoTotal,GUARDAS_PISO_OT_COP);
+  let costoGuardasTotal=rGuardas.costoTotal;
+  if(p.guardasPlastificado){
+    const areaGuardasM2=(areaCm2(p.anchoCm,p.altoCm)*(p.guardasCantidad!=null?p.guardasCantidad:GUARDAS_CANTIDAD_DEFAULT)*p.cantidad)/10000;
+    costoGuardasTotal+=Math.max(areaGuardasM2*GUARDAS_PLASTIFICADO_COP_M2, GUARDAS_PISO_OT_COP);
+  }
   desglose["guardas"]=costoGuardasTotal;
   detalleLineas["Guardas"]=rGuardas;
 

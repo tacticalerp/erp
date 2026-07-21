@@ -152,6 +152,9 @@ def cotizar_cuaderno(
     desglose["tapa_semidura_segunda_capa"] = costo_tapa_semidura_extra
 
     # ---------------- GUARDAS (estructural: cantidad + plastificado) ----------------
+    # El plastificado de guardas NO usa la tarifa/piso genericos de
+    # plastificado ($950/m2, piso $30.000) - tiene los suyos propios
+    # ($900/m2, piso $20.000), confirmado en 2 documentos fuente.
     guardas_sustrato = guardas_sustrato or D.GUARDAS_SUSTRATO_DEFAULT
     linea_guardas = {
         "nombre": "Guardas",
@@ -160,10 +163,13 @@ def cotizar_cuaderno(
         "tintas_tiro": guardas_tintas_tiro,
         "tintas_retiro": 0,
         "diseno": "unico_por_pagina",
-        "acabados": [{"tipo": "plastificado"}] if guardas_plastificado else [],
+        "acabados": [],
     }
     r_guardas = procesar_linea_impresion(linea_guardas, ancho_cm, alto_cm, cantidad)
-    costo_guardas_total = max(r_guardas["costo_total"], D.GUARDAS_PISO_OT_COP)
+    costo_guardas_total = r_guardas["costo_total"]
+    if guardas_plastificado:
+        area_guardas_m2 = (M.area_cm2(ancho_cm, alto_cm) * guardas_cantidad * cantidad) / 10_000
+        costo_guardas_total += max(area_guardas_m2 * D.GUARDAS_PLASTIFICADO_COP_M2, D.GUARDAS_PISO_OT_COP)
     desglose["guardas"] = costo_guardas_total
     detalle_lineas["Guardas"] = r_guardas
 
