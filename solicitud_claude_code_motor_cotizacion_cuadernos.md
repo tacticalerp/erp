@@ -512,3 +512,26 @@ Conde reconstruyó 2 casos reales **desde cero en Litoplan** (Agenda Ejecutiva =
 ### Próximo paso recomendado
 
 Reconstruir 1-2 casos más **desde cero en Litoplan** (con captura de pantalla del desglose completo, igual que el 7 y el 9) para tener más puntos de comparación limpios con margen real conocido. Candidatos: casos 1 y 6 (comparten la misma base — Agenda 24x17, tapa dura, anillado — así que resolver uno probablemente valida el otro).
+
+### HALLAZGO (2026-07-21) — se construyó la calculadora visual, y con ella salió un caso nuevo que reveló 4 costos faltantes
+
+Conde probó un pedido nuevo (1000 Cuad-Tapa-Blanda, Media Carta 14x21) directamente en Litoplan y comparó línea por línea contra la calculadora. Con eso se confirmaron/resolvieron varios puntos pendientes:
+
+1. **Anillado/Grapa:** el número que teníamos ya estaba bien (`ESCOLAR_ENCUADERNACION_COP.grapa = $250`, coincide exacto). Litoplan solo reutiliza la etiqueta genérica "Anillado" en su UI aunque internamente esté aplicando la tarifa de Grapa — no es un bug del motor.
+2. **"Alce", "Revisión" y "Otros" = Fondo de Seguridad de Producción.** Confirmado por Conde: esos 3 renglones que aparecían sueltos en Litoplan (~$80-90/unidad cada uno) son en realidad el Fondo de Seguridad que se había sacado de la fórmula el 2026-07-15 (punto 4 del hallazgo anterior) creyendo que no aplicaba. **Se reincorporó** usando la tabla de tramos que ya existía en `datos_maestros.py` (9%/7%/5%/3% sobre el costo directo, con excepción de 2.5% para Agenda Ejecutiva en el tramo superior).
+3. **Empaque** (encontrado en el Dossier Maestro, sección 7 "Logística, Empaque y Fletes"): caja de $3.000, con capacidad según tamaño y si es Escolar o no — Media Carta (35 anillado/40 escolar), Agenda (30/33), Carta (20/26). Conde: "en Litoplan no es exacto, aquí lo puedes usar como está descrito en tus datos" — se implementó tal cual el Dossier, sin forzar que cuadre con el número puntual de Litoplan.
+4. **Transporte** (misma sección del Dossier, "Ruta 3 — Cuadernos y Agendas Pesadas"): % escalonado sobre el subtotal (4% de $500k-$3M, 3% de $3M-$5M, 2% sobre $5M), piso $45.000, con descuento de -0.5% en el primer tramo para Agenda Ejecutiva. Confirmado por Conde, coincidía casi exacto en el caso de prueba (3% × $3.034.070 = $91.022 calculado vs $90.000 real).
+5. **Sherpa** (muestra de color al cliente) — fórmula confirmada por Conde: piso **$20.000**, sube **$1.000 por cada página de inserto**, tope **$40.000** (no siempre se entregan todas las hojas de muestra en pedidos con muchos insertos, de ahí el tope).
+6. **Levante manual de insertos** ($10/hoja de inserto por cuaderno) — ya estaba definido en `datos_maestros.py` desde el Paso 1 pero nunca se había conectado al cálculo. Confirmado por Conde que sí aplica. Ya está conectado.
+7. **Limpieza de colbón** ($180/unidad, Cuaderno Anillado) — Conde confirma que "Limpieza" y "Revisión" son nombres genéricos intercambiables y que el dato que ya teníamos está bien, no se toca.
+
+**Efecto en los 10 casos de prueba:** la mayoría se movió en la dirección correcta (más cerca de lo real, porque antes nos faltaba cobrar estos costos). **Excepción importante: el caso 9** — el único con subtotal 100% confirmado desde cero — pasó de **+1.4% a +13.8%** de diferencia. Los 4 costos nuevos suman ~$351.000 en ese pedido que antes no se cobraban y que en el subtotal real reconstruido ($2.976.625) no parecían estar. **Pendiente:** revisar con Conde si el caso 9 realmente no llevaba estos cargos (¿pedido con condición especial?), o si el screenshot original que se usó para reconstruirlo no alcanzaba a mostrar todas las líneas de Litoplan (Alce/Revisión/Otros/Empaque/Transporte/Sherpa) y por eso no se habían capturado antes.
+
+**También se encontraron, buscando sistemáticamente constantes definidas pero nunca usadas en el motor, otros posibles vacíos sin confirmar todavía:**
+- `PLASTIFICADO_2CARAS_COP_M2` ($1.900/m²) — tenemos el dato pero la interfaz solo permite marcar "plastificado" genérico (1 cara). ¿Hace falta poder marcar 2 caras?
+- `DIGITAL_SEMICORTE_COP` ($1.500/pliego) — cargo de semicorte digital que nunca se cobra hoy en `costo_impresion_digital()`.
+- `OFFSET_RECARGO_PANTONE_COP` ($50.000) — no hay forma de marcar "tinta Pantone" en una línea de impresión.
+- `OFFSET_CTP_VIDA_UTIL_IMPRESIONES` / `OFFSET_CTP_REPETITIVO_PCT` (30% de descuento en plancha si es reimpresión de un trabajo repetido) — el motor no tiene el concepto de "reorden/repetición" todavía.
+- `ESPESOR_LOMO_MM_POR_HOJA` (0.13mm/hoja) — probablemente para una fórmula de anillado "por altura" (grosor del lomo) que se vio en la categoría "78 Acabado x altura" de Litoplan, pero no hay datos reales confirmados todavía para armarla.
+
+Implementado en `motor_cotizacion/datos_maestros.py`, `motor.py`, `cotizador.py`, `desglosar_caso.py` y portado también a `calculadora.html`. Commit `9f8b4f8`.
