@@ -493,3 +493,22 @@ Conde compartió una captura de la pantalla real de captura de datos de Litoplan
 5. Seguir cerrando casos 6, 7, 9 con el nuevo modelo una vez reestructurado.
 6. Cartón Prensado 1.5mm/2.0mm: confirmar si el precio vigente es $3.500/$4.500 (como está ahora) o $4.000/$5.000 (según la lista de marzo 2026).
 7. ~~Acabados de Carátula~~ — **RESUELTO (2026-07-15):** se agrega **Estampado** como 4ª casilla, y una 5ª opción **"Otros"** con costeo libre por unidad (para pedidos poco comunes sin nombre fijo). Acordeón de Acabados queda: Plastificado / UV Parcial / Troquelado / Estampado / Otros (costeo libre).
+8. ~~Reestructurar a líneas libres~~ — **RESUELTO (2026-07-15):** hecho. Nuevo módulo `linea_impresion.py` con el procesador genérico; `cotizar_cuaderno()` recibe `lineas_impresion` (lista libre) en vez de categorías fijas. De paso se cerraron 2 gaps reales: guardas e insertos ahora sí tienen costo de impresión calculado (antes solo cobraban material).
+
+### HALLAZGO MAYOR (2026-07-15) — la fórmula de precio de venta estaba mal para TODOS los casos
+
+Conde reconstruyó 2 casos reales **desde cero en Litoplan** (Agenda Ejecutiva = caso 7, y caso 9) con capturas de pantalla del desglose completo (Subtotal, %utilidad, %ventas, %agencia, Total). Esto reveló:
+
+1. **La fórmula real es multiplicativa en cascada:** `Precio = Subtotal × (1+%utilidad) × (1+%ventas) × (1+%agencia)` — verificado con precisión de <0.01% en ambos casos. La fórmula que se venía usando (`Costo / (1 - %utilidad - %comisión)`, ej. `/0.56`) es **incorrecta** — para el mismo subtotal da un resultado muy superior al real.
+2. **%utilidad y %ventas se ajustan A MANO en cada cotización** según cliente, cantidad y complejidad del producto — no hay un default fijo real. Conde no usa el campo "%agencia" (siempre 0).
+3. **El caso 7 original estaba mal transcrito**: el valor real es **$27.167/unidad** (Total $2.716.700 ÷ 100), no los $19.800 que se habían dado al inicio. El caso 9 sí estaba bien ($5.209 real vs $5.205 dado — coincide).
+4. **Ni "Fondo de Seguridad" ni "Preprensa" aparecen como líneas separadas** en ninguno de los 2 cálculos reales reconstruidos — se quitaron de la fórmula del Subtotal hasta confirmar si aplican en otro lado o si el concepto quedó descartado.
+5. **Correcciones puntuales confirmadas con los datos reales:** tamaño Agenda = **17x24.5cm** (no 17x24); costo de plancha medio pliego = **$22.000** (no $21.000, confirmado en ambos casos); insertos del caso 9 son **cote C2S 90gr a 4x4 tintas** (no Bond 90gr a 2 tintas como se había transcrito verbalmente).
+6. **Patrón a confirmar más adelante:** en ambos casos reales, la carátula/tapa se imprime en un tamaño de máquina fijo (**Octavo 25x35 / Konica-1/8**), no en el tamaño real del cuaderno — sugiere que la carátula siempre se monta en un tamaño de referencia estándar en vez de cubicarse dinámicamente como el resto. No implementado todavía, falta más evidencia.
+7. **Ítems sin identificar en los cálculos reales:** aparece una línea llamada **"Sherpa"** (2 × $20.000 en caso 7, 2 × $10.000 en caso 9) cuyo significado no se conoce — preguntarle a Conde qué es.
+
+**Impacto en la validación:** con la fórmula corregida y usando el margen real conocido (40% utilidad / 0% ventas), el **caso 9 da 1.3% de diferencia — prácticamente exacto**, confirmando que el motor de costeo (subtotal) está bien calibrado. Los demás 8 casos (1-6, 8, 10) muestran diferencias grandes (-8% a -32%) **no por errores del motor, sino porque no se sabe qué margen real se usó en esas cotizaciones históricas** (fueron transcritas verbalmente, no reconstruidas desde cero como el 7 y el 9). No son comparables de forma justa todavía.
+
+### Próximo paso recomendado
+
+Reconstruir 1-2 casos más **desde cero en Litoplan** (con captura de pantalla del desglose completo, igual que el 7 y el 9) para tener más puntos de comparación limpios con margen real conocido. Candidatos: casos 1 y 6 (comparten la misma base — Agenda 24x17, tapa dura, anillado — así que resolver uno probablemente valida el otro).
