@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de Cotización — Cuadernos (Tactical Marketing)</title>
+<style>
+  :root{
+    --azul:#1e3a5f; --azul-claro:#2c5282; --fondo:#f4f6f8; --tarjeta:#ffffff;
+    --borde:#d7dee5; --texto:#1a202c; --texto-suave:#5a6472; --verde:#1a7d3f;
+    --rojo:#b91c1c; --acento:#e8792c;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    background:var(--fondo); color:var(--texto); line-height:1.4;
+  }
+  header{
+    background:var(--azul); color:#fff; padding:18px 24px;
+  }
+  header h1{margin:0; font-size:20px;}
+  header p{margin:4px 0 0; font-size:13px; color:#cbd8e8;}
+  .layout{
+    display:flex; gap:20px; padding:20px; max-width:1400px; margin:0 auto;
+    align-items:flex-start; flex-wrap:wrap;
+  }
+  .col-form{flex:1 1 620px; min-width:340px;}
+  .col-resultado{flex:1 1 380px; min-width:320px; position:sticky; top:20px;}
+  .card{
+    background:var(--tarjeta); border:1px solid var(--borde); border-radius:8px;
+    padding:16px 18px; margin-bottom:16px;
+  }
+  .card h2{margin:0 0 12px; font-size:15px; color:var(--azul); border-bottom:1px solid var(--borde); padding-bottom:8px;}
+  .card h3{margin:0 0 10px; font-size:13.5px; color:var(--azul-claro);}
+  .fila{display:flex; flex-wrap:wrap; gap:12px; margin-bottom:10px;}
+  .campo{flex:1 1 140px; display:flex; flex-direction:column; gap:4px;}
+  .campo.chico{flex:0 1 100px;}
+  label{font-size:12px; color:var(--texto-suave); font-weight:600;}
+  input[type=number], input[type=text], select{
+    padding:7px 8px; border:1px solid var(--borde); border-radius:5px; font-size:13.5px;
+    background:#fff; color:var(--texto);
+  }
+  input[type=number]{width:100%;}
+  .checkbox-row{display:flex; align-items:center; gap:6px; font-size:13px; color:var(--texto);}
+  .checkbox-row input{margin:0;}
+  .acabados-grid{display:flex; flex-wrap:wrap; gap:10px 16px; margin-top:6px; padding-top:8px; border-top:1px dashed var(--borde);}
+  .linea-card{
+    border:1px solid var(--borde); border-radius:6px; padding:12px 14px; margin-bottom:12px; background:#fbfcfd;
+  }
+  .linea-card .titulo-linea{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
+  .linea-card .titulo-linea strong{color:var(--azul);}
+  button{
+    cursor:pointer; border:none; border-radius:6px; font-size:13.5px; padding:8px 14px; font-weight:600;
+  }
+  .btn-primario{background:var(--acento); color:#fff; width:100%; padding:12px; font-size:15px;}
+  .btn-primario:hover{background:#d4691f;}
+  .btn-secundario{background:#e9edf1; color:var(--azul); }
+  .btn-secundario:hover{background:#dbe2e8;}
+  .btn-quitar{background:transparent; color:var(--rojo); font-weight:600; padding:2px 8px; font-size:12px;}
+  select.caso-select{width:100%;}
+  .hint{font-size:11.5px; color:var(--texto-suave); margin-top:2px;}
+  .resultado-tabla{width:100%; border-collapse:collapse; font-size:13px;}
+  .resultado-tabla td{padding:5px 4px; border-bottom:1px solid #eef1f4;}
+  .resultado-tabla td.num{text-align:right; font-variant-numeric:tabular-nums;}
+  .resultado-tabla tr.sub td{font-weight:700; border-top:2px solid var(--borde);}
+  .resultado-tabla tr.total td{font-weight:700; color:var(--azul); font-size:15px; border-top:2px solid var(--azul);}
+  .resultado-tabla tr.detalle td{color:var(--texto-suave); font-size:12px; padding-left:14px;}
+  .badge-dif{display:inline-block; padding:3px 10px; border-radius:12px; font-weight:700; font-size:13px;}
+  .badge-pos{background:#fde8e8; color:var(--rojo);}
+  .badge-neg{background:#fde8e8; color:var(--rojo);}
+  .badge-ok{background:#e6f6ec; color:var(--verde);}
+  .placeholder{color:var(--texto-suave); font-size:13.5px; text-align:center; padding:30px 10px;}
+  .error-box{background:#fde8e8; color:var(--rojo); border:1px solid #f3b4b4; border-radius:6px; padding:10px 12px; font-size:13px; margin-bottom:12px;}
+  details summary{cursor:pointer; font-size:12.5px; color:var(--azul-claro); margin-top:8px;}
+  @media (max-width:900px){ .col-resultado{position:static;} }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Calculadora de Cotización — Línea Editorial / Cuadernos</h1>
+  <p>Herramienta interna de pruebas — Tactical Marketing Group SAS. Misma lógica que el motor Python, para probar casos sin depender de Claude.</p>
+</header>
+
+<div class="layout">
+  <div class="col-form">
+
+    <div class="card">
+      <h2>Casos de prueba conocidos</h2>
+      <div class="fila">
+        <div class="campo" style="flex:1 1 100%;">
+          <label for="selectCaso">Cargar un caso ya documentado (10 casos de Litoplan)</label>
+          <select id="selectCaso" class="caso-select" onchange="cargarCaso(this.value)">
+            <option value="">— Formulario en blanco —</option>
+          </select>
+          <div class="hint">Al cargar un caso se rellenan todos los campos, incluido el valor real de Litoplan para comparar.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>1. Datos del cuaderno</h2>
+      <div class="fila">
+        <div class="campo">
+          <label for="lineaProducto">Línea de producto</label>
+          <select id="lineaProducto" onchange="onLineaProductoChange()">
+            <option value="escolar">Escolar</option>
+            <option value="cuaderno_anillado">Cuaderno Anillado</option>
+            <option value="agenda_ejecutiva">Agenda Ejecutiva</option>
+            <option value="libretas">Libretas</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label for="cantidad">Cantidad (unidades)</label>
+          <input type="number" id="cantidad" value="100" min="1">
+        </div>
+      </div>
+      <div class="fila">
+        <div class="campo chico">
+          <label for="anchoCm">Ancho (cm)</label>
+          <input type="number" id="anchoCm" value="24" step="0.1">
+        </div>
+        <div class="campo chico">
+          <label for="altoCm">Alto (cm)</label>
+          <input type="number" id="altoCm" value="17" step="0.1">
+        </div>
+        <div class="campo">
+          <label for="presetTamano">Tamaño rápido</label>
+          <select id="presetTamano" onchange="aplicarPreset(this.value)">
+            <option value="">Personalizado…</option>
+            <option value="21,14">Media Carta 21x14</option>
+            <option value="17,24.5">Agenda 17x24.5</option>
+            <option value="28,21.5">Carta 28x21.5</option>
+          </select>
+        </div>
+      </div>
+      <div class="fila">
+        <div class="campo">
+          <label for="tapaTipo">Tipo de tapa</label>
+          <select id="tapaTipo" onchange="onTapaTipoChange()">
+            <option value="dura">Dura</option>
+            <option value="semidura">Semidura</option>
+            <option value="blanda">Blanda</option>
+          </select>
+        </div>
+        <div class="campo" id="cartonCalibreWrap">
+          <label for="cartonCalibre">Calibre cartón (tapa dura)</label>
+          <select id="cartonCalibre">
+            <option value="1.5">1.5mm</option>
+            <option value="2.0">2.0mm</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label for="encuadernacionTipo">Encuadernación</label>
+          <select id="encuadernacionTipo" onchange="onEncuadernacionChange()"></select>
+        </div>
+      </div>
+      <div class="fila">
+        <div class="campo chico">
+          <label for="tacoHojas">Hojas del taco</label>
+          <input type="number" id="tacoHojas" value="100" min="1" onchange="document.getElementById('tacoHojasLinea').value=this.value">
+        </div>
+        <div class="hint" style="align-self:center;">Se usa tanto para el armado/encuadernación como para la línea de impresión del taco.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>2. Carátula</h2>
+      <div id="lineaCaratula"></div>
+    </div>
+
+    <div class="card">
+      <h2>3. Taco</h2>
+      <div id="lineaTaco"></div>
+    </div>
+
+    <div class="card">
+      <h2>4. Insertos (opcional)</h2>
+      <div id="insertosContainer"></div>
+      <button class="btn-secundario" onclick="agregarInserto()">+ Agregar inserto</button>
+    </div>
+
+    <div class="card">
+      <h2>5. Guardas</h2>
+      <div class="fila">
+        <div class="campo chico">
+          <label for="guardasCantidad">Cantidad</label>
+          <input type="number" id="guardasCantidad" value="2" min="0">
+        </div>
+        <div class="campo">
+          <label for="guardasSustrato">Sustrato</label>
+          <select id="guardasSustrato"></select>
+        </div>
+        <div class="campo chico">
+          <label for="guardasTintasTiro">Tintas (tiro)</label>
+          <input type="number" id="guardasTintasTiro" value="0" min="0" max="4">
+        </div>
+        <div class="campo" style="justify-content:flex-end;">
+          <div class="checkbox-row"><input type="checkbox" id="guardasPlastificado"><label for="guardasPlastificado" style="font-weight:400;">Plastificado</label></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>6. Márgenes y comparación</h2>
+      <div class="fila">
+        <div class="campo">
+          <label for="utilidadPct">% Utilidad</label>
+          <input type="number" id="utilidadPct" value="40" step="1">
+        </div>
+        <div class="campo">
+          <label for="ventasPct">% Ventas</label>
+          <input type="number" id="ventasPct" value="0" step="1">
+        </div>
+        <div class="campo">
+          <label for="litoplanEsperado">Valor real Litoplan (COP, opcional)</label>
+          <input type="number" id="litoplanEsperado" placeholder="ej. 15232">
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-primario" onclick="calcular()">Calcular cotización</button>
+
+  </div>
+
+  <div class="col-resultado">
+    <div class="card" id="resultadoCard">
+      <h2>Resultado</h2>
+      <div class="placeholder" id="resultadoVacio">Completa el formulario y presiona "Calcular cotización".</div>
+      <div id="resultadoContenido" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   DATOS MAESTROS (portados 1:1 de motor_cotizacion/datos_maestros.py)
+   ============================================================ */
+const SUSTRATOS = {
+  "Bond__60": {p6090:177.30, p70100:229.50},
+  "Bond__70": {p6090:206.10, p70100:267.30},
+  "Bond__75": {p6090:221.40, p70100:287.10},
+  "Bond__90": {p6090:265.50, p70100:343.80},
+  "Bond__115": {p6090:null, p70100:459.00},
+  "Propalcote__80": {p6090:null, p70100:308.70},
+  "Propalcote__90": {p6090:267.30, p70100:348.30},
+  "Propalcote__115": {p6090:343.80, p70100:448.20},
+  "Propalcote__150": {p6090:472.50, p70100:612.90},
+  "Propalcote__200": {p6090:603.90, p70100:810.00},
+  "Propalcote__300": {p6090:910.80, p70100:1182.60},
+  "Propalcote__350": {p6090:null, p70100:1381.50},
+  "Cartulina C11__190": {p6090:null, p70100:684.00},
+  "Cartulina C12__205": {p6090:580.50, p70100:753.30},
+  "Cartulina C14__225": {p6090:637.20, p70100:826.20},
+  "Cartulina C16__255": {p6090:722.70, p70100:936.90},
+  "Cartulina C18__275": {p6090:779.40, p70100:1009.80},
+  "Cartulina C20__305": {p6090:864.00, p70100:1120.50},
+  "Cartulina C22__330": {p6090:null, p70100:1212.30},
+};
+const PLIEGOS_CM = {"60x90":[60,90], "70x100":[70,100]};
+
+const CARTON_1_5MM_COP = 3500;
+const CARTON_2_0MM_COP = 4500;
+
+const TAMANOS_CATALOGO_CM = {media_carta:[21,14], agenda:[17,24.5], carta:[28,21.5]};
+const FACTOR_MANIPULACION_TAMANO_CUSTOM = 1.30;
+
+const ARMADO_FORRADO_TAPA_DURA_COP = {media_carta:620, agenda:640, carta:750};
+const CARATULA_EMBONE_TAPA_DURA_CM = 1.5;
+const CARATULA_TAMANOS_MAQUINA_CM = [[21.5,28],[25,35],[33,50],[42,28],[50,70]];
+
+const COLAMINADO_COP_M2 = 900;
+const PLASTIFICADO_COP_M2 = 950;
+const PLASTIFICADO_PISO_COP = 30000;
+const UV_PARCIAL_COP_M2 = 1950;
+const UV_PARCIAL_PISO_COP = 80000;
+const TROQUEL_TAPA_COP_POR_MILLAR = 35000;
+const ESTAMPADO_COP_POR_GOLPE = 350;
+const ESTAMPADO_ARRANQUE_COP = 80000;
+const ESTAMPADO_MINIMO_COP = 80000;
+const TAPA_DURA_UMBRAL_TINTA_RETIRO_UNIDADES = 150;
+
+const RECARGO_TINTA_CUADRICULA_MILLAR_COP = 20000;
+
+const GUARDAS_CANTIDAD_DEFAULT = 2;
+const GUARDAS_PISO_OT_COP = 20000;
+
+const ANILLO_DOBLE_O = {
+  media_carta:{base_80h:900, variacion_hoja:5.0},
+  agenda:{base_80h:990, variacion_hoja:5.5},
+  carta:{base_80h:1700, variacion_hoja:10.0},
+};
+const REFILE_CUADERNO_ANILLADO_COP = 100;
+const LIMPIEZA_COLBON_CUADERNO_ANILLADO_COP = 180;
+
+const COSTURA_AGENDA_EJECUTIVA = {
+  media_carta:{base_80h:4100, variacion_hoja:10.0},
+  agenda:{base_80h:4400, variacion_hoja:15.0},
+  carta:{base_80h:5800, variacion_hoja:55.0},
+};
+
+const ESCOLAR_ENCUADERNACION_COP = {grapa:250, hilo:450, hilo_cinta:650};
+const GRAFADO_ESCOLAR_COP_POR_MILLAR = 35000;
+
+const HOTMELT_BASE_COP_UNIDAD = 430;
+const HOTMELT_CM_REFERENCIA = 21;
+const HOTMELT_PISO_OT_COP = 90000;
+const COLBON_COP_UNIDAD = 250;
+const COLBON_PISO_OT_COP = 30000;
+const GRAFADO_LIBRETAS_COP_FIJO = 35000;
+const ANILLADO_CORTO_FACTOR = 1.30;
+
+const DIGITAL_GRAMAJE_MAX = 240;
+const DIGITAL_PINZA_MM = 5;
+const DIGITAL_CLIC_COP = {
+  carta:{color:750, negro:350},
+  octavo:{color:900, negro:450},
+  pliego_max:{color:1000, negro:550},
+};
+const DIGITAL_MERMA_HOJAS = {policromia:20, negro:10, promedio:18};
+const DIGITAL_DESCUENTO_VOLUMEN = [[9,0.0],[50,0.10],[200,0.18],[400,0.26],[Infinity,0.30]];
+const DIGITAL_FORMATOS_CM = {carta:[21.5,28], octavo:[25,35], pliego_max:[33,50]};
+
+const OFFSET_CTP_COP = {medio_pliego:22000, cuarto:11000, octavo:9000};
+const OFFSET_MILLAR_COP = {medio_pliego_color:25000, medio_pliego_policromia_4x0:100000, cuarto:16000, octavo:12000};
+const OFFSET_RECARGO_FONDO_PLENO_COP = {medio_pliego:90000, cuarto:50000, octavo:50000};
+const OFFSET_MERMA_HOJAS = [[1000,100],[2000,130],[Infinity,160]];
+const OFFSET_MERMA_FACTOR_2_MAS_TINTAS = 1.30;
+const OFFSET_FORMATOS_CM = {octavo:[25,35], cuarto:[35,50], medio_pliego:[50,70]};
+
+const PINZA_ENTRADA_MM = 12;
+const PINZA_SALIDA_MM = 5;
+
+const LINEAS_CON_PLIEGUE = new Set(["escolar","agenda_ejecutiva"]);
+const ENCUADERNACIONES_LIBRETAS_CON_PLIEGUE = new Set(["hotmelt","colbon"]);
+
+const ESCUDO_BAJOS_MONTOS_UMBRAL = 150000;
+const DISENO_COSTO_NORMAL = 40000;
+const DISENO_COSTO_REDUCIDO = 20000;
+const IVA_PCT = 0.19;
+
+/* ============================================================
+   MOTOR (portado 1:1 de motor.py / linea_impresion.py / cotizador.py)
+   ============================================================ */
+function ordenar2(a,b){ return a<=b ? [a,b] : [b,a]; }
+
+function piezasPorPliego(pa,pal,pw,ph){
+  const sinRotar = Math.floor(pw/pa)*Math.floor(ph/pal);
+  const rotada = Math.floor(pw/pal)*Math.floor(ph/pa);
+  return Math.max(sinRotar,rotada,0);
+}
+
+function requierePliegue(lineaProducto,tipoEnc){
+  if(LINEAS_CON_PLIEGUE.has(lineaProducto)) return true;
+  if(lineaProducto==="libretas") return ENCUADERNACIONES_LIBRETAS_CON_PLIEGUE.has(tipoEnc);
+  return false;
+}
+
+function piezasPorMedioPliegoOffset(pa,pal,pliegue=false){
+  const margenCm = (PINZA_ENTRADA_MM+PINZA_SALIDA_MM)/10;
+  let bloqueAncho,bloqueAlto;
+  if(pliegue){
+    const [corto,largo]=ordenar2(pa,pal);
+    bloqueAncho=corto*2; bloqueAlto=largo;
+  } else {
+    bloqueAncho=pa; bloqueAlto=pal;
+  }
+  let opciones=[];
+  for(const key of Object.keys(PLIEGOS_CM)){
+    const [pw,ph]=PLIEGOS_CM[key];
+    const medioAlto = ph/2;
+    const n = piezasPorPliego(bloqueAncho,bloqueAlto,pw,medioAlto-margenCm);
+    if(n>0){
+      const desperdicio = 1-(n*bloqueAncho*bloqueAlto)/(pw*medioAlto);
+      opciones.push([desperdicio,n]);
+    }
+  }
+  if(opciones.length===0) return 1;
+  opciones.sort((x,y)=>x[0]-y[0]);
+  const nBloques=opciones[0][1];
+  return pliegue ? nBloques*2 : nBloques;
+}
+
+function tamanoMontajeCaratula(ancho,alto,tapaTipo){
+  let [corto,largo]=ordenar2(ancho,alto);
+  if(tapaTipo==="dura"){
+    corto += CARATULA_EMBONE_TAPA_DURA_CM*2;
+    largo += CARATULA_EMBONE_TAPA_DURA_CM*2;
+  }
+  return [corto*2,largo];
+}
+
+function redondearATamanoMaquinaCaratula(ancho,alto){
+  const [a,b]=ordenar2(ancho,alto);
+  let candidatos=[];
+  for(const [mw,mh] of CARATULA_TAMANOS_MAQUINA_CM){
+    const [ma,mb]=ordenar2(mw,mh);
+    if(a<=ma && b<=mb) candidatos.push([ma*mb,ma,mb]);
+  }
+  if(candidatos.length===0) return [ancho,alto];
+  candidatos.sort((x,y)=>x[0]-y[0]);
+  return [candidatos[0][1],candidatos[0][2]];
+}
+
+function mejorPliegoParaPieza(pa,pal,sustratoNombre,gramaje){
+  const key = sustratoNombre+"__"+gramaje;
+  const precios = SUSTRATOS[key];
+  if(!precios) throw new Error("Sustrato no encontrado: "+sustratoNombre+" "+gramaje+"g");
+  let mejores=[];
+  const precioMap = {"60x90":precios.p6090, "70x100":precios.p70100};
+  for(const formato of Object.keys(PLIEGOS_CM)){
+    const [pw,ph]=PLIEGOS_CM[formato];
+    const precioPliego = precioMap[formato];
+    if(precioPliego==null) continue;
+    const n = piezasPorPliego(pa,pal,pw,ph);
+    if(n===0) continue;
+    mejores.push([precioPliego/n, formato, n, precioPliego]);
+  }
+  if(mejores.length===0) throw new Error(`La pieza ${pa}x${pal}cm no cabe en ningún pliego disponible para ${sustratoNombre} ${gramaje}g`);
+  mejores.sort((x,y)=>x[0]-y[0]);
+  return {formato:mejores[0][1], piezasPorPliego:mejores[0][2], costoPorPieza:mejores[0][0]};
+}
+
+function areaCm2(a,b){ return a*b; }
+
+function tamanoCatalogoMasCercano(ancho,alto){
+  const areaPedida=areaCm2(ancho,alto);
+  let mejor=null, mejorDif=null;
+  for(const clave of Object.keys(TAMANOS_CATALOGO_CM)){
+    const [a,b]=TAMANOS_CATALOGO_CM[clave];
+    const dif=Math.abs(areaCm2(a,b)-areaPedida);
+    if(mejorDif===null||dif<mejorDif){ mejorDif=dif; mejor=clave; }
+  }
+  const areaCatMejor = areaCm2(...TAMANOS_CATALOGO_CM[mejor]);
+  const coincideExacto = mejorDif===0 || Math.abs(areaCatMejor-areaPedida) <= 1e-6*Math.max(Math.abs(areaCatMejor),Math.abs(areaPedida));
+  return [mejor,coincideExacto];
+}
+
+function factorEscaladoTamano(ancho,alto,catalogoClave){
+  const areaPedida=areaCm2(ancho,alto);
+  const areaCat=areaCm2(...TAMANOS_CATALOGO_CM[catalogoClave]);
+  return (areaPedida/areaCat)*FACTOR_MANIPULACION_TAMANO_CUSTOM;
+}
+
+function claseFormatoDigital(ancho,alto){
+  const [a,b]=ordenar2(ancho,alto);
+  if(a<=21.5 && b<=28) return "carta";
+  if(a<=25 && b<=35) return "octavo";
+  if(a<=33 && b<=50) return "pliego_max";
+  return null;
+}
+
+function elegibleDigital(ancho,alto,gramaje,cantidadUnidades=1){
+  if(gramaje>DIGITAL_GRAMAJE_MAX) return false;
+  if(cantidadUnidades>200) return false;
+  return claseFormatoDigital(ancho,alto)!==null;
+}
+
+function descuentoVolumenDigital(cantidadUnidades){
+  for(const [tope,pct] of DIGITAL_DESCUENTO_VOLUMEN){
+    if(cantidadUnidades<=tope) return pct;
+  }
+  return 0.0;
+}
+
+function costoImpresionDigital(nPaginas,caras,esColor,ancho,alto,cantidadUnidades=1){
+  const clase=claseFormatoDigital(ancho,alto);
+  if(clase===null) return null;
+  const [sheetW,sheetH]=DIGITAL_FORMATOS_CM[clase];
+  const margenCm=DIGITAL_PINZA_MM/10;
+  let piezasPorClic=piezasPorPliego(ancho,alto,sheetW,sheetH-margenCm);
+  if(piezasPorClic===0) piezasPorClic=1;
+  const nClics=Math.ceil(nPaginas/piezasPorClic)*caras;
+  const precioClic=DIGITAL_CLIC_COP[clase][esColor?"color":"negro"];
+  const descuento=descuentoVolumenDigital(cantidadUnidades);
+  const total=nClics*precioClic*(1-descuento);
+  return {total, via:"digital", nClics, precioClic, descuentoPct:descuento};
+}
+
+function fraccionPliegoOffset(ancho,alto,esPolicromia=false){
+  const [a,b]=ordenar2(ancho,alto);
+  if(a<=25 && b<=35 && !esPolicromia) return "octavo";
+  if(a<=35 && b<=50) return "cuarto";
+  return "medio_pliego";
+}
+
+function costoImpresionOffset(nPiezasFinales,cantTintas,esPolicromia,ancho,alto,cuadriculaUniforme=false,pliegue=false){
+  const fraccion=fraccionPliegoOffset(ancho,alto,esPolicromia);
+  const [sheetW,sheetH]=OFFSET_FORMATOS_CM[fraccion];
+  let piezasPorPasada=piezasPorPliego(ancho,alto,sheetW,sheetH);
+  if(piezasPorPasada===0) piezasPorPasada=1;
+  const nPasadas=Math.ceil(nPiezasFinales/piezasPorPasada);
+  const millares=Math.ceil(nPasadas/1000);
+
+  const nPlanchasNormal=Math.max(cantTintas,1);
+  const costoCtpNormal=OFFSET_CTP_COP[fraccion]*nPlanchasNormal;
+  let tarifaMillarNormal, costoMillarNormal;
+  if(fraccion==="medio_pliego" && esPolicromia){
+    tarifaMillarNormal=OFFSET_MILLAR_COP.medio_pliego_policromia_4x0;
+    costoMillarNormal=tarifaMillarNormal*millares;
+  } else if(fraccion==="medio_pliego"){
+    tarifaMillarNormal=OFFSET_MILLAR_COP.medio_pliego_color*nPlanchasNormal;
+    costoMillarNormal=tarifaMillarNormal*millares;
+  } else {
+    tarifaMillarNormal=OFFSET_MILLAR_COP[fraccion]*nPlanchasNormal;
+    costoMillarNormal=tarifaMillarNormal*millares;
+  }
+  const costoNormal=costoCtpNormal+costoMillarNormal;
+  const detalleNormal={
+    total:costoNormal, via:`offset (${fraccion})`,
+    nPlanchas:nPlanchasNormal, costoCtpUnitario:OFFSET_CTP_COP[fraccion],
+    costoPlanchas:costoCtpNormal, nMillares:millares,
+    costoMillarUnitario:tarifaMillarNormal, costoMillares:costoMillarNormal,
+  };
+  if(!cuadriculaUniforme) return detalleNormal;
+
+  const piezasMedioPliego=piezasPorMedioPliegoOffset(ancho,alto,pliegue);
+  const nPasadasMp=Math.ceil(nPiezasFinales/Math.max(piezasMedioPliego,1));
+  const millaresMp=Math.ceil(nPasadasMp/1000);
+  const costoCtpCuadricula=OFFSET_CTP_COP.medio_pliego;
+  const costoMillarCuadricula=RECARGO_TINTA_CUADRICULA_MILLAR_COP*millaresMp;
+  return {
+    total:costoCtpCuadricula+costoMillarCuadricula, via:"offset (medio pliego, cuadrícula)",
+    nPlanchas:1, costoCtpUnitario:OFFSET_CTP_COP.medio_pliego,
+    costoPlanchas:costoCtpCuadricula, nMillares:millaresMp,
+    costoMillarUnitario:RECARGO_TINTA_CUADRICULA_MILLAR_COP, costoMillares:costoMillarCuadricula,
+  };
+}
+
+function costoImpresionUnicoPorPagina(paginasUnicas,cantidad,ancho,alto,esColor,pliegue=false){
+  const piezasPorPlancha=piezasPorMedioPliegoOffset(ancho,alto,pliegue);
+  const nPlanchas=Math.ceil(paginasUnicas/Math.max(piezasPorPlancha,1));
+  const nImpresiones=nPlanchas*cantidad;
+  const millarRate=esColor?OFFSET_MILLAR_COP.medio_pliego_policromia_4x0:RECARGO_TINTA_CUADRICULA_MILLAR_COP;
+  const nMillares=Math.ceil(nImpresiones/1000);
+  const costoPlanchas=nPlanchas*OFFSET_CTP_COP.medio_pliego;
+  const costoMillares=nMillares*millarRate;
+  return {
+    total:costoPlanchas+costoMillares, via:`offset (${nPlanchas} planchas, único)`, nPlanchas,
+    costoCtpUnitario:OFFSET_CTP_COP.medio_pliego, costoPlanchas,
+    nMillares, costoMillarUnitario:millarRate, costoMillares,
+  };
+}
+
+function mermaOffsetHojas(nHojasFisicas,cantTintas){
+  let base=OFFSET_MERMA_HOJAS[OFFSET_MERMA_HOJAS.length-1][1];
+  for(const [tope,merma] of OFFSET_MERMA_HOJAS){
+    if(nHojasFisicas<=tope){ base=merma; break; }
+  }
+  if(cantTintas>=2) base*=OFFSET_MERMA_FACTOR_2_MAS_TINTAS;
+  return base;
+}
+
+function mermaDigitalHojas(esPolicromia){
+  return DIGITAL_MERMA_HOJAS[esPolicromia?"policromia":"negro"];
+}
+
+function disenoYPreprensa(montoOt){
+  if(montoOt<ESCUDO_BAJOS_MONTOS_UMBRAL) return [DISENO_COSTO_REDUCIDO,0];
+  return [DISENO_COSTO_NORMAL,25000];
+}
+
+function precioVentaDesdeSubtotal(subtotal,utilidadPct=0.40,ventasPct=0.0,agenciaPct=0.0){
+  return subtotal*(1+utilidadPct)*(1+ventasPct)*(1+agenciaPct);
+}
+
+function procesarLineaImpresion(linea, anchoCuaderno, altoCuaderno, cantidadCuadernos){
+  const nombre=linea.nombre||"Línea";
+  const hojas=linea.hojasPorCuaderno;
+  const ancho=linea.anchoCm||anchoCuaderno;
+  const alto=linea.altoCm||altoCuaderno;
+  const sustrato=linea.sustrato;
+  const tintasTiro=linea.tintasTiro||0;
+  const tintasRetiro=linea.tintasRetiro||0;
+  const diseno=linea.diseno||"uniforme";
+  const pliegue=linea.pliegue||false;
+  const acabados=linea.acabados||[];
+
+  const resultado={nombre};
+
+  const rMat=mejorPliegoParaPieza(ancho,alto,sustrato.nombre,sustrato.gramaje);
+  const costoMaterial=rMat.costoPorPieza*hojas*cantidadCuadernos;
+  resultado.costoMaterial=costoMaterial;
+
+  const fondoPleno=acabados.some(a=>a.tipo==="fondo_pleno");
+
+  if(tintasTiro===0 && tintasRetiro===0){
+    resultado.costoImpresion=0;
+    resultado.detalleImpresion=null;
+  } else {
+    const caras=tintasRetiro>0?2:1;
+    const esColor=tintasTiro>=2||tintasRetiro>=2;
+    const cantTintas=Math.max(tintasTiro,tintasRetiro,1);
+    const nPiezasFisicas=hojas*cantidadCuadernos;
+    let det;
+    if(fondoPleno){
+      const fraccion=fraccionPliegoOffset(ancho,alto,esColor);
+      const mermaO=mermaOffsetHojas(nPiezasFisicas,cantTintas);
+      det=costoImpresionOffset(nPiezasFisicas+mermaO,cantTintas,esColor,ancho,alto);
+      const recargo=OFFSET_RECARGO_FONDO_PLENO_COP[fraccion];
+      const planchaExtra=OFFSET_CTP_COP[fraccion];
+      det.total+=recargo+planchaExtra;
+      det.nPlanchas+=1;
+      det.costoPlanchas+=planchaExtra;
+      det.recargoFondoPleno=recargo;
+      det.via=`offset (fondo pleno ${fraccion})`;
+    } else if(diseno==="unico_por_pagina"){
+      const paginasUnicas=hojas*caras;
+      det=costoImpresionUnicoPorPagina(paginasUnicas,cantidadCuadernos,ancho,alto,esColor,pliegue);
+    } else {
+      const esCuadriculaUniforme=(diseno==="uniforme") && !esColor;
+      const elegibleDig=elegibleDigital(ancho,alto,sustrato.gramaje,cantidadCuadernos) && !pliegue;
+      if(elegibleDig && !esCuadriculaUniforme){
+        const mermaD=mermaDigitalHojas(esColor);
+        const detDigital=costoImpresionDigital(nPiezasFisicas+mermaD,caras,esColor,ancho,alto,cantidadCuadernos);
+        const mermaO=mermaOffsetHojas(nPiezasFisicas,cantTintas);
+        const detOffset=costoImpresionOffset(nPiezasFisicas+mermaO,cantTintas,esColor,ancho,alto,false,pliegue);
+        det=(detDigital!==null && detDigital.total<detOffset.total)?detDigital:detOffset;
+      } else {
+        const mermaO=mermaOffsetHojas(nPiezasFisicas,cantTintas);
+        det=costoImpresionOffset(nPiezasFisicas+mermaO,cantTintas,esColor,ancho,alto,esCuadriculaUniforme,pliegue);
+      }
+    }
+    resultado.costoImpresion=det.total;
+    resultado.detalleImpresion=det;
+  }
+
+  let costoAcabados=0;
+  const areaTotalM2=(areaCm2(ancho,alto)*hojas*cantidadCuadernos)/10000;
+  const piezasTotales=hojas*cantidadCuadernos;
+  const tieneUv=acabados.some(a=>a.tipo==="uv_parcial");
+
+  for(const acab of acabados){
+    const tipo=acab.tipo;
+    if(tipo==="plastificado"){
+      if(tieneUv) continue;
+      costoAcabados+=Math.max(areaTotalM2*PLASTIFICADO_COP_M2,PLASTIFICADO_PISO_COP);
+    } else if(tipo==="uv_parcial"){
+      costoAcabados+=Math.max(areaTotalM2*UV_PARCIAL_COP_M2,UV_PARCIAL_PISO_COP);
+    } else if(tipo==="troquelado"){
+      costoAcabados+=Math.ceil(piezasTotales/1000)*TROQUEL_TAPA_COP_POR_MILLAR;
+    } else if(tipo==="estampado"){
+      costoAcabados+=Math.max(piezasTotales*ESTAMPADO_COP_POR_GOLPE+ESTAMPADO_ARRANQUE_COP,ESTAMPADO_MINIMO_COP);
+    } else if(tipo==="colaminado"){
+      costoAcabados+=areaTotalM2*COLAMINADO_COP_M2;
+    } else if(tipo==="otro"){
+      costoAcabados+=(acab.costoManual||0)*cantidadCuadernos;
+    }
+  }
+
+  resultado.costoAcabados=costoAcabados;
+  resultado.costoTotal=costoMaterial+resultado.costoImpresion+costoAcabados;
+  return resultado;
+}
+
+function cotizarCuaderno(p){
+  const lineasImpresion = p.lineasImpresion.map(l=>({...l, acabados:(l.acabados||[]).map(a=>({...a}))}));
+
+  const [catClave,coincideExacto]=tamanoCatalogoMasCercano(p.anchoCm,p.altoCm);
+  const factorEscala = coincideExacto?1.0:factorEscaladoTamano(p.anchoCm,p.altoCm,catClave);
+
+  if(p.tapaTipo==="dura" && p.cantidad>=TAPA_DURA_UMBRAL_TINTA_RETIRO_UNIDADES){
+    for(const l of lineasImpresion){
+      if(l.rol==="caratula" && (l.tintasRetiro||0)===0) l.tintasRetiro=1;
+    }
+  }
+
+  const [montajeAncho,montajeAlto]=tamanoMontajeCaratula(p.anchoCm,p.altoCm,p.tapaTipo);
+  const tamanoMaquinaCaratula=redondearATamanoMaquinaCaratula(montajeAncho,montajeAlto);
+  for(const l of lineasImpresion){
+    if(l.rol==="caratula"){
+      l.anchoCm=tamanoMaquinaCaratula[0]; l.altoCm=tamanoMaquinaCaratula[1];
+      l.hojasPorCuaderno=1;
+    }
+  }
+
+  const desglose={};
+  const detalleLineas={};
+  for(const l of lineasImpresion){
+    const r=procesarLineaImpresion(l,p.anchoCm,p.altoCm,p.cantidad);
+    const clave=l.nombre||l.rol||"linea";
+    desglose["linea_"+clave]=r.costoTotal;
+    detalleLineas[clave]=r;
+  }
+
+  const lineaCaratula=lineasImpresion.find(l=>l.rol==="caratula")||null;
+
+  let costoTapaArmado=0, costoTapaCarton=0;
+  if(p.tapaTipo==="dura"){
+    costoTapaArmado=ARMADO_FORRADO_TAPA_DURA_COP[catClave]*factorEscala*p.cantidad;
+    const cartonPrecio=p.cartonCalibreMm===1.5?CARTON_1_5MM_COP:CARTON_2_0MM_COP;
+    const nPorPliegoCarton=piezasPorPliego(tamanoMaquinaCaratula[0],tamanoMaquinaCaratula[1],70,100);
+    costoTapaCarton=(cartonPrecio/Math.max(nPorPliegoCarton,1))*p.cantidad;
+  }
+  desglose["tapa_armado_forrado"]=costoTapaArmado;
+  desglose["tapa_carton"]=costoTapaCarton;
+
+  let costoTapaSemiduraExtra=0;
+  if(p.tapaTipo==="semidura" && lineaCaratula!==null){
+    const rCapa2=mejorPliegoParaPieza(tamanoMaquinaCaratula[0],tamanoMaquinaCaratula[1],lineaCaratula.sustrato.nombre,lineaCaratula.sustrato.gramaje);
+    costoTapaSemiduraExtra=rCapa2.costoPorPieza*p.cantidad;
+    const areaColaminadoM2=(areaCm2(tamanoMaquinaCaratula[0],tamanoMaquinaCaratula[1])*p.cantidad)/10000;
+    costoTapaSemiduraExtra+=areaColaminadoM2*COLAMINADO_COP_M2;
+  }
+  desglose["tapa_semidura_segunda_capa"]=costoTapaSemiduraExtra;
+
+  const guardasSustrato=p.guardasSustrato||{nombre:"Propalcote",gramaje:150};
+  const lineaGuardas={
+    nombre:"Guardas", hojasPorCuaderno: p.guardasCantidad!=null?p.guardasCantidad:GUARDAS_CANTIDAD_DEFAULT,
+    sustrato:guardasSustrato, tintasTiro:p.guardasTintasTiro||0, tintasRetiro:0,
+    diseno:"unico_por_pagina",
+    acabados:p.guardasPlastificado?[{tipo:"plastificado"}]:[],
+  };
+  const rGuardas=procesarLineaImpresion(lineaGuardas,p.anchoCm,p.altoCm,p.cantidad);
+  const costoGuardasTotal=Math.max(rGuardas.costoTotal,GUARDAS_PISO_OT_COP);
+  desglose["guardas"]=costoGuardasTotal;
+  detalleLineas["Guardas"]=rGuardas;
+
+  let costoArmado=0;
+  const tipoEnc=p.encuadernacionTipo;
+
+  if(p.lineaProducto==="escolar"){
+    costoArmado=ESCOLAR_ENCUADERNACION_COP[tipoEnc]*p.cantidad*factorEscala;
+    costoArmado+=(p.cantidad/1000)*GRAFADO_ESCOLAR_COP_POR_MILLAR;
+  } else if(p.lineaProducto==="cuaderno_anillado"){
+    const tabla=ANILLO_DOBLE_O[catClave];
+    let costoUnit=(tabla.base_80h+(p.tacoHojas-80)*tabla.variacion_hoja)*factorEscala;
+    costoArmado=costoUnit*p.cantidad;
+    costoArmado+=REFILE_CUADERNO_ANILLADO_COP*p.cantidad;
+    costoArmado+=LIMPIEZA_COLBON_CUADERNO_ANILLADO_COP*p.cantidad;
+  } else if(p.lineaProducto==="agenda_ejecutiva"){
+    const tabla=COSTURA_AGENDA_EJECUTIVA[catClave];
+    let costoUnit=(tabla.base_80h+(p.tacoHojas-80)*tabla.variacion_hoja)*factorEscala;
+    costoArmado=costoUnit*p.cantidad;
+  } else if(p.lineaProducto==="libretas"){
+    if(tipoEnc==="anillo_doble_o"){
+      const tabla=ANILLO_DOBLE_O[catClave];
+      const baseCorta=tabla.base_80h+(p.tacoHojas-80)*tabla.variacion_hoja;
+      const [ladoCorto,ladoLargo]=ordenar2(p.anchoCm,p.altoCm);
+      const costoUnit=((baseCorta*ladoCorto)/ladoLargo)*ANILLADO_CORTO_FACTOR;
+      costoArmado=costoUnit*p.cantidad;
+    } else if(tipoEnc==="hotmelt"){
+      const ladoPegue=Math.min(p.anchoCm,p.altoCm);
+      const costoUnit=HOTMELT_BASE_COP_UNIDAD*(ladoPegue/HOTMELT_CM_REFERENCIA);
+      costoArmado=Math.max(costoUnit*p.cantidad,HOTMELT_PISO_OT_COP);
+      costoArmado+=GRAFADO_LIBRETAS_COP_FIJO;
+    } else if(tipoEnc==="colbon"){
+      costoArmado=Math.max(COLBON_COP_UNIDAD*p.cantidad,COLBON_PISO_OT_COP);
+      costoArmado+=GRAFADO_LIBRETAS_COP_FIJO;
+    }
+    costoArmado+=REFILE_CUADERNO_ANILLADO_COP*p.cantidad;
+  }
+  desglose["armado_encuadernacion"]=costoArmado;
+
+  const costoDirecto=Object.values(desglose).reduce((a,b)=>a+b,0);
+  const [disenoCop] = disenoYPreprensa(costoDirecto);
+  const subtotal=costoDirecto+disenoCop;
+
+  const precioVenta=precioVentaDesdeSubtotal(subtotal,p.utilidadPct,p.ventasPct);
+  const iva=precioVenta*IVA_PCT;
+  const precioFinal=precioVenta+iva;
+  const precioVentaUnitario=precioVenta/p.cantidad;
+
+  const resultado={
+    desgloseDirecto:desglose, detalleLineas, costoDirectoTotal:costoDirecto,
+    costoDirectoUnitario:costoDirecto/p.cantidad, disenoCop, subtotal,
+    utilidadPct:p.utilidadPct, ventasPct:p.ventasPct,
+    precioVentaTotal:precioVenta, precioVentaUnitario, ivaTotal:iva, precioFinalTotal:precioFinal,
+    catClave, tamanoMaquinaCaratula,
+  };
+
+  if(p.litoplanEsperado!=null && p.litoplanEsperado!==""){
+    const diferencia=precioVentaUnitario-p.litoplanEsperado;
+    resultado.litoplanEsperado=p.litoplanEsperado;
+    resultado.diferenciaCop=diferencia;
+    resultado.diferenciaPct=(diferencia/p.litoplanEsperado)*100;
+  }
+  return resultado;
+}
+
+/* ============================================================
+   CASOS DE PRUEBA (portados de motor_cotizacion/casos_prueba.py)
+   ============================================================ */
+const PROPALCOTE_150 = {nombre:"Propalcote", gramaje:150};
+const CASOS_PRUEBA = [
+  {nombreCaso:"1. 100 cuadernos Agenda anillado tapa dura", lineaProducto:"cuaderno_anillado", anchoCm:24, altoCm:17, cantidad:100, tapaTipo:"dura", encuadernacionTipo:"anillo_doble_o", tacoHojas:100,
+    caratula:{sustrato:PROPALCOTE_150, tintasTiro:4, tintasRetiro:0, diseno:"uniforme", acabados:["plastificado"]},
+    taco:{hojasPorCuaderno:100, sustrato:{nombre:"Bond",gramaje:70}, tintasTiro:1, tintasRetiro:1, diseno:"uniforme", pliegue:false},
+    insertos:[{nombre:"Insertos", hojasPorCuaderno:3, sustrato:PROPALCOTE_150, tintasTiro:4, tintasRetiro:4, diseno:"unico_por_pagina", pliegue:false, acabados:[]}],
+    guardasTintasTiro:0, guardasPlastificado:false, litoplanEsperado:15232},
+  {nombreCaso:"2. 700 cuadernos Media Carta anillado tapa dura", lineaProducto:"cuaderno_anillado", anchoCm:21, altoCm:14, cantidad:700, tapaTipo:"dura", encuadernacionTipo:"anillo_doble_o", tacoHojas:100,
+    caratula:{sustrato:PROPALCOTE_150, tintasTiro:4, tintasRetiro:0, diseno:"uniforme", acabados:["uv_parcial"]},
+    taco:{hojasPorCuaderno:100, sustrato:{nombre:"Bond",gramaje:70}, tintasTiro:1, tintasRetiro:1, diseno:"uniforme", pliegue:false},
+    insertos:[], guardasTintasTiro:0, guardasPlastificado:false, litoplanEsperado:7395},
+  {nombreCaso:"3. 80 cuadernos Media Carta anillado tapa dura", lineaProducto:"cuaderno_anillado", anchoCm:14, altoCm:21, cantidad:80, tapaTipo:"dura", encuadernacionTipo:"anillo_doble_o", tacoHojas:80,
+    caratula:{sustrato:PROPALCOTE_150, tintasTiro:4, tintasRetiro:0, diseno:"uniforme", acabados:["plastificado"]},
+    taco:{hojasPorCuaderno:80, sustrato:{nombre:"Bond",gramaje:70}, tintasTiro:1, tintasRetiro:1, diseno:"uniforme", pliegue:false},
+    insertos:[], guardasTintasTiro:0, guardasPlastificado:false, litoplanEsperado:11600},
+  {nombreCaso:"4. 100 cuadernos Carta escolar tapa blanda", lineaProducto:"escolar", anchoCm:28, altoCm:21.5, cantidad:100, tapaTipo:"blanda", encuadernacionTipo:"hilo", tacoHojas:30,
+    caratula:{sustrato:{nombre:"Propalcote",gramaje:300}, tintasTiro:4, tintasRetiro:0, diseno:"uniforme", acabados:["plastificado"]},
+    taco:{hojasPorCuaderno:30, sustrato:{nombre:"Bond",gramaje:70}, tintasTiro:1, tintasRetiro:1, diseno:"uniforme", pliegue:true},
+    insertos:[], guardasTintasTiro:0, guardasPlastificado:false, litoplanEsperado:7980},
+  {nombreCaso:"5. 1300 cuadernos Agenda escolar tapa blanda", lineaProducto:"escolar", anchoCm:24, altoCm:17, cantidad:1300, tapaTipo:"blanda", encuadernacionTipo:"hilo", tacoHojas:50,
+    caratula:{sustrato:{nombre:"Propalcote",gramaje:300}, tintasTiro:4, tintasRetiro:0, diseno:"uniforme", acabados:["plastificado"]},
+    taco:{hojasPorCuaderno:50, sustrato:{nombre:"Bond",gramaje:70}, tintasTiro:1, tintasRetiro:1, diseno:"uniforme", pliegue:true},
+    insertos:[], guardasTintasTiro:0, guardasPlastificado:false, litoplanEsperado:3065},
+  {nombreCaso:"6. 200 cuadernos Agenda anillado diseño único", lineaProducto:"cuaderno_anillado", anchoCm:24, altoCm:17, cantidad:200, tapaTipo:"dura", encuadernacionTipo:"anillo_doble_o", tacoHojas:100,
+    caratula:{sustrato:PROPALCOTE_150, tintasTiro:4, tintasRetiro:0, diseno:"uniforme", acabados:["plastificado"]},
+    taco:{hojasPorCuaderno:100, sustrato:{nombre:"Bond",gramaje:70}, tintasTiro:1, tintasRetiro:1, diseno:"unico_por_pagina", pliegue:false},
+    insertos:[], guardasTintasTiro:0, guardasPlastificado:false, litoplanEsperado:17760},
+  {nombreCaso:"7. 100 Agenda Ejecutiva Media Carta", lineaProducto:"agenda_ejecutiva", anchoCm:21, altoCm:14, cantidad:100, tapaTipo:"dura", encuadernacionTipo:"costura", tacoHojas:80,
+    caratula:{sustrato:PROPALCOTE_150, tintasTiro:4, tintasRetiro:1, diseno:"uniforme", acabados:["plastificado"]},
+    taco:{hojasPorCuaderno:80, sustrato:{nombre:"Bond",gramaje:70}, tintasTiro:1, tintasRetiro:1, diseno:"unico_por_pagina", pliegue:true},
+    insertos:[], guardasTintasTiro:0, guardasPlastificado:false, litoplanEsperado:27167},
+  {nombreCaso:"8. 1000 libretas Media Carta semidura hotmelt", lineaProducto:"libretas", anchoCm:21, altoCm:14, cantidad:1000, tapaTipo:"semidura", encuadernacionTipo:"hotmelt", tacoHojas:80,
+    caratula:{sustrato:{nombre:"Cartulina C16",gramaje:255}, tintasTiro:4, tintasRetiro:0, diseno:"uniforme", acabados:["plastificado"]},
+    taco:{hojasPorCuaderno:80, sustrato:{nombre:"Bond",gramaje:70}, tintasTiro:1, tintasRetiro:1, diseno:"uniforme", pliegue:true},
+    insertos:[], guardasTintasTiro:4, guardasPlastificado:true, litoplanEsperado:4240},
+  {nombreCaso:"9. 800 cuadernos Agenda anillado tapa blanda C18", lineaProducto:"cuaderno_anillado", anchoCm:24, altoCm:17, cantidad:800, tapaTipo:"blanda", encuadernacionTipo:"anillo_doble_o", tacoHojas:70,
+    caratula:{sustrato:{nombre:"Cartulina C18",gramaje:275}, tintasTiro:4, tintasRetiro:0, diseno:"uniforme", acabados:["plastificado"]},
+    taco:{hojasPorCuaderno:70, sustrato:{nombre:"Bond",gramaje:75}, tintasTiro:1, tintasRetiro:1, diseno:"uniforme", pliegue:false},
+    insertos:[{nombre:"Insertos", hojasPorCuaderno:2, sustrato:{nombre:"Propalcote",gramaje:90}, tintasTiro:4, tintasRetiro:4, diseno:"unico_por_pagina", pliegue:false, acabados:[]}],
+    guardasTintasTiro:4, guardasPlastificado:false, litoplanEsperado:5209},
+  {nombreCaso:"10. 500 libretas Micro 14x11 tapa blanda C12 colbón", lineaProducto:"libretas", anchoCm:14, altoCm:11, cantidad:500, tapaTipo:"blanda", encuadernacionTipo:"colbon", tacoHojas:50,
+    caratula:{sustrato:{nombre:"Cartulina C12",gramaje:205}, tintasTiro:1, tintasRetiro:0, diseno:"uniforme", acabados:["fondo_pleno","plastificado"]},
+    taco:{hojasPorCuaderno:50, sustrato:{nombre:"Bond",gramaje:70}, tintasTiro:1, tintasRetiro:0, diseno:"uniforme", pliegue:true},
+    insertos:[], guardasTintasTiro:0, guardasPlastificado:false, litoplanEsperado:2230},
+];
+
+/* ============================================================
+   INTERFAZ: construcción del formulario
+   ============================================================ */
+const ACABADOS_DISPONIBLES = [
+  {tipo:"plastificado", label:"Plastificado"},
+  {tipo:"uv_parcial", label:"UV Parcial"},
+  {tipo:"troquelado", label:"Troquelado"},
+  {tipo:"estampado", label:"Estampado"},
+  {tipo:"colaminado", label:"Colaminado"},
+  {tipo:"fondo_pleno", label:"Fondo Pleno / Plastón"},
+];
+
+const ENCUADERNACIONES_POR_LINEA = {
+  escolar: [["grapa","Grapa"],["hilo","Hilo"],["hilo_cinta","Hilo con cinta"]],
+  cuaderno_anillado: [["anillo_doble_o","Anillo Doble O"]],
+  agenda_ejecutiva: [["costura","Costura"]],
+  libretas: [["anillo_doble_o","Anillo Doble O"],["hotmelt","Hotmelt"],["colbon","Colbón"]],
+};
+
+function sustratoOptionsHtml(){
+  let html = "";
+  for(const key of Object.keys(SUSTRATOS)){
+    const [nombre,gramaje] = key.split("__");
+    html += `<option value="${key}">${nombre} ${gramaje}g</option>`;
+  }
+  return html;
+}
+
+function acabadosGridHtml(prefix){
+  let html = `<div class="acabados-grid">`;
+  for(const a of ACABADOS_DISPONIBLES){
+    html += `<div class="checkbox-row"><input type="checkbox" id="${prefix}_acab_${a.tipo}"><label for="${prefix}_acab_${a.tipo}" style="font-weight:400;">${a.label}</label></div>`;
+  }
+  html += `<div class="checkbox-row"><input type="checkbox" id="${prefix}_acab_otro" onchange="document.getElementById('${prefix}_otroCostoWrap').style.display=this.checked?'flex':'none'"><label for="${prefix}_acab_otro" style="font-weight:400;">Otro:</label>
+    <div id="${prefix}_otroCostoWrap" style="display:none; align-items:center; gap:4px;"><input type="number" id="${prefix}_otroCosto" placeholder="COP/und" style="width:90px;"></div></div>`;
+  html += `</div>`;
+  return html;
+}
+
+function lineaCardHtml(prefix, opciones){
+  opciones = opciones || {};
+  const mostrarPliegue = opciones.mostrarPliegue !== false;
+  const mostrarNombre = !!opciones.mostrarNombre;
+  const mostrarHojas = opciones.mostrarHojas !== false;
+  const mostrarQuitar = !!opciones.mostrarQuitar;
+  let html = `<div class="linea-card" id="${prefix}_card">`;
+  html += `<div class="titulo-linea"><strong>${opciones.titulo||prefix}</strong>`;
+  if(mostrarQuitar) html += `<button class="btn-quitar" onclick="quitarInserto('${prefix}')">Quitar</button>`;
+  html += `</div>`;
+  html += `<div class="fila">`;
+  if(mostrarNombre){
+    html += `<div class="campo"><label>Nombre</label><input type="text" id="${prefix}_nombre" value="${opciones.nombreDefault||'Insertos'}"></div>`;
+  }
+  if(mostrarHojas){
+    html += `<div class="campo chico"><label>Hojas por cuaderno</label><input type="number" id="${prefix}_hojas" value="${opciones.hojasDefault||1}" min="1"></div>`;
+  }
+  html += `<div class="campo"><label>Sustrato</label><select id="${prefix}_sustrato">${sustratoOptionsHtml()}</select></div>`;
+  html += `</div><div class="fila">`;
+  html += `<div class="campo chico"><label>Tintas tiro</label><input type="number" id="${prefix}_tintasTiro" value="${opciones.tintasTiroDefault!=null?opciones.tintasTiroDefault:4}" min="0" max="4"></div>`;
+  html += `<div class="campo chico"><label>Tintas retiro</label><input type="number" id="${prefix}_tintasRetiro" value="${opciones.tintasRetiroDefault!=null?opciones.tintasRetiroDefault:0}" min="0" max="4"></div>`;
+  html += `<div class="campo"><label>Diseño</label><select id="${prefix}_diseno"><option value="uniforme">Uniforme (repetido)</option><option value="unico_por_pagina">Único por página</option></select></div>`;
+  if(mostrarPliegue){
+    html += `<div class="campo" style="justify-content:flex-end;"><div class="checkbox-row"><input type="checkbox" id="${prefix}_pliegue"><label for="${prefix}_pliegue" style="font-weight:400;">Pliegue (se dobla al centro)</label></div></div>`;
+  }
+  html += `</div>`;
+  html += acabadosGridHtml(prefix);
+  html += `</div>`;
+  return html;
+}
+
+let insertoContador = 0;
+
+function agregarInserto(datos){
+  insertoContador++;
+  const id = "inserto_"+insertoContador;
+  const div = document.createElement("div");
+  div.innerHTML = lineaCardHtml(id, {
+    titulo:"Inserto", mostrarNombre:true, nombreDefault: (datos&&datos.nombre)||"Insertos",
+    mostrarHojas:true, hojasDefault:(datos&&datos.hojasPorCuaderno)||3,
+    tintasTiroDefault:(datos&&datos.tintasTiro)!=null?datos.tintasTiro:4,
+    tintasRetiroDefault:(datos&&datos.tintasRetiro)!=null?datos.tintasRetiro:4,
+    mostrarQuitar:true,
+  });
+  document.getElementById("insertosContainer").appendChild(div.firstElementChild);
+  if(datos){
+    if(datos.sustrato) document.getElementById(id+"_sustrato").value = datos.sustrato.nombre+"__"+datos.sustrato.gramaje;
+    if(datos.diseno) document.getElementById(id+"_diseno").value = datos.diseno;
+    if(datos.pliegue) document.getElementById(id+"_pliegue").checked = true;
+    if(datos.acabados) datos.acabados.forEach(t=>{ const el=document.getElementById(id+"_acab_"+t); if(el) el.checked=true; });
+  }
+  return id;
+}
+
+function quitarInserto(prefix){
+  const el = document.getElementById(prefix+"_card");
+  if(el) el.remove();
+}
+
+function leerLineaDesdeForm(prefix, opciones){
+  opciones = opciones || {};
+  const sustratoVal = document.getElementById(prefix+"_sustrato").value;
+  const [sNombre, sGramaje] = sustratoVal.split("__");
+  const acabados = [];
+  for(const a of ACABADOS_DISPONIBLES){
+    if(document.getElementById(prefix+"_acab_"+a.tipo).checked) acabados.push({tipo:a.tipo});
+  }
+  if(document.getElementById(prefix+"_acab_otro").checked){
+    const costo = parseFloat(document.getElementById(prefix+"_otroCosto").value)||0;
+    acabados.push({tipo:"otro", costoManual:costo});
+  }
+  return {
+    nombre: opciones.nombre || (document.getElementById(prefix+"_nombre") ? document.getElementById(prefix+"_nombre").value : opciones.nombreFijo),
+    rol: opciones.rol,
+    hojasPorCuaderno: opciones.hojasFijo!=null ? opciones.hojasFijo : parseFloat(document.getElementById(prefix+"_hojas").value),
+    sustrato: {nombre:sNombre, gramaje:parseFloat(sGramaje)},
+    tintasTiro: parseInt(document.getElementById(prefix+"_tintasTiro").value)||0,
+    tintasRetiro: parseInt(document.getElementById(prefix+"_tintasRetiro").value)||0,
+    diseno: document.getElementById(prefix+"_diseno").value,
+    pliegue: document.getElementById(prefix+"_pliegue") ? document.getElementById(prefix+"_pliegue").checked : false,
+    acabados,
+  };
+}
+
+/* ---- construcción inicial ---- */
+function construirFormulario(){
+  document.getElementById("lineaCaratula").innerHTML = lineaCardHtml("caratula", {
+    titulo:"Carátula", mostrarNombre:false, mostrarHojas:false, mostrarPliegue:false, tintasTiroDefault:4, tintasRetiroDefault:0,
+  });
+  document.getElementById("caratula_acab_plastificado").checked = true;
+
+  document.getElementById("lineaTaco").innerHTML = lineaCardHtml("taco", {
+    titulo:"Taco", mostrarNombre:false, mostrarHojas:false, tintasTiroDefault:1, tintasRetiroDefault:1,
+  });
+  // el taco usa "Hojas del taco" (campo global) en vez de un campo propio
+  const tacoCard = document.getElementById("taco_card");
+  const inputHojasGlobal = document.createElement("input");
+  inputHojasGlobal.type="hidden"; inputHojasGlobal.id="tacoHojasLinea"; inputHojasGlobal.value = document.getElementById("tacoHojas").value;
+  tacoCard.appendChild(inputHojasGlobal);
+
+  const selectCaso = document.getElementById("selectCaso");
+  CASOS_PRUEBA.forEach((c,i)=>{
+    const opt = document.createElement("option");
+    opt.value = i; opt.textContent = c.nombreCaso;
+    selectCaso.appendChild(opt);
+  });
+
+  document.getElementById("guardasSustrato").innerHTML = sustratoOptionsHtml();
+  document.getElementById("guardasSustrato").value = "Propalcote__150";
+
+  onLineaProductoChange();
+  onTapaTipoChange();
+}
+
+function onLineaProductoChange(){
+  const lp = document.getElementById("lineaProducto").value;
+  const sel = document.getElementById("encuadernacionTipo");
+  sel.innerHTML = "";
+  for(const [val,label] of ENCUADERNACIONES_POR_LINEA[lp]){
+    const opt = document.createElement("option");
+    opt.value = val; opt.textContent = label;
+    sel.appendChild(opt);
+  }
+  onEncuadernacionChange();
+}
+
+function onEncuadernacionChange(){
+  const lp = document.getElementById("lineaProducto").value;
+  const enc = document.getElementById("encuadernacionTipo").value;
+  const sugerido = requierePliegue(lp, enc);
+  const chk = document.getElementById("taco_pliegue");
+  if(chk) chk.checked = sugerido;
+}
+
+function onTapaTipoChange(){
+  const tapa = document.getElementById("tapaTipo").value;
+  document.getElementById("cartonCalibreWrap").style.display = tapa==="dura" ? "flex" : "none";
+}
+
+function aplicarPreset(val){
+  if(!val) return;
+  const [a,b] = val.split(",").map(Number);
+  document.getElementById("anchoCm").value = a;
+  document.getElementById("altoCm").value = b;
+}
+
+/* ============================================================
+   CARGA DE CASOS DE PRUEBA
+   ============================================================ */
+function cargarCaso(idx){
+  if(idx===""){ return; }
+  const c = CASOS_PRUEBA[parseInt(idx)];
+
+  document.getElementById("lineaProducto").value = c.lineaProducto;
+  onLineaProductoChange();
+  document.getElementById("cantidad").value = c.cantidad;
+  document.getElementById("anchoCm").value = c.anchoCm;
+  document.getElementById("altoCm").value = c.altoCm;
+  document.getElementById("presetTamano").value = "";
+  document.getElementById("tapaTipo").value = c.tapaTipo;
+  onTapaTipoChange();
+  document.getElementById("encuadernacionTipo").value = c.encuadernacionTipo;
+  document.getElementById("tacoHojas").value = c.tacoHojas;
+  document.getElementById("tacoHojasLinea").value = c.tacoHojas;
+
+  // Carátula
+  document.getElementById("caratula_sustrato").value = c.caratula.sustrato.nombre+"__"+c.caratula.sustrato.gramaje;
+  document.getElementById("caratula_tintasTiro").value = c.caratula.tintasTiro;
+  document.getElementById("caratula_tintasRetiro").value = c.caratula.tintasRetiro;
+  document.getElementById("caratula_diseno").value = c.caratula.diseno;
+  ACABADOS_DISPONIBLES.forEach(a=>{ document.getElementById("caratula_acab_"+a.tipo).checked = c.caratula.acabados.includes(a.tipo); });
+  document.getElementById("caratula_acab_otro").checked = false;
+  document.getElementById("caratula_otroCostoWrap").style.display = "none";
+
+  // Taco
+  document.getElementById("taco_sustrato").value = c.taco.sustrato.nombre+"__"+c.taco.sustrato.gramaje;
+  document.getElementById("taco_tintasTiro").value = c.taco.tintasTiro;
+  document.getElementById("taco_tintasRetiro").value = c.taco.tintasRetiro;
+  document.getElementById("taco_diseno").value = c.taco.diseno;
+  document.getElementById("taco_pliegue").checked = c.taco.pliegue;
+  ACABADOS_DISPONIBLES.forEach(a=>{ document.getElementById("taco_acab_"+a.tipo).checked = false; });
+  document.getElementById("taco_acab_otro").checked = false;
+  document.getElementById("taco_otroCostoWrap").style.display = "none";
+
+  // Insertos: limpiar y recrear
+  document.getElementById("insertosContainer").innerHTML = "";
+  (c.insertos||[]).forEach(ins=>{
+    agregarInserto({
+      nombre: ins.nombre, hojasPorCuaderno: ins.hojasPorCuaderno, sustrato: ins.sustrato,
+      tintasTiro: ins.tintasTiro, tintasRetiro: ins.tintasRetiro, diseno: ins.diseno,
+      pliegue: ins.pliegue, acabados: ins.acabados,
+    });
+  });
+
+  // Guardas
+  document.getElementById("guardasCantidad").value = 2;
+  document.getElementById("guardasSustrato").value = "Propalcote__150";
+  document.getElementById("guardasTintasTiro").value = c.guardasTintasTiro||0;
+  document.getElementById("guardasPlastificado").checked = !!c.guardasPlastificado;
+
+  document.getElementById("utilidadPct").value = 40;
+  document.getElementById("ventasPct").value = 0;
+  document.getElementById("litoplanEsperado").value = c.litoplanEsperado;
+
+  calcular();
+}
+
+/* ============================================================
+   CÁLCULO Y RENDER DE RESULTADO
+   ============================================================ */
+function formatoCop(v){
+  if(v==null || isNaN(v)) return "—";
+  return "$"+Math.round(v).toLocaleString("es-CO");
+}
+
+function calcular(){
+  try{
+    const lineaProducto = document.getElementById("lineaProducto").value;
+    const anchoCm = parseFloat(document.getElementById("anchoCm").value);
+    const altoCm = parseFloat(document.getElementById("altoCm").value);
+    const cantidad = parseFloat(document.getElementById("cantidad").value);
+    const tapaTipo = document.getElementById("tapaTipo").value;
+    const cartonCalibreMm = parseFloat(document.getElementById("cartonCalibre").value);
+    const encuadernacionTipo = document.getElementById("encuadernacionTipo").value;
+    const tacoHojas = parseFloat(document.getElementById("tacoHojas").value);
+
+    const lineaCaratula = leerLineaDesdeForm("caratula", {rol:"caratula", nombreFijo:"Caratula", hojasFijo:2});
+    const lineaTaco = leerLineaDesdeForm("taco", {rol:"taco", nombreFijo:"Taco", hojasFijo:tacoHojas});
+
+    const lineasInsertos = [];
+    document.querySelectorAll("#insertosContainer .linea-card").forEach(card=>{
+      const prefix = card.id.replace("_card","");
+      lineasInsertos.push(leerLineaDesdeForm(prefix, {rol:"inserto"}));
+    });
+
+    const lineasImpresion = [lineaCaratula, lineaTaco, ...lineasInsertos];
+
+    const guardasSustratoVal = document.getElementById("guardasSustrato").value.split("__");
+    const p = {
+      lineaProducto, anchoCm, altoCm, cantidad, tapaTipo, cartonCalibreMm,
+      encuadernacionTipo, tacoHojas, lineasImpresion,
+      guardasCantidad: parseFloat(document.getElementById("guardasCantidad").value),
+      guardasSustrato: {nombre:guardasSustratoVal[0], gramaje:parseFloat(guardasSustratoVal[1])},
+      guardasTintasTiro: parseInt(document.getElementById("guardasTintasTiro").value)||0,
+      guardasPlastificado: document.getElementById("guardasPlastificado").checked,
+      utilidadPct: parseFloat(document.getElementById("utilidadPct").value)/100,
+      ventasPct: parseFloat(document.getElementById("ventasPct").value)/100,
+      litoplanEsperado: document.getElementById("litoplanEsperado").value===""? null : parseFloat(document.getElementById("litoplanEsperado").value),
+    };
+
+    const r = cotizarCuaderno(p);
+    renderResultado(r, p);
+  } catch(err){
+    document.getElementById("resultadoVacio").style.display="none";
+    const cont = document.getElementById("resultadoContenido");
+    cont.style.display="block";
+    cont.innerHTML = `<div class="error-box">Error en el cálculo: ${err.message}</div>`;
+  }
+}
+
+const ETIQUETAS_DESGLOSE = {
+  tapa_armado_forrado: "Armado y forrado de tapa (dura)",
+  tapa_carton: "Cartón de tapa (dura)",
+  tapa_semidura_segunda_capa: "Segunda capa + colaminado (semidura)",
+  guardas: "Guardas",
+  armado_encuadernacion: "Armado / encuadernación",
+};
+
+function renderResultado(r, p){
+  document.getElementById("resultadoVacio").style.display="none";
+  const cont = document.getElementById("resultadoContenido");
+  cont.style.display="block";
+
+  let filas = "";
+  for(const clave of Object.keys(r.desgloseDirecto)){
+    const valor = r.desgloseDirecto[clave];
+    let etiqueta = ETIQUETAS_DESGLOSE[clave];
+    if(!etiqueta){
+      etiqueta = clave.startsWith("linea_") ? "Línea: "+clave.slice(6) : clave;
+    }
+    if(valor===0 && (clave==="tapa_armado_forrado"||clave==="tapa_carton"||clave==="tapa_semidura_segunda_capa")) continue;
+    filas += `<tr><td>${etiqueta}</td><td class="num">${formatoCop(valor)}</td></tr>`;
+    const detalle = r.detalleLineas[clave.replace("linea_","")];
+    if(detalle){
+      filas += `<tr class="detalle"><td colspan="2">material ${formatoCop(detalle.costoMaterial)} · impresión ${formatoCop(detalle.costoImpresion)}${detalle.detalleImpresion?" ("+detalle.detalleImpresion.via+")":""} · acabados ${formatoCop(detalle.costoAcabados)}</td></tr>`;
+    }
+  }
+
+  filas += `<tr class="sub"><td>Costo directo total</td><td class="num">${formatoCop(r.costoDirectoTotal)}</td></tr>`;
+  filas += `<tr><td>Diseño / Ajuste</td><td class="num">${formatoCop(r.disenoCop)}</td></tr>`;
+  filas += `<tr class="sub"><td>Subtotal</td><td class="num">${formatoCop(r.subtotal)}</td></tr>`;
+  filas += `<tr class="detalle"><td colspan="2">Precio = Subtotal × (1+${(r.utilidadPct*100).toFixed(0)}% utilidad) × (1+${(r.ventasPct*100).toFixed(0)}% ventas)</td></tr>`;
+  filas += `<tr><td>Precio de venta (total pedido)</td><td class="num">${formatoCop(r.precioVentaTotal)}</td></tr>`;
+  filas += `<tr class="total"><td>Precio de venta UNITARIO</td><td class="num">${formatoCop(r.precioVentaUnitario)}</td></tr>`;
+  filas += `<tr><td>IVA (19%)</td><td class="num">${formatoCop(r.ivaTotal)}</td></tr>`;
+  filas += `<tr><td>Precio final total (con IVA)</td><td class="num">${formatoCop(r.precioFinalTotal)}</td></tr>`;
+
+  let comparacionHtml = "";
+  if(r.litoplanEsperado!=null){
+    const badge = Math.abs(r.diferenciaPct) <= 3 ? "badge-ok" : "badge-neg";
+    comparacionHtml = `
+      <div style="margin-top:14px; padding-top:12px; border-top:1px solid var(--borde);">
+        <div style="font-size:13px; color:var(--texto-suave); margin-bottom:6px;">Comparación contra Litoplan real: ${formatoCop(r.litoplanEsperado)}</div>
+        <span class="badge-dif ${badge}">${r.diferenciaCop>=0?"+":""}${formatoCop(r.diferenciaCop)} (${r.diferenciaPct>=0?"+":""}${r.diferenciaPct.toFixed(1)}%)</span>
+      </div>`;
+  }
+
+  cont.innerHTML = `
+    <table class="resultado-tabla">${filas}</table>
+    ${comparacionHtml}
+    <details>
+      <summary>Ver tamaño de máquina usado para la carátula</summary>
+      <div class="hint">Montaje: ${r.tamanoMaquinaCaratula[0]} x ${r.tamanoMaquinaCaratula[1]} cm · Tamaño de catálogo más cercano: ${r.catClave}</div>
+    </details>
+  `;
+}
+
+construirFormulario();
+</script>
+</body>
+</html>
