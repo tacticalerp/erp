@@ -380,6 +380,12 @@ def diseno_y_preprensa(monto_ot):
     return D.DISENO_COSTO_NORMAL, D.PREPRENSA_COSTO_NORMAL
 
 
+def espesor_lomo_cm(taco_hojas):
+    """Grosor del lomo = cantidad de hojas del taco x 0.13mm/hoja,
+    convertido a cm. Confirmado por Conde (2026-07-21)."""
+    return taco_hojas * D.ESPESOR_LOMO_MM_POR_HOJA / 10
+
+
 def costo_empaque(cantidad, cat_clave, linea_producto):
     """$3.000 por caja de carton, con capacidad segun tamano y si es Escolar
     o no. Confirmado por Conde (2026-07-21): usar la tabla del Dossier tal

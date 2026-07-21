@@ -261,6 +261,7 @@ const PLIEGOS_CM = {"60x90":[60,90], "70x100":[70,100]};
 
 const CARTON_1_5MM_COP = 3500;
 const CARTON_2_0MM_COP = 4500;
+const ESPESOR_LOMO_MM_POR_HOJA = 0.13;
 
 const TAMANOS_CATALOGO_CM = {media_carta:[21,14], agenda:[17,24.5], carta:[28,21.5]};
 const FACTOR_MANIPULACION_TAMANO_CUSTOM = 1.30;
@@ -589,6 +590,10 @@ function tramoFondoSeguridad(costoFabricacion, lineaProducto){
   return FONDO_SEGURIDAD_TRAMOS[FONDO_SEGURIDAD_TRAMOS.length-1][1];
 }
 
+function espesorLomoCm(tacoHojas){
+  return tacoHojas*ESPESOR_LOMO_MM_POR_HOJA/10;
+}
+
 function costoEmpaque(cantidad, catClave, lineaProducto){
   const columna = lineaProducto==="escolar" ? "escolar" : "no_escolar";
   const capacidad = EMPAQUE_CAPACIDAD_CAJA[catClave][columna];
@@ -744,8 +749,16 @@ function cotizarCuaderno(p){
   if(p.tapaTipo==="dura"){
     costoTapaArmado=ARMADO_FORRADO_TAPA_DURA_COP[catClave]*factorEscala*p.cantidad;
     const cartonPrecio=p.cartonCalibreMm===1.5?CARTON_1_5MM_COP:CARTON_2_0MM_COP;
-    const nPorPliegoCarton=piezasPorPliego(tamanoMaquinaCaratula[0],tamanoMaquinaCaratula[1],70,100);
-    costoTapaCarton=(cartonPrecio/Math.max(nPorPliegoCarton,1))*p.cantidad;
+
+    const nTapasPorPliego=piezasPorPliego(p.anchoCm,p.altoCm,70,100);
+    costoTapaCarton=(cartonPrecio/Math.max(nTapasPorPliego,1))*2*p.cantidad;
+
+    if(p.lineaProducto==="agenda_ejecutiva"){
+      const largoLomo=Math.max(p.anchoCm,p.altoCm);
+      const espesorLomo=espesorLomoCm(p.tacoHojas);
+      const nLomosPorPliego=piezasPorPliego(largoLomo,espesorLomo,70,100);
+      costoTapaCarton+=(cartonPrecio/Math.max(nLomosPorPliego,1))*p.cantidad;
+    }
   }
   desglose["tapa_armado_forrado"]=costoTapaArmado;
   desglose["tapa_carton"]=costoTapaCarton;

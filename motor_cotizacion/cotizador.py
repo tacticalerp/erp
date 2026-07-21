@@ -111,6 +111,14 @@ def cotizar_cuaderno(
     linea_caratula = next((l for l in lineas_impresion if l.get("rol") == "caratula"), None)
 
     # ---------------- ARMADO/FORRADO ESTRUCTURAL DE TAPA ----------------
+    # CORREGIDO 2026-07-21: el carton NO se corta al tamano de montaje de
+    # la caratula (ese tamano incluye el embone + doblez, es solo para el
+    # PAPEL que envuelve el carton). El carton se corta al tamano FINAL:
+    # 2 laminas (tapa + contratapa) del tamano real del cuaderno, mas 1
+    # lamina de lomo (solo en lineas con lomo/costura como Agenda
+    # Ejecutiva) cuyo largo es el lado "largo" del cuaderno (el que no se
+    # dobla, mismo criterio que usa el pliegue) y cuyo ancho es el
+    # espesor del taco (taco_hojas x 0.13mm). Confirmado por Conde.
     costo_tapa_armado = 0.0
     costo_tapa_carton = 0.0
     if tapa_tipo == "dura":
@@ -118,8 +126,15 @@ def cotizar_cuaderno(
         costo_tapa_armado = armado_base * factor_escala * cantidad
 
         carton_precio = D.CARTON_1_5MM_COP if carton_calibre_mm == 1.5 else D.CARTON_2_0MM_COP
-        n_por_pliego_carton = M.piezas_por_pliego(*tamano_maquina_caratula, 70, 100)
-        costo_tapa_carton = (carton_precio / max(n_por_pliego_carton, 1)) * cantidad
+
+        n_tapas_por_pliego = M.piezas_por_pliego(ancho_cm, alto_cm, 70, 100)
+        costo_tapa_carton = (carton_precio / max(n_tapas_por_pliego, 1)) * 2 * cantidad
+
+        if linea_producto == "agenda_ejecutiva":
+            largo_lomo = max(ancho_cm, alto_cm)
+            espesor_lomo = M.espesor_lomo_cm(taco_hojas)
+            n_lomos_por_pliego = M.piezas_por_pliego(largo_lomo, espesor_lomo, 70, 100)
+            costo_tapa_carton += (carton_precio / max(n_lomos_por_pliego, 1)) * cantidad
 
     desglose["tapa_armado_forrado"] = costo_tapa_armado
     desglose["tapa_carton"] = costo_tapa_carton
