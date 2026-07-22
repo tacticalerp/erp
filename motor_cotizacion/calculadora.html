@@ -453,6 +453,29 @@ function mejorPliegoParaPieza(pa,pal,sustratoNombre,gramaje){
   return {formato:mejores[0][1], piezasPorPliego:mejores[0][2], costoPorPieza:mejores[0][0]};
 }
 
+function costoMaterialPliegos(pa,pal,sustratoNombre,gramaje,piezasNecesarias,mermaHojas=0){
+  const key = sustratoNombre+"__"+gramaje;
+  const precios = SUSTRATOS[key];
+  if(!precios) throw new Error("Sustrato no encontrado: "+sustratoNombre+" "+gramaje+"g");
+  const piezasTotales = piezasNecesarias + mermaHojas;
+  let mejores=[];
+  const precioMap = {"60x90":precios.p6090, "70x100":precios.p70100};
+  for(const formato of Object.keys(PLIEGOS_CM)){
+    const [pw,ph]=PLIEGOS_CM[formato];
+    const precioPliego = precioMap[formato];
+    if(precioPliego==null) continue;
+    const nPorPliego = piezasPorPliego(pa,pal,pw,ph);
+    if(nPorPliego===0) continue;
+    const nPliegos = Math.ceil(piezasTotales/nPorPliego);
+    const costoTotal = nPliegos*precioPliego;
+    mejores.push([costoTotal, formato, nPorPliego, nPliegos, precioPliego]);
+  }
+  if(mejores.length===0) throw new Error(`La pieza ${pa}x${pal}cm no cabe en ningún pliego disponible para ${sustratoNombre} ${gramaje}g`);
+  mejores.sort((x,y)=>x[0]-y[0]);
+  const [costoTotal, formato, nPorPliego, nPliegos, precioPliego] = mejores[0];
+  return {formato, piezasPorPliego:nPorPliego, nPliegos, precioPliego, costoTotal};
+}
+
 function areaCm2(a,b){ return a*b; }
 
 function tamanoCatalogoMasCercano(ancho,alto){
@@ -661,8 +684,18 @@ function procesarLineaImpresion(linea, anchoCuaderno, altoCuaderno, cantidadCuad
 
   const resultado={nombre};
 
-  const rMat=mejorPliegoParaPieza(ancho,alto,sustrato.nombre,sustrato.gramaje);
-  const costoMaterial=rMat.costoPorPieza*hojas*cantidadCuadernos;
+  const nPiezasFisicas=hojas*cantidadCuadernos;
+  const caras=tintasRetiro>0?2:1;
+  const esColor=tintasTiro>=2||tintasRetiro>=2;
+  const cantTintas=Math.max(tintasTiro,tintasRetiro,1);
+
+  // Merma de alistamiento offset: hojas de mas que se pierden calibrando
+  // la maquina - hay que comprarlas tambien en papel, no solo pagarlas
+  // en la impresion. Solo aplica si la linea SI se imprime.
+  const mermaMaterial=(tintasTiro>0||tintasRetiro>0) ? mermaOffsetHojas(nPiezasFisicas,cantTintas) : 0;
+
+  const rMat=costoMaterialPliegos(ancho,alto,sustrato.nombre,sustrato.gramaje,nPiezasFisicas,mermaMaterial);
+  const costoMaterial=rMat.costoTotal;
   resultado.costoMaterial=costoMaterial;
 
   const fondoPleno=acabados.some(a=>a.tipo==="fondo_pleno");
@@ -671,10 +704,6 @@ function procesarLineaImpresion(linea, anchoCuaderno, altoCuaderno, cantidadCuad
     resultado.costoImpresion=0;
     resultado.detalleImpresion=null;
   } else {
-    const caras=tintasRetiro>0?2:1;
-    const esColor=tintasTiro>=2||tintasRetiro>=2;
-    const cantTintas=Math.max(tintasTiro,tintasRetiro,1);
-    const nPiezasFisicas=hojas*cantidadCuadernos;
     let det;
     if(fondoPleno){
       const fraccion=fraccionPliegoOffset(ancho,alto,esColor);

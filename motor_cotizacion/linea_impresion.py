@@ -56,9 +56,23 @@ def procesar_linea_impresion(linea, ancho_cuaderno, alto_cuaderno, cantidad_cuad
 
     resultado = {"nombre": nombre}
 
+    n_piezas_fisicas = hojas * cantidad_cuadernos
+    caras = 2 if tintas_retiro > 0 else 1
+    es_color = tintas_tiro >= 2 or tintas_retiro >= 2
+    cant_tintas = max(tintas_tiro, tintas_retiro, 1)
+
+    # Merma de alistamiento offset: hojas de mas que se pierden calibrando
+    # la maquina - hay que comprarlas tambien en papel, no solo pagarlas
+    # en la impresion. Solo aplica si la linea SI se imprime (tintas>0).
+    # Confirmado por Conde 2026-07-22 (antes solo se sumaba al calculo de
+    # impresion, no al de material).
+    merma_material = M.merma_offset_hojas(n_piezas_fisicas, cant_tintas) if (tintas_tiro > 0 or tintas_retiro > 0) else 0
+
     # ---------------- MATERIAL ----------------
-    r_mat = M.mejor_pliego_para_pieza(ancho, alto, *sustrato)
-    costo_material = r_mat["costo_por_pieza"] * hojas * cantidad_cuadernos
+    # El papel se compra en pliegos COMPLETOS (redondeado hacia arriba),
+    # no a una tarifa continua por pieza suelta.
+    r_mat = M.costo_material_pliegos(ancho, alto, *sustrato, n_piezas_fisicas, merma_material)
+    costo_material = r_mat["costo_total"]
     resultado["costo_material"] = costo_material
 
     # ---------------- IMPRESION ----------------
@@ -68,11 +82,6 @@ def procesar_linea_impresion(linea, ancho_cuaderno, alto_cuaderno, cantidad_cuad
         resultado["costo_impresion"] = 0.0
         resultado["detalle_impresion"] = None
     else:
-        caras = 2 if tintas_retiro > 0 else 1
-        es_color = tintas_tiro >= 2 or tintas_retiro >= 2
-        cant_tintas = max(tintas_tiro, tintas_retiro, 1)
-        n_piezas_fisicas = hojas * cantidad_cuadernos
-
         if fondo_pleno:
             fraccion = M._fraccion_pliego_offset(ancho, alto, es_policromia=es_color)
             merma_o = M.merma_offset_hojas(n_piezas_fisicas, cant_tintas)

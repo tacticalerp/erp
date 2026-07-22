@@ -130,6 +130,45 @@ def mejor_pliego_para_pieza(pieza_ancho, pieza_alto, sustrato_nombre, gramaje):
     return {"formato": formato, "piezas_por_pliego": n, "costo_por_pieza": costo_por_pieza}
 
 
+def costo_material_pliegos(pieza_ancho, pieza_alto, sustrato_nombre, gramaje, piezas_necesarias, merma_hojas=0):
+    """Cubicaje de MATERIAL real: el papel se compra en pliegos COMPLETOS,
+    no en piezas sueltas - se redondea hacia arriba. Incluye la merma de
+    alistamiento (hojas de mas que se pierden calibrando la maquina, que
+    tambien hay que comprar en papel). Evalua 60x90 y 70x100 y elige el
+    que salga mas barato en total para la cantidad de piezas necesarias
+    (no necesariamente el de mejor tarifa por pieza suelta - a veces un
+    formato con peor tarifa unitaria desperdicia menos al redondear).
+    Confirmado por Conde 2026-07-22."""
+    precios = D.SUSTRATOS.get((sustrato_nombre, gramaje))
+    if precios is None:
+        raise ValueError(f"Sustrato no encontrado: {sustrato_nombre} {gramaje}g")
+
+    piezas_totales = piezas_necesarias + merma_hojas
+    mejores = []
+    for formato, (pw, ph) in D.PLIEGOS_CM.items():
+        precio_pliego = precios.get(formato)
+        if precio_pliego is None:
+            continue
+        n_por_pliego = piezas_por_pliego(pieza_ancho, pieza_alto, pw, ph)
+        if n_por_pliego == 0:
+            continue
+        n_pliegos = math.ceil(piezas_totales / n_por_pliego)
+        costo_total = n_pliegos * precio_pliego
+        mejores.append((costo_total, formato, n_por_pliego, n_pliegos, precio_pliego))
+
+    if not mejores:
+        raise ValueError(
+            f"La pieza {pieza_ancho}x{pieza_alto}cm no cabe en ningun pliego "
+            f"disponible para {sustrato_nombre} {gramaje}g"
+        )
+    mejores.sort(key=lambda x: x[0])
+    costo_total, formato, n_por_pliego, n_pliegos, precio_pliego = mejores[0]
+    return {
+        "formato": formato, "piezas_por_pliego": n_por_pliego, "n_pliegos": n_pliegos,
+        "precio_pliego": precio_pliego, "costo_total": costo_total,
+    }
+
+
 def area_cm2(ancho, alto):
     return ancho * alto
 
