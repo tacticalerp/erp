@@ -565,3 +565,17 @@ Con la calculadora visual, Conde probó varios casos de Agenda Ejecutiva y fue d
 **Estado de los 10 casos al cierre de esta ronda:** casos 1,2,3,4 entre -9% y -16% (esperado, sin margen real conocido — ver hallazgo del 15-jul); caso 5 +10.7%; caso 6 +2.6%; **caso 7 -3.0%** (el más importante, ya casi exacto); caso 8 -3.5%; **caso 9 +13.8%** (regresión pendiente de revisar, ver más abajo); caso 10 +4.9%.
 
 **Sigue pendiente:** la regresión del caso 9 (pasó de +1.4% a +13.8% al agregar Fondo de Seguridad/Empaque/Transporte/Sherpa el 21-jul) — falta confirmar con Conde si ese caso realmente no llevaba esos cargos o si el screenshot original no mostraba todas las líneas de Litoplan.
+
+### Revisión de merma en todas las rutas de impresión (2026-07-22)
+
+A pedido de Conde se revisaron los documentos fuente por merma en cada tipo de impresión: la merma digital (20 hojas policromía / 10 negro / 18 promedio) y la merma offset (100/130/160 hojas según tiraje, ×1.30 si 2+ tintas) ya estaban bien capturadas y aplicadas correctamente. Se encontró un cargo relacionado sin conectar — **Semicorte Digital ($1.500/pliego)** — que se agregó y luego se **revirtió**: Conde aclaró que ese cargo es exclusivo de troquelado sobre sustratos adhesivos/vinilo (Gran Formato), no aplica a papel de Cuadernos. Commits `9cef8ed` (agregado) y `1337ce8` (revertido).
+
+### Ronda de ajustes de fórmula y UI (2026-07-22)
+
+Confirmados por Conde, implementados y verificados Python=JS:
+
+1. **Piso mínimo de armado Agenda Ejecutiva: $3.000/unidad.** En tamaños muy chicos (ej. agenda 15x10cm) el factor de escala por área bajaba el costo por debajo de $3.000, que no refleja la mano de obra mínima real. Se aplica un `max()` sobre la tarifa por tamaño antes del descuento por volumen.
+2. **Anillado en 2 secciones** (nuevo, Cuaderno Anillado): para un cuaderno grande que se anilla en 2 partes separadas en vez de 1 anillo continuo. El combinado de las 2 secciones cuesta 30% MENOS que el anillado normal (no se duplica el costo). Nuevo checkbox en la calculadora, visible solo cuando la línea es Cuaderno Anillado.
+3. Ajustes de UI en la calculadora: carátula con sustrato por defecto Propalcote 150g (90% de los casos reales) y sin selector de "Diseño" (no aplica, solo hay 1 pieza); taco/insertos con las opciones de diseño renombradas a "Páginas iguales"/"Páginas diferentes" (antes "Uniforme"/"Único por página"), taco inicia en "iguales", insertos en "diferentes"; guardas con plastificado marcado por defecto; preset de tamaño "Agenda 17x24.5" renombrado a "Mediano 24x17".
+
+Implementado en `datos_maestros.py`, `cotizador.py`, portado a `calculadora.html`. Commit `bb4bf8d`.
