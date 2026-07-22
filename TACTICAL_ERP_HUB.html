@@ -335,8 +335,10 @@
 
                     <div class="form-group">
                         <label>ID Máster de la OT (Dejar vacío para trabajos Express):</label>
-                        <input type="text" id="inp-ot" placeholder="Ej: COT-2026-07-001" oninput="actualizarFormularioReceta()">
+                        <input type="text" id="inp-ot" list="reproceso-ot-datalist" placeholder="Ej: OT-0001" oninput="actualizarFormularioReceta()">
+                        <datalist id="reproceso-ot-datalist"></datalist>
                     </div>
+                    <div id="reproceso-ficha-tecnica" style="display:none; margin:-6px 0 14px 0; padding:10px 14px; background:#eef2f7; border-left:4px solid var(--primary); border-radius:4px; font-size:0.88rem; color:#2d3748;"></div>
 
                     <div style="display: flex; gap: 15px; flex-wrap: wrap;">
                         <div class="form-group" style="flex: 1; min-width: 140px;">
@@ -545,10 +547,16 @@
                     </div>
                     <div id="cot-cliente" class="accordion-content active">
                         <div class="form-grid">
-                            <div class="form-group"><label>Cliente:</label><input type="text" id="cot-cli-empresa" placeholder="Nombre de la empresa o persona"></div>
+                            <div class="form-group">
+                                <label>Cliente:</label>
+                                <input type="text" id="cot-cli-empresa" list="cot-clientes-datalist" placeholder="Nombre de la empresa o persona (si ya existe, selecciónalo de la lista)" oninput="cotAutocompletarCliente()">
+                                <datalist id="cot-clientes-datalist"></datalist>
+                                <div id="cot-cliente-existente-nota" style="display:none; font-size:0.8rem; color:var(--ganado,#2f855a); margin-top:2px;">✓ Cliente existente — datos cargados automáticamente</div>
+                            </div>
                             <div class="form-group"><label>Encargado:</label><input type="text" id="cot-cli-encargado" placeholder="Persona de contacto"></div>
                             <div class="form-group"><label>Teléfono:</label><input type="text" id="cot-cli-telefono" placeholder="Ej: 3001234567"></div>
-                            <div class="form-group"><label>Correo:</label><input type="text" id="cot-cli-correo" placeholder="cliente@empresa.com"></div>
+                            <div class="form-group"><label>Correo:</label><input type="text" id="cot-cli-correo" placeholder="cliente@empresa.com" list="cot-clientes-correo-datalist" oninput="cotAutocompletarCliente()"></div>
+                            <datalist id="cot-clientes-correo-datalist"></datalist>
                             <div class="form-group">
                                 <label>Vendedor a cargo:</label>
                                 <select id="cot-vendedor"></select>
@@ -662,6 +670,7 @@
                             <button class="btn-submit" style="flex:1; min-width:220px;" onclick="cotGuardarYGenerarPDF()">📄 Guardar y Generar PDF Cliente</button>
                             <button class="btn-submit" style="flex:1; min-width:220px; background:var(--secondary);" onclick="cotGenerarOrdenProduccion()">🏭 Generar Orden de Producción</button>
                         </div>
+                        <div id="cot-ot-nota" style="display:none; margin-top:10px; padding:8px 12px; background:#eef2f7; border-left:4px solid var(--primary); border-radius:4px; font-size:0.9rem;"></div>
                     </div>
                 </div>
             </div>
@@ -757,6 +766,7 @@
                 navContainer.style.display = 'block';
                 mainTitle.innerText = "CONTROL DE REPROCESOS TACTICAL";
                 subTitle.innerText = "Auditoría de Insumos y Proveedores (2026)";
+                if (typeof reprocesoLlenarOTDatalist === 'function') reprocesoLlenarOTDatalist();
                 actualizarFormularioReceta();
                 renderAllReprocesos();
             } else if (viewId === 'crm') {
@@ -771,6 +781,7 @@
                 mainTitle.innerText = "COTIZADOR CUADERNOS";
                 subTitle.innerText = "Línea Editorial — Escolar, Anillado, Agenda Ejecutiva, Libretas (2026)";
                 if (typeof initCotizador === 'function') initCotizador();
+                if (typeof cotRefrescarDatalistClientes === 'function') cotRefrescarDatalistClientes();
             } else if (viewId === 'reportes') {
                 navContainer.style.display = 'block';
                 mainTitle.innerText = "REPORTES";
@@ -1037,9 +1048,101 @@
         function actualizarFormularioReceta() {
             const ot = document.getElementById('inp-ot').value.trim();
             const badge = document.getElementById('txt-modo-activo');
-            if(ot !== '') { badge.innerText = "MODO A: PEDIDO CON OT (RECETA CONTEXTUAL)"; badge.className = "mode-badge mode-a"; }
+            const match = ot !== '' && typeof db_cotizaciones !== 'undefined' ? db_cotizaciones.find(c => c.ot === ot) : null;
+            if(ot !== '' && match) { badge.innerText = "MODO A: PEDIDO CON OT (RECETA CONTEXTUAL)"; badge.className = "mode-badge mode-a"; }
+            else if(ot !== '') { badge.innerText = "MODO A: OT SIN FICHA TÉCNICA EN EL SISTEMA"; badge.className = "mode-badge mode-a"; }
             else { badge.innerText = "MODO B: SERVICIO EXPRESS / MAQUILA"; badge.className = "mode-badge mode-b"; }
+            reprocesoBuscarOT(ot, match);
             if(document.getElementById('wrapper-detail-rows').children.length === 0) { addRowDetalle(); }
+        }
+
+        function reprocesoLlenarOTDatalist(){
+            const dl = document.getElementById('reproceso-ot-datalist');
+            if(!dl || typeof db_cotizaciones === 'undefined') return;
+            dl.innerHTML = db_cotizaciones.filter(c=>c.ot).map(c => `<option value="${c.ot}">${c.desc||''} — ${c.cliente&&c.cliente.empresa||''}</option>`).join('');
+        }
+
+        const COT_NOMBRE_MAQUINA_REPROCESO = { octavo:"Octavo", cuarto:"Cuarto", medio_pliego:"Medio Pliego", digital:"Digital (Konica)" };
+        function reprocesoMatchPapelKey(sustrato){
+            const nombre = (sustrato.nombre||'').toLowerCase();
+            const gramaje = sustrato.gramaje;
+            const candidatos = Object.assign({}, TOP8_PAPELES, OTROS_PAPELES);
+            for(const key in candidatos){
+                if(key === 'MANUAL_INS') continue;
+                const label = candidatos[key].name.toLowerCase();
+                const primeraPalabra = (label.match(/[a-záéíóúñ]+/)||[''])[0];
+                const coincideNombre = primeraPalabra.length > 2 && nombre.includes(primeraPalabra);
+                const coincideGramaje = !gramaje || label.includes(gramaje+'gr') || label.includes(gramaje+' gr');
+                if(coincideNombre && coincideGramaje) return key;
+            }
+            return null;
+        }
+
+        function reprocesoWrapperEsPristino(){
+            const rows = document.querySelectorAll('.detail-row-grid');
+            if(rows.length === 0) return true;
+            if(rows.length > 1) return false;
+            const row = rows[0];
+            const tocado = row.querySelector('.det-name-manual').value.trim() !== '' ||
+                           row.querySelector('.det-costo-manual').value.trim() !== '' ||
+                           row.querySelector('.det-cantidad').value !== '10';
+            return !tocado;
+        }
+
+        function reprocesoAgregarFilaSugerida(tipo, nombreSugerido, catalogKey, cantidad){
+            addRowDetalle();
+            const wrapper = document.getElementById('wrapper-detail-rows');
+            const div = wrapper.lastElementChild;
+            const tipoSelect = div.querySelector('.det-tipo');
+            tipoSelect.value = tipo;
+            cambiarTipoFila(tipoSelect, div.id);
+            const itemSelect = div.querySelector('.det-item-select');
+            itemSelect.value = catalogKey || (tipo === 'papel' ? 'MANUAL_INS' : 'MANUAL_PROC');
+            evaluarItemManual(itemSelect, div.id);
+            if(!catalogKey){ div.querySelector('.det-name-manual').value = nombreSugerido; }
+            div.querySelector('.det-cantidad').value = cantidad;
+        }
+
+        let reprocesoUltimoOTBuscado = null;
+        function reprocesoBuscarOT(ot, cot){
+            const fichaBox = document.getElementById('reproceso-ficha-tecnica');
+            if(!fichaBox) return;
+            if(!ot){ fichaBox.style.display = 'none'; fichaBox.innerHTML = ''; reprocesoUltimoOTBuscado = null; return; }
+            if(!cot){ fichaBox.style.display = 'block'; fichaBox.innerHTML = `Sin ficha técnica registrada para "${ot}" en el sistema (puede ser una OT anterior al cotizador digital).`; reprocesoUltimoOTBuscado = null; return; }
+
+            const nombresLinea = {escolar:"Cuaderno Escolar", cuaderno_anillado:"Cuaderno Anillado", agenda_ejecutiva:"Agenda Ejecutiva", libretas:"Libreta"};
+            let filasLineas = '';
+            Object.values(cot.resultado.detalleLineas).forEach(linea=>{
+                const det = linea.detalleImpresion;
+                const fraccion = det ? (det.via === 'digital' ? 'digital' : (det.fraccion || 'medio_pliego')) : null;
+                const maquina = det ? (COT_NOMBRE_MAQUINA_REPROCESO[fraccion] || fraccion) : 'Sin impresión';
+                const tintas = det ? `${linea.tintasTiro}x${linea.tintasRetiro||0}` : '—';
+                filasLineas += `<li><strong>${linea.nombre}</strong>: ${linea.sustrato.nombre} ${linea.sustrato.gramaje}gr — ${maquina}${det?` (${tintas})`:''}</li>`;
+            });
+            fichaBox.style.display = 'block';
+            fichaBox.innerHTML = `📋 <strong>${ot}</strong> — ${nombresLinea[cot.params.lineaProducto]||cot.params.lineaProducto} ${cot.params.cantidad}u — Cliente: ${cot.cliente.empresa||'-'}
+                <ul style="margin:6px 0 0 0; padding-left:18px;">${filasLineas}</ul>
+                <button type="button" class="btn-add-item" style="margin-top:8px;" onclick="reprocesoCargarSugerenciaOT('${ot}')">⬇️ Cargar papel de cada línea como sugerencia en el desglose</button>`;
+
+            if(reprocesoUltimoOTBuscado !== ot){
+                reprocesoUltimoOTBuscado = ot;
+                if(reprocesoWrapperEsPristino()){
+                    reprocesoCargarSugerenciaOT(ot);
+                }
+            }
+        }
+
+        function reprocesoCargarSugerenciaOT(ot){
+            const cot = db_cotizaciones.find(c => c.ot === ot);
+            if(!cot) return;
+            reprocesoUltimoOTBuscado = ot;
+            const wrapper = document.getElementById('wrapper-detail-rows');
+            wrapper.innerHTML = '';
+            Object.values(cot.resultado.detalleLineas).forEach(linea=>{
+                const key = reprocesoMatchPapelKey(linea.sustrato);
+                reprocesoAgregarFilaSugerida('papel', `${linea.sustrato.nombre} ${linea.sustrato.gramaje}gr (${linea.nombre})`, key, 10);
+            });
+            reprocesoBuscarOT(ot, cot);
         }
 
         function addRowDetalle() {
@@ -1136,7 +1239,8 @@
             document.getElementById('txt-observaciones').value = '';
             document.getElementById('wrapper-detail-rows').innerHTML = '';
             document.getElementById('sel-proveedor').value = 'Ninguno';
-            renderAllReprocesos(); addRowDetalle();
+            reprocesoUltimoOTBuscado = null;
+            renderAllReprocesos(); actualizarFormularioReceta();
         }
 
         function renderAllReprocesos() {
@@ -1944,6 +2048,19 @@
         let cotInicializado = false;
         let cotInsertoContador = 0;
         let cotUltimoResultado = null, cotUltimoParams = null;
+        let cotUltimoOT = null;
+
+        function cotSiguienteOT(){
+          let n = parseInt(localStorage.getItem('tactical_ot_counter')||'0') + 1;
+          localStorage.setItem('tactical_ot_counter', String(n));
+          return 'OT-' + String(n).padStart(4,'0');
+        }
+        function cotObtenerOT(){
+          if(!cotUltimoOT) cotUltimoOT = cotSiguienteOT();
+          const nota = document.getElementById('cot-ot-nota');
+          if(nota){ nota.style.display = 'block'; nota.innerText = `📋 Esta cotización quedó registrada como ${cotUltimoOT} — usa este número para referenciarla en Reprocesos si llega a haber un incidente con este pedido.`; }
+          return cotUltimoOT;
+        }
 
         function cotSustratoOptionsHtml(){
           let html = "";
@@ -2114,6 +2231,9 @@
             };
             const r = cotizarCuaderno(p);
             cotUltimoResultado = r; cotUltimoParams = p;
+            cotUltimoOT = null;
+            const notaOt = document.getElementById('cot-ot-nota');
+            if(notaOt) notaOt.style.display = 'none';
             cotRenderResultado(r, p);
           } catch(err){
             document.getElementById("cot-resultado-contenido").innerHTML = `<div style="background:#fde8e8; color:var(--peligro); border:1px solid #f3b4b4; border-radius:6px; padding:10px 12px; font-size:13px;">Error en el cálculo: ${err.message}</div>`;
@@ -2151,6 +2271,33 @@
         /* ---- GUARDAR COTIZACIÓN: CRM + PDF CLIENTE ---- */
         let db_cotizaciones = JSON.parse(localStorage.getItem('tactical_cotizaciones_v1')) || [];
 
+        function cotRefrescarDatalistClientes(){
+          const dlEmpresa = document.getElementById('cot-clientes-datalist');
+          const dlCorreo = document.getElementById('cot-clientes-correo-datalist');
+          if(!dlEmpresa || !dlCorreo) return;
+          dlEmpresa.innerHTML = db_clientes.map(c => `<option value="${c.empresa}">${c.nombre||''}</option>`).join('');
+          dlCorreo.innerHTML = db_clientes.filter(c=>c.correo).map(c => `<option value="${c.correo}"></option>`).join('');
+        }
+
+        function cotAutocompletarCliente(){
+          const empresaVal = document.getElementById('cot-cli-empresa').value.trim();
+          const correoVal = document.getElementById('cot-cli-correo').value.trim();
+          const nota = document.getElementById('cot-cliente-existente-nota');
+          const cli = db_clientes.find(c =>
+            (correoVal && c.correo && c.correo.toLowerCase() === correoVal.toLowerCase()) ||
+            (empresaVal && c.empresa.toLowerCase() === empresaVal.toLowerCase())
+          );
+          if(cli){
+            document.getElementById('cot-cli-empresa').value = cli.empresa;
+            document.getElementById('cot-cli-encargado').value = cli.nombre || '';
+            document.getElementById('cot-cli-telefono').value = cli.wp || '';
+            document.getElementById('cot-cli-correo').value = cli.correo || '';
+            nota.style.display = 'block';
+          } else {
+            nota.style.display = 'none';
+          }
+        }
+
         function cotDescripcionProducto(p){
           const nombresLinea = {escolar:"Cuaderno Escolar", cuaderno_anillado:"Cuaderno Anillado", agenda_ejecutiva:"Agenda Ejecutiva", libretas:"Libreta"};
           return `${p.cantidad} ${nombresLinea[p.lineaProducto]} ${p.anchoCm}x${p.altoCm}cm, tapa ${p.tapaTipo}`;
@@ -2185,13 +2332,17 @@
 
           const plazoEntrega = document.getElementById('cot-plazoEntrega').value.trim();
           const validezOferta = document.getElementById('cot-validezOferta').value.trim();
+          const ot = cotObtenerOT();
+          opp.ot = ot;
+          localStorage.setItem('tactical_crm_opps_v2', JSON.stringify(db_opps));
           const cotizacion = {
-            id: opp.id, idOpp: opp.id, idCli: cli.id, fecha: new Date().toISOString(),
+            ot, id: opp.id, idOpp: opp.id, idCli: cli.id, fecha: new Date().toISOString(),
             cliente: {empresa, encargado, telefono, correo}, vendedor, desc, params: p, resultado: r,
             plazoEntrega, validezOferta,
           };
           db_cotizaciones.push(cotizacion);
           localStorage.setItem('tactical_cotizaciones_v1', JSON.stringify(db_cotizaciones));
+          cotRefrescarDatalistClientes();
 
           cotImprimirPDFCliente(cotizacion);
         }
@@ -2207,7 +2358,7 @@
             <div class="doc-header">
               <div>
                 <h1>${TACTICAL_INFO.nombre}</h1>
-                <div class="doc-tipo">COTIZACIÓN</div>
+                <div class="doc-tipo">COTIZACIÓN ${cot.ot||''}</div>
               </div>
               <div class="doc-empresa-datos">
                 ${TACTICAL_INFO.nit}<br>${TACTICAL_INFO.direccion}<br>${TACTICAL_INFO.web}<br>
@@ -2255,6 +2406,7 @@
         function cotGenerarOrdenProduccion(){
           if(!cotUltimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
           const r = cotUltimoResultado, p = cotUltimoParams;
+          const ot = cotObtenerOT();
           const nombresTapa = {dura:"Dura", semidura:"Semidura", blanda:"Blanda"};
           const nombresLinea = {escolar:"Cuaderno Escolar", cuaderno_anillado:"Cuaderno Anillado", agenda_ejecutiva:"Agenda Ejecutiva", libretas:"Libreta"};
 
@@ -2293,10 +2445,11 @@
 
           const html = `
             <div class="doc-header">
-              <div><h1>${TACTICAL_INFO.nombre}</h1><div class="doc-tipo" style="background:var(--secondary);">ORDEN DE PRODUCCIÓN — USO INTERNO</div></div>
+              <div><h1>${TACTICAL_INFO.nombre}</h1><div class="doc-tipo" style="background:var(--secondary);">ORDEN DE PRODUCCIÓN ${ot} — USO INTERNO</div></div>
               <div class="doc-empresa-datos">${new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'})}</div>
             </div>
             <table class="doc-table">
+              <tr><th>N° de OT</th><td colspan="3" style="font-weight:bold; font-size:1.1rem;">${ot}</td></tr>
               <tr><th>Producto</th><td>${nombresLinea[p.lineaProducto]}</td><th>Cantidad</th><td>${p.cantidad} unidades</td></tr>
               <tr><th>Tamaño</th><td>${p.anchoCm} x ${p.altoCm} cm</td><th>Tapa</th><td>${nombresTapa[p.tapaTipo]}</td></tr>
               <tr><th>Encuadernación</th><td>${p.encuadernacionTipo}</td><th>Hojas del taco</th><td>${p.tacoHojas}</td></tr>
