@@ -593,3 +593,20 @@ Verificado con el caso de Conde: taco Carta 28x21.5cm Bond 70g, 50.000 hojas + 1
 **Pendiente relacionado (no implementado aún, alcance menor):** la segunda capa de cartón en tapa semidura (`tapa_semidura_segunda_capa` en `cotizador.py`) todavía usa la tarifa continua vieja (`mejor_pliego_para_pieza`), no el redondeo a pliegos completos. No lleva merma porque no se imprime, pero sí debería redondear a pliegos completos por consistencia — revisar si vale la pena el cambio.
 
 Implementado en `motor.py` (`costo_material_pliegos`), `linea_impresion.py`, portado a `calculadora.html`. Commit `fc91cca`.
+
+### CIERRE (casi total) del caso 7: recargo de tiro/retiro en offset (2026-07-22)
+
+Conde explicó el mecanismo real de "millar" y de tiro/retiro con un ejemplo concreto (carátula Escolar en máquina de Cuarto, ~45x30cm): confirmó 3 correcciones.
+
+1. **Grafado Escolar tenía el mismo bug que ya se había corregido en el resto del motor, pero se quedó sin tocar aquí**: se cobraba en proporción continua (0.5 millar = $17.500) en vez de millar completo mínimo (0.5 → 1 millar = $35.000). Corregido con `math.ceil()`.
+
+2. **Refile SÍ aplica a Escolar** (contradice lo que se había confirmado el 15-jul — Conde se corrigió). Además se agregó un **piso mínimo de $15.000 por OT** al refile del taco, aplicando a Escolar, Cuaderno Anillado y Libretas (antes no tenía piso, solo $100/unidad plano).
+
+3. **Tiro + Retiro en offset depende del tamaño de máquina** — este era el bug de fondo que quedaba en el caso 7:
+   - **Cuarto/Octavo** (máquina chica): el retiro necesita su propio juego de planchas → se factura como un segundo trabajo INDEPENDIENTE completo (su propio millar mínimo). Antes esto costaba $0 extra si el retiro usaba el mismo número de tintas que el tiro (bug real: el conteo de planchas se calculaba con `max(tiro,retiro)`, así que retiro con las mismas tintas no sumaba nada).
+   - **Medio Pliego** con las MISMAS tintas en tiro y retiro (mismas planchas, se reutilizan): no se duplica, pero se agrega un recargo del **+30% en la policromía** (por el tiempo de secado antes de voltear la hoja). Si son tintas especiales (Pantone/preparadas) el recargo es +20% — **no implementado todavía**, el modelo no tiene forma de marcar que una línea usa tinta especial vs. policromía normal de proceso.
+   - **Cuadrícula**: nunca lleva recargo — con tan poca tinta sobre Bond seca mucho más rápido. Ya estaba correcto (esa ruta no se tocó).
+
+**Resultado:** el caso 7 (Agenda Ejecutiva) pasó de -3.0% a **-0.7%** — prácticamente exacto. Verificado Python=JS en los 10 casos de prueba. Implementado en `datos_maestros.py`, `motor.py` (`costo_impresion_offset` ahora recibe `tintas_tiro`/`tintas_retiro` por separado en vez de un `cant_tintas` ya combinado), `linea_impresion.py`, `cotizador.py`, portado a `calculadora.html`. Commit `ebbc347`.
+
+**Pendiente:** agregar al modelo una forma de marcar "tinta especial/Pantone" en una línea de impresión, para poder aplicar el recargo del +20% (hoy el modelo solo distingue tintas por cantidad, no por tipo).
