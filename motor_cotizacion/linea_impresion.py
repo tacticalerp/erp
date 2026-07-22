@@ -85,7 +85,7 @@ def procesar_linea_impresion(linea, ancho_cuaderno, alto_cuaderno, cantidad_cuad
         if fondo_pleno:
             fraccion = M._fraccion_pliego_offset(ancho, alto, es_policromia=es_color)
             merma_o = M.merma_offset_hojas(n_piezas_fisicas, cant_tintas)
-            det = M.costo_impresion_offset(n_piezas_fisicas + merma_o, cant_tintas, es_color, ancho, alto)
+            det = M.costo_impresion_offset(n_piezas_fisicas + merma_o, tintas_tiro, tintas_retiro, es_color, ancho, alto)
             recargo = D.OFFSET_RECARGO_FONDO_PLENO_COP[fraccion]
             plancha_extra = D.OFFSET_CTP_COP[fraccion]
             det["total"] += recargo + plancha_extra
@@ -109,13 +109,13 @@ def procesar_linea_impresion(linea, ancho_cuaderno, alto_cuaderno, cantidad_cuad
                 )
                 merma_o = M.merma_offset_hojas(n_piezas_fisicas, cant_tintas)
                 det_offset = M.costo_impresion_offset(
-                    n_piezas_fisicas + merma_o, cant_tintas, es_color, ancho, alto, pliegue=pliegue
+                    n_piezas_fisicas + merma_o, tintas_tiro, tintas_retiro, es_color, ancho, alto, pliegue=pliegue
                 )
                 det = det_digital if (det_digital is not None and det_digital["total"] < det_offset["total"]) else det_offset
             else:
                 merma_o = M.merma_offset_hojas(n_piezas_fisicas, cant_tintas)
                 det = M.costo_impresion_offset(
-                    n_piezas_fisicas + merma_o, cant_tintas, es_color, ancho, alto,
+                    n_piezas_fisicas + merma_o, tintas_tiro, tintas_retiro, es_color, ancho, alto,
                     cuadricula_uniforme=es_cuadricula_uniforme, pliegue=pliegue,
                 )
 

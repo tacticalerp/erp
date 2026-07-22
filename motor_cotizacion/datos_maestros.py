@@ -200,7 +200,13 @@ ANILLO_DOBLE_O = {
     "agenda": {"base_80h": 990, "variacion_hoja": 5.5},
     "carta": {"base_80h": 1700, "variacion_hoja": 10.0},
 }
-REFILE_CUADERNO_ANILLADO_COP = 100
+# Refile del taco: $100/unidad, aplica a Cuaderno Anillado, Escolar y
+# Libretas (Agenda Ejecutiva NO - va incluido en su precio de costura).
+# Confirmado por Conde 2026-07-22: Escolar tambien lo lleva (antes se
+# creia incluido en el precio de Grapa/Hilo, no era correcto). Con un
+# piso minimo de $15.000 por OT para las 3 lineas que lo llevan.
+REFILE_TACO_COP_UNIDAD = 100
+REFILE_TACO_MINIMO_COP = 15_000
 
 # Anillado en 2 secciones (confirmado por Conde 2026-07-22): para un
 # cuaderno grande que se anilla en 2 partes separadas en vez de un solo
@@ -315,6 +321,20 @@ OFFSET_RECARGO_FONDO_PLENO_COP = {
     "octavo": 50_000,
 }
 RECARGO_TINTA_CUADRICULA_MILLAR_COP = 20_000  # tarifa preferencial cuadricula uniforme
+
+# Tiro + Retiro (confirmado por Conde 2026-07-22):
+# - Maquinas chicas (Cuarto/Octavo): el retiro necesita su propio juego
+#   de planchas -> se factura como 2 trabajos independientes (cada cara
+#   paga su propio millar minimo, no se comparte).
+# - Medio Pliego: si tiro y retiro usan las MISMAS planchas, no se
+#   duplica plancha ni millar - se cobra 1 millar + un recargo (por el
+#   tiempo de secado antes de voltear la hoja): +30% en policromia,
+#   +20% en tintas especiales (Pantone/preparadas - AUN NO HAY DATO EN
+#   EL MODELO PARA DISTINGUIRLAS, pendiente). Si es cuadricula (tinta de
+#   linea, poca tinta sobre Bond) NO hay recargo, seca mucho mas rapido
+#   - ya cubierto porque cuadricula usa su propia ruta de precio aparte.
+OFFSET_RECARGO_RETIRO_MEDIO_PLIEGO_POLICROMIA_PCT = 0.30
+OFFSET_RECARGO_RETIRO_MEDIO_PLIEGO_TINTA_ESPECIAL_PCT = 0.20
 
 OFFSET_MERMA_HOJAS = [(1000, 100), (2000, 130), (float("inf"), 160)]
 OFFSET_MERMA_FACTOR_2_MAS_TINTAS = 1.30

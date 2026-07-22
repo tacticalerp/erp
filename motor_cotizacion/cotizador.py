@@ -22,6 +22,8 @@ Ver solicitud_claude_code_motor_cotizacion_cuadernos.md para el detalle
 y la fuente de cada regla de negocio usada aqui.
 """
 
+import math
+
 import datos_maestros as D
 import motor as M
 from linea_impresion import procesar_linea_impresion
@@ -196,7 +198,14 @@ def cotizar_cuaderno(
 
     if linea_producto == "escolar":
         costo_armado = D.ESCOLAR_ENCUADERNACION_COP[tipo_enc] * cantidad * factor_escala
-        costo_armado += (cantidad / 1000) * D.GRAFADO_ESCOLAR_COP_POR_MILLAR
+        # CORREGIDO 2026-07-22: el millar se cobra completo, no en
+        # proporcion (0.5 millar no son $17.500, son $35.000 - 1 millar
+        # minimo). Confirmado por Conde.
+        costo_armado += math.ceil(cantidad / 1000) * D.GRAFADO_ESCOLAR_COP_POR_MILLAR
+        # Refile del taco: confirmado por Conde 2026-07-22 que SI aplica
+        # a Escolar tambien (antes se creia incluido en el precio de
+        # Grapa/Hilo, no era correcto), con el mismo piso de $15.000.
+        costo_armado += max(D.REFILE_TACO_COP_UNIDAD * cantidad, D.REFILE_TACO_MINIMO_COP)
 
     elif linea_producto == "cuaderno_anillado":
         tabla = D.ANILLO_DOBLE_O[cat_clave]
@@ -208,7 +217,7 @@ def cotizar_cuaderno(
             # 30% MENOS que el anillado normal. Confirmado por Conde.
             costo_unit *= (1 - D.ANILLADO_DOS_SECCIONES_DESCUENTO_PCT)
         costo_armado = costo_unit * cantidad
-        costo_armado += D.REFILE_CUADERNO_ANILLADO_COP * cantidad
+        costo_armado += max(D.REFILE_TACO_COP_UNIDAD * cantidad, D.REFILE_TACO_MINIMO_COP)
 
     elif linea_producto == "agenda_ejecutiva":
         # Tarifa fija por tamano (ya no depende de hojas de taco) con
@@ -234,7 +243,7 @@ def cotizar_cuaderno(
         elif tipo_enc == "colbon":
             costo_armado = max(D.COLBON_COP_UNIDAD * cantidad, D.COLBON_PISO_OT_COP)
             costo_armado += D.GRAFADO_LIBRETAS_COP_FIJO
-        costo_armado += D.REFILE_CUADERNO_ANILLADO_COP * cantidad
+        costo_armado += max(D.REFILE_TACO_COP_UNIDAD * cantidad, D.REFILE_TACO_MINIMO_COP)
 
     # Limpieza (colbon/residuos), $/unidad segun linea de producto -
     # aplica a las 4 lineas, no solo a Cuaderno Anillado. Confirmado por

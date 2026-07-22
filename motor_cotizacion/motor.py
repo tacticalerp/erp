@@ -298,7 +298,7 @@ def _fraccion_pliego_offset(ancho, alto, es_policromia=False):
     return "medio_pliego"
 
 
-def costo_impresion_offset(n_piezas_finales, cant_tintas, es_policromia, ancho, alto,
+def costo_impresion_offset(n_piezas_finales, tintas_tiro, tintas_retiro, es_policromia, ancho, alto,
                             cuadricula_uniforme=False, pliegue=False):
     """Costo de planchas (CtP) + millar/pasada + recargos, para un tiraje
     de n_piezas_finales piezas ya cortadas a su tamano final.
@@ -307,6 +307,18 @@ def costo_impresion_offset(n_piezas_finales, cant_tintas, es_policromia, ancho, 
     no por cada 1000 piezas chicas terminadas - varias piezas caben
     imposicionadas en un mismo pliego, igual que en digital. Antes se
     cobraba 1 pasada completa por cada pieza chica, disparando el costo.
+
+    Tiro + Retiro (confirmado por Conde 2026-07-22): en maquinas chicas
+    (Cuarto/Octavo) el retiro necesita su propio juego de planchas, se
+    factura como un segundo trabajo independiente completo (planchas +
+    millar propio, con su propio minimo). En Medio Pliego, si tiro y
+    retiro usan las MISMAS tintas (mismas planchas), no se duplica -
+    se cobra 1 millar + un recargo por el tiempo de secado antes de
+    voltear la hoja (+30% en policromia). Si las tintas de retiro son
+    distintas a las de tiro en Medio Pliego, se factura aparte tambien
+    (necesita su propio juego de planchas igual que en maquina chica).
+    La cuadricula (ver mas abajo) nunca lleva este recargo - con tan
+    poca tinta sobre Bond seca mucho mas rapido.
 
     Escudo para Cuadriculas y Tirajes Largos: si el interior es una
     cuadricula/diseno uniforme (se repite igual en todas las hojas), 1
@@ -326,6 +338,7 @@ def costo_impresion_offset(n_piezas_finales, cant_tintas, es_policromia, ancho, 
     # se cobra como 2). Confirmado por Conde.
     millares = math.ceil(n_pasadas / 1000)
 
+    cant_tintas = max(tintas_tiro, tintas_retiro, 1)
     n_planchas_normal = max(cant_tintas, 1)
     costo_ctp_normal = D.OFFSET_CTP_COP[fraccion] * n_planchas_normal
     if fraccion == "medio_pliego" and es_policromia:
@@ -338,12 +351,39 @@ def costo_impresion_offset(n_piezas_finales, cant_tintas, es_policromia, ancho, 
         tarifa_millar_normal = D.OFFSET_MILLAR_COP[fraccion] * n_planchas_normal
         costo_millar_normal = tarifa_millar_normal * millares
     costo_normal = costo_ctp_normal + costo_millar_normal
+
+    recargo_retiro = 0.0
+    tiene_retiro = tintas_retiro > 0
+    via_extra = ""
+    if tiene_retiro and not cuadricula_uniforme:
+        mismas_planchas = tintas_retiro == tintas_tiro
+        if fraccion in ("cuarto", "octavo") or (fraccion == "medio_pliego" and not mismas_planchas):
+            # Retiro con su propio juego de planchas: se factura como un
+            # segundo trabajo independiente (su propio millar minimo).
+            n_planchas_retiro = max(tintas_retiro, 1)
+            costo_ctp_retiro = D.OFFSET_CTP_COP[fraccion] * n_planchas_retiro
+            if fraccion == "medio_pliego" and es_policromia:
+                costo_millar_retiro = D.OFFSET_MILLAR_COP["medio_pliego_policromia_4x0"] * millares
+            elif fraccion == "medio_pliego":
+                costo_millar_retiro = D.OFFSET_MILLAR_COP["medio_pliego_color"] * n_planchas_retiro * millares
+            else:
+                costo_millar_retiro = D.OFFSET_MILLAR_COP[fraccion] * n_planchas_retiro * millares
+            costo_normal += costo_ctp_retiro + costo_millar_retiro
+            via_extra = " +retiro (planchas propias)"
+        elif fraccion == "medio_pliego" and mismas_planchas and es_policromia:
+            # Mismas planchas: no se duplica, recargo por tiempo de secado.
+            recargo_retiro = costo_millar_normal * D.OFFSET_RECARGO_RETIRO_MEDIO_PLIEGO_POLICROMIA_PCT
+            costo_normal += recargo_retiro
+            via_extra = " +retiro (mismas planchas, +30%)"
+
     detalle_normal = {
-        "total": costo_normal, "via": f"offset ({fraccion})",
+        "total": costo_normal, "via": f"offset ({fraccion}){via_extra}",
         "n_planchas": n_planchas_normal, "costo_ctp_unitario": D.OFFSET_CTP_COP[fraccion],
         "costo_planchas": costo_ctp_normal, "n_millares": millares,
         "costo_millar_unitario": tarifa_millar_normal, "costo_millares": costo_millar_normal,
     }
+    if recargo_retiro:
+        detalle_normal["recargo_retiro"] = recargo_retiro
 
     if not cuadricula_uniforme:
         return detalle_normal

@@ -316,7 +316,8 @@ const ANILLO_DOBLE_O = {
   agenda:{base_80h:990, variacion_hoja:5.5},
   carta:{base_80h:1700, variacion_hoja:10.0},
 };
-const REFILE_CUADERNO_ANILLADO_COP = 100;
+const REFILE_TACO_COP_UNIDAD = 100;
+const REFILE_TACO_MINIMO_COP = 15000;
 const LIMPIEZA_COP_UNIDAD = {cuaderno_anillado:180, agenda_ejecutiva:180, libretas:120, escolar:120};
 const ANILLADO_DOS_SECCIONES_DESCUENTO_PCT = 0.30;
 
@@ -353,6 +354,8 @@ const DIGITAL_FORMATOS_CM = {carta:[21.5,28], octavo:[25,35], pliego_max:[33,50]
 const OFFSET_CTP_COP = {medio_pliego:22000, cuarto:11000, octavo:9000};
 const OFFSET_MILLAR_COP = {medio_pliego_color:25000, medio_pliego_policromia_4x0:100000, cuarto:16000, octavo:12000};
 const OFFSET_RECARGO_FONDO_PLENO_COP = {medio_pliego:90000, cuarto:50000, octavo:50000};
+const OFFSET_RECARGO_RETIRO_MEDIO_PLIEGO_POLICROMIA_PCT = 0.30;
+const OFFSET_RECARGO_RETIRO_MEDIO_PLIEGO_TINTA_ESPECIAL_PCT = 0.20;
 const OFFSET_MERMA_HOJAS = [[1000,100],[2000,130],[Infinity,160]];
 const OFFSET_MERMA_FACTOR_2_MAS_TINTAS = 1.30;
 const OFFSET_FORMATOS_CM = {octavo:[25,35], cuarto:[35,50], medio_pliego:[50,70]};
@@ -542,7 +545,7 @@ function fraccionPliegoOffset(ancho,alto,esPolicromia=false){
   return "medio_pliego";
 }
 
-function costoImpresionOffset(nPiezasFinales,cantTintas,esPolicromia,ancho,alto,cuadriculaUniforme=false,pliegue=false){
+function costoImpresionOffset(nPiezasFinales,tintasTiro,tintasRetiro,esPolicromia,ancho,alto,cuadriculaUniforme=false,pliegue=false){
   const fraccion=fraccionPliegoOffset(ancho,alto,esPolicromia);
   const [sheetW,sheetH]=OFFSET_FORMATOS_CM[fraccion];
   let piezasPorPasada=piezasPorPliego(ancho,alto,sheetW,sheetH);
@@ -550,6 +553,7 @@ function costoImpresionOffset(nPiezasFinales,cantTintas,esPolicromia,ancho,alto,
   const nPasadas=Math.ceil(nPiezasFinales/piezasPorPasada);
   const millares=Math.ceil(nPasadas/1000);
 
+  const cantTintas=Math.max(tintasTiro,tintasRetiro,1);
   const nPlanchasNormal=Math.max(cantTintas,1);
   const costoCtpNormal=OFFSET_CTP_COP[fraccion]*nPlanchasNormal;
   let tarifaMillarNormal, costoMillarNormal;
@@ -563,13 +567,41 @@ function costoImpresionOffset(nPiezasFinales,cantTintas,esPolicromia,ancho,alto,
     tarifaMillarNormal=OFFSET_MILLAR_COP[fraccion]*nPlanchasNormal;
     costoMillarNormal=tarifaMillarNormal*millares;
   }
-  const costoNormal=costoCtpNormal+costoMillarNormal;
+  let costoNormal=costoCtpNormal+costoMillarNormal;
+
+  // Tiro + Retiro (confirmado por Conde 2026-07-22): maquinas chicas
+  // (cuarto/octavo) o retiro con tintas distintas en medio pliego ->
+  // el retiro necesita su propio juego de planchas, se factura como un
+  // segundo trabajo independiente. En medio pliego con las MISMAS
+  // tintas (mismas planchas), no se duplica - solo recargo de secado
+  // (+30% policromia). La cuadricula nunca lleva este recargo.
+  let recargoRetiro=0, viaExtra="";
+  const tieneRetiro=tintasRetiro>0;
+  if(tieneRetiro && !cuadriculaUniforme){
+    const mismasPlanchas=tintasRetiro===tintasTiro;
+    if(fraccion!=="medio_pliego" || !mismasPlanchas){
+      const nPlanchasRetiro=Math.max(tintasRetiro,1);
+      const costoCtpRetiro=OFFSET_CTP_COP[fraccion]*nPlanchasRetiro;
+      let costoMillarRetiro;
+      if(fraccion==="medio_pliego" && esPolicromia) costoMillarRetiro=OFFSET_MILLAR_COP.medio_pliego_policromia_4x0*millares;
+      else if(fraccion==="medio_pliego") costoMillarRetiro=OFFSET_MILLAR_COP.medio_pliego_color*nPlanchasRetiro*millares;
+      else costoMillarRetiro=OFFSET_MILLAR_COP[fraccion]*nPlanchasRetiro*millares;
+      costoNormal+=costoCtpRetiro+costoMillarRetiro;
+      viaExtra=" +retiro (planchas propias)";
+    } else if(esPolicromia){
+      recargoRetiro=costoMillarNormal*OFFSET_RECARGO_RETIRO_MEDIO_PLIEGO_POLICROMIA_PCT;
+      costoNormal+=recargoRetiro;
+      viaExtra=" +retiro (mismas planchas, +30%)";
+    }
+  }
+
   const detalleNormal={
-    total:costoNormal, via:`offset (${fraccion})`,
+    total:costoNormal, via:`offset (${fraccion})${viaExtra}`,
     nPlanchas:nPlanchasNormal, costoCtpUnitario:OFFSET_CTP_COP[fraccion],
     costoPlanchas:costoCtpNormal, nMillares:millares,
     costoMillarUnitario:tarifaMillarNormal, costoMillares:costoMillarNormal,
   };
+  if(recargoRetiro) detalleNormal.recargoRetiro=recargoRetiro;
   if(!cuadriculaUniforme) return detalleNormal;
 
   const piezasMedioPliego=piezasPorMedioPliegoOffset(ancho,alto,pliegue);
@@ -708,7 +740,7 @@ function procesarLineaImpresion(linea, anchoCuaderno, altoCuaderno, cantidadCuad
     if(fondoPleno){
       const fraccion=fraccionPliegoOffset(ancho,alto,esColor);
       const mermaO=mermaOffsetHojas(nPiezasFisicas,cantTintas);
-      det=costoImpresionOffset(nPiezasFisicas+mermaO,cantTintas,esColor,ancho,alto);
+      det=costoImpresionOffset(nPiezasFisicas+mermaO,tintasTiro,tintasRetiro,esColor,ancho,alto);
       const recargo=OFFSET_RECARGO_FONDO_PLENO_COP[fraccion];
       const planchaExtra=OFFSET_CTP_COP[fraccion];
       det.total+=recargo+planchaExtra;
@@ -726,11 +758,11 @@ function procesarLineaImpresion(linea, anchoCuaderno, altoCuaderno, cantidadCuad
         const mermaD=mermaDigitalHojas(esColor);
         const detDigital=costoImpresionDigital(nPiezasFisicas+mermaD,caras,esColor,ancho,alto,cantidadCuadernos);
         const mermaO=mermaOffsetHojas(nPiezasFisicas,cantTintas);
-        const detOffset=costoImpresionOffset(nPiezasFisicas+mermaO,cantTintas,esColor,ancho,alto,false,pliegue);
+        const detOffset=costoImpresionOffset(nPiezasFisicas+mermaO,tintasTiro,tintasRetiro,esColor,ancho,alto,false,pliegue);
         det=(detDigital!==null && detDigital.total<detOffset.total)?detDigital:detOffset;
       } else {
         const mermaO=mermaOffsetHojas(nPiezasFisicas,cantTintas);
-        det=costoImpresionOffset(nPiezasFisicas+mermaO,cantTintas,esColor,ancho,alto,esCuadriculaUniforme,pliegue);
+        det=costoImpresionOffset(nPiezasFisicas+mermaO,tintasTiro,tintasRetiro,esColor,ancho,alto,esCuadriculaUniforme,pliegue);
       }
     }
     resultado.costoImpresion=det.total;
@@ -859,13 +891,17 @@ function cotizarCuaderno(p){
 
   if(p.lineaProducto==="escolar"){
     costoArmado=ESCOLAR_ENCUADERNACION_COP[tipoEnc]*p.cantidad*factorEscala;
-    costoArmado+=(p.cantidad/1000)*GRAFADO_ESCOLAR_COP_POR_MILLAR;
+    // Millar completo, no en proporcion (0.5 millar = $35.000, no $17.500).
+    costoArmado+=Math.ceil(p.cantidad/1000)*GRAFADO_ESCOLAR_COP_POR_MILLAR;
+    // Refile del taco: SI aplica a Escolar tambien (antes se creia incluido
+    // en el precio de Grapa/Hilo). Confirmado por Conde 2026-07-22.
+    costoArmado+=Math.max(REFILE_TACO_COP_UNIDAD*p.cantidad, REFILE_TACO_MINIMO_COP);
   } else if(p.lineaProducto==="cuaderno_anillado"){
     const tabla=ANILLO_DOBLE_O[catClave];
     let costoUnit=(tabla.base_80h+(p.tacoHojas-80)*tabla.variacion_hoja)*factorEscala;
     if(p.anilladoDosSecciones) costoUnit*=(1-ANILLADO_DOS_SECCIONES_DESCUENTO_PCT);
     costoArmado=costoUnit*p.cantidad;
-    costoArmado+=REFILE_CUADERNO_ANILLADO_COP*p.cantidad;
+    costoArmado+=Math.max(REFILE_TACO_COP_UNIDAD*p.cantidad, REFILE_TACO_MINIMO_COP);
   } else if(p.lineaProducto==="agenda_ejecutiva"){
     const costoUnit=Math.max(ARMADO_AGENDA_EJECUTIVA_COP[catClave]*factorEscala, ARMADO_AGENDA_EJECUTIVA_MINIMO_COP);
     const descuentoVol=descuentoVolumenArmadoAgendaEjecutiva(p.cantidad);
@@ -886,7 +922,7 @@ function cotizarCuaderno(p){
       costoArmado=Math.max(COLBON_COP_UNIDAD*p.cantidad,COLBON_PISO_OT_COP);
       costoArmado+=GRAFADO_LIBRETAS_COP_FIJO;
     }
-    costoArmado+=REFILE_CUADERNO_ANILLADO_COP*p.cantidad;
+    costoArmado+=Math.max(REFILE_TACO_COP_UNIDAD*p.cantidad, REFILE_TACO_MINIMO_COP);
   }
   costoArmado+=LIMPIEZA_COP_UNIDAD[p.lineaProducto]*p.cantidad;
   desglose["armado_encuadernacion"]=costoArmado;
