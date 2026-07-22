@@ -579,3 +579,17 @@ Confirmados por Conde, implementados y verificados Python=JS:
 3. Ajustes de UI en la calculadora: carátula con sustrato por defecto Propalcote 150g (90% de los casos reales) y sin selector de "Diseño" (no aplica, solo hay 1 pieza); taco/insertos con las opciones de diseño renombradas a "Páginas iguales"/"Páginas diferentes" (antes "Uniforme"/"Único por página"), taco inicia en "iguales", insertos en "diferentes"; guardas con plastificado marcado por defecto; preset de tamaño "Agenda 17x24.5" renombrado a "Mediano 24x17".
 
 Implementado en `datos_maestros.py`, `cotizador.py`, portado a `calculadora.html`. Commit `bb4bf8d`.
+
+### Merma también en el material, no solo en la impresión (2026-07-22)
+
+Conde revisó a mano el cálculo de papel de un caso Escolar (Carta 28x21.5cm, 500 unidades, taco 100 hojas): 50.000 hojas ÷ 8 piezas que caben en un pliego 60x90 = 6.250 pliegos, y preguntó si la merma se le sumaba antes de ese cálculo. Aclaración de términos: las 8 piezas caben en el pliego COMPLETO 60x90, no en medio pliego (60x45) — en medio pliego solo caben 4 (por área no alcanzan 8 piezas de ese tamaño ahí).
+
+**Hallazgo confirmado:** la merma de alistamiento offset (100/130/160 hojas según tiraje, ×1.30 si 2+ tintas) solo se le sumaba al cálculo de impresión (planchas/millares), nunca al material — pero si la máquina desperdicia hojas calibrando, esas hojas también hay que comprarlas en papel. Corregido: ahora la merma se suma también al material.
+
+De paso se corrigió el modelo de compra de papel: antes se cobraba una tarifa continua por pieza suelta (`precio_pliego / piezas_por_pliego × piezas_necesarias`); ahora se compran pliegos COMPLETOS redondeando hacia arriba (`ceil((piezas_necesarias + merma) / piezas_por_pliego) × precio_pliego`), y se elige el formato de pliego (60x90 vs 70x100) que salga más barato en TOTAL para la cantidad real, no solo por tarifa unitaria — puede haber casos donde un formato con peor tarifa por pieza desperdicie menos al redondear y termine siendo más barato en total.
+
+Verificado con el caso de Conde: taco Carta 28x21.5cm Bond 70g, 50.000 hojas + 160 de merma = 50.160 ÷ 8 = 6.270 pliegos × $206.10 = **$1.292.247** (antes $1.288.125 sin merma). Los 10 casos de prueba se movieron levemente en la dirección esperada (más papel = más costo).
+
+**Pendiente relacionado (no implementado aún, alcance menor):** la segunda capa de cartón en tapa semidura (`tapa_semidura_segunda_capa` en `cotizador.py`) todavía usa la tarifa continua vieja (`mejor_pliego_para_pieza`), no el redondeo a pliegos completos. No lleva merma porque no se imprime, pero sí debería redondear a pliegos completos por consistencia — revisar si vale la pena el cambio.
+
+Implementado en `motor.py` (`costo_material_pliegos`), `linea_impresion.py`, portado a `calculadora.html`. Commit `fc91cca`.
