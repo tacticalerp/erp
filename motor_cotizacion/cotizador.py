@@ -41,6 +41,7 @@ def cotizar_cuaderno(
     guardas_tintas_tiro=0,
     guardas_plastificado=False,
     carton_calibre_mm=1.5,
+    anillado_dos_secciones=False,
     utilidad_pct=0.40,
     ventas_pct=0.0,
     litoplan_esperado=None,
@@ -201,6 +202,11 @@ def cotizar_cuaderno(
         tabla = D.ANILLO_DOBLE_O[cat_clave]
         costo_unit = tabla["base_80h"] + (taco_hojas - 80) * tabla["variacion_hoja"]
         costo_unit *= factor_escala
+        if anillado_dos_secciones:
+            # Cuaderno grande anillado en 2 partes separadas en vez de 1
+            # solo anillo continuo: el combinado de las 2 secciones cuesta
+            # 30% MENOS que el anillado normal. Confirmado por Conde.
+            costo_unit *= (1 - D.ANILLADO_DOS_SECCIONES_DESCUENTO_PCT)
         costo_armado = costo_unit * cantidad
         costo_armado += D.REFILE_CUADERNO_ANILLADO_COP * cantidad
 
@@ -208,7 +214,7 @@ def cotizar_cuaderno(
         # Tarifa fija por tamano (ya no depende de hojas de taco) con
         # descuento por volumen cada 200 unidades. Confirmado por Conde
         # 2026-07-21, reemplaza la tabla base_80h+variacion anterior.
-        costo_unit = D.ARMADO_AGENDA_EJECUTIVA_COP[cat_clave] * factor_escala
+        costo_unit = max(D.ARMADO_AGENDA_EJECUTIVA_COP[cat_clave] * factor_escala, D.ARMADO_AGENDA_EJECUTIVA_MINIMO_COP)
         descuento_vol = M.descuento_volumen_armado_agenda_ejecutiva(cantidad)
         costo_armado = costo_unit * cantidad * (1 - descuento_vol)
         # Refile incluido en el precio de costura (confirmado por Conde).

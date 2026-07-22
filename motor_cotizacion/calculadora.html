@@ -129,7 +129,7 @@
           <select id="presetTamano" onchange="aplicarPreset(this.value)">
             <option value="">Personalizado…</option>
             <option value="21,14">Media Carta 21x14</option>
-            <option value="17,24.5">Agenda 17x24.5</option>
+            <option value="24,17">Mediano 24x17</option>
             <option value="28,21.5">Carta 28x21.5</option>
           </select>
         </div>
@@ -161,6 +161,14 @@
           <input type="number" id="tacoHojas" value="100" min="1" onchange="document.getElementById('tacoHojasLinea').value=this.value">
         </div>
         <div class="hint" style="align-self:center;">Se usa tanto para el armado/encuadernación como para la línea de impresión del taco.</div>
+      </div>
+      <div class="fila" id="anillado2SeccionesWrap" style="display:none;">
+        <div class="campo" style="flex:1 1 100%;">
+          <div class="checkbox-row" style="padding:10px; background:#eef4fb; border-radius:6px; border:1px solid var(--borde);">
+            <input type="checkbox" id="anillado2Secciones">
+            <label for="anillado2Secciones" style="font-weight:600;">Anillado en 2 secciones (cuaderno grande dividido en 2 partes de anillo) — aplica 30% de descuento sobre el valor del anillado</label>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -310,8 +318,10 @@ const ANILLO_DOBLE_O = {
 };
 const REFILE_CUADERNO_ANILLADO_COP = 100;
 const LIMPIEZA_COP_UNIDAD = {cuaderno_anillado:180, agenda_ejecutiva:180, libretas:120, escolar:120};
+const ANILLADO_DOS_SECCIONES_DESCUENTO_PCT = 0.30;
 
 const ARMADO_AGENDA_EJECUTIVA_COP = {media_carta:4000, agenda:4300, carta:5600};
+const ARMADO_AGENDA_EJECUTIVA_MINIMO_COP = 3000;
 const ARMADO_AGENDA_EJECUTIVA_DESCUENTO_TRAMOS = [
   [199,0.00],[299,0.04],[399,0.05],[499,0.06],[599,0.07],[699,0.08],[799,0.09],[Infinity,0.10],
 ];
@@ -824,10 +834,11 @@ function cotizarCuaderno(p){
   } else if(p.lineaProducto==="cuaderno_anillado"){
     const tabla=ANILLO_DOBLE_O[catClave];
     let costoUnit=(tabla.base_80h+(p.tacoHojas-80)*tabla.variacion_hoja)*factorEscala;
+    if(p.anilladoDosSecciones) costoUnit*=(1-ANILLADO_DOS_SECCIONES_DESCUENTO_PCT);
     costoArmado=costoUnit*p.cantidad;
     costoArmado+=REFILE_CUADERNO_ANILLADO_COP*p.cantidad;
   } else if(p.lineaProducto==="agenda_ejecutiva"){
-    const costoUnit=ARMADO_AGENDA_EJECUTIVA_COP[catClave]*factorEscala;
+    const costoUnit=Math.max(ARMADO_AGENDA_EJECUTIVA_COP[catClave]*factorEscala, ARMADO_AGENDA_EJECUTIVA_MINIMO_COP);
     const descuentoVol=descuentoVolumenArmadoAgendaEjecutiva(p.cantidad);
     costoArmado=costoUnit*p.cantidad*(1-descuentoVol);
   } else if(p.lineaProducto==="libretas"){
@@ -981,6 +992,8 @@ function lineaCardHtml(prefix, opciones){
   const mostrarNombre = !!opciones.mostrarNombre;
   const mostrarHojas = opciones.mostrarHojas !== false;
   const mostrarQuitar = !!opciones.mostrarQuitar;
+  const mostrarDiseno = opciones.mostrarDiseno !== false;
+  const disenoDefault = opciones.disenoDefault || "uniforme";
   let html = `<div class="linea-card" id="${prefix}_card">`;
   html += `<div class="titulo-linea"><strong>${opciones.titulo||prefix}</strong>`;
   if(mostrarQuitar) html += `<button class="btn-quitar" onclick="quitarInserto('${prefix}')">Quitar</button>`;
@@ -996,7 +1009,12 @@ function lineaCardHtml(prefix, opciones){
   html += `</div><div class="fila">`;
   html += `<div class="campo chico"><label>Tintas tiro</label><input type="number" id="${prefix}_tintasTiro" value="${opciones.tintasTiroDefault!=null?opciones.tintasTiroDefault:4}" min="0" max="4"></div>`;
   html += `<div class="campo chico"><label>Tintas retiro</label><input type="number" id="${prefix}_tintasRetiro" value="${opciones.tintasRetiroDefault!=null?opciones.tintasRetiroDefault:0}" min="0" max="4"></div>`;
-  html += `<div class="campo"><label>Diseño</label><select id="${prefix}_diseno"><option value="uniforme">Uniforme (repetido)</option><option value="unico_por_pagina">Único por página</option></select></div>`;
+  if(mostrarDiseno){
+    html += `<div class="campo"><label>Diseño</label><select id="${prefix}_diseno">
+      <option value="uniforme" ${disenoDefault==="uniforme"?"selected":""}>Páginas iguales</option>
+      <option value="unico_por_pagina" ${disenoDefault==="unico_por_pagina"?"selected":""}>Páginas diferentes</option>
+    </select></div>`;
+  }
   if(mostrarPliegue){
     html += `<div class="campo" style="justify-content:flex-end;"><div class="checkbox-row"><input type="checkbox" id="${prefix}_pliegue"><label for="${prefix}_pliegue" style="font-weight:400;">Pliegue (se dobla al centro)</label></div></div>`;
   }
@@ -1017,6 +1035,7 @@ function agregarInserto(datos){
     mostrarHojas:true, hojasDefault:(datos&&datos.hojasPorCuaderno)||3,
     tintasTiroDefault:(datos&&datos.tintasTiro)!=null?datos.tintasTiro:4,
     tintasRetiroDefault:(datos&&datos.tintasRetiro)!=null?datos.tintasRetiro:4,
+    disenoDefault:(datos&&datos.diseno)||"unico_por_pagina",
     mostrarQuitar:true,
   });
   document.getElementById("insertosContainer").appendChild(div.firstElementChild);
@@ -1053,7 +1072,7 @@ function leerLineaDesdeForm(prefix, opciones){
     sustrato: {nombre:sNombre, gramaje:parseFloat(sGramaje)},
     tintasTiro: parseInt(document.getElementById(prefix+"_tintasTiro").value)||0,
     tintasRetiro: parseInt(document.getElementById(prefix+"_tintasRetiro").value)||0,
-    diseno: document.getElementById(prefix+"_diseno").value,
+    diseno: document.getElementById(prefix+"_diseno") ? document.getElementById(prefix+"_diseno").value : "uniforme",
     pliegue: document.getElementById(prefix+"_pliegue") ? document.getElementById(prefix+"_pliegue").checked : false,
     acabados,
   };
@@ -1062,9 +1081,10 @@ function leerLineaDesdeForm(prefix, opciones){
 /* ---- construcción inicial ---- */
 function construirFormulario(){
   document.getElementById("lineaCaratula").innerHTML = lineaCardHtml("caratula", {
-    titulo:"Carátula", mostrarNombre:false, mostrarHojas:false, mostrarPliegue:false, tintasTiroDefault:4, tintasRetiroDefault:0,
+    titulo:"Carátula", mostrarNombre:false, mostrarHojas:false, mostrarPliegue:false, mostrarDiseno:false, tintasTiroDefault:4, tintasRetiroDefault:0,
   });
   document.getElementById("caratula_acab_plastificado").checked = true;
+  document.getElementById("caratula_sustrato").value = "Propalcote__150";
 
   document.getElementById("lineaTaco").innerHTML = lineaCardHtml("taco", {
     titulo:"Taco", mostrarNombre:false, mostrarHojas:false, tintasTiroDefault:1, tintasRetiroDefault:1,
@@ -1084,6 +1104,7 @@ function construirFormulario(){
 
   document.getElementById("guardasSustrato").innerHTML = sustratoOptionsHtml();
   document.getElementById("guardasSustrato").value = "Propalcote__150";
+  document.getElementById("guardasPlastificado").checked = true;
 
   onLineaProductoChange();
   onTapaTipoChange();
@@ -1098,6 +1119,7 @@ function onLineaProductoChange(){
     opt.value = val; opt.textContent = label;
     sel.appendChild(opt);
   }
+  document.getElementById("anillado2SeccionesWrap").style.display = (lp==="cuaderno_anillado") ? "flex" : "none";
   onEncuadernacionChange();
 }
 
@@ -1139,12 +1161,12 @@ function cargarCaso(idx){
   document.getElementById("encuadernacionTipo").value = c.encuadernacionTipo;
   document.getElementById("tacoHojas").value = c.tacoHojas;
   document.getElementById("tacoHojasLinea").value = c.tacoHojas;
+  document.getElementById("anillado2Secciones").checked = false;
 
   // Carátula
   document.getElementById("caratula_sustrato").value = c.caratula.sustrato.nombre+"__"+c.caratula.sustrato.gramaje;
   document.getElementById("caratula_tintasTiro").value = c.caratula.tintasTiro;
   document.getElementById("caratula_tintasRetiro").value = c.caratula.tintasRetiro;
-  document.getElementById("caratula_diseno").value = c.caratula.diseno;
   ACABADOS_DISPONIBLES.forEach(a=>{ document.getElementById("caratula_acab_"+a.tipo).checked = c.caratula.acabados.includes(a.tipo); });
   document.getElementById("caratula_acab_otro").checked = false;
   document.getElementById("caratula_otroCostoWrap").style.display = "none";
@@ -1220,6 +1242,7 @@ function calcular(){
       guardasSustrato: {nombre:guardasSustratoVal[0], gramaje:parseFloat(guardasSustratoVal[1])},
       guardasTintasTiro: parseInt(document.getElementById("guardasTintasTiro").value)||0,
       guardasPlastificado: document.getElementById("guardasPlastificado").checked,
+      anilladoDosSecciones: document.getElementById("anillado2Secciones").checked,
       utilidadPct: parseFloat(document.getElementById("utilidadPct").value)/100,
       ventasPct: parseFloat(document.getElementById("ventasPct").value)/100,
       litoplanEsperado: document.getElementById("litoplanEsperado").value===""? null : parseFloat(document.getElementById("litoplanEsperado").value),

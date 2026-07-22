@@ -202,6 +202,12 @@ ANILLO_DOBLE_O = {
 }
 REFILE_CUADERNO_ANILLADO_COP = 100
 
+# Anillado en 2 secciones (confirmado por Conde 2026-07-22): para un
+# cuaderno grande que se anilla en 2 partes separadas en vez de un solo
+# anillo continuo. El costo combinado de las 2 secciones es un 30% MENOS
+# que el valor normal de anillado (no se duplica el costo).
+ANILLADO_DOS_SECCIONES_DESCUENTO_PCT = 0.30
+
 # Limpieza (de colbon/residuos), $/unidad segun linea de producto.
 # Confirmado por Conde 2026-07-21.
 LIMPIEZA_COP_UNIDAD = {
@@ -229,6 +235,11 @@ ARMADO_AGENDA_EJECUTIVA_COP = {
     "agenda": 4300,
     "carta": 5600,
 }
+# Piso minimo por unidad (confirmado por Conde 2026-07-22): en tamanos muy
+# chicos (ej. agenda 15x10) el factor de escala por area puede bajar el
+# costo unitario por debajo de lo que realmente cuesta la mano de obra
+# minima de armado - no puede bajar de esto, sin importar el tamano.
+ARMADO_AGENDA_EJECUTIVA_MINIMO_COP = 3000
 # Tabla ajustada por Conde (2026-07-21): tramos de 100 unidades desde 200,
 # +1% cada tramo, tope maximo 10%. Antes de 200 unidades no hay descuento.
 ARMADO_AGENDA_EJECUTIVA_DESCUENTO_TRAMOS = [
