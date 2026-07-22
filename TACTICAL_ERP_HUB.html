@@ -1,0 +1,2394 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TACTICAL MARKETING ERP (2026)</title>
+    <style>
+        :root {
+            --primary: #cc0000; /* Rojo Intenso */
+            --secondary: #4a5568; /* Gris Corporativo */
+            --dark: #1a202c; /* Negro / Carbón */
+            --light-gray: #f7fafc;
+            --pendiente: #ecc94b; --proceso: #ed8936; --externo: #805ad5; --listo: #48bb78; --finalizado: #2b6cb0; --peligro: #e53e3e; --info: #3182ce;
+            --vip: #805ad5; --recurrente: #3182ce; --ocasional: #ed8936; --nuevo: #48bb78;
+            --req: #ecc94b; --cot: #ed8936; --neg: #4299e1; --ganado: #48bb78; --perdido: #e53e3e;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #edf2f7; margin: 0; padding: 10px; color: var(--dark); -webkit-tap-highlight-color: transparent; }
+        .container { max-width: 1280px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden; border-top: 5px solid var(--primary); }
+
+        /* ENCABEZADO GLOBAL */
+        header { background: var(--dark); color: white; padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--primary); flex-wrap: wrap; gap: 10px; }
+        header h2 { margin: 0; font-size: 1.5rem; letter-spacing: 1px; color: white; }
+        .nav-btn-hub { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 0.9rem; }
+        .nav-btn-hub:hover { background: #b30000; }
+
+        .app-view { display: none; }
+        .app-view.active-view { display: block; }
+
+        /* HUB DE PRESENTACIÓN */
+        .hub-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; padding: 25px; }
+        .hub-card { background: white; border: 2px solid #e2e8f0; border-radius: 8px; padding: 22px; cursor: pointer; transition: all 0.25s ease; position: relative; border-top: 4px solid var(--secondary); display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
+        .hub-card:hover { transform: translateY(-4px); border-color: var(--primary); box-shadow: 0 8px 16px rgba(204,0,0,0.12); }
+        .hub-card.active-card { border-top-color: var(--primary); }
+        .hub-card.disabled-card { opacity: 0.6; cursor: not-allowed; background: #f8fafc; border-top-color: #cbd5e0; }
+        .hub-card.disabled-card:hover { transform: none; border-color: #cbd5e0; box-shadow: none; }
+
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+        .card-title { font-size: 1.25rem; font-weight: bold; color: var(--dark); margin: 0; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; color: white; text-transform: uppercase; }
+        .badge-active { background: var(--primary); }
+        .badge-dev { background: var(--secondary); }
+        .card-desc { font-size: 0.9rem; color: #718096; line-height: 1.4; margin-bottom: 15px; }
+        .card-footer { font-size: 0.88rem; font-weight: bold; color: var(--primary); display: flex; align-items: center; gap: 5px; }
+
+        /* ESTILOS COMUNES, FORMULARIOS Y TABLAS */
+        .accordion-item { width: 100%; margin-bottom: 5px; }
+        .accordion-header { background: var(--dark); color: white; padding: 15px 20px; font-weight: bold; font-size: 1.1rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid var(--secondary); transition: 0.2s; user-select: none; }
+        .accordion-header:hover { background: #2d3748; color: var(--primary); }
+        .accordion-header.active { border-left: 5px solid var(--primary); background: #2d3748; }
+        .header-special { background: var(--secondary); }
+        .accordion-content { display: none; padding: 15px; background: white; border: 1px solid #e2e8f0; border-top: none; }
+        .accordion-content.active { display: block; }
+
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 15px; background: var(--light-gray); padding: 15px; border-radius: 6px; border: 1px solid #cbd5e0; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.88rem; color: var(--secondary); }
+        input[type="text"], input[type="number"], select, textarea { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 16px !important; box-sizing: border-box; background: white; pointer-events: auto !important; }
+        textarea { resize: vertical; height: 75px; }
+        .task-espec { width: 92% !important; padding: 5px 8px !important; font-size: 0.85rem !important; border: 1px solid #e2e8f0 !important; color: var(--secondary); font-weight: normal !important; }
+        input::placeholder { color: #cbd5e0 !important; opacity: 0.5 !important; font-style: italic; }
+
+        .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 12px; background: var(--light-gray); border-bottom: 2px solid #cbd5e0; font-weight: bold; font-size: 0.95rem; }
+        td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+
+        .status-select { font-weight: bold; color: white; border: none; outline: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; }
+        .status-pendiente { background-color: var(--pendiente); color: #744210; }
+        .status-proceso { background-color: var(--proceso); color: white; }
+        .status-externo { background-color: var(--externo); color: white; }
+        .status-listo { background-color: var(--listo); color: white; }
+        .status-finalizado { background-color: var(--finalizado); color: white; }
+
+        .badge-delay { display: inline-block; background: var(--peligro); color: white; padding: 3px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; margin-bottom: 5px; }
+        .badge-escape { background: #fff5f5; color: var(--primary); border: 1px solid #feb2b2; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; display: inline-block; margin-top: 4px; }
+        .badge-supplier { background: #f3e8ff; color: var(--externo); border: 1px solid #d6bcfa; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; display: inline-block; margin-top: 4px; }
+
+        .tag { padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; color: white; display: inline-block; }
+        .tag-vip { background: var(--vip); } .tag-recurrente { background: var(--recurrente); } .tag-ocasional { background: var(--ocasional); } .tag-nuevo { background: var(--nuevo); }
+        .stage-req { background: var(--req); color: #744210; } .stage-cot { background: var(--cot); color: white; } .stage-neg { background: var(--neg); color: white; }
+
+        .btn-add { background: white; color: var(--primary); border: 2px dashed var(--primary); padding: 12px; width: 100%; font-weight: bold; cursor: pointer; border-radius: 4px; font-size: 1rem; }
+        .btn-add-item { background: white; color: var(--info); border: 1px dashed var(--info); padding: 10px; width: 100%; font-weight: bold; cursor: pointer; border-radius: 4px; margin-bottom: 10px; }
+        .btn-submit { background: var(--primary); color: white; border: none; padding: 12px; width: 100%; font-weight: bold; font-size: 1rem; cursor: pointer; border-radius: 4px; transition: 0.2s; }
+        .btn-submit:hover { background: #b30000; }
+
+        .btn-action { background: #edf2f7; border: 1px solid #cbd5e0; border-radius: 4px; padding: 6px 10px; cursor: pointer; font-size: 0.9rem; margin-right: 2px; }
+        .btn-clear { background: var(--secondary); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; float: right; font-size: 0.85rem; }
+        .btn-del-row { background: #fff5f5; border: 1px solid #feb2b2; color: var(--primary); font-weight: bold; }
+        .cron-simulator { display: block; margin: 20px auto 10px; padding: 14px 30px; background: var(--primary); color: white; border: none; border-radius: 4px; font-size: 1rem; font-weight: bold; cursor: pointer; }
+
+        .search-container { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; background: #e2e8f0; padding: 12px; border-radius: 6px; border: 1px solid #cbd5e0; }
+        .search-input { flex: 2; min-width: 180px; padding: 8px 12px; border: 1px solid #cbd5e0; border-radius: 4px; }
+        .search-date { flex: 1; min-width: 140px; padding: 8px 12px; border: 1px solid #cbd5e0; border-radius: 4px; }
+
+        .main-grid { display: flex; gap: 20px; padding: 20px; flex-wrap: wrap; }
+        .form-side { flex: 1.3; min-width: 320px; }
+        .stats-side { flex: 0.7; min-width: 300px; background: var(--light-gray); padding: 20px; border-radius: 6px; border: 1px solid #e2e8f0; height: fit-content; }
+        .detail-container { background: #f8fafc; border: 1px solid #cbd5e0; border-radius: 6px; padding: 15px; margin-bottom: 20px; }
+        .detail-header { font-weight: bold; color: var(--dark); margin-bottom: 10px; border-bottom: 2px solid var(--primary); padding-bottom: 5px; }
+        .detail-row-grid { display: grid; grid-template-columns: 1.2fr 1.5fr 0.6fr 1fr 0.3fr; gap: 10px; margin-bottom: 10px; align-items: center; }
+        .input-manual { display: none; margin-top: 4px; font-size: 0.85rem !important; padding: 6px !important; border-color: var(--primary); }
+
+        .dash-title { margin: 0 0 15px 0; color: var(--dark); border-bottom: 2px solid #cbd5e0; padding-bottom: 5px; font-size: 1.1rem; }
+        .sub-dash-section { background: white; padding: 12px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #e2e8f0; }
+        .metric-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95rem; }
+        .metric-total { font-size: 1.4rem; font-weight: bold; color: var(--primary); background: white; padding: 10px; border-radius: 4px; border: 1px solid #cbd5e0; text-align: center; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
+        .kpi-card { background: white; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center; border-bottom: 4px solid #cbd5e0; }
+        .kpi-value { font-size: 2.2rem; font-weight: bold; margin: 10px 0; }
+
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; margin-top: 15px; }
+        .data-card { background: white; border: 1px solid #cbd5e0; border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); position: relative; border-left: 5px solid var(--secondary); }
+        .card-title { font-size: 1.15rem; font-weight: bold; color: var(--dark); margin: 0 0 4px 0; }
+        .card-subtitle { font-size: 0.88rem; color: #4a5568; margin-bottom: 8px; }
+        .client-stats-box { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #cbd5e0; font-size: 0.88rem; line-height: 1.5; background: #faf5ff; padding: 8px 10px; border-radius: 4px; border: 1px solid #f3e8ff; }
+        .action-row { display: flex; gap: 8px; margin-top: 15px; }
+        .btn-stage { flex: 1; padding: 8px; border: none; border-radius: 4px; font-weight: bold; font-size: 0.85rem; cursor: pointer; color: white; }
+        .btn-ganado { background: var(--ganado); } .btn-perdido { background: var(--peligro); } .btn-avanzar { background: var(--info); }
+        #modal-perdida { display: none; background: #fff5f5; border: 1px solid #feb2b2; padding: 15px; border-radius: 6px; margin-top: 10px; }
+        .dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .kpi-box { background: white; border: 1px solid #e2e8f0; padding: 15px; border-radius: 6px; text-align: center; border-bottom: 3px solid var(--secondary); }
+
+        /* MÓVIL */
+        @media (max-width: 768px) {
+            body { padding: 4px; }
+            header { padding: 12px; text-align: center; justify-content: center; }
+            header h2 { font-size: 1.2rem; width: 100%; justify-content: center; }
+            .hub-grid { padding: 15px 10px; gap: 15px; }
+
+            #view-tareas table, #view-tareas thead, #view-tareas tbody, #view-tareas th, #view-tareas td, #view-tareas tr,
+            #view-reprocesos table, #view-reprocesos thead, #view-reprocesos tbody, #view-reprocesos th, #view-reprocesos td, #view-reprocesos tr { display: block !important; width: 100% !important; box-sizing: border-box; }
+            thead { display: none !important; }
+            tr { background: #ffffff !important; border: 1px solid #cbd5e0 !important; border-radius: 8px !important; padding: 12px !important; margin-bottom: 15px !important; position: relative !important; }
+            td { padding: 4px 0 !important; border: none !important; display: block !important; text-align: left !important; }
+
+            input[type="text"], select, .task-emp, .status-select { font-size: 16px !important; padding: 10px !important; width: 100% !important; margin: 4px 0 !important; height: 44px !important; display: block !important; }
+            .card-grid { grid-template-columns: 1fr; }
+            .detail-row-grid { grid-template-columns: 1fr; gap: 8px; border: 1px dashed #cbd5e0; padding: 12px; border-radius: 6px; background: white; }
+            td:last-child { display: flex !important; flex-direction: row !important; justify-content: space-between !important; gap: 6px !important; margin-top: 10px !important; border-top: 1px dashed #cbd5e0 !important; padding-top: 8px !important; }
+
+            /* La regla "td { display:block }" de arriba es global y tambien
+               rompia las tablas del PDF/Orden de Produccion en pantallas
+               angostas - se restaura el layout de tabla normal ahi. */
+            #print-area td, #print-area th { display: table-cell !important; border: 1px solid #cbd5e0 !important; padding: 6px 10px !important; }
+            #print-area tr { background: transparent !important; border: none !important; padding: 0 !important; margin-bottom: 0 !important; }
+        }
+
+        /* IMPRESIÓN (PDF Cliente / Orden de Producción) */
+        #print-area { font-family: 'Segoe UI', Tahoma, sans-serif; color: #1a202c; }
+        .doc-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid var(--primary); padding-bottom: 14px; margin-bottom: 18px; }
+        .doc-header h1 { margin: 0; font-size: 1.4rem; color: var(--primary); }
+        .doc-header .doc-empresa-datos { font-size: 0.82rem; color: #4a5568; line-height: 1.5; text-align: right; }
+        .doc-tipo { display: inline-block; background: var(--dark); color: white; padding: 4px 14px; border-radius: 4px; font-weight: bold; font-size: 0.85rem; margin-top: 6px; }
+        .doc-section-title { font-weight: bold; color: var(--dark); background: var(--light-gray); padding: 6px 10px; border-left: 4px solid var(--primary); margin: 18px 0 10px; font-size: 0.95rem; }
+        .doc-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 0.88rem; }
+        .doc-table td, .doc-table th { border: 1px solid #cbd5e0; padding: 6px 10px; text-align: left; }
+        .doc-table th { background: var(--light-gray); }
+        .doc-total-box { text-align: right; font-size: 1.15rem; font-weight: bold; color: var(--primary); margin: 10px 0; }
+        .doc-condiciones { font-size: 0.82rem; color: #4a5568; line-height: 1.6; }
+        .doc-condiciones ul { margin: 4px 0; padding-left: 18px; }
+        .doc-linea-block { border: 1px solid #cbd5e0; border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; background: #fbfcfd; }
+        .doc-linea-block h4 { margin: 0 0 6px; color: var(--primary); font-size: 0.98rem; }
+        @media print {
+            body * { visibility: hidden; }
+            #print-area, #print-area * { visibility: visible; }
+            #print-area { display: block !important; position: absolute; left: 0; top: 0; width: 100%; padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- HEADER PRINCIPAL -->
+        <header>
+            <div>
+                <h2 id="app-header-title">TACTICAL MARKETING ERP</h2>
+                <span id="app-header-sub" style="font-size: 0.88rem; color: #cbd5e0; font-style: italic;">Planta de Producción & MIS (2026)</span>
+            </div>
+            <div id="nav-hub-container" style="display:none;">
+                <button class="nav-btn-hub" onclick="showView('hub')">🏠 Volver al Hub Principal</button>
+            </div>
+        </header>
+
+        <!-- VISTA 0: HUB DE SELECCIÓN PRINCIPAL -->
+        <div id="view-hub" class="app-view active-view">
+            <div style="padding: 25px 20px 0 20px; text-align: center;">
+                <h3 style="margin: 0; font-size: 1.4rem; color: var(--dark);">Centro de Control de Operaciones</h3>
+                <p style="color: #718096; margin-top: 6px; font-size: 0.95rem;">Seleccione el módulo en el que desea trabajar hoy:</p>
+            </div>
+
+            <div class="hub-grid">
+                <!-- MÓDULO 1: TAREAS -->
+                <div class="hub-card active-card" onclick="showView('tareas')">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title">📋 Plan de Tareas</h3>
+                            <span class="badge badge-active">Activo</span>
+                        </div>
+                        <p class="card-desc">Gestión operativa diaria por áreas (Diseño, Producción, Comercial, Gerencia), prioridades, causas externas y motor de arrastre nocturno.</p>
+                    </div>
+                    <div class="card-footer">Ingresar al Módulo ➔</div>
+                </div>
+
+                <!-- MÓDULO 2: REPROCESOS -->
+                <div class="hub-card active-card" onclick="showView('reprocesos')">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title">⚠️ Control de Reprocesos</h3>
+                            <span class="badge badge-active">Activo</span>
+                        </div>
+                        <p class="card-desc">Registro multi-insumo de desperdicios, cálculo oculto de tiempos y materiales, auditoría de operarios e índice de culpa de proveedores.</p>
+                    </div>
+                    <div class="card-footer">Ingresar al Módulo ➔</div>
+                </div>
+
+                <!-- MÓDULO 3: CRM -->
+                <div class="hub-card active-card" onclick="showView('crm')">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title">👥 CRM & Clientes B2B</h3>
+                            <span class="badge badge-active">Activo</span>
+                        </div>
+                        <p class="card-desc">Directorio independiente (Empresa, Contacto, WA, Email), métricas LTV, historial de cotizaciones y razones de pérdida.</p>
+                    </div>
+                    <div class="card-footer">Ingresar al Módulo ➔</div>
+                </div>
+
+                <!-- MÓDULO 4: COTIZADOR CUADERNOS -->
+                <div class="hub-card active-card" onclick="showView('cotizador')">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title">🧮 Cotizador Cuadernos</h3>
+                            <span class="badge badge-active">Activo</span>
+                        </div>
+                        <p class="card-desc">Motor de cotización validado contra casos reales de Litoplan: Escolar, Cuaderno Anillado, Agenda Ejecutiva y Libretas. Genera PDF para el cliente y Orden de Producción. Alimenta el CRM automáticamente.</p>
+                    </div>
+                    <div class="card-footer">Ingresar al Módulo ➔</div>
+                </div>
+
+                <!-- MÓDULO 5: REPORTES -->
+                <div class="hub-card active-card" onclick="showView('reportes')">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title">📈 Reportes</h3>
+                            <span class="badge badge-active">Activo</span>
+                        </div>
+                        <p class="card-desc">Indicadores cruzados de Ventas, Producción, Calidad y Tareas — a partir de los datos que ya se capturan en los demás módulos.</p>
+                    </div>
+                    <div class="card-footer">Ingresar al Módulo ➔</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISTA 1: PLAN DE TAREAS TACTICAL -->
+        <div id="view-tareas" class="app-view">
+            <div style="padding: 10px;">
+                <div class="accordion-item">
+                    <div class="accordion-header active" id="head-diseno" onclick="toggleSection('diseno')">
+                        <span>🎨 1. Área de Diseño</span><span class="arrow" id="arrow-diseno">▼</span>
+                    </div>
+                    <div id="diseno" class="accordion-content active">
+                        <div class="table-responsive"><table id="table-diseno"><thead><tr><th style="width:38%;">Descripción de la Tarea</th><th style="width:24%;">Impresión (Cant. / Tipo)</th><th style="width:13%;">Responsable</th><th style="width:11%;">Estado</th><th style="width:10%;">Origen</th><th style="width:4%;"></th></tr></thead><tbody></tbody></table></div>
+                        <button class="btn-add" onclick="addTask('diseno')">+ Añadir Tarea de Diseño</button>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header" id="head-produccion" onclick="toggleSection('produccion')">
+                        <span>🛠️ 2. Área de Producción</span><span class="arrow" id="arrow-produccion">►</span>
+                    </div>
+                    <div id="produccion" class="accordion-content">
+                        <div class="table-responsive"><table id="table-produccion"><thead><tr><th>Descripción de la Tarea</th><th>Notas (Proveedor / Detalles)</th><th>Responsable</th><th>Estado</th><th>Origen</th><th></th></tr></thead><tbody></tbody></table></div>
+                        <button class="btn-add" onclick="addTask('produccion')">+ Añadir Tarea de Producción</button>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header" id="head-comercial" onclick="toggleSection('comercial')">
+                        <span>💼 3. Área Comercial</span><span class="arrow" id="arrow-comercial">►</span>
+                    </div>
+                    <div id="comercial" class="accordion-content">
+                        <div class="table-responsive"><table id="table-comercial"><thead><tr><th>Descripción de la Tarea</th><th>Notas Comerciales</th><th>Responsable</th><th>Estado</th><th>Origen</th><th></th></tr></thead><tbody></tbody></table></div>
+                        <button class="btn-add" onclick="addTask('comercial')">+ Añadir Tarea Comercial</button>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header" id="head-gerencia" onclick="toggleSection('gerencia')">
+                        <span>👑 4. Área de Gerencia</span><span class="arrow" id="arrow-gerencia">►</span>
+                    </div>
+                    <div id="gerencia" class="accordion-content">
+                        <div class="table-responsive"><table id="table-gerencia"><thead><tr><th>Descripción de la Tarea</th><th>Notas Generales</th><th>Responsable</th><th>Estado</th><th>Origen</th><th></th></tr></thead><tbody></tbody></table></div>
+                        <button class="btn-add" onclick="addTask('gerencia')">+ Añadir Tarea de Gerencia</button>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header header-special" id="head-historico" onclick="toggleSection('historico'); renderHistory();">
+                        <span>📂 Histórico de Cierres</span><span class="arrow" id="arrow-historico">►</span>
+                    </div>
+                    <div id="historico" class="accordion-content">
+                        <h3 style="margin-top:0; color: var(--dark);">Auditoría General de Cierres</h3>
+                        <div class="search-container">
+                            <input type="text" id="search-keyword" class="search-input" placeholder="🔍 Buscar palabra clave..." oninput="renderHistory()">
+                            <input type="text" id="search-date" class="search-date" placeholder="📅 Filtrar por fecha..." oninput="renderHistory()">
+                            <button class="btn-action btn-clear" onclick="clearSearch()">Limpiar Filtros</button>
+                        </div>
+                        <div class="table-responsive"><table id="table-historico"><thead><tr><th>Fecha Cierre</th><th>Tarea / Bloqueos</th><th>Especificación / Notas</th><th>Responsable</th><th>Estado Final</th><th>Resultado</th><th>Acción</th></tr></thead><tbody></tbody></table></div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header header-special" id="head-kpis" onclick="toggleSection('kpis'); renderKPIs();">
+                        <span>📊 Rendimiento KPI</span><span class="arrow" id="arrow-kpis">►</span>
+                    </div>
+                    <div id="kpis" class="accordion-content">
+                        <h3 style="margin-top:0; color: var(--dark);">Indicadores de Eficiencia Real</h3>
+                        <div class="kpi-grid" id="kpi-container"></div>
+                    </div>
+                </div>
+
+                <button class="cron-simulator" onclick="simulateMidnight()">⏳ Simular Fin del Día (11:59 PM)</button>
+            </div>
+        </div>
+
+        <!-- VISTA 2: CONTROL DE REPROCESOS -->
+        <div id="view-reprocesos" class="app-view">
+            <div class="main-grid">
+                <div class="form-side">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <h3 style="margin:0; color:var(--dark);">Nuevo Registro de Incidente</h3>
+                        <div class="mode-badge mode-b" id="txt-modo-activo">MODO B: SERVICIO EXPRESS / MAQUILA</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>ID Máster de la OT (Dejar vacío para trabajos Express):</label>
+                        <input type="text" id="inp-ot" placeholder="Ej: COT-2026-07-001" oninput="actualizarFormularioReceta()">
+                    </div>
+
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 140px;">
+                            <label>Responsable del Error:</label>
+                            <select id="sel-responsable">
+                                <option value="Nicol">Nicol</option>
+                                <option value="Helver">Helver</option>
+                                <option value="Norely">Norely</option>
+                                <option value="Sebastian">Sebastian</option>
+                                <option value="Susana">Susana</option>
+                                <option value="Yasmid">Yasmid</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 140px;">
+                            <label>Proveedor Asociado al Insumo:</label>
+                            <select id="sel-proveedor">
+                                <option value="Ninguno">Ninguno (Error Interno de Planta)</option>
+                                <option value="Cuarto Iván policromía">Cuarto Iván policromía</option>
+                                <option value="Cuarto Iván 1 tinta">Cuarto Iván 1 tinta</option>
+                                <option value="Medio Alfredo 1 tinta">Medio Alfredo 1 tinta</option>
+                                <option value="Medio Alfredo policromía">Medio Alfredo policromía</option>
+                                <option value="Cuarto Alfredo">Cuarto Alfredo</option>
+                                <option value="Octavo Alex">Octavo Alex</option>
+                                <option value="Delta Planchas">Delta Planchas</option>
+                                <option value="Belpar">Belpar</option>
+                                <option value="Dispapeles">Dispapeles</option>
+                                <option value="RyR">RyR</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 140px;">
+                            <label>Etapa de Origen del Daño:</label>
+                            <select id="sel-origen">
+                                <option value="Cotización">Cotización</option>
+                                <option value="Diseño">Diseño</option>
+                                <option value="Impresión">Impresión</option>
+                                <option value="Acabados">Acabados</option>
+                                <option value="Corte">Corte</option>
+                                <option value="Despacho">Despacho</option>
+                                <option value="Instalación">Instalación</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 140px;">
+                            <label>Etapa de Detección:</label>
+                            <select id="sel-deteccion">
+                                <option value="Diseño">Diseño</option>
+                                <option value="Impresión">Impresión</option>
+                                <option value="Acabados">Acabados</option>
+                                <option value="Corte">Corte</option>
+                                <option value="Despacho">Despacho</option>
+                                <option value="Instalación">Instalación</option>
+                                <option value="Cliente">⚠️ Cliente (Escape de Calidad)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="detail-container">
+                        <div class="detail-header">📦 Desglose de Materiales y Tiempos Dañados</div>
+                        <div id="wrapper-detail-rows"></div>
+                        <button class="btn-add-item" onclick="addRowDetalle()">➕ Añadir Insumo o Tiempo de Máquina Dañado</button>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Observaciones y Acciones Preventivas (Lección Aprendida):</label>
+                        <textarea id="txt-observaciones" placeholder="Escriba la acción preventiva para evitar que este error se repita..."></textarea>
+                    </div>
+
+                    <button class="btn-submit" onclick="procesarIncidenteReproceso()">⚠️ Registrar Incidente Completo</button>
+                </div>
+
+                <div class="stats-side">
+                    <h4 class="dash-title">📊 Auditoría de Calidad Real</h4>
+                    <div class="sub-dash-section">
+                        <div style="font-weight:bold; margin-bottom:5px; color:var(--secondary);">Métricas Generales</div>
+                        <div class="metric-row"><span>Incidentes Totales:</span><strong id="m-count">0</strong></div>
+                        <div class="metric-row"><span>Escape de Calidad (Cliente):</span><strong id="m-escape" style="color:var(--primary);">0%</strong></div>
+                    </div>
+                    <div class="sub-dash-section">
+                        <div style="font-weight:bold; margin-bottom:5px; color:var(--secondary);">Pérdidas por Operario</div>
+                        <div id="kpi-personas-container" style="font-size:0.9rem; line-height:1.4;"></div>
+                    </div>
+                    <div class="sub-dash-section">
+                        <div style="font-weight:bold; margin-bottom:5px; color:var(--secondary);">Índice de Culpa de Proveedores</div>
+                        <div id="kpi-proveedores-container" style="font-size:0.9rem; line-height:1.4;"></div>
+                    </div>
+                    <div class="metric-total">
+                        <div style="font-size: 0.75rem; color: var(--secondary); text-transform: uppercase;">Dinero Total Perdido</div>
+                        <span id="m-costo">$0 COP</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="history-section">
+                <h4 class="dash-title">📂 Historial de Incidentes de Reproceso</h4>
+                <div class="search-container">
+                    <input type="text" id="search-reproceso" class="search-input" placeholder="🔍 Buscar palabra clave..." oninput="renderAllReprocesos()">
+                    <button class="btn-action btn-clear" onclick="document.getElementById('search-reproceso').value=''; renderAllReprocesos();">Limpiar Filtro</button>
+                </div>
+                <div class="table-responsive">
+                    <table id="table-reprocesos">
+                        <thead><tr><th>OT / Caso</th><th>Responsable / Fases</th><th>Desglose de Pérdidas</th><th>Costo Total</th><th>Lección de Taller</th><th></th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISTA 3: CRM & CLIENTES B2B -->
+        <div id="view-crm" class="app-view">
+            <div style="padding:10px;">
+                <div class="accordion-item">
+                    <div class="accordion-header active" onclick="toggleSection('directorio')" id="head-directorio">
+                        <span>👥 1. Directorio de Clientes B2B</span><span class="arrow" id="arrow-directorio">▼</span>
+                    </div>
+                    <div id="directorio" class="accordion-content active">
+                        <div class="form-grid">
+                            <div class="form-group"><label>Nombre de la Empresa / Cliente:</label><input type="text" id="cli-empresa" placeholder="Ej: Gráficas JP S.A.S."></div>
+                            <div class="form-group"><label>Contacto Principal (Persona):</label><input type="text" id="cli-nombre" placeholder="Ej: Juan Pérez"></div>
+                            <div class="form-group"><label>WhatsApp de Negocios:</label><input type="text" id="cli-wp" placeholder="Ej: 3001234567"></div>
+                            <div class="form-group"><label>Correo Electrónico:</label><input type="text" id="cli-correo" placeholder="Ej: compras@graficasjp.com"></div>
+                            <div class="form-group">
+                                <label>Clasificación Comercial:</label>
+                                <select id="cli-clase">
+                                    <option value="nuevo">Nuevo</option>
+                                    <option value="ocasional">Ocasional</option>
+                                    <option value="recurrente">Recurrente</option>
+                                    <option value="vip">VIP (Top 20%)</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="display:flex; align-items:flex-end;">
+                                <button class="btn-submit" onclick="guardarCliente()">+ Registrar Cliente B2B</button>
+                            </div>
+                        </div>
+
+                        <input type="text" id="search-cli" placeholder="🔍 Buscar por Empresa, Contacto, Correo o WhatsApp..." style="margin-bottom:12px; width:100%; box-sizing:border-box; padding:10px; border:1px solid #cbd5e0; border-radius:4px; font-size:0.95rem;" oninput="renderClientes()">
+                        <div class="card-grid" id="lista-clientes"></div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header" onclick="toggleSection('pipeline')" id="head-pipeline">
+                        <span>💰 2. Embudo de Negocios Activos (Automático con Cotizador)</span><span class="arrow" id="arrow-pipeline">►</span>
+                    </div>
+                    <div id="pipeline" class="accordion-content">
+                        <div class="form-grid">
+                            <div class="form-group"><label>Seleccionar Cliente:</label><select id="opp-cliente"></select></div>
+                            <div class="form-group"><label>¿Qué está cotizando / pidiendo?</label><input type="text" id="opp-desc" placeholder="Ej: 1000 Cuadernos Tapa Dura"></div>
+                            <div class="form-group"><label>Monto Cotizado ($ COP):</label><input type="number" id="opp-monto" value="0"></div>
+                            <div class="form-group">
+                                <label>Etapa Comercial Actual:</label>
+                                <select id="opp-etapa">
+                                    <option value="req">🎯 Nuevo Requerimiento</option>
+                                    <option value="cot">📝 Cotización Enviada</option>
+                                    <option value="neg">💬 En Negociación / Seguimiento</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="display:flex; align-items:flex-end;">
+                                <button class="btn-submit" onclick="guardarOportunidad()">+ Crear Negocio Manual</button>
+                            </div>
+                        </div>
+
+                        <div id="modal-perdida">
+                            <label style="font-weight:bold; color:var(--peligro); display:block; margin-bottom:5px;">¿Por qué se perdió este negocio?</label>
+                            <select id="motivo-perdida" style="margin-bottom:10px;" onchange="if(this.value==='Otra') document.getElementById('motivo-otra').style.display='block'; else document.getElementById('motivo-otra').style.display='none';">
+                                <option value="Precio">Por Precio (Competencia más barata)</option>
+                                <option value="Tiempo Cotización">Tiempo de entrega de cotización tardó mucho</option>
+                                <option value="Tiempo Producto">Tiempo de entrega del producto muy largo</option>
+                                <option value="Cliente no respondió">El cliente cotizó y disappeared (No respondió)</option>
+                                <option value="Otra">Otra razón...</option>
+                            </select>
+                            <input type="text" id="motivo-otra" placeholder="Escriba la razón manual..." style="display:none; margin-bottom:10px;">
+                            <button class="btn-submit" style="background:var(--peligro);" onclick="confirmarPerdida()">Confirmar Cierre Perdido</button>
+                            <input type="hidden" id="opp-id-perdida">
+                        </div>
+
+                        <div class="card-grid" id="lista-oportunidades"></div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header header-special" onclick="toggleSection('dashboard'); renderDashboard();" id="head-dashboard">
+                        <span>📊 3. Inteligencia de Ventas (Dashboard)</span><span class="arrow" id="arrow-dashboard">►</span>
+                    </div>
+                    <div id="dashboard" class="accordion-content">
+                        <div class="dash-grid" style="margin-bottom:20px;">
+                            <div class="kpi-box" style="border-color:var(--info);"><div class="kpi-label">Dinero en Seguimiento</div><div class="kpi-value" id="kpi-pipeline">$0</div></div>
+                            <div class="kpi-box" style="border-color:var(--ganado);"><div class="kpi-label">Ventas Ganadas</div><div class="kpi-value" id="kpi-ganadas" style="color:var(--ganado);">$0</div></div>
+                            <div class="kpi-box" style="border-color:var(--peligro);"><div class="kpi-label">Tasa de Cierre</div><div class="kpi-value" id="kpi-tasa" style="color:var(--dark);">0%</div></div>
+                        </div>
+                        <h4 style="color:var(--dark); border-bottom:2px solid #cbd5e0; padding-bottom:5px;">🔍 Análisis de Razones de Pérdida</h4>
+                        <div id="lista-motivos" style="background:var(--light-gray); padding:15px; border-radius:6px; border:1px solid #cbd5e0; font-size:0.95rem; line-height:1.6;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISTA 4: COTIZADOR CUADERNOS -->
+        <div id="view-cotizador" class="app-view">
+            <div style="padding:10px;">
+
+                <div class="accordion-item">
+                    <div class="accordion-header active" id="head-cot-cliente" onclick="toggleSection('cot-cliente')">
+                        <span>👤 1. Datos del Cliente</span><span class="arrow" id="arrow-cot-cliente">▼</span>
+                    </div>
+                    <div id="cot-cliente" class="accordion-content active">
+                        <div class="form-grid">
+                            <div class="form-group"><label>Cliente:</label><input type="text" id="cot-cli-empresa" placeholder="Nombre de la empresa o persona"></div>
+                            <div class="form-group"><label>Encargado:</label><input type="text" id="cot-cli-encargado" placeholder="Persona de contacto"></div>
+                            <div class="form-group"><label>Teléfono:</label><input type="text" id="cot-cli-telefono" placeholder="Ej: 3001234567"></div>
+                            <div class="form-group"><label>Correo:</label><input type="text" id="cot-cli-correo" placeholder="cliente@empresa.com"></div>
+                            <div class="form-group">
+                                <label>Vendedor a cargo:</label>
+                                <select id="cot-vendedor"></select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header" id="head-cot-producto" onclick="toggleSection('cot-producto')">
+                        <span>📓 2. Datos del Cuaderno</span><span class="arrow" id="arrow-cot-producto">►</span>
+                    </div>
+                    <div id="cot-producto" class="accordion-content">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Línea de producto:</label>
+                                <select id="cot-lineaProducto" onchange="cotOnLineaProductoChange()">
+                                    <option value="escolar">Escolar</option>
+                                    <option value="cuaderno_anillado">Cuaderno Anillado</option>
+                                    <option value="agenda_ejecutiva">Agenda Ejecutiva</option>
+                                    <option value="libretas">Libretas</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label>Cantidad (unidades):</label><input type="number" id="cot-cantidad" value="100" min="1"></div>
+                            <div class="form-group"><label>Ancho (cm):</label><input type="number" id="cot-anchoCm" value="24" step="0.1"></div>
+                            <div class="form-group"><label>Alto (cm):</label><input type="number" id="cot-altoCm" value="17" step="0.1"></div>
+                            <div class="form-group">
+                                <label>Tipo de tapa:</label>
+                                <select id="cot-tapaTipo" onchange="cotOnTapaTipoChange()">
+                                    <option value="dura">Dura</option><option value="semidura">Semidura</option><option value="blanda">Blanda</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="cot-cartonCalibreWrap">
+                                <label>Calibre cartón (tapa dura):</label>
+                                <select id="cot-cartonCalibre"><option value="1.5">1.5mm</option><option value="2.0">2.0mm</option></select>
+                            </div>
+                            <div class="form-group"><label>Encuadernación:</label><select id="cot-encuadernacionTipo" onchange="cotOnEncuadernacionChange()"></select></div>
+                            <div class="form-group"><label>Hojas del taco:</label><input type="number" id="cot-tacoHojas" value="100" min="1"></div>
+                        </div>
+                        <div id="cot-anillado2SeccionesWrap" style="display:none;">
+                            <div class="checkbox-row" style="padding:10px; background:var(--light-gray); border-radius:6px; border:1px solid #cbd5e0; margin-bottom:10px;">
+                                <input type="checkbox" id="cot-anillado2Secciones">
+                                <label for="cot-anillado2Secciones" style="font-weight:normal; margin:0;">Anillado en 2 secciones (cuaderno grande dividido en 2 partes) — resta 30% al valor del anillado</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header" id="head-cot-caratula" onclick="toggleSection('cot-caratula')">
+                        <span>🎨 3. Carátula</span><span class="arrow" id="arrow-cot-caratula">►</span>
+                    </div>
+                    <div id="cot-caratula" class="accordion-content"><div id="cot-lineaCaratula"></div></div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header" id="head-cot-taco" onclick="toggleSection('cot-taco')">
+                        <span>📄 4. Taco</span><span class="arrow" id="arrow-cot-taco">►</span>
+                    </div>
+                    <div id="cot-taco" class="accordion-content"><div id="cot-lineaTaco"></div></div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header" id="head-cot-insertos" onclick="toggleSection('cot-insertos')">
+                        <span>📑 5. Insertos (opcional)</span><span class="arrow" id="arrow-cot-insertos">►</span>
+                    </div>
+                    <div id="cot-insertos" class="accordion-content">
+                        <div id="cot-insertosContainer"></div>
+                        <button class="btn-add" onclick="cotAgregarInserto()">+ Agregar inserto</button>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header" id="head-cot-guardas" onclick="toggleSection('cot-guardas')">
+                        <span>📗 6. Guardas</span><span class="arrow" id="arrow-cot-guardas">►</span>
+                    </div>
+                    <div id="cot-guardas" class="accordion-content">
+                        <div class="form-grid">
+                            <div class="form-group"><label>Cantidad:</label><input type="number" id="cot-guardasCantidad" value="2" min="0"></div>
+                            <div class="form-group"><label>Sustrato:</label><select id="cot-guardasSustrato"></select></div>
+                            <div class="form-group"><label>Tintas (tiro):</label><input type="number" id="cot-guardasTintasTiro" value="0" min="0" max="4"></div>
+                            <div class="form-group" style="display:flex; align-items:flex-end;">
+                                <div class="checkbox-row"><input type="checkbox" id="cot-guardasPlastificado" checked><label for="cot-guardasPlastificado" style="font-weight:normal; margin:0;">Plastificado</label></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header" id="head-cot-comercial" onclick="toggleSection('cot-comercial')">
+                        <span>📋 7. Condiciones Comerciales</span><span class="arrow" id="arrow-cot-comercial">►</span>
+                    </div>
+                    <div id="cot-comercial" class="accordion-content">
+                        <div class="form-grid">
+                            <div class="form-group"><label>% Utilidad:</label><input type="number" id="cot-utilidadPct" value="40" step="1"></div>
+                            <div class="form-group"><label>% Ventas:</label><input type="number" id="cot-ventasPct" value="0" step="1"></div>
+                            <div class="form-group" style="flex-basis:100%;"><label>Plazo de entrega:</label><input type="text" id="cot-plazoEntrega" value="15 días hábiles luego de aprobado montaje digital y anticipo"></div>
+                            <div class="form-group" style="flex-basis:100%;"><label>Validez de la oferta:</label><input type="text" id="cot-validezOferta" placeholder="Ej: 30 días calendario desde la fecha de emisión"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header header-special" id="head-cot-resultado" onclick="toggleSection('cot-resultado')">
+                        <span>💰 8. Resultado y Documentos</span><span class="arrow" id="arrow-cot-resultado">▼</span>
+                    </div>
+                    <div id="cot-resultado" class="accordion-content active">
+                        <button class="btn-submit" onclick="cotCalcular()">🧮 Calcular Cotización</button>
+                        <div id="cot-resultado-contenido" style="margin-top:15px;"></div>
+                        <div style="display:flex; gap:10px; margin-top:15px; flex-wrap:wrap;">
+                            <button class="btn-submit" style="flex:1; min-width:220px;" onclick="cotGuardarYGenerarPDF()">📄 Guardar y Generar PDF Cliente</button>
+                            <button class="btn-submit" style="flex:1; min-width:220px; background:var(--secondary);" onclick="cotGenerarOrdenProduccion()">🏭 Generar Orden de Producción</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISTA 5: REPORTES -->
+        <div id="view-reportes" class="app-view">
+            <div style="padding:15px;">
+                <div class="accordion-item">
+                    <div class="accordion-header active" id="head-rep-comercial" onclick="toggleSection('rep-comercial')">
+                        <span>💼 Ventas y Comercial</span><span class="arrow" id="arrow-rep-comercial">▼</span>
+                    </div>
+                    <div id="rep-comercial" class="accordion-content active">
+                        <div class="dash-grid" id="rep-comercial-kpis"></div>
+                        <div class="card-grid" style="margin-top:15px;">
+                            <div class="data-card">
+                                <div class="card-title">🏆 Top Clientes (LTV)</div>
+                                <div id="rep-top-clientes" style="font-size:0.9rem; line-height:1.6; margin-top:8px;"></div>
+                            </div>
+                            <div class="data-card">
+                                <div class="card-title">📦 Unidades Cotizadas por Línea</div>
+                                <div id="rep-lineas" style="font-size:0.9rem; line-height:1.6; margin-top:8px;"></div>
+                            </div>
+                            <div class="data-card">
+                                <div class="card-title">❌ Motivos de Pérdida</div>
+                                <div id="rep-motivos" style="font-size:0.9rem; line-height:1.6; margin-top:8px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header" id="head-rep-produccion" onclick="toggleSection('rep-produccion')">
+                        <span>🏭 Producción</span><span class="arrow" id="arrow-rep-produccion">►</span>
+                    </div>
+                    <div id="rep-produccion" class="accordion-content">
+                        <div class="card-grid">
+                            <div class="data-card">
+                                <div class="card-title">📄 Consumo de Papel (todas las cotizaciones)</div>
+                                <div id="rep-consumo-papel" style="font-size:0.9rem; line-height:1.6; margin-top:8px;"></div>
+                            </div>
+                            <div class="data-card">
+                                <div class="card-title">🖨️ Uso de Máquinas</div>
+                                <div id="rep-maquinas" style="font-size:0.9rem; line-height:1.6; margin-top:8px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header" id="head-rep-calidad" onclick="toggleSection('rep-calidad')">
+                        <span>⚠️ Calidad / Reprocesos</span><span class="arrow" id="arrow-rep-calidad">►</span>
+                    </div>
+                    <div id="rep-calidad" class="accordion-content">
+                        <div class="dash-grid" id="rep-calidad-kpis"></div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header" id="head-rep-tareas" onclick="toggleSection('rep-tareas')">
+                        <span>📋 Tareas y Eficiencia</span><span class="arrow" id="arrow-rep-tareas">►</span>
+                    </div>
+                    <div id="rep-tareas" class="accordion-content">
+                        <div class="dash-grid" id="rep-tareas-kpis"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTENEDOR OCULTO PARA IMPRESIÓN (PDF / ORDEN DE PRODUCCIÓN) -->
+    <div id="print-area" style="display:none;"></div>
+
+    <script>
+        // NAVEGACIÓN SPA DEL HUB
+        function showView(viewId) {
+            document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active-view'));
+            document.getElementById('view-' + viewId).classList.add('active-view');
+
+            const navContainer = document.getElementById('nav-hub-container');
+            const subTitle = document.getElementById('app-header-sub');
+            const mainTitle = document.getElementById('app-header-title');
+
+            if (viewId === 'hub') {
+                navContainer.style.display = 'none';
+                mainTitle.innerText = "TACTICAL MARKETING ERP";
+                subTitle.innerText = "Planta de Producción & MIS (2026)";
+            } else if (viewId === 'tareas') {
+                navContainer.style.display = 'block';
+                mainTitle.innerText = "PLAN DE TAREAS TACTICAL";
+                subTitle.innerText = "Gestión Operativa Sincronizada (2026)";
+            } else if (viewId === 'reprocesos') {
+                navContainer.style.display = 'block';
+                mainTitle.innerText = "CONTROL DE REPROCESOS TACTICAL";
+                subTitle.innerText = "Auditoría de Insumos y Proveedores (2026)";
+                actualizarFormularioReceta();
+                renderAllReprocesos();
+            } else if (viewId === 'crm') {
+                navContainer.style.display = 'block';
+                mainTitle.innerText = "CRM & CLIENTES B2B";
+                subTitle.innerText = "Directorio y Embudo de Ventas (2026)";
+                renderClientes();
+                llenarSelectClientes();
+                renderOportunidades();
+            } else if (viewId === 'cotizador') {
+                navContainer.style.display = 'block';
+                mainTitle.innerText = "COTIZADOR CUADERNOS";
+                subTitle.innerText = "Línea Editorial — Escolar, Anillado, Agenda Ejecutiva, Libretas (2026)";
+                if (typeof initCotizador === 'function') initCotizador();
+            } else if (viewId === 'reportes') {
+                navContainer.style.display = 'block';
+                mainTitle.innerText = "REPORTES";
+                subTitle.innerText = "Indicadores de Ventas, Producción, Calidad y Tareas (2026)";
+                if (typeof renderReportes === 'function') renderReportes();
+            }
+        }
+
+        // ==========================================
+        // MÓDULO 1: PLAN DE TAREAS
+        // ==========================================
+        let currentDate = localStorage.getItem('tactical_date') ? new Date(localStorage.getItem('tactical_date')) : new Date(2026, 6, 15);
+        let db_historico = JSON.parse(localStorage.getItem('tactical_db_historico')) || [];
+        let activeTasks = JSON.parse(localStorage.getItem('tactical_active_tasks')) || [
+            { area: 'diseno', desc: 'Aprobación de arte: Cuadernos Cliente Especial', espec: '', emp: 'Nicol', status: 'externo', origin: 'Desde hace 2 semanas', delay: 14, aclaracion: 'El cliente no responde llamadas ni aprueba el boceto' },
+            { area: 'produccion', desc: 'Plastificado Caratulas Rubinus', espec: '', emp: 'Sebastian', status: 'pendiente', origin: 'Hoy', delay: 0, aclaracion: '' },
+            { area: 'produccion', desc: 'Plastificado insertos Rubinus', espec: '', emp: 'Sebastian', status: 'pendiente', origin: 'Hoy', delay: 0, aclaracion: '' },
+            { area: 'produccion', desc: 'corte rompecabezas personalizados', espec: '', emp: 'Sebastian', status: 'pendiente', origin: 'Hoy', delay: 0, aclaracion: '' }
+        ];
+
+        const employees = {
+            'diseno': ['Nicol', 'Helver'],
+            'produccion': ['Sebastian', 'Susana', 'Helver'],
+            'comercial': ['Norely', 'Helver', 'Yasmid'],
+            'gerencia': ['Helver', 'Norely', 'Yasmid']
+        };
+
+        function toggleSection(sectionId) {
+            const content = document.getElementById(sectionId);
+            const header = document.getElementById('head-' + sectionId);
+            const arrow = document.getElementById('arrow-' + sectionId);
+            if (content.classList.contains('active')) {
+                content.classList.remove('active'); header.classList.remove('active'); arrow.innerText = '►';
+            } else {
+                content.classList.add('active'); header.classList.add('active'); arrow.innerText = '▼';
+            }
+            saveStateToLocalStorage();
+        }
+
+        function formatDate(date) { return date.toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }); }
+
+        function saveStateToLocalStorage() {
+            localStorage.setItem('tactical_date', currentDate.toISOString());
+            localStorage.setItem('tactical_db_historico', JSON.stringify(db_historico));
+
+            let currentActive = [];
+            ['diseno', 'produccion', 'comercial', 'gerencia'].forEach(area => {
+                const rows = document.querySelectorAll(`#table-${area} tbody tr`);
+                rows.forEach(row => {
+                    const desc = row.querySelector('.task-desc').value;
+                    const espec = row.querySelector('.task-espec').value;
+                    const emp = row.querySelector('.task-emp').value;
+                    const status = row.querySelector('.status-select').value;
+                    const aclaracion = row.querySelector('.input-aclaracion').value;
+                    const origin = row.querySelector('.task-origin').innerText;
+                    let delayText = row.querySelector('.badge-delay') ? row.querySelector('.badge-delay').innerText : '';
+                    let delay = delayText ? parseInt(delayText.replace(/[^0-9]/g, '')) : 0;
+                    if(desc.trim() !== '') currentActive.push({ area, desc, espec, emp, status, origin, delay, aclaracion });
+                });
+            });
+            localStorage.setItem('tactical_active_tasks', JSON.stringify(currentActive));
+        }
+
+        function addTask(area, desc = '', espec = '', assigned = '', status = 'pendiente', originDate = null, daysDelayed = 0, aclaracion = '') {
+            const tbody = document.querySelector(`#table-${area} tbody`);
+            const tr = document.createElement('tr');
+            const dateStr = originDate ? originDate : 'Hoy';
+
+            let optionsHTML = '';
+            employees[area].forEach(emp => {
+                let selected = (emp === assigned) ? 'selected' : '';
+                optionsHTML += `<option value="${emp}" ${selected}>${emp}</option>`;
+            });
+
+            let delayBadge = daysDelayed > 0 ? `<div class="badge-delay">⚠️ Retraso: ${daysDelayed} día(s)</div><br>` : '';
+            let displayAclaracion = (daysDelayed > 0 || status === 'externo') ? 'block' : 'none';
+            let inputPlaceholder = area === 'diseno' ? 'Cant. y tipo de impresión...' : (area === 'produccion' ? 'Dirección proveedor...' : 'Notas...');
+
+            tr.innerHTML = `
+                <td>
+                    ${delayBadge}
+                    <input type="text" style="width:95%; font-weight:bold;" placeholder="Escriba la tarea..." value="${desc}" class="task-desc" onchange="saveStateToLocalStorage()">
+                    <input type="text" class="input-aclaracion" style="display: ${displayAclaracion};" placeholder="💡 Motivo del retraso externo..." value="${aclaracion}" onchange="saveStateToLocalStorage()">
+                </td>
+                <td><input type="text" class="task-espec" placeholder="${inputPlaceholder}" value="${espec}" onchange="saveStateToLocalStorage()"></td>
+                <td><select class="task-emp" onchange="saveStateToLocalStorage()">${optionsHTML}</select></td>
+                <td>
+                    <select class="status-select status-${status}" onchange="evaluarEstadoFila(this)">
+                        <option value="pendiente" ${status === 'pendiente' ? 'selected' : ''}>⏳ Pendiente</option>
+                        <option value="proceso" ${status === 'proceso' ? 'selected' : ''}>🔄 En Proceso</option>
+                        <option value="externo" ${status === 'externo' ? 'selected' : ''}>⚠️ Causa Externa</option>
+                        <option value="listo" ${status === 'listo' ? 'selected' : ''}>✅ Listo</option>
+                        <option value="finalizado" ${status === 'finalizado' ? 'selected' : ''}>🏁 Finalizado</option>
+                    </select>
+                </td>
+                <td class="task-origin">${dateStr}</td>
+                <td style="text-align:center;">
+                    <button class="btn-action" onclick="moveRowUp(this)" title="Subir prioridad">🔼</button>
+                    <button class="btn-action" onclick="moveRowDown(this)" title="Bajar prioridad">🔽</button>
+                    <button class="btn-action btn-del-row" onclick="this.closest('tr').remove(); saveStateToLocalStorage();" title="Eliminar">🗑️</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        function moveRowUp(button) {
+            const row = button.closest('tr');
+            const previousRow = row.previousElementSibling;
+            if (previousRow) { row.parentNode.insertBefore(row, previousRow); saveStateToLocalStorage(); }
+        }
+
+        function moveRowDown(button) {
+            const row = button.closest('tr');
+            const nextRow = row.nextElementSibling;
+            if (nextRow) { row.parentNode.insertBefore(nextRow, row); saveStateToLocalStorage(); }
+        }
+
+        function evaluarEstadoFila(selectElement) {
+            selectElement.className = 'status-select status-' + selectElement.value;
+            const tr = selectElement.closest('tr');
+            const aclInput = tr.querySelector('.input-aclaracion');
+            if (selectElement.value === 'externo') aclInput.style.display = 'block';
+            else if (!tr.querySelector('.badge-delay')) aclInput.style.display = 'none';
+            saveStateToLocalStorage();
+        }
+
+        function simulateMidnight() {
+            const allAreas = ['diseno', 'produccion', 'comercial', 'gerencia'];
+            let nextDayTasks = [];
+
+            allAreas.forEach(area => {
+                const rows = document.querySelectorAll(`#table-${area} tbody tr`);
+                rows.forEach(row => {
+                    const desc = row.querySelector('.task-desc').value;
+                    const espec = row.querySelector('.task-espec').value;
+                    const emp = row.querySelector('.task-emp').value;
+                    const status = row.querySelector('.status-select').value;
+                    const aclaracion = row.querySelector('.input-aclaracion').value;
+                    let origin = row.querySelector('.task-origin').innerText;
+
+                    if (desc.trim() !== '') {
+                        let delayText = row.querySelector('.badge-delay') ? row.querySelector('.badge-delay').innerText : '';
+                        let currentDelay = delayText ? parseInt(delayText.replace(/[^0-9]/g, '')) : 0;
+
+                        if (origin.startsWith('Desde')) { /* Ignorar */ }
+                        else if (origin === 'Hoy') { origin = "Desde " + formatDate(currentDate).split(',')[0]; }
+
+                        if (status === 'pendiente' || status === 'proceso') {
+                            nextDayTasks.push({ area, desc, espec, emp, status, origin, delay: currentDelay + 1, aclaracion });
+                        } else {
+                            db_historico.push({
+                                closeDate: formatDate(currentDate), desc, espec, emp, status, origin, delay: currentDelay, area,
+                                aclaracion: status === 'externo' ? (aclaracion || 'No especificada') : aclaracion
+                            });
+                        }
+                    }
+                });
+                document.querySelector(`#table-${area} tbody`).innerHTML = '';
+            });
+
+            currentDate.setDate(currentDate.getDate() + 1);
+            document.getElementById('display-fecha').innerText = formatDate(currentDate);
+
+            nextDayTasks.forEach(task => addTask(task.area, task.desc, task.espec, task.emp, task.status, task.origin, task.delay, task.aclaracion));
+            saveStateToLocalStorage();
+            if(document.getElementById('historico').classList.contains('active')) renderHistory();
+            if(document.getElementById('kpis').classList.contains('active')) renderKPIs();
+        }
+
+        function renderHistory() {
+            const tbody = document.querySelector(`#table-historico tbody`);
+            tbody.innerHTML = '';
+            const keyword = document.getElementById('search-keyword').value.toLowerCase();
+            const dateSearch = document.getElementById('search-date').value.toLowerCase();
+
+            let mappedHistory = db_historico.map((task, originalIndex) => ({ ...task, originalIndex }));
+            let filteredHistory = mappedHistory.filter(task => {
+                const matchKeyword = !keyword || task.desc.toLowerCase().includes(keyword) || (task.espec && task.espec.toLowerCase().includes(keyword)) || task.emp.toLowerCase().includes(keyword) || (task.aclaracion && task.aclaracion.toLowerCase().includes(keyword));
+                const matchDate = !dateSearch || task.closeDate.toLowerCase().includes(dateSearch);
+                return matchKeyword && matchDate;
+            });
+
+            [...filteredHistory].reverse().forEach((task) => {
+                let logResultado = task.status === 'externo' ? `<span style="color:var(--externo); font-weight:bold;">🛑 Trancado Externo</span>` : (task.delay === 0 ? '<span style="color:green; font-weight:bold;">A Tiempo</span>' : `<span style="color:red; font-weight:bold;">Tardó ${task.delay} día(s)</span>`);
+                let textTarea = `<strong>${task.desc}</strong>` + (task.aclaracion ? `<br><span style="color:var(--externo); font-size:0.85rem; font-style:italic;">💡 Nota: ${task.aclaracion}</span>` : '');
+                let textEstado = task.status === 'externo' ? '⚠️ Bloqueo Ext.' : (task.status === 'listo' ? '✅ Listo' : '🏁 Finalizado');
+                let textEspec = task.espec ? task.espec : '---';
+                tbody.innerHTML += `<tr><td>${task.closeDate}</td><td>${textTarea}</td><td><em>${textEspec}</em></td><td>${task.emp}</td><td>${textEstado}</td><td>${logResultado}</td><td><button onclick="reabrirTarea(${task.originalIndex})" style="padding:6px 12px; cursor: pointer;">↩️ Reabrir</button></td></tr>`;
+            });
+            if(filteredHistory.length === 0) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#cbd5e0; font-style:italic;">No hay registros.</td></tr>';
+        }
+
+        function clearSearch() { document.getElementById('search-keyword').value = ''; document.getElementById('search-date').value = ''; renderHistory(); }
+
+        function reabrirTarea(realIndex) {
+            let t = db_historico[realIndex];
+            addTask(t.area, t.desc, t.espec, t.emp, 'proceso', t.origin, t.delay, t.aclaracion);
+            db_historico.splice(realIndex, 1);
+            saveStateToLocalStorage(); renderHistory(); toggleSection(t.area);
+        }
+
+        function renderKPIs() {
+            const container = document.getElementById('kpi-container');
+            container.innerHTML = '';
+            ['Norely', 'Helver', 'Nicol', 'Sebastian', 'Susana', 'Yasmid'].forEach(emp => {
+                let empTasks = db_historico.filter(t => t.emp === emp);
+                let totalHistorico = empTasks.length;
+                let evaluables = empTasks.filter(t => t.status !== 'externo');
+                let aTiempo = evaluables.filter(t => t.delay === 0).length;
+                let trancadasPorCliente = empTasks.filter(t => t.status === 'externo').length;
+                let eficiencia = evaluables.length === 0 ? 100 : Math.round((aTiempo / evaluables.length) * 100);
+                let color = evaluables.length === 0 && trancadasPorCliente > 0 ? 'var(--externo)' : (eficiencia >= 80 ? 'var(--listo)' : (eficiencia >= 50 ? 'var(--pendiente)' : 'var(--peligro)'));
+
+                container.innerHTML += `
+                    <div class="kpi-card">
+                        <h4 style="margin:0; color:var(--dark); border-bottom: 2px solid #edf2f7; padding-bottom:5px;">${emp}</h4>
+                        <div class="kpi-value" style="color: ${color};">${evaluables.length === 0 && trancadasPorCliente > 0 ? 'Pausado' : eficiencia + '%'}</div>
+                        <div style="font-size:0.85rem; color:var(--secondary); font-weight:bold;">Eficiencia Interna</div>
+                        <hr style="border:0; border-top:1px solid #e2e8f0; margin:10px 0;">
+                        <div style="text-align:left; font-size:0.88rem; line-height:1.5;">
+                            🎯 Completadas: <strong>${aTiempo}</strong><br>
+                            🛑 Bloqueos Externos: <strong style="color:var(--externo);">${trancadasPorCliente}</strong><br>
+                            📋 Total Historial: ${totalHistorico}
+                        </div>
+                    </div>`;
+            });
+        }
+
+        // ==========================================
+        // MÓDULO 2: CONTROL DE REPROCESOS
+        // ==========================================
+        const TOP8_PAPELES = {
+            'P_150': { name: '1. Cote 150 gr [$612.90]', cost: 612.90 },
+            'P_300': { name: '2. Cote 300 gr [$1,182.60]', cost: 1182.60 },
+            'C_15': { name: '3. Cartón de 1.5 mm [$3,500.00]', cost: 3500.00 },
+            'B_70_60': { name: '4. Bond 70gr 60x90 [$206.10]', cost: 206.10 },
+            'B_70_70': { name: '5. Bond 70gr 70x100 [$267.30]', cost: 267.30 },
+            'VIN_TRANS': { name: '6. Vinilo Transparente m² [$5,550.00]', cost: 5550.00 },
+            'VIN_BLANCO': { name: '7. Vinilo Blanco m² [$6,220.00]', cost: 6220.00 },
+            'POLIEST': { name: '8. Poliestireno m² [$22,000.00]', cost: 22000.00 }
+        };
+
+        const OTROS_PAPELES = {
+            'B_60': { name: 'Bond 60gr (70x100) [$229.50]', cost: 229.50 },
+            'C_C11': { name: 'Cartulina C11 190gr [$684.00]', cost: 684.00 },
+            'C_C16': { name: 'Cartulina C16 255gr [$936.90]', cost: 936.90 },
+            'C_C20': { name: 'Cartulina C20 305gr [$1120.50]', cost: 1120.50 },
+            'E_EP_70': { name: 'Earth Pact 70gr [$234.00]', cost: 234.00 },
+            'A_RIT': { name: 'Adhesivo Ritrama [$1710.00]', cost: 1710.00 },
+            'C_20': { name: 'Cartón 2.0mm Tapas [$4500.00]', cost: 4500.00 },
+            'MANUAL_INS': { name: '❌ OTRO INSUMO (Digitar Manual)', cost: 0 }
+        };
+
+        const CATALOGO_PROCESOS = {
+            'MOD_PLANTA': { name: 'Mano de Obra Planta ($125/min)', cost: 125 },
+            'LASER_MDF3': { name: 'Láser CO2 MDF 3mm ($800/min)', cost: 800 },
+            'LASER_ACR2': { name: 'Láser CO2 Acrílico 2-3mm ($950/min)', cost: 950 },
+            'CLIC_DIGITAL': { name: 'Clic Impresión Digital [$1000/u]', cost: 1000 },
+            'MANUAL_PROC': { name: '❌ OTRO PROCESO (Digitar Manual)', cost: 0 }
+        };
+
+        let db_reprocesos = JSON.parse(localStorage.getItem('tactical_db_reprocesos_v4')) || [];
+
+        function actualizarFormularioReceta() {
+            const ot = document.getElementById('inp-ot').value.trim();
+            const badge = document.getElementById('txt-modo-activo');
+            if(ot !== '') { badge.innerText = "MODO A: PEDIDO CON OT (RECETA CONTEXTUAL)"; badge.className = "mode-badge mode-a"; }
+            else { badge.innerText = "MODO B: SERVICIO EXPRESS / MAQUILA"; badge.className = "mode-badge mode-b"; }
+            if(document.getElementById('wrapper-detail-rows').children.length === 0) { addRowDetalle(); }
+        }
+
+        function addRowDetalle() {
+            const wrapper = document.getElementById('wrapper-detail-rows');
+            const rowId = 'row_' + Math.random().toString(36).substr(2, 9);
+            const div = document.createElement('div');
+            div.className = 'detail-row-grid'; div.id = rowId;
+            div.innerHTML = `
+                <div><select onchange="cambiarTipoFila(this, '${rowId}')" class="det-tipo"><option value="papel">📦 Material / Sustrato</option><option value="proceso">⚙️ Tiempo / Máquina</option></select></div>
+                <div><select class="det-item-select" onchange="evaluarItemManual(this, '${rowId}')"></select><input type="text" class="input-manual det-name-manual" placeholder="Nombre del concepto..."></div>
+                <div><input type="number" class="det-cantidad" value="10" min="1"></div>
+                <div><input type="number" class="det-costo-manual input-manual" placeholder="$ Valor unitario"><span class="det-costo-preview" style="font-size:0.85rem; color:var(--secondary); font-weight:bold;">---</span></div>
+                <div style="text-align:center;"><button style="background:none; border:none; color:var(--peligro); font-size:1.2rem; cursor:pointer;" onclick="document.getElementById('${rowId}').remove()">🗑️</button></div>
+            `;
+            wrapper.appendChild(div);
+            cambiarTipoFila(div.querySelector('.det-tipo'), rowId);
+        }
+
+        function cambiarTipoFila(select, rowId) {
+            const div = document.getElementById(rowId);
+            const itemSelect = div.querySelector('.det-item-select');
+            let html = '';
+            if(select.value === 'papel') {
+                html += `<optgroup label="🌟 Top 8 Insumos Frecuentes">`;
+                for (let key in TOP8_PAPELES) html += `<option value="${key}">${TOP8_PAPELES[key].name}</option>`;
+                html += `</optgroup><optgroup label="📄 Otros Sustratos del Catálogo">`;
+                for (let key in OTROS_PAPELES) html += `<option value="${key}">${OTROS_PAPELES[key].name}</option>`;
+                html += `</optgroup>`;
+            } else {
+                html += `<optgroup label="⚙️ Tiempos de Planta y Maquinaria">`;
+                for (let key in CATALOGO_PROCESOS) html += `<option value="${key}">${CATALOGO_PROCESOS[key].name}</option>`;
+                html += `</optgroup>`;
+            }
+            itemSelect.innerHTML = html;
+            evaluarItemManual(itemSelect, rowId);
+        }
+
+        function evaluarItemManual(select, rowId) {
+            const div = document.getElementById(rowId);
+            const nameManual = div.querySelector('.det-name-manual');
+            const costManual = div.querySelector('.det-costo-manual');
+            const costPreview = div.querySelector('.det-costo-preview');
+            const tipo = div.querySelector('.det-tipo').value;
+
+            if(select.value === 'MANUAL_INS' || select.value === 'MANUAL_PROC') {
+                nameManual.style.display = 'block'; costManual.style.display = 'block'; costPreview.style.display = 'none';
+            } else {
+                nameManual.style.display = 'none'; costManual.style.display = 'none'; costPreview.style.display = 'inline';
+                let baseCost = tipo === 'papel' ? (TOP8_PAPELES[select.value] ? TOP8_PAPELES[select.value].cost : OTROS_PAPELES[select.value].cost) : CATALOGO_PROCESOS[select.value].cost;
+                costPreview.innerText = `$${baseCost.toLocaleString()} u.`;
+            }
+        }
+
+        function procesarIncidenteReproceso() {
+            const ot = document.getElementById('inp-ot').value.trim() || 'Servicio Express';
+            const responsable = document.getElementById('sel-responsable').value;
+            const proveedor = document.getElementById('sel-proveedor').value;
+            const origen = document.getElementById('sel-origen').value;
+            const deteccion = document.getElementById('sel-deteccion').value;
+            const observaciones = document.getElementById('txt-observaciones').value.trim();
+
+            if(observaciones === '') { alert('Debe registrar la lección aprendida.'); return; }
+            const detailRows = document.querySelectorAll('.detail-row-grid');
+            if(detailRows.length === 0) { alert('Añada al menos un insumo dañado.'); return; }
+
+            let desgloseItems = [];
+            let costoTotalIncidente = 0;
+
+            detailRows.forEach(row => {
+                const tipo = row.querySelector('.det-tipo').value;
+                const selectKey = row.querySelector('.det-item-select').value;
+                const cantidad = parseFloat(row.querySelector('.det-cantidad').value) || 0;
+                let nameConcepto = '', costoUnitario = 0;
+
+                if(selectKey === 'MANUAL_INS' || selectKey === 'MANUAL_PROC') {
+                    nameConcepto = row.querySelector('.det-name-manual').value.trim() || 'Concepto Especial';
+                    costoUnitario = parseFloat(row.querySelector('.det-costo-manual').value) || 0;
+                } else {
+                    if(tipo === 'papel') {
+                        let obj = TOP8_PAPELES[selectKey] || OTROS_PAPELES[selectKey];
+                        nameConcepto = obj.name.split(' [$')[0]; costoUnitario = obj.cost;
+                    } else {
+                        nameConcepto = CATALOGO_PROCESOS[selectKey].name.split(' ($')[0]; costoUnitario = CATALOGO_PROCESOS[selectKey].cost;
+                    }
+                }
+                let costoFila = Math.round(cantidad * costoUnitario);
+                costoTotalIncidente += costoFila;
+                desgloseItems.push({ nameConcepto, cantidad, costoFila });
+            });
+
+            db_reprocesos.push({ ot, responsable, proveedor, origen, deteccion, observaciones, costoTotal: costoTotalIncidente, items: desgloseItems });
+            localStorage.setItem('tactical_db_reprocesos_v4', JSON.stringify(db_reprocesos));
+
+            document.getElementById('txt-observaciones').value = '';
+            document.getElementById('wrapper-detail-rows').innerHTML = '';
+            document.getElementById('sel-proveedor').value = 'Ninguno';
+            renderAllReprocesos(); addRowDetalle();
+        }
+
+        function renderAllReprocesos() {
+            const tbody = document.querySelector('#table-reprocesos tbody');
+            tbody.innerHTML = '';
+            const filterKeyword = document.getElementById('search-reproceso').value.toLowerCase();
+
+            let totalCostoPlanta = 0, countEscape = 0;
+            let kpiPersonas = {}, kpiProveedores = {};
+            ['Nicol','Helver','Norely','Sebastian','Susana','Yasmid'].forEach(p => kpiPersonas[p] = 0);
+            ['Ninguno','Cuarto Iván policromía','Cuarto Iván 1 tinta','Medio Alfredo 1 tinta','Medio Alfredo policromía','Cuarto Alfredo','Octavo Alex','Delta Planchas','Belpar','Dispapeles','RyR'].forEach(pr => kpiProveedores[pr] = 0);
+
+            let filteredList = db_reprocesos.filter(inc => {
+                let matchString = inc.ot.toLowerCase() + inc.responsable.toLowerCase() + inc.proveedor.toLowerCase() + inc.observaciones.toLowerCase();
+                inc.items.forEach(it => matchString += it.nameConcepto.toLowerCase());
+                return !filterKeyword || matchString.includes(filterKeyword);
+            });
+
+            filteredList.reverse().forEach((inc, index) => {
+                totalCostoPlanta += inc.costoTotal;
+                if(inc.deteccion === 'Cliente') countEscape++;
+                if(kpiPersonas[inc.responsable] !== undefined) kpiPersonas[inc.responsable] += inc.costoTotal;
+                if(kpiProveedores[inc.proveedor] !== undefined) kpiProveedores[inc.proveedor] += inc.costoTotal;
+
+                let badgeEscape = inc.deteccion === 'Cliente' ? '<br><span class="badge-escape">🚨 ESCAPE DE CALIDAD</span>' : '';
+                let badgeProveedor = inc.proveedor !== 'Ninguno' ? `<br><span class="badge-supplier">🚚 Proveedor: ${inc.proveedor}</span>` : '';
+
+                let htmlDesglose = '<ul style="margin:0; padding-left:12px; font-size:0.85rem; color:var(--secondary);">';
+                inc.items.forEach(it => htmlDesglose += `<li>${it.cantidad} x ${it.nameConcepto} (+$${it.costoFila.toLocaleString()} COP)</li>`);
+                htmlDesglose += '</ul>';
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${inc.ot}</strong>${badgeEscape}${badgeProveedor}</td>
+                        <td><strong>${inc.responsable}</strong><br><span style="color:#718096; font-size:0.85rem;">${inc.origen} ➔ ${inc.deteccion}</span></td>
+                        <td>${htmlDesglose}</td>
+                        <td style="font-weight:bold; color:var(--primary); font-size:1.05rem;">$${inc.costoTotal.toLocaleString()}</td>
+                        <td><span style="font-size:0.85rem; font-style:italic;">"${inc.observaciones}"</span></td>
+                        <td><button class="btn-action btn-del-row" onclick="eliminarIncidenteReproceso(${db_reprocesos.length - 1 - index})">🗑️</button></td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('m-count').innerText = filteredList.length;
+            document.getElementById('m-costo').innerText = "$" + totalCostoPlanta.toLocaleString() + " COP";
+            document.getElementById('m-escape').innerText = (filteredList.length === 0 ? 0 : Math.round((countEscape / filteredList.length) * 100)) + "%";
+
+            let pContainer = document.getElementById('kpi-personas-container');
+            pContainer.innerHTML = '';
+            for(let p in kpiPersonas) { if(kpiPersonas[p] > 0) pContainer.innerHTML += `• ${p}: <span style="color:var(--primary); font-weight:bold;">$${kpiPersonas[p].toLocaleString()}</span><br>`; }
+            if(pContainer.innerHTML === '') pContainer.innerHTML = '<span style="color:#cbd5e0; font-style:italic;">Sin pérdidas por personas.</span>';
+
+            let prContainer = document.getElementById('kpi-proveedores-container');
+            prContainer.innerHTML = '';
+            for(let pr in kpiProveedores) {
+                if(kpiProveedores[pr] > 0) {
+                    let pct = totalCostoPlanta === 0 ? 0 : Math.round((kpiProveedores[pr] / totalCostoPlanta) * 100);
+                    prContainer.innerHTML += `• ${pr}: <strong>${pct}%</strong> ($${kpiProveedores[pr].toLocaleString()})<br>`;
+                }
+            }
+            if(prContainer.innerHTML === '') prContainer.innerHTML = '<span style="color:#cbd5e0; font-style:italic;">Sin pérdidas por proveedores.</span>';
+            if(filteredList.length === 0) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#cbd5e0; font-style:italic;">No hay incidentes reportados. Planta limpia.</td></tr>';
+        }
+
+        function eliminarIncidenteReproceso(index) {
+            db_reprocesos.splice(index, 1);
+            localStorage.setItem('tactical_db_reprocesos_v4', JSON.stringify(db_reprocesos));
+            renderAllReprocesos();
+        }
+
+        // ==========================================
+        // MÓDULO 3: CRM & CLIENTES B2B
+        // ==========================================
+        let db_clientes = JSON.parse(localStorage.getItem('tactical_crm_clientes_v2')) || [];
+        let db_opps = JSON.parse(localStorage.getItem('tactical_crm_opps_v2')) || [];
+        let db_historial_cierres = JSON.parse(localStorage.getItem('tactical_crm_historial_v2')) || [];
+
+        const tags_clase = { 'nuevo': 'tag-nuevo', 'ocasional': 'tag-ocasional', 'recurrente': 'tag-recurrente', 'vip': 'tag-vip' };
+        const tags_etapa = { 'req': {lbl: '🎯 Nuevo Req.', cls: 'stage-req'}, 'cot': {lbl: '📝 Cotización Enviada', cls: 'stage-cot'}, 'neg': {lbl: '💬 Seguimiento', cls: 'stage-neg'} };
+
+        function guardarCliente() {
+            const empresa = document.getElementById('cli-empresa').value.trim();
+            const nombre = document.getElementById('cli-nombre').value.trim();
+            const wp = document.getElementById('cli-wp').value.trim();
+            const correo = document.getElementById('cli-correo').value.trim();
+            const clase = document.getElementById('cli-clase').value;
+
+            if(!empresa && !nombre) { alert("Debe ingresar al menos la Empresa o el Contacto."); return; }
+
+            db_clientes.push({
+                id: Date.now().toString(), empresa: empresa || 'Cliente Particular', nombre: nombre || 'Sin contacto directo',
+                wp: wp || '', correo: correo || '', clase, ltv: 0
+            });
+            localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
+
+            document.getElementById('cli-empresa').value = ''; document.getElementById('cli-nombre').value = '';
+            document.getElementById('cli-wp').value = ''; document.getElementById('cli-correo').value = '';
+            renderClientes(); llenarSelectClientes();
+        }
+
+        function renderClientes() {
+            const container = document.getElementById('lista-clientes');
+            const search = document.getElementById('search-cli').value.toLowerCase();
+            container.innerHTML = '';
+
+            let filtrados = db_clientes.filter(c =>
+                c.empresa.toLowerCase().includes(search) || c.nombre.toLowerCase().includes(search) ||
+                c.wp.toLowerCase().includes(search) || c.correo.toLowerCase().includes(search)
+            );
+
+            filtrados.sort((a, b) => b.ltv - a.ltv).forEach(c => {
+                let borderCls = c.clase === 'vip' ? 'var(--vip)' : (c.clase === 'nuevo' ? 'var(--nuevo)' : 'var(--secondary)');
+                let oppsCliente = db_opps.filter(o => o.idCli === c.id);
+                let cierresCliente = db_historial_cierres.filter(h => h.idCli === c.id);
+                let totalCotizaciones = oppsCliente.length + cierresCliente.length;
+                let ganadasCount = cierresCliente.filter(h => h.estado === 'ganado').length;
+
+                container.innerHTML += `
+                    <div class="data-card" style="border-left-color: ${borderCls};">
+                        <span class="tag ${tags_clase[c.clase]}" style="float:right;">${c.clase.toUpperCase()}</span>
+                        <div class="card-title">${c.empresa}</div>
+                        <div class="card-subtitle">👤 Contacto: <strong>${c.nombre}</strong></div>
+                        <div style="font-size:0.85rem; color:#4a5568; line-height:1.4;">
+                            📱 WA: <strong>${c.wp || 'No registrado'}</strong><br>
+                            ✉️ Email: <strong>${c.correo || 'No registrado'}</strong>
+                        </div>
+                        <div class="client-stats-box">
+                            📋 Total Cotizaciones/Solicitudes: <strong>${totalCotizaciones}</strong><br>
+                            🎯 Negocios Ganados: <strong style="color:var(--ganado);">${ganadasCount}</strong><br>
+                            💲 Compras Acumuladas (LTV): <strong style="color:var(--primary); font-size:1rem;">$${c.ltv.toLocaleString()} COP</strong>
+                        </div>
+                    </div>
+                `;
+            });
+            if(filtrados.length === 0) container.innerHTML = '<p style="color:#718096; grid-column: 1/-1;">No hay clientes que coincidan.</p>';
+        }
+
+        function llenarSelectClientes() {
+            const sel = document.getElementById('opp-cliente');
+            sel.innerHTML = '<option value="">-- Seleccione un Cliente --</option>';
+            db_clientes.forEach(c => { sel.innerHTML += `<option value="${c.id}">${c.empresa} (${c.nombre})</option>`; });
+        }
+
+        function guardarOportunidad() {
+            const idCli = document.getElementById('opp-cliente').value;
+            const desc = document.getElementById('opp-desc').value.trim();
+            const monto = parseFloat(document.getElementById('opp-monto').value) || 0;
+            const etapa = document.getElementById('opp-etapa').value;
+
+            if(!idCli || !desc) { alert("Debe seleccionar un cliente y escribir la descripción."); return; }
+            const cliObj = db_clientes.find(c => c.id === idCli);
+            db_opps.push({ id: Date.now().toString(), idCli, nombreCli: `${cliObj.empresa} - ${cliObj.nombre}`, desc, monto, etapa });
+            localStorage.setItem('tactical_crm_opps_v2', JSON.stringify(db_opps));
+
+            document.getElementById('opp-desc').value = ''; document.getElementById('opp-monto').value = '0';
+            renderOportunidades(); renderClientes();
+        }
+
+        function renderOportunidades() {
+            const container = document.getElementById('lista-oportunidades');
+            container.innerHTML = '';
+            const orden = { 'neg': 1, 'cot': 2, 'req': 3 };
+            let activas = [...db_opps].sort((a, b) => orden[a.etapa] - orden[b.etapa]);
+
+            activas.forEach(opp => {
+                let btnAvanzar = '';
+                if(opp.etapa === 'req') btnAvanzar = `<button class="btn-stage btn-avanzar" onclick="avanzarEtapa('${opp.id}', 'cot')">Mandar Cotización ➔</button>`;
+                if(opp.etapa === 'cot') btnAvanzar = `<button class="btn-stage btn-avanzar" onclick="avanzarEtapa('${opp.id}', 'neg')">A Seguimiento ➔</button>`;
+
+                container.innerHTML += `
+                    <div class="data-card">
+                        <span class="tag ${tags_etapa[opp.etapa].cls}" style="float:right;">${tags_etapa[opp.etapa].lbl}</span>
+                        <div class="card-title">${opp.desc}</div>
+                        <div class="card-subtitle">👤 Cliente: <strong>${opp.nombreCli}</strong></div>
+                        <div style="font-size:1.3rem; font-weight:bold; color:var(--dark);">$${opp.monto.toLocaleString()} COP</div>
+                        <div class="action-row">
+                            ${btnAvanzar}
+                            <button class="btn-stage btn-ganado" onclick="cerrarNegocio('${opp.id}', 'ganado')">💲 Ganado</button>
+                            <button class="btn-stage btn-perdido" onclick="abrirModalPerdida('${opp.id}')">❌ Perdido</button>
+                        </div>
+                    </div>
+                `;
+            });
+            if(activas.length === 0) container.innerHTML = '<p style="color:#718096; grid-column: 1/-1;">No hay cotizaciones/negocios activos en el embudo.</p>';
+        }
+
+        function avanzarEtapa(idOpp, nuevaEtapa) {
+            let opp = db_opps.find(o => o.id === idOpp);
+            opp.etapa = nuevaEtapa;
+            localStorage.setItem('tactical_crm_opps_v2', JSON.stringify(db_opps));
+            renderOportunidades();
+        }
+
+        function cerrarNegocio(idOpp, estado, motivo = '') {
+            let idx = db_opps.findIndex(o => o.id === idOpp);
+            let opp = db_opps[idx];
+
+            if(estado === 'ganado') {
+                let cli = db_clientes.find(c => c.id === opp.idCli);
+                if(cli) {
+                    cli.ltv += opp.monto;
+                    if(cli.clase === 'nuevo' && cli.ltv > 0) cli.clase = 'recurrente';
+                    localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
+                }
+            }
+
+            db_historial_cierres.push({ ...opp, estado, motivo, fechaCierre: new Date().toISOString() });
+            localStorage.setItem('tactical_crm_historial_v2', JSON.stringify(db_historial_cierres));
+
+            db_opps.splice(idx, 1);
+            localStorage.setItem('tactical_crm_opps_v2', JSON.stringify(db_opps));
+
+            document.getElementById('modal-perdida').style.display = 'none';
+            renderOportunidades(); renderClientes();
+        }
+
+        function abrirModalPerdida(idOpp) {
+            document.getElementById('opp-id-perdida').value = idOpp;
+            document.getElementById('modal-perdida').style.display = 'block';
+            document.getElementById('modal-perdida').scrollIntoView();
+        }
+
+        function confirmarPerdida() {
+            let motivo = document.getElementById('motivo-perdida').value;
+            if(motivo === 'Otra') motivo = document.getElementById('motivo-otra').value.trim() || 'Razón no especificada';
+            let idOpp = document.getElementById('opp-id-perdida').value;
+            cerrarNegocio(idOpp, 'perdido', motivo);
+        }
+
+        function renderDashboard() {
+            let totalPipeline = db_opps.reduce((sum, opp) => sum + opp.monto, 0);
+            document.getElementById('kpi-pipeline').innerText = "$" + totalPipeline.toLocaleString();
+
+            let ganadas = db_historial_cierres.filter(h => h.estado === 'ganado');
+            let perdidas = db_historial_cierres.filter(h => h.estado === 'perdido');
+            let totalGanado = ganadas.reduce((sum, o) => sum + o.monto, 0);
+            document.getElementById('kpi-ganadas').innerText = "$" + totalGanado.toLocaleString();
+
+            let totalCerrados = ganadas.length + perdidas.length;
+            let tasa = totalCerrados === 0 ? 0 : Math.round((ganadas.length / totalCerrados) * 100);
+            document.getElementById('kpi-tasa').innerText = tasa + "%";
+
+            let objMotivos = {};
+            perdidas.forEach(p => { objMotivos[p.motivo] = (objMotivos[p.motivo] || 0) + 1; });
+
+            let listaHTML = '';
+            for(let mot in objMotivos) {
+                let pct = Math.round((objMotivos[mot] / perdidas.length) * 100);
+                let barraColor = mot.includes('Precio') ? 'var(--peligro)' : (mot.includes('Tiempo') ? 'var(--proceso)' : 'var(--secondary)');
+                listaHTML += `
+                    <div style="margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between; font-weight:bold;">
+                            <span>${mot}</span><span>${objMotivos[mot]} casos (${pct}%)</span>
+                        </div>
+                        <div style="width:100%; background:#e2e8f0; height:8px; border-radius:4px; margin-top:3px;">
+                            <div style="width:${pct}%; background:${barraColor}; height:100%; border-radius:4px;"></div>
+                        </div>
+                    </div>
+                `;
+            }
+            document.getElementById('lista-motivos').innerHTML = listaHTML || '<span style="color:#718096; font-style:italic;">No hay registros de pérdidas para analizar.</span>';
+        }
+
+        // ==========================================
+        // MÓDULO 4: COTIZADOR CUADERNOS
+        // Motor de calculo validado contra 10 casos reales de Litoplan
+        // (portado 1:1 de motor_cotizacion/calculadora.html)
+        // ==========================================
+
+        /* ---- DATOS MAESTROS ---- */
+        const SUSTRATOS = {
+          "Bond__60": {p6090:177.30, p70100:229.50}, "Bond__70": {p6090:206.10, p70100:267.30},
+          "Bond__75": {p6090:221.40, p70100:287.10}, "Bond__90": {p6090:265.50, p70100:343.80},
+          "Bond__115": {p6090:null, p70100:459.00}, "Propalcote__80": {p6090:null, p70100:308.70},
+          "Propalcote__90": {p6090:267.30, p70100:348.30}, "Propalcote__115": {p6090:343.80, p70100:448.20},
+          "Propalcote__150": {p6090:472.50, p70100:612.90}, "Propalcote__200": {p6090:603.90, p70100:810.00},
+          "Propalcote__300": {p6090:910.80, p70100:1182.60}, "Propalcote__350": {p6090:null, p70100:1381.50},
+          "Cartulina C11__190": {p6090:null, p70100:684.00}, "Cartulina C12__205": {p6090:580.50, p70100:753.30},
+          "Cartulina C14__225": {p6090:637.20, p70100:826.20}, "Cartulina C16__255": {p6090:722.70, p70100:936.90},
+          "Cartulina C18__275": {p6090:779.40, p70100:1009.80}, "Cartulina C20__305": {p6090:864.00, p70100:1120.50},
+          "Cartulina C22__330": {p6090:null, p70100:1212.30},
+        };
+        const PLIEGOS_CM = {"60x90":[60,90], "70x100":[70,100]};
+        const CARTON_1_5MM_COP = 3500, CARTON_2_0MM_COP = 4500, ESPESOR_LOMO_MM_POR_HOJA = 0.13;
+        const TAMANOS_CATALOGO_CM = {media_carta:[21,14], agenda:[17,24.5], carta:[28,21.5]};
+        const FACTOR_MANIPULACION_TAMANO_CUSTOM = 1.30;
+        const ARMADO_FORRADO_TAPA_DURA_COP = {media_carta:620, agenda:640, carta:750};
+        const CARATULA_EMBONE_TAPA_DURA_CM = 1.5;
+        const CARATULA_TAMANOS_MAQUINA_CM = [[21.5,28],[25,35],[33,50],[42,28],[50,70]];
+        const COLAMINADO_COP_M2 = 900, PLASTIFICADO_COP_M2 = 950, PLASTIFICADO_PISO_COP = 30000;
+        const UV_PARCIAL_COP_M2 = 1950, UV_PARCIAL_PISO_COP = 80000, TROQUEL_TAPA_COP_POR_MILLAR = 35000;
+        const ESTAMPADO_COP_POR_GOLPE = 350, ESTAMPADO_ARRANQUE_COP = 80000, ESTAMPADO_MINIMO_COP = 80000;
+        const TAPA_DURA_UMBRAL_TINTA_RETIRO_UNIDADES = 150;
+        const RECARGO_TINTA_CUADRICULA_MILLAR_COP = 20000;
+        const GUARDAS_CANTIDAD_DEFAULT = 2, GUARDAS_PLASTIFICADO_COP_M2 = 900, GUARDAS_PISO_OT_COP = 20000;
+        const LEVANTE_COP_HOJA = {taco:8, inserto:10};
+        const SHERPA_BASE_COP = 20000, SHERPA_COP_POR_PAGINA_INSERTO = 1000, SHERPA_MAXIMO_COP = 40000;
+        const EMPAQUE_CAJA_COP = 3000;
+        const EMPAQUE_CAPACIDAD_CAJA = { media_carta:{escolar:40, no_escolar:35}, agenda:{escolar:33, no_escolar:30}, carta:{escolar:26, no_escolar:20} };
+        const TRANSPORTE_TRAMOS = [[3000000,0.04],[5000000,0.03],[Infinity,0.02]];
+        const TRANSPORTE_DESCUENTO_AGENDA_EJECUTIVA_PRIMER_TRAMO = 0.005, TRANSPORTE_PISO_COP = 45000;
+        const ANILLO_DOBLE_O = { media_carta:{base_80h:900, variacion_hoja:5.0}, agenda:{base_80h:990, variacion_hoja:5.5}, carta:{base_80h:1700, variacion_hoja:10.0} };
+        const REFILE_TACO_COP_UNIDAD = 100, REFILE_TACO_MINIMO_COP = 15000;
+        const LIMPIEZA_COP_UNIDAD = {cuaderno_anillado:180, agenda_ejecutiva:180, libretas:120, escolar:120};
+        const ANILLADO_DOS_SECCIONES_DESCUENTO_PCT = 0.30;
+        const ARMADO_AGENDA_EJECUTIVA_COP = {media_carta:4000, agenda:4300, carta:5600};
+        const ARMADO_AGENDA_EJECUTIVA_MINIMO_COP = 3000;
+        const ARMADO_AGENDA_EJECUTIVA_DESCUENTO_TRAMOS = [[199,0.00],[299,0.04],[399,0.05],[499,0.06],[599,0.07],[699,0.08],[799,0.09],[Infinity,0.10]];
+        const TRANSPORTE_AGENDA_EJECUTIVA_FACTOR = 2;
+        const ESCOLAR_ENCUADERNACION_COP = {grapa:250, hilo:450, hilo_cinta:650};
+        const GRAFADO_ESCOLAR_COP_POR_MILLAR = 35000;
+        const HOTMELT_BASE_COP_UNIDAD = 430, HOTMELT_CM_REFERENCIA = 21, HOTMELT_PISO_OT_COP = 90000;
+        const COLBON_COP_UNIDAD = 250, COLBON_PISO_OT_COP = 30000, GRAFADO_LIBRETAS_COP_FIJO = 35000, ANILLADO_CORTO_FACTOR = 1.30;
+        const DIGITAL_GRAMAJE_MAX = 240, DIGITAL_PINZA_MM = 5;
+        const DIGITAL_CLIC_COP = { carta:{color:750, negro:350}, octavo:{color:900, negro:450}, pliego_max:{color:1000, negro:550} };
+        const DIGITAL_MERMA_HOJAS = {policromia:20, negro:10, promedio:18};
+        const DIGITAL_DESCUENTO_VOLUMEN = [[9,0.0],[50,0.10],[200,0.18],[400,0.26],[Infinity,0.30]];
+        const DIGITAL_FORMATOS_CM = {carta:[21.5,28], octavo:[25,35], pliego_max:[33,50]};
+        const OFFSET_CTP_COP = {medio_pliego:22000, cuarto:11000, octavo:9000};
+        const OFFSET_MILLAR_COP = {medio_pliego_color:25000, medio_pliego_policromia_4x0:100000, cuarto:16000, octavo:12000};
+        const OFFSET_RECARGO_FONDO_PLENO_COP = {medio_pliego:90000, cuarto:50000, octavo:50000};
+        const OFFSET_RECARGO_RETIRO_MEDIO_PLIEGO_POLICROMIA_PCT = 0.30;
+        const OFFSET_MERMA_HOJAS = [[1000,100],[2000,130],[Infinity,160]];
+        const OFFSET_MERMA_FACTOR_2_MAS_TINTAS = 1.30;
+        const OFFSET_FORMATOS_CM = {octavo:[25,35], cuarto:[35,50], medio_pliego:[50,70]};
+        const PINZA_ENTRADA_MM = 12, PINZA_SALIDA_MM = 5;
+        const LINEAS_CON_PLIEGUE = new Set(["escolar","agenda_ejecutiva"]);
+        const ENCUADERNACIONES_LIBRETAS_CON_PLIEGUE = new Set(["hotmelt","colbon"]);
+        const ESCUDO_BAJOS_MONTOS_UMBRAL = 150000, DISENO_COSTO_NORMAL = 40000, DISENO_COSTO_REDUCIDO = 20000, IVA_PCT = 0.19;
+        const FONDO_SEGURIDAD_TRAMOS = [[500000,0.09],[1000000,0.07],[3000000,0.05],[Infinity,0.03]];
+        const FONDO_SEGURIDAD_TRAMO_SUPERIOR_AGENDA_EJECUTIVA = 0.025;
+
+        /* ---- MOTOR DE CALCULO ---- */
+        function ordenar2(a,b){ return a<=b ? [a,b] : [b,a]; }
+        function piezasPorPliego(pa,pal,pw,ph){
+          const sinRotar = Math.floor(pw/pa)*Math.floor(ph/pal);
+          const rotada = Math.floor(pw/pal)*Math.floor(ph/pa);
+          return Math.max(sinRotar,rotada,0);
+        }
+        function requierePliegue(lineaProducto,tipoEnc){
+          if(LINEAS_CON_PLIEGUE.has(lineaProducto)) return true;
+          if(lineaProducto==="libretas") return ENCUADERNACIONES_LIBRETAS_CON_PLIEGUE.has(tipoEnc);
+          return false;
+        }
+        function piezasPorMedioPliegoOffset(pa,pal,pliegue=false){
+          const margenCm = (PINZA_ENTRADA_MM+PINZA_SALIDA_MM)/10;
+          let bloqueAncho,bloqueAlto;
+          if(pliegue){ const [corto,largo]=ordenar2(pa,pal); bloqueAncho=corto*2; bloqueAlto=largo; }
+          else { bloqueAncho=pa; bloqueAlto=pal; }
+          let opciones=[];
+          for(const key of Object.keys(PLIEGOS_CM)){
+            const [pw,ph]=PLIEGOS_CM[key];
+            const medioAlto = ph/2;
+            const n = piezasPorPliego(bloqueAncho,bloqueAlto,pw,medioAlto-margenCm);
+            if(n>0){ const desperdicio = 1-(n*bloqueAncho*bloqueAlto)/(pw*medioAlto); opciones.push([desperdicio,n]); }
+          }
+          if(opciones.length===0) return 1;
+          opciones.sort((x,y)=>x[0]-y[0]);
+          const nBloques=opciones[0][1];
+          return pliegue ? nBloques*2 : nBloques;
+        }
+        function tamanoMontajeCaratula(ancho,alto,tapaTipo){
+          let [corto,largo]=ordenar2(ancho,alto);
+          if(tapaTipo==="dura"){ corto += CARATULA_EMBONE_TAPA_DURA_CM*2; largo += CARATULA_EMBONE_TAPA_DURA_CM*2; }
+          return [corto*2,largo];
+        }
+        function redondearATamanoMaquinaCaratula(ancho,alto){
+          const [a,b]=ordenar2(ancho,alto);
+          let candidatos=[];
+          for(const [mw,mh] of CARATULA_TAMANOS_MAQUINA_CM){
+            const [ma,mb]=ordenar2(mw,mh);
+            if(a<=ma && b<=mb) candidatos.push([ma*mb,ma,mb]);
+          }
+          if(candidatos.length===0) return [ancho,alto];
+          candidatos.sort((x,y)=>x[0]-y[0]);
+          return [candidatos[0][1],candidatos[0][2]];
+        }
+        function mejorPliegoParaPieza(pa,pal,sustratoNombre,gramaje){
+          const key = sustratoNombre+"__"+gramaje;
+          const precios = SUSTRATOS[key];
+          if(!precios) throw new Error("Sustrato no encontrado: "+sustratoNombre+" "+gramaje+"g");
+          let mejores=[];
+          const precioMap = {"60x90":precios.p6090, "70x100":precios.p70100};
+          for(const formato of Object.keys(PLIEGOS_CM)){
+            const [pw,ph]=PLIEGOS_CM[formato];
+            const precioPliego = precioMap[formato];
+            if(precioPliego==null) continue;
+            const n = piezasPorPliego(pa,pal,pw,ph);
+            if(n===0) continue;
+            mejores.push([precioPliego/n, formato, n, precioPliego]);
+          }
+          if(mejores.length===0) throw new Error(`La pieza ${pa}x${pal}cm no cabe en ningún pliego disponible para ${sustratoNombre} ${gramaje}g`);
+          mejores.sort((x,y)=>x[0]-y[0]);
+          return {formato:mejores[0][1], piezasPorPliego:mejores[0][2], costoPorPieza:mejores[0][0]};
+        }
+        function costoMaterialPliegos(pa,pal,sustratoNombre,gramaje,piezasNecesarias,mermaHojas=0){
+          const key = sustratoNombre+"__"+gramaje;
+          const precios = SUSTRATOS[key];
+          if(!precios) throw new Error("Sustrato no encontrado: "+sustratoNombre+" "+gramaje+"g");
+          const piezasTotales = piezasNecesarias + mermaHojas;
+          let mejores=[];
+          const precioMap = {"60x90":precios.p6090, "70x100":precios.p70100};
+          for(const formato of Object.keys(PLIEGOS_CM)){
+            const [pw,ph]=PLIEGOS_CM[formato];
+            const precioPliego = precioMap[formato];
+            if(precioPliego==null) continue;
+            const nPorPliego = piezasPorPliego(pa,pal,pw,ph);
+            if(nPorPliego===0) continue;
+            const nPliegos = Math.ceil(piezasTotales/nPorPliego);
+            mejores.push([nPliegos*precioPliego, formato, nPorPliego, nPliegos, precioPliego]);
+          }
+          if(mejores.length===0) throw new Error(`La pieza ${pa}x${pal}cm no cabe en ningún pliego disponible para ${sustratoNombre} ${gramaje}g`);
+          mejores.sort((x,y)=>x[0]-y[0]);
+          const [costoTotal, formato, nPorPliego, nPliegos, precioPliego] = mejores[0];
+          return {formato, piezasPorPliego:nPorPliego, nPliegos, precioPliego, costoTotal};
+        }
+        function areaCm2(a,b){ return a*b; }
+        function tamanoCatalogoMasCercano(ancho,alto){
+          const areaPedida=areaCm2(ancho,alto);
+          let mejor=null, mejorDif=null;
+          for(const clave of Object.keys(TAMANOS_CATALOGO_CM)){
+            const [a,b]=TAMANOS_CATALOGO_CM[clave];
+            const dif=Math.abs(areaCm2(a,b)-areaPedida);
+            if(mejorDif===null||dif<mejorDif){ mejorDif=dif; mejor=clave; }
+          }
+          const areaCatMejor = areaCm2(...TAMANOS_CATALOGO_CM[mejor]);
+          const coincideExacto = mejorDif===0 || Math.abs(areaCatMejor-areaPedida) <= 1e-6*Math.max(Math.abs(areaCatMejor),Math.abs(areaPedida));
+          return [mejor,coincideExacto];
+        }
+        function factorEscaladoTamano(ancho,alto,catalogoClave){
+          const areaPedida=areaCm2(ancho,alto);
+          const areaCat=areaCm2(...TAMANOS_CATALOGO_CM[catalogoClave]);
+          return (areaPedida/areaCat)*FACTOR_MANIPULACION_TAMANO_CUSTOM;
+        }
+        function claseFormatoDigital(ancho,alto){
+          const [a,b]=ordenar2(ancho,alto);
+          if(a<=21.5 && b<=28) return "carta";
+          if(a<=25 && b<=35) return "octavo";
+          if(a<=33 && b<=50) return "pliego_max";
+          return null;
+        }
+        function elegibleDigital(ancho,alto,gramaje,cantidadUnidades=1){
+          if(gramaje>DIGITAL_GRAMAJE_MAX) return false;
+          if(cantidadUnidades>200) return false;
+          return claseFormatoDigital(ancho,alto)!==null;
+        }
+        function descuentoVolumenDigital(cantidadUnidades){
+          for(const [tope,pct] of DIGITAL_DESCUENTO_VOLUMEN){ if(cantidadUnidades<=tope) return pct; }
+          return 0.0;
+        }
+        function costoImpresionDigital(nPaginas,caras,esColor,ancho,alto,cantidadUnidades=1){
+          const clase=claseFormatoDigital(ancho,alto);
+          if(clase===null) return null;
+          const [sheetW,sheetH]=DIGITAL_FORMATOS_CM[clase];
+          const margenCm=DIGITAL_PINZA_MM/10;
+          let piezasPorClic=piezasPorPliego(ancho,alto,sheetW,sheetH-margenCm);
+          if(piezasPorClic===0) piezasPorClic=1;
+          const nClics=Math.ceil(nPaginas/piezasPorClic)*caras;
+          const precioClic=DIGITAL_CLIC_COP[clase][esColor?"color":"negro"];
+          const descuento=descuentoVolumenDigital(cantidadUnidades);
+          const total=nClics*precioClic*(1-descuento);
+          return {total, via:"digital", nClics, precioClic, descuentoPct:descuento};
+        }
+        function fraccionPliegoOffset(ancho,alto,esPolicromia=false){
+          const [a,b]=ordenar2(ancho,alto);
+          if(a<=25 && b<=35 && !esPolicromia) return "octavo";
+          if(a<=35 && b<=50) return "cuarto";
+          return "medio_pliego";
+        }
+        function costoImpresionOffset(nPiezasFinales,tintasTiro,tintasRetiro,esPolicromia,ancho,alto,cuadriculaUniforme=false,pliegue=false){
+          const fraccion=fraccionPliegoOffset(ancho,alto,esPolicromia);
+          const [sheetW,sheetH]=OFFSET_FORMATOS_CM[fraccion];
+          let piezasPorPasada=piezasPorPliego(ancho,alto,sheetW,sheetH);
+          if(piezasPorPasada===0) piezasPorPasada=1;
+          const nPasadas=Math.ceil(nPiezasFinales/piezasPorPasada);
+          const millares=Math.ceil(nPasadas/1000);
+          const cantTintas=Math.max(tintasTiro,tintasRetiro,1);
+          const nPlanchasNormal=Math.max(cantTintas,1);
+          const costoCtpNormal=OFFSET_CTP_COP[fraccion]*nPlanchasNormal;
+          let tarifaMillarNormal, costoMillarNormal;
+          if(fraccion==="medio_pliego" && esPolicromia){ tarifaMillarNormal=OFFSET_MILLAR_COP.medio_pliego_policromia_4x0; costoMillarNormal=tarifaMillarNormal*millares; }
+          else if(fraccion==="medio_pliego"){ tarifaMillarNormal=OFFSET_MILLAR_COP.medio_pliego_color*nPlanchasNormal; costoMillarNormal=tarifaMillarNormal*millares; }
+          else { tarifaMillarNormal=OFFSET_MILLAR_COP[fraccion]*nPlanchasNormal; costoMillarNormal=tarifaMillarNormal*millares; }
+          let costoNormal=costoCtpNormal+costoMillarNormal;
+          let recargoRetiro=0, viaExtra="";
+          const tieneRetiro=tintasRetiro>0;
+          if(tieneRetiro && !cuadriculaUniforme){
+            const mismasPlanchas=tintasRetiro===tintasTiro;
+            if(fraccion!=="medio_pliego" || !mismasPlanchas){
+              const nPlanchasRetiro=Math.max(tintasRetiro,1);
+              const costoCtpRetiro=OFFSET_CTP_COP[fraccion]*nPlanchasRetiro;
+              let costoMillarRetiro;
+              if(fraccion==="medio_pliego" && esPolicromia) costoMillarRetiro=OFFSET_MILLAR_COP.medio_pliego_policromia_4x0*millares;
+              else if(fraccion==="medio_pliego") costoMillarRetiro=OFFSET_MILLAR_COP.medio_pliego_color*nPlanchasRetiro*millares;
+              else costoMillarRetiro=OFFSET_MILLAR_COP[fraccion]*nPlanchasRetiro*millares;
+              costoNormal+=costoCtpRetiro+costoMillarRetiro;
+              viaExtra=" +retiro (planchas propias)";
+            } else if(esPolicromia){
+              recargoRetiro=costoMillarNormal*OFFSET_RECARGO_RETIRO_MEDIO_PLIEGO_POLICROMIA_PCT;
+              costoNormal+=recargoRetiro;
+              viaExtra=" +retiro (mismas planchas, +30%)";
+            }
+          }
+          const detalleNormal={
+            total:costoNormal, via:`offset (${fraccion})${viaExtra}`, fraccion,
+            nPlanchas:nPlanchasNormal, costoCtpUnitario:OFFSET_CTP_COP[fraccion],
+            costoPlanchas:costoCtpNormal, nMillares:millares,
+            costoMillarUnitario:tarifaMillarNormal, costoMillares:costoMillarNormal,
+          };
+          if(recargoRetiro) detalleNormal.recargoRetiro=recargoRetiro;
+          if(!cuadriculaUniforme) return detalleNormal;
+          const piezasMedioPliego=piezasPorMedioPliegoOffset(ancho,alto,pliegue);
+          const nPasadasMp=Math.ceil(nPiezasFinales/Math.max(piezasMedioPliego,1));
+          const millaresMp=Math.ceil(nPasadasMp/1000);
+          const costoCtpCuadricula=OFFSET_CTP_COP.medio_pliego;
+          const costoMillarCuadricula=RECARGO_TINTA_CUADRICULA_MILLAR_COP*millaresMp;
+          return {
+            total:costoCtpCuadricula+costoMillarCuadricula, via:"offset (medio pliego, cuadrícula)", fraccion:"medio_pliego",
+            nPlanchas:1, costoCtpUnitario:OFFSET_CTP_COP.medio_pliego,
+            costoPlanchas:costoCtpCuadricula, nMillares:millaresMp,
+            costoMillarUnitario:RECARGO_TINTA_CUADRICULA_MILLAR_COP, costoMillares:costoMillarCuadricula,
+          };
+        }
+        function costoImpresionUnicoPorPagina(paginasUnicas,cantidad,ancho,alto,esColor,pliegue=false){
+          const piezasPorPlancha=piezasPorMedioPliegoOffset(ancho,alto,pliegue);
+          const nPlanchas=Math.ceil(paginasUnicas/Math.max(piezasPorPlancha,1));
+          const cantTintasEquiv=esColor?2:1;
+          const merma=mermaOffsetHojas(cantidad,cantTintasEquiv);
+          const impresionesPorPlancha=cantidad+merma;
+          const millaresPorPlancha=Math.ceil(impresionesPorPlancha/1000);
+          const nMillares=nPlanchas*millaresPorPlancha;
+          const millarRate=esColor?OFFSET_MILLAR_COP.medio_pliego_policromia_4x0:RECARGO_TINTA_CUADRICULA_MILLAR_COP;
+          const costoPlanchas=nPlanchas*OFFSET_CTP_COP.medio_pliego;
+          const costoMillares=nMillares*millarRate;
+          return {
+            total:costoPlanchas+costoMillares, via:`offset (medio pliego, ${nPlanchas} planchas, único)`, fraccion:"medio_pliego", nPlanchas,
+            costoCtpUnitario:OFFSET_CTP_COP.medio_pliego, costoPlanchas,
+            nMillares, costoMillarUnitario:millarRate, costoMillares,
+          };
+        }
+        function mermaOffsetHojas(nHojasFisicas,cantTintas){
+          let base=OFFSET_MERMA_HOJAS[OFFSET_MERMA_HOJAS.length-1][1];
+          for(const [tope,merma] of OFFSET_MERMA_HOJAS){ if(nHojasFisicas<=tope){ base=merma; break; } }
+          if(cantTintas>=2) base*=OFFSET_MERMA_FACTOR_2_MAS_TINTAS;
+          return base;
+        }
+        function mermaDigitalHojas(esPolicromia){ return DIGITAL_MERMA_HOJAS[esPolicromia?"policromia":"negro"]; }
+        function disenoYPreprensa(montoOt){
+          if(montoOt<ESCUDO_BAJOS_MONTOS_UMBRAL) return [DISENO_COSTO_REDUCIDO,0];
+          return [DISENO_COSTO_NORMAL,25000];
+        }
+        function tramoFondoSeguridad(costoFabricacion, lineaProducto){
+          for(const [tope,pct] of FONDO_SEGURIDAD_TRAMOS){
+            if(costoFabricacion<=tope){
+              if(tope===Infinity && lineaProducto==="agenda_ejecutiva") return FONDO_SEGURIDAD_TRAMO_SUPERIOR_AGENDA_EJECUTIVA;
+              return pct;
+            }
+          }
+          return FONDO_SEGURIDAD_TRAMOS[FONDO_SEGURIDAD_TRAMOS.length-1][1];
+        }
+        function descuentoVolumenArmadoAgendaEjecutiva(cantidad){
+          for(const [tope,pct] of ARMADO_AGENDA_EJECUTIVA_DESCUENTO_TRAMOS){ if(cantidad<=tope) return pct; }
+          return ARMADO_AGENDA_EJECUTIVA_DESCUENTO_TRAMOS[ARMADO_AGENDA_EJECUTIVA_DESCUENTO_TRAMOS.length-1][1];
+        }
+        function espesorLomoCm(tacoHojas){ return tacoHojas*ESPESOR_LOMO_MM_POR_HOJA/10; }
+        function costoEmpaque(cantidad, catClave, lineaProducto){
+          const columna = lineaProducto==="escolar" ? "escolar" : "no_escolar";
+          const capacidad = EMPAQUE_CAPACIDAD_CAJA[catClave][columna];
+          return Math.ceil(cantidad/capacidad)*EMPAQUE_CAJA_COP;
+        }
+        function costoTransporte(baseCop, lineaProducto){
+          for(const [tope,pctOriginal] of TRANSPORTE_TRAMOS){
+            if(baseCop<=tope){
+              let pct = pctOriginal;
+              if(tope===TRANSPORTE_TRAMOS[0][0] && lineaProducto==="agenda_ejecutiva") pct -= TRANSPORTE_DESCUENTO_AGENDA_EJECUTIVA_PRIMER_TRAMO;
+              return Math.max(baseCop*pct, TRANSPORTE_PISO_COP);
+            }
+          }
+          return Math.max(baseCop*TRANSPORTE_TRAMOS[TRANSPORTE_TRAMOS.length-1][1], TRANSPORTE_PISO_COP);
+        }
+        function costoSherpa(totalPaginasInsertos){ return Math.min(SHERPA_BASE_COP + SHERPA_COP_POR_PAGINA_INSERTO*totalPaginasInsertos, SHERPA_MAXIMO_COP); }
+        function precioVentaDesdeSubtotal(subtotal,utilidadPct=0.40,ventasPct=0.0,agenciaPct=0.0){ return subtotal*(1+utilidadPct)*(1+ventasPct)*(1+agenciaPct); }
+
+        function procesarLineaImpresion(linea, anchoCuaderno, altoCuaderno, cantidadCuadernos){
+          const nombre=linea.nombre||"Línea";
+          const hojas=linea.hojasPorCuaderno;
+          const ancho=linea.anchoCm||anchoCuaderno;
+          const alto=linea.altoCm||altoCuaderno;
+          const sustrato=linea.sustrato;
+          const tintasTiro=linea.tintasTiro||0;
+          const tintasRetiro=linea.tintasRetiro||0;
+          const diseno=linea.diseno||"uniforme";
+          const pliegue=linea.pliegue||false;
+          const acabados=linea.acabados||[];
+          const resultado={nombre, hojas, ancho, alto, sustrato, tintasTiro, tintasRetiro, diseno, pliegue, acabadosList:acabados};
+          const nPiezasFisicas=hojas*cantidadCuadernos;
+          const caras=tintasRetiro>0?2:1;
+          const esColor=tintasTiro>=2||tintasRetiro>=2;
+          const cantTintas=Math.max(tintasTiro,tintasRetiro,1);
+          const mermaMaterial=(tintasTiro>0||tintasRetiro>0) ? mermaOffsetHojas(nPiezasFisicas,cantTintas) : 0;
+          const rMat=costoMaterialPliegos(ancho,alto,sustrato.nombre,sustrato.gramaje,nPiezasFisicas,mermaMaterial);
+          resultado.costoMaterial=rMat.costoTotal;
+          resultado.detalleMaterial=rMat;
+          const fondoPleno=acabados.some(a=>a.tipo==="fondo_pleno");
+          if(tintasTiro===0 && tintasRetiro===0){
+            resultado.costoImpresion=0; resultado.detalleImpresion=null;
+          } else {
+            let det;
+            if(fondoPleno){
+              const fraccion=fraccionPliegoOffset(ancho,alto,esColor);
+              const mermaO=mermaOffsetHojas(nPiezasFisicas,cantTintas);
+              det=costoImpresionOffset(nPiezasFisicas+mermaO,tintasTiro,tintasRetiro,esColor,ancho,alto);
+              const recargo=OFFSET_RECARGO_FONDO_PLENO_COP[fraccion];
+              const planchaExtra=OFFSET_CTP_COP[fraccion];
+              det.total+=recargo+planchaExtra; det.nPlanchas+=1; det.costoPlanchas+=planchaExtra;
+              det.recargoFondoPleno=recargo; det.via=`offset (fondo pleno ${fraccion})`;
+            } else if(diseno==="unico_por_pagina"){
+              const paginasUnicas=hojas*caras;
+              det=costoImpresionUnicoPorPagina(paginasUnicas,cantidadCuadernos,ancho,alto,esColor,pliegue);
+            } else {
+              const esCuadriculaUniforme=(diseno==="uniforme") && !esColor;
+              const elegibleDig=elegibleDigital(ancho,alto,sustrato.gramaje,cantidadCuadernos) && !pliegue;
+              if(elegibleDig && !esCuadriculaUniforme){
+                const mermaD=mermaDigitalHojas(esColor);
+                const detDigital=costoImpresionDigital(nPiezasFisicas+mermaD,caras,esColor,ancho,alto,cantidadCuadernos);
+                const mermaO=mermaOffsetHojas(nPiezasFisicas,cantTintas);
+                const detOffset=costoImpresionOffset(nPiezasFisicas+mermaO,tintasTiro,tintasRetiro,esColor,ancho,alto,false,pliegue);
+                det=(detDigital!==null && detDigital.total<detOffset.total)?detDigital:detOffset;
+              } else {
+                const mermaO=mermaOffsetHojas(nPiezasFisicas,cantTintas);
+                det=costoImpresionOffset(nPiezasFisicas+mermaO,tintasTiro,tintasRetiro,esColor,ancho,alto,esCuadriculaUniforme,pliegue);
+              }
+            }
+            resultado.costoImpresion=det.total; resultado.detalleImpresion=det;
+          }
+          let costoAcabados=0;
+          const areaTotalM2=(areaCm2(ancho,alto)*hojas*cantidadCuadernos)/10000;
+          const piezasTotales=hojas*cantidadCuadernos;
+          const tieneUv=acabados.some(a=>a.tipo==="uv_parcial");
+          for(const acab of acabados){
+            const tipo=acab.tipo;
+            if(tipo==="plastificado"){ if(tieneUv) continue; costoAcabados+=Math.max(areaTotalM2*PLASTIFICADO_COP_M2,PLASTIFICADO_PISO_COP); }
+            else if(tipo==="uv_parcial"){ costoAcabados+=Math.max(areaTotalM2*UV_PARCIAL_COP_M2,UV_PARCIAL_PISO_COP); }
+            else if(tipo==="troquelado"){ costoAcabados+=Math.ceil(piezasTotales/1000)*TROQUEL_TAPA_COP_POR_MILLAR; }
+            else if(tipo==="estampado"){ costoAcabados+=Math.max(piezasTotales*ESTAMPADO_COP_POR_GOLPE+ESTAMPADO_ARRANQUE_COP,ESTAMPADO_MINIMO_COP); }
+            else if(tipo==="colaminado"){ costoAcabados+=areaTotalM2*COLAMINADO_COP_M2; }
+            else if(tipo==="otro"){ costoAcabados+=(acab.costoManual||0)*cantidadCuadernos; }
+          }
+          resultado.costoAcabados=costoAcabados;
+          resultado.costoTotal=resultado.costoMaterial+resultado.costoImpresion+costoAcabados;
+          return resultado;
+        }
+
+        function cotizarCuaderno(p){
+          const lineasImpresion = p.lineasImpresion.map(l=>({...l, acabados:(l.acabados||[]).map(a=>({...a}))}));
+          const [catClave,coincideExacto]=tamanoCatalogoMasCercano(p.anchoCm,p.altoCm);
+          const factorEscala = coincideExacto?1.0:factorEscaladoTamano(p.anchoCm,p.altoCm,catClave);
+          if(p.tapaTipo==="dura" && p.cantidad>=TAPA_DURA_UMBRAL_TINTA_RETIRO_UNIDADES){
+            for(const l of lineasImpresion){ if(l.rol==="caratula" && (l.tintasRetiro||0)===0) l.tintasRetiro=1; }
+          }
+          const [montajeAncho,montajeAlto]=tamanoMontajeCaratula(p.anchoCm,p.altoCm,p.tapaTipo);
+          const tamanoMaquinaCaratula=redondearATamanoMaquinaCaratula(montajeAncho,montajeAlto);
+          for(const l of lineasImpresion){
+            if(l.rol==="caratula"){ l.anchoCm=tamanoMaquinaCaratula[0]; l.altoCm=tamanoMaquinaCaratula[1]; l.hojasPorCuaderno=1; }
+          }
+          const desglose={}, detalleLineas={};
+          for(const l of lineasImpresion){
+            const r=procesarLineaImpresion(l,p.anchoCm,p.altoCm,p.cantidad);
+            const clave=l.nombre||l.rol||"linea";
+            desglose["linea_"+clave]=r.costoTotal;
+            r.rol=l.rol;
+            detalleLineas[clave]=r;
+          }
+          const lineasInsertos=lineasImpresion.filter(l=>l.rol==="inserto");
+          const totalPaginasInsertos=lineasInsertos.reduce((a,l)=>a+l.hojasPorCuaderno,0);
+          let costoLevante=0;
+          for(const l of lineasImpresion){
+            const rol=l.rol;
+            if(LEVANTE_COP_HOJA[rol]!=null && (l.diseno||"uniforme")==="unico_por_pagina") costoLevante += LEVANTE_COP_HOJA[rol]*l.hojasPorCuaderno*p.cantidad;
+          }
+          desglose["levante"]=costoLevante;
+          const lineaCaratula=lineasImpresion.find(l=>l.rol==="caratula")||null;
+          let costoTapaArmado=0, costoTapaCarton=0;
+          if(p.tapaTipo==="dura"){
+            if(p.lineaProducto!=="agenda_ejecutiva") costoTapaArmado=ARMADO_FORRADO_TAPA_DURA_COP[catClave]*factorEscala*p.cantidad;
+            const cartonPrecio=p.cartonCalibreMm===1.5?CARTON_1_5MM_COP:CARTON_2_0MM_COP;
+            const nTapasPorPliego=piezasPorPliego(p.anchoCm,p.altoCm,70,100);
+            costoTapaCarton=(cartonPrecio/Math.max(nTapasPorPliego,1))*2*p.cantidad;
+            if(p.lineaProducto==="agenda_ejecutiva"){
+              const largoLomo=Math.max(p.anchoCm,p.altoCm);
+              const espesorLomo=espesorLomoCm(p.tacoHojas);
+              const nLomosPorPliego=piezasPorPliego(largoLomo,espesorLomo,70,100);
+              costoTapaCarton+=(cartonPrecio/Math.max(nLomosPorPliego,1))*p.cantidad;
+            }
+          }
+          desglose["tapa_armado_forrado"]=costoTapaArmado;
+          desglose["tapa_carton"]=costoTapaCarton;
+          let costoTapaSemiduraExtra=0;
+          if(p.tapaTipo==="semidura" && lineaCaratula!==null){
+            const rCapa2=mejorPliegoParaPieza(tamanoMaquinaCaratula[0],tamanoMaquinaCaratula[1],lineaCaratula.sustrato.nombre,lineaCaratula.sustrato.gramaje);
+            costoTapaSemiduraExtra=rCapa2.costoPorPieza*p.cantidad;
+            const areaColaminadoM2=(areaCm2(tamanoMaquinaCaratula[0],tamanoMaquinaCaratula[1])*p.cantidad)/10000;
+            costoTapaSemiduraExtra+=areaColaminadoM2*COLAMINADO_COP_M2;
+          }
+          desglose["tapa_semidura_segunda_capa"]=costoTapaSemiduraExtra;
+          const guardasSustrato=p.guardasSustrato||{nombre:"Propalcote",gramaje:150};
+          const lineaGuardas={ nombre:"Guardas", hojasPorCuaderno: p.guardasCantidad!=null?p.guardasCantidad:GUARDAS_CANTIDAD_DEFAULT, sustrato:guardasSustrato, tintasTiro:p.guardasTintasTiro||0, tintasRetiro:0, diseno:"unico_por_pagina", acabados:[] };
+          const rGuardas=procesarLineaImpresion(lineaGuardas,p.anchoCm,p.altoCm,p.cantidad);
+          let costoGuardasTotal=rGuardas.costoTotal;
+          if(p.guardasPlastificado){
+            const areaGuardasM2=(areaCm2(p.anchoCm,p.altoCm)*(p.guardasCantidad!=null?p.guardasCantidad:GUARDAS_CANTIDAD_DEFAULT)*p.cantidad)/10000;
+            costoGuardasTotal+=Math.max(areaGuardasM2*GUARDAS_PLASTIFICADO_COP_M2, GUARDAS_PISO_OT_COP);
+          }
+          desglose["guardas"]=costoGuardasTotal;
+          detalleLineas["Guardas"]=rGuardas;
+          let costoArmado=0;
+          const tipoEnc=p.encuadernacionTipo;
+          if(p.lineaProducto==="escolar"){
+            costoArmado=ESCOLAR_ENCUADERNACION_COP[tipoEnc]*p.cantidad*factorEscala;
+            costoArmado+=Math.ceil(p.cantidad/1000)*GRAFADO_ESCOLAR_COP_POR_MILLAR;
+            costoArmado+=Math.max(REFILE_TACO_COP_UNIDAD*p.cantidad, REFILE_TACO_MINIMO_COP);
+          } else if(p.lineaProducto==="cuaderno_anillado"){
+            const tabla=ANILLO_DOBLE_O[catClave];
+            let costoUnit=(tabla.base_80h+(p.tacoHojas-80)*tabla.variacion_hoja)*factorEscala;
+            if(p.anilladoDosSecciones) costoUnit*=(1-ANILLADO_DOS_SECCIONES_DESCUENTO_PCT);
+            costoArmado=costoUnit*p.cantidad;
+            costoArmado+=Math.max(REFILE_TACO_COP_UNIDAD*p.cantidad, REFILE_TACO_MINIMO_COP);
+          } else if(p.lineaProducto==="agenda_ejecutiva"){
+            const costoUnit=Math.max(ARMADO_AGENDA_EJECUTIVA_COP[catClave]*factorEscala, ARMADO_AGENDA_EJECUTIVA_MINIMO_COP);
+            const descuentoVol=descuentoVolumenArmadoAgendaEjecutiva(p.cantidad);
+            costoArmado=costoUnit*p.cantidad*(1-descuentoVol);
+          } else if(p.lineaProducto==="libretas"){
+            if(tipoEnc==="anillo_doble_o"){
+              const tabla=ANILLO_DOBLE_O[catClave];
+              const baseCorta=tabla.base_80h+(p.tacoHojas-80)*tabla.variacion_hoja;
+              const [ladoCorto,ladoLargo]=ordenar2(p.anchoCm,p.altoCm);
+              const costoUnit=((baseCorta*ladoCorto)/ladoLargo)*ANILLADO_CORTO_FACTOR;
+              costoArmado=costoUnit*p.cantidad;
+            } else if(tipoEnc==="hotmelt"){
+              const ladoPegue=Math.min(p.anchoCm,p.altoCm);
+              const costoUnit=HOTMELT_BASE_COP_UNIDAD*(ladoPegue/HOTMELT_CM_REFERENCIA);
+              costoArmado=Math.max(costoUnit*p.cantidad,HOTMELT_PISO_OT_COP);
+              costoArmado+=GRAFADO_LIBRETAS_COP_FIJO;
+            } else if(tipoEnc==="colbon"){
+              costoArmado=Math.max(COLBON_COP_UNIDAD*p.cantidad,COLBON_PISO_OT_COP);
+              costoArmado+=GRAFADO_LIBRETAS_COP_FIJO;
+            }
+            costoArmado+=Math.max(REFILE_TACO_COP_UNIDAD*p.cantidad, REFILE_TACO_MINIMO_COP);
+          }
+          costoArmado+=LIMPIEZA_COP_UNIDAD[p.lineaProducto]*p.cantidad;
+          desglose["armado_encuadernacion"]=costoArmado;
+          const costoDirecto=Object.values(desglose).reduce((a,b)=>a+b,0);
+          const [disenoCop] = disenoYPreprensa(costoDirecto);
+          const fondoSeguridadPct = tramoFondoSeguridad(costoDirecto, p.lineaProducto);
+          const fondoSeguridadCop = costoDirecto*fondoSeguridadPct;
+          const empaqueCop = costoEmpaque(p.cantidad, catClave, p.lineaProducto);
+          const sherpaCop = costoSherpa(totalPaginasInsertos);
+          const subtotalPreTransporte = costoDirecto+disenoCop+fondoSeguridadCop+empaqueCop+sherpaCop;
+          let transporteCop = costoTransporte(subtotalPreTransporte, p.lineaProducto);
+          if(p.lineaProducto==="agenda_ejecutiva") transporteCop *= TRANSPORTE_AGENDA_EJECUTIVA_FACTOR;
+          const subtotal = subtotalPreTransporte+transporteCop;
+          const precioVenta=precioVentaDesdeSubtotal(subtotal,p.utilidadPct,p.ventasPct);
+          const iva=precioVenta*IVA_PCT;
+          const precioFinal=precioVenta+iva;
+          const precioVentaUnitario=precioVenta/p.cantidad;
+          return {
+            desgloseDirecto:desglose, detalleLineas, costoDirectoTotal:costoDirecto, costoDirectoUnitario:costoDirecto/p.cantidad,
+            disenoCop, fondoSeguridadCop, fondoSeguridadPct, empaqueCop, sherpaCop, transporteCop, subtotal,
+            utilidadPct:p.utilidadPct, ventasPct:p.ventasPct, precioVentaTotal:precioVenta, precioVentaUnitario,
+            ivaTotal:iva, precioFinalTotal:precioFinal, catClave, tamanoMaquinaCaratula,
+          };
+        }
+
+        /* ---- DATOS DE LA EMPRESA ---- */
+        const TACTICAL_INFO = {
+          nombre: "TACTICAL MARKETING GROUP S.A.S.",
+          nit: "NIT 900.413.145-7",
+          web: "www.tacticalmg.co",
+          direccion: "Calle 5B Bis # 53D-56, Piso 1, Bogotá",
+        };
+        const VENDEDORES = {
+          "Norely Sarmiento": { correo: "contacto@tacticalmg.co", telefono: "311 222 8871" },
+          "Helver Conde": { correo: "gerencia@tacticalmg.co", telefono: "320 840 1643" },
+        };
+        const CONDICIONES_COMERCIALES_DEFAULT = [
+          "El cliente suministra diseño listo para impresión en Illustrator o PDF editable. Correcciones adicionales generan un sobrecosto de mínimo $50.000, al igual que archivos recibidos en Canva.",
+          "Costo sujeto a verificación de archivos y/o muestra suministrada por el cliente.",
+          "Forma de pago: 50% inicial - 50% al registro fotográfico de alistamiento de material para despacho. Plazo de compra luego del anticipo: 30 días — si el producto no es fabricado en ese plazo, se realizará un descuento del 15% sobre el anticipo recibido.",
+          "Se inicia producción con orden de compra, anticipo y archivos aprobados.",
+          "Despacho en zona urbana de Bogotá. Despachos solo días hábiles impares.",
+        ];
+
+        /* ---- INTERFAZ DEL COTIZADOR ---- */
+        const COT_ACABADOS_DISPONIBLES = [
+          {tipo:"plastificado", label:"Plastificado"}, {tipo:"uv_parcial", label:"UV Parcial"},
+          {tipo:"troquelado", label:"Troquelado"}, {tipo:"estampado", label:"Estampado"},
+          {tipo:"colaminado", label:"Colaminado"}, {tipo:"fondo_pleno", label:"Fondo Pleno / Plastón"},
+        ];
+        const COT_ENCUADERNACIONES_POR_LINEA = {
+          escolar: [["grapa","Grapa"],["hilo","Hilo"],["hilo_cinta","Hilo con cinta"]],
+          cuaderno_anillado: [["anillo_doble_o","Anillo Doble O"]],
+          agenda_ejecutiva: [["costura","Costura"]],
+          libretas: [["anillo_doble_o","Anillo Doble O"],["hotmelt","Hotmelt"],["colbon","Colbón"]],
+        };
+        let cotInicializado = false;
+        let cotInsertoContador = 0;
+        let cotUltimoResultado = null, cotUltimoParams = null;
+
+        function cotSustratoOptionsHtml(){
+          let html = "";
+          for(const key of Object.keys(SUSTRATOS)){ const [nombre,gramaje] = key.split("__"); html += `<option value="${key}">${nombre} ${gramaje}g</option>`; }
+          return html;
+        }
+        function cotAcabadosGridHtml(prefix){
+          let html = `<div class="acabados-grid" style="display:flex; flex-wrap:wrap; gap:10px 16px; margin-top:8px; padding-top:8px; border-top:1px dashed #cbd5e0;">`;
+          for(const a of COT_ACABADOS_DISPONIBLES){
+            html += `<div class="checkbox-row" style="display:flex; align-items:center; gap:4px;"><input type="checkbox" id="${prefix}_acab_${a.tipo}"><label for="${prefix}_acab_${a.tipo}" style="font-weight:normal; margin:0;">${a.label}</label></div>`;
+          }
+          html += `<div class="checkbox-row" style="display:flex; align-items:center; gap:4px;"><input type="checkbox" id="${prefix}_acab_otro" onchange="document.getElementById('${prefix}_otroCostoWrap').style.display=this.checked?'flex':'none'"><label for="${prefix}_acab_otro" style="font-weight:normal; margin:0;">Otro:</label>
+            <div id="${prefix}_otroCostoWrap" style="display:none; align-items:center; gap:4px;"><input type="number" id="${prefix}_otroCosto" placeholder="COP/und" style="width:100px;"></div></div>`;
+          html += `</div>`;
+          return html;
+        }
+        function cotLineaCardHtml(prefix, opciones){
+          opciones = opciones || {};
+          const mostrarPliegue = opciones.mostrarPliegue !== false;
+          const mostrarNombre = !!opciones.mostrarNombre;
+          const mostrarHojas = opciones.mostrarHojas !== false;
+          const mostrarQuitar = !!opciones.mostrarQuitar;
+          const mostrarDiseno = opciones.mostrarDiseno !== false;
+          const disenoDefault = opciones.disenoDefault || "uniforme";
+          let html = `<div class="linea-card" id="${prefix}_card" style="border:1px solid #cbd5e0; border-radius:6px; padding:12px 14px; margin-bottom:12px; background:#fbfcfd;">`;
+          html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;"><strong style="color:var(--primary);">${opciones.titulo||prefix}</strong>`;
+          if(mostrarQuitar) html += `<button type="button" style="background:none; border:none; color:var(--peligro); font-weight:bold; cursor:pointer;" onclick="cotQuitarInserto('${prefix}')">🗑️ Quitar</button>`;
+          html += `</div><div class="form-grid" style="margin-bottom:8px;">`;
+          if(mostrarNombre) html += `<div class="form-group"><label>Nombre</label><input type="text" id="${prefix}_nombre" value="${opciones.nombreDefault||'Insertos'}"></div>`;
+          if(mostrarHojas) html += `<div class="form-group"><label>Hojas por cuaderno</label><input type="number" id="${prefix}_hojas" value="${opciones.hojasDefault||1}" min="1"></div>`;
+          html += `<div class="form-group"><label>Sustrato</label><select id="${prefix}_sustrato">${cotSustratoOptionsHtml()}</select></div>`;
+          html += `<div class="form-group"><label>Tintas tiro</label><input type="number" id="${prefix}_tintasTiro" value="${opciones.tintasTiroDefault!=null?opciones.tintasTiroDefault:4}" min="0" max="4"></div>`;
+          html += `<div class="form-group"><label>Tintas retiro</label><input type="number" id="${prefix}_tintasRetiro" value="${opciones.tintasRetiroDefault!=null?opciones.tintasRetiroDefault:0}" min="0" max="4"></div>`;
+          if(mostrarDiseno){
+            html += `<div class="form-group"><label>Diseño</label><select id="${prefix}_diseno">
+              <option value="uniforme" ${disenoDefault==="uniforme"?"selected":""}>Páginas iguales</option>
+              <option value="unico_por_pagina" ${disenoDefault==="unico_por_pagina"?"selected":""}>Páginas diferentes</option>
+            </select></div>`;
+          }
+          if(mostrarPliegue) html += `<div class="form-group" style="display:flex; align-items:flex-end;"><div class="checkbox-row" style="display:flex; align-items:center; gap:4px;"><input type="checkbox" id="${prefix}_pliegue"><label for="${prefix}_pliegue" style="font-weight:normal; margin:0;">Pliegue (se dobla al centro)</label></div></div>`;
+          html += `</div>`;
+          html += cotAcabadosGridHtml(prefix);
+          html += `</div>`;
+          return html;
+        }
+        function cotAgregarInserto(datos){
+          cotInsertoContador++;
+          const id = "cotinserto_"+cotInsertoContador;
+          const div = document.createElement("div");
+          div.innerHTML = cotLineaCardHtml(id, {
+            titulo:"Inserto", mostrarNombre:true, nombreDefault:(datos&&datos.nombre)||"Insertos",
+            mostrarHojas:true, hojasDefault:(datos&&datos.hojasPorCuaderno)||3,
+            tintasTiroDefault:(datos&&datos.tintasTiro)!=null?datos.tintasTiro:4,
+            tintasRetiroDefault:(datos&&datos.tintasRetiro)!=null?datos.tintasRetiro:4,
+            disenoDefault:(datos&&datos.diseno)||"unico_por_pagina", mostrarQuitar:true,
+          });
+          document.getElementById("cot-insertosContainer").appendChild(div.firstElementChild);
+          if(datos){
+            if(datos.sustrato) document.getElementById(id+"_sustrato").value = datos.sustrato.nombre+"__"+datos.sustrato.gramaje;
+            if(datos.pliegue) document.getElementById(id+"_pliegue").checked = true;
+            if(datos.acabados) datos.acabados.forEach(t=>{ const el=document.getElementById(id+"_acab_"+t); if(el) el.checked=true; });
+          }
+          return id;
+        }
+        function cotQuitarInserto(prefix){ const el = document.getElementById(prefix+"_card"); if(el) el.remove(); }
+        function cotLeerLineaDesdeForm(prefix, opciones){
+          opciones = opciones || {};
+          const sustratoVal = document.getElementById(prefix+"_sustrato").value;
+          const [sNombre, sGramaje] = sustratoVal.split("__");
+          const acabados = [];
+          for(const a of COT_ACABADOS_DISPONIBLES){ if(document.getElementById(prefix+"_acab_"+a.tipo).checked) acabados.push({tipo:a.tipo}); }
+          if(document.getElementById(prefix+"_acab_otro").checked){
+            const costo = parseFloat(document.getElementById(prefix+"_otroCosto").value)||0;
+            acabados.push({tipo:"otro", costoManual:costo});
+          }
+          return {
+            nombre: opciones.nombre || (document.getElementById(prefix+"_nombre") ? document.getElementById(prefix+"_nombre").value : opciones.nombreFijo),
+            rol: opciones.rol,
+            hojasPorCuaderno: opciones.hojasFijo!=null ? opciones.hojasFijo : parseFloat(document.getElementById(prefix+"_hojas").value),
+            sustrato: {nombre:sNombre, gramaje:parseFloat(sGramaje)},
+            tintasTiro: parseInt(document.getElementById(prefix+"_tintasTiro").value)||0,
+            tintasRetiro: parseInt(document.getElementById(prefix+"_tintasRetiro").value)||0,
+            diseno: document.getElementById(prefix+"_diseno") ? document.getElementById(prefix+"_diseno").value : "uniforme",
+            pliegue: document.getElementById(prefix+"_pliegue") ? document.getElementById(prefix+"_pliegue").checked : false,
+            acabados,
+          };
+        }
+
+        function initCotizador(){
+          if(cotInicializado){ return; }
+          cotInicializado = true;
+
+          const selVendedor = document.getElementById('cot-vendedor');
+          Object.keys(VENDEDORES).forEach(v => { const opt=document.createElement('option'); opt.value=v; opt.textContent=v; selVendedor.appendChild(opt); });
+
+          document.getElementById("cot-lineaCaratula").innerHTML = cotLineaCardHtml("cotcaratula", {
+            titulo:"Carátula", mostrarNombre:false, mostrarHojas:false, mostrarPliegue:false, mostrarDiseno:false, tintasTiroDefault:4, tintasRetiroDefault:0,
+          });
+          document.getElementById("cotcaratula_acab_plastificado").checked = true;
+          document.getElementById("cotcaratula_sustrato").value = "Propalcote__150";
+
+          document.getElementById("cot-lineaTaco").innerHTML = cotLineaCardHtml("cottaco", {
+            titulo:"Taco", mostrarNombre:false, mostrarHojas:false, tintasTiroDefault:1, tintasRetiroDefault:1, disenoDefault:"uniforme",
+          });
+          const tacoCard = document.getElementById("cottaco_card");
+          const inputHojasGlobal = document.createElement("input");
+          inputHojasGlobal.type="hidden"; inputHojasGlobal.id="cottaco_hojas"; inputHojasGlobal.value = document.getElementById("cot-tacoHojas").value;
+          tacoCard.appendChild(inputHojasGlobal);
+          document.getElementById("cot-tacoHojas").addEventListener('input', function(){ document.getElementById("cottaco_hojas").value = this.value; });
+
+          document.getElementById("cot-guardasSustrato").innerHTML = cotSustratoOptionsHtml();
+          document.getElementById("cot-guardasSustrato").value = "Propalcote__150";
+
+          cotOnLineaProductoChange();
+          cotOnTapaTipoChange();
+        }
+        function cotOnLineaProductoChange(){
+          const lp = document.getElementById("cot-lineaProducto").value;
+          const sel = document.getElementById("cot-encuadernacionTipo");
+          sel.innerHTML = "";
+          for(const [val,label] of COT_ENCUADERNACIONES_POR_LINEA[lp]){ const opt=document.createElement("option"); opt.value=val; opt.textContent=label; sel.appendChild(opt); }
+          document.getElementById("cot-anillado2SeccionesWrap").style.display = (lp==="cuaderno_anillado") ? "flex" : "none";
+          cotOnEncuadernacionChange();
+        }
+        function cotOnEncuadernacionChange(){
+          const lp = document.getElementById("cot-lineaProducto").value;
+          const enc = document.getElementById("cot-encuadernacionTipo").value;
+          const chk = document.getElementById("cottaco_pliegue");
+          if(chk) chk.checked = requierePliegue(lp, enc);
+        }
+        function cotOnTapaTipoChange(){
+          const tapa = document.getElementById("cot-tapaTipo").value;
+          document.getElementById("cot-cartonCalibreWrap").style.display = tapa==="dura" ? "block" : "none";
+        }
+
+        function cotFormatoCop(v){ if(v==null || isNaN(v)) return "—"; return "$"+Math.round(v).toLocaleString("es-CO"); }
+
+        function cotCalcular(){
+          try{
+            const lineaProducto = document.getElementById("cot-lineaProducto").value;
+            const anchoCm = parseFloat(document.getElementById("cot-anchoCm").value);
+            const altoCm = parseFloat(document.getElementById("cot-altoCm").value);
+            const cantidad = parseFloat(document.getElementById("cot-cantidad").value);
+            const tapaTipo = document.getElementById("cot-tapaTipo").value;
+            const cartonCalibreMm = parseFloat(document.getElementById("cot-cartonCalibre").value);
+            const encuadernacionTipo = document.getElementById("cot-encuadernacionTipo").value;
+            const tacoHojas = parseFloat(document.getElementById("cot-tacoHojas").value);
+
+            const lineaCaratula = cotLeerLineaDesdeForm("cotcaratula", {rol:"caratula", nombreFijo:"Caratula", hojasFijo:2});
+            const lineaTaco = cotLeerLineaDesdeForm("cottaco", {rol:"taco", nombreFijo:"Taco", hojasFijo:tacoHojas});
+            const lineasInsertos = [];
+            document.querySelectorAll("#cot-insertosContainer .linea-card").forEach(card=>{
+              const prefix = card.id.replace("_card","");
+              lineasInsertos.push(cotLeerLineaDesdeForm(prefix, {rol:"inserto"}));
+            });
+            const lineasImpresion = [lineaCaratula, lineaTaco, ...lineasInsertos];
+            const guardasSustratoVal = document.getElementById("cot-guardasSustrato").value.split("__");
+
+            const p = {
+              lineaProducto, anchoCm, altoCm, cantidad, tapaTipo, cartonCalibreMm, encuadernacionTipo, tacoHojas, lineasImpresion,
+              guardasCantidad: parseFloat(document.getElementById("cot-guardasCantidad").value),
+              guardasSustrato: {nombre:guardasSustratoVal[0], gramaje:parseFloat(guardasSustratoVal[1])},
+              guardasTintasTiro: parseInt(document.getElementById("cot-guardasTintasTiro").value)||0,
+              guardasPlastificado: document.getElementById("cot-guardasPlastificado").checked,
+              anilladoDosSecciones: document.getElementById("cot-anillado2Secciones").checked,
+              utilidadPct: parseFloat(document.getElementById("cot-utilidadPct").value)/100,
+              ventasPct: parseFloat(document.getElementById("cot-ventasPct").value)/100,
+            };
+            const r = cotizarCuaderno(p);
+            cotUltimoResultado = r; cotUltimoParams = p;
+            cotRenderResultado(r, p);
+          } catch(err){
+            document.getElementById("cot-resultado-contenido").innerHTML = `<div style="background:#fde8e8; color:var(--peligro); border:1px solid #f3b4b4; border-radius:6px; padding:10px 12px; font-size:13px;">Error en el cálculo: ${err.message}</div>`;
+          }
+        }
+
+        const COT_ETIQUETAS_DESGLOSE = {
+          tapa_armado_forrado: "Armado y forrado de tapa (dura)", tapa_carton: "Cartón de tapa (dura)",
+          tapa_semidura_segunda_capa: "Segunda capa + colaminado (semidura)", guardas: "Guardas",
+          levante: "Levante manual (hojas único por página)", armado_encuadernacion: "Armado / encuadernación",
+        };
+        function cotRenderResultado(r, p){
+          let filas = `<table class="doc-table">`;
+          for(const clave of Object.keys(r.desgloseDirecto)){
+            const valor = r.desgloseDirecto[clave];
+            let etiqueta = COT_ETIQUETAS_DESGLOSE[clave] || (clave.startsWith("linea_") ? "Línea: "+clave.slice(6) : clave);
+            if(valor===0 && ["tapa_armado_forrado","tapa_carton","tapa_semidura_segunda_capa","levante"].includes(clave)) continue;
+            filas += `<tr><td>${etiqueta}</td><td style="text-align:right;">${cotFormatoCop(valor)}</td></tr>`;
+          }
+          filas += `<tr style="font-weight:bold;"><td>Costo directo total</td><td style="text-align:right;">${cotFormatoCop(r.costoDirectoTotal)}</td></tr>`;
+          filas += `<tr><td>Diseño / Ajuste</td><td style="text-align:right;">${cotFormatoCop(r.disenoCop)}</td></tr>`;
+          filas += `<tr><td>Fondo de Seguridad (${(r.fondoSeguridadPct*100).toFixed(1)}%)</td><td style="text-align:right;">${cotFormatoCop(r.fondoSeguridadCop)}</td></tr>`;
+          filas += `<tr><td>Empaque</td><td style="text-align:right;">${cotFormatoCop(r.empaqueCop)}</td></tr>`;
+          filas += `<tr><td>Sherpa (muestra de color)</td><td style="text-align:right;">${cotFormatoCop(r.sherpaCop)}</td></tr>`;
+          filas += `<tr><td>Transporte</td><td style="text-align:right;">${cotFormatoCop(r.transporteCop)}</td></tr>`;
+          filas += `<tr style="font-weight:bold; border-top:2px solid #cbd5e0;"><td>Subtotal</td><td style="text-align:right;">${cotFormatoCop(r.subtotal)}</td></tr>`;
+          filas += `<tr><td>Precio de venta (total pedido)</td><td style="text-align:right;">${cotFormatoCop(r.precioVentaTotal)}</td></tr>`;
+          filas += `<tr style="font-weight:bold; color:var(--primary); font-size:1.05rem; border-top:2px solid var(--primary);"><td>Precio de venta UNITARIO</td><td style="text-align:right;">${cotFormatoCop(r.precioVentaUnitario)}</td></tr>`;
+          filas += `<tr><td>IVA (19%)</td><td style="text-align:right;">${cotFormatoCop(r.ivaTotal)}</td></tr>`;
+          filas += `<tr style="font-weight:bold;"><td>Precio final total (con IVA)</td><td style="text-align:right;">${cotFormatoCop(r.precioFinalTotal)}</td></tr>`;
+          filas += `</table>`;
+          document.getElementById("cot-resultado-contenido").innerHTML = filas;
+        }
+
+        /* ---- GUARDAR COTIZACIÓN: CRM + PDF CLIENTE ---- */
+        let db_cotizaciones = JSON.parse(localStorage.getItem('tactical_cotizaciones_v1')) || [];
+
+        function cotDescripcionProducto(p){
+          const nombresLinea = {escolar:"Cuaderno Escolar", cuaderno_anillado:"Cuaderno Anillado", agenda_ejecutiva:"Agenda Ejecutiva", libretas:"Libreta"};
+          return `${p.cantidad} ${nombresLinea[p.lineaProducto]} ${p.anchoCm}x${p.altoCm}cm, tapa ${p.tapaTipo}`;
+        }
+
+        function cotGuardarYGenerarPDF(){
+          if(!cotUltimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
+          const empresa = document.getElementById('cot-cli-empresa').value.trim();
+          const encargado = document.getElementById('cot-cli-encargado').value.trim();
+          const telefono = document.getElementById('cot-cli-telefono').value.trim();
+          const correo = document.getElementById('cot-cli-correo').value.trim();
+          const vendedor = document.getElementById('cot-vendedor').value;
+          if(!empresa && !encargado){ alert("Ingresa al menos el Cliente o el Encargado antes de generar el PDF."); return; }
+
+          // Buscar o crear cliente en el CRM
+          let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
+          if(!cli){
+            cli = { id: Date.now().toString(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0 };
+            db_clientes.push(cli);
+            localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
+          } else {
+            if(telefono) cli.wp = telefono;
+            if(correo) cli.correo = correo;
+            localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
+          }
+
+          const r = cotUltimoResultado, p = cotUltimoParams;
+          const desc = cotDescripcionProducto(p);
+          const opp = { id: Date.now().toString()+'_opp', idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, desc, monto: Math.round(r.precioFinalTotal), etapa: 'cot' };
+          db_opps.push(opp);
+          localStorage.setItem('tactical_crm_opps_v2', JSON.stringify(db_opps));
+
+          const plazoEntrega = document.getElementById('cot-plazoEntrega').value.trim();
+          const validezOferta = document.getElementById('cot-validezOferta').value.trim();
+          const cotizacion = {
+            id: opp.id, idOpp: opp.id, idCli: cli.id, fecha: new Date().toISOString(),
+            cliente: {empresa, encargado, telefono, correo}, vendedor, desc, params: p, resultado: r,
+            plazoEntrega, validezOferta,
+          };
+          db_cotizaciones.push(cotizacion);
+          localStorage.setItem('tactical_cotizaciones_v1', JSON.stringify(db_cotizaciones));
+
+          cotImprimirPDFCliente(cotizacion);
+        }
+
+        function cotImprimirPDFCliente(cot){
+          const p = cot.params, r = cot.resultado, vend = VENDEDORES[cot.vendedor] || {correo:'', telefono:''};
+          const fecha = new Date(cot.fecha).toLocaleDateString('es-CO', {year:'numeric', month:'long', day:'numeric'});
+          let condicionesHtml = '<ul>' + CONDICIONES_COMERCIALES_DEFAULT.map(c=>`<li>${c}</li>`).join('') + '</ul>';
+          const nombresLinea = {escolar:"Cuaderno Escolar", cuaderno_anillado:"Cuaderno Anillado", agenda_ejecutiva:"Agenda Ejecutiva", libretas:"Libreta"};
+          const nombresTapa = {dura:"Dura", semidura:"Semidura", blanda:"Blanda"};
+
+          const html = `
+            <div class="doc-header">
+              <div>
+                <h1>${TACTICAL_INFO.nombre}</h1>
+                <div class="doc-tipo">COTIZACIÓN</div>
+              </div>
+              <div class="doc-empresa-datos">
+                ${TACTICAL_INFO.nit}<br>${TACTICAL_INFO.direccion}<br>${TACTICAL_INFO.web}<br>
+                Vendedor: <strong>${cot.vendedor}</strong> — ${vend.telefono} — ${vend.correo}
+              </div>
+            </div>
+            <table class="doc-table">
+              <tr><td style="width:20%;"><strong>Fecha</strong></td><td>${fecha}</td><td style="width:20%;"><strong>Cliente</strong></td><td>${cot.cliente.empresa||'-'}</td></tr>
+              <tr><td><strong>Encargado</strong></td><td>${cot.cliente.encargado||'-'}</td><td><strong>Teléfono</strong></td><td>${cot.cliente.telefono||'-'}</td></tr>
+              <tr><td><strong>Correo</strong></td><td colspan="3">${cot.cliente.correo||'-'}</td></tr>
+            </table>
+
+            <div class="doc-section-title">Descripción del Producto</div>
+            <table class="doc-table">
+              <tr><th>Producto</th><td>${nombresLinea[p.lineaProducto]}</td><th>Cantidad</th><td>${p.cantidad} unidades</td></tr>
+              <tr><th>Tamaño</th><td>${p.anchoCm} x ${p.altoCm} cm</td><th>Tapa</th><td>${nombresTapa[p.tapaTipo]}</td></tr>
+            </table>
+
+            <div class="doc-section-title">Valor de la Cotización</div>
+            <table class="doc-table">
+              <tr><td>Precio unitario</td><td style="text-align:right;">${cotFormatoCop(r.precioVentaUnitario)}</td></tr>
+              <tr><td>Cantidad</td><td style="text-align:right;">${p.cantidad}</td></tr>
+              <tr><td>Subtotal</td><td style="text-align:right;">${cotFormatoCop(r.precioVentaTotal)}</td></tr>
+              <tr><td>IVA (19%)</td><td style="text-align:right;">${cotFormatoCop(r.ivaTotal)}</td></tr>
+            </table>
+            <div class="doc-total-box">TOTAL: ${cotFormatoCop(r.precioFinalTotal)} COP</div>
+
+            <div class="doc-section-title">Condiciones Comerciales</div>
+            <div class="doc-condiciones">
+              <p><strong>Plazo de entrega:</strong> ${cot.plazoEntrega || '-'}</p>
+              <p><strong>Validez de la oferta:</strong> ${cot.validezOferta || '-'}</p>
+              ${condicionesHtml}
+            </div>
+          `;
+          document.getElementById('print-area').innerHTML = html;
+          document.getElementById('print-area').style.display = 'block';
+          setTimeout(() => { window.print(); document.getElementById('print-area').style.display = 'none'; }, 100);
+
+          // Refrescar CRM si esta visible
+          if(document.getElementById('view-crm').classList.contains('active-view')){ renderClientes(); llenarSelectClientes(); renderOportunidades(); }
+        }
+
+        /* ---- ORDEN DE PRODUCCIÓN ---- */
+        const COT_NOMBRE_MAQUINA = { octavo:"Octavo", cuarto:"Cuarto", medio_pliego:"Medio Pliego", digital:"Digital (Konica)" };
+        function cotGenerarOrdenProduccion(){
+          if(!cotUltimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
+          const r = cotUltimoResultado, p = cotUltimoParams;
+          const nombresTapa = {dura:"Dura", semidura:"Semidura", blanda:"Blanda"};
+          const nombresLinea = {escolar:"Cuaderno Escolar", cuaderno_anillado:"Cuaderno Anillado", agenda_ejecutiva:"Agenda Ejecutiva", libretas:"Libreta"};
+
+          let bloques = '';
+          for(const clave of Object.keys(r.detalleLineas)){
+            const linea = r.detalleLineas[clave];
+            const det = linea.detalleImpresion;
+            const mat = linea.detalleMaterial;
+            let maquina = 'N/A (sin impresión)';
+            let impresionTxt = 'Sin impresión (papel en blanco)';
+            if(det){
+              const esDigital = det.via === 'digital';
+              const fraccion = esDigital ? 'digital' : (det.fraccion || 'medio_pliego');
+              maquina = COT_NOMBRE_MAQUINA[fraccion] || fraccion;
+              const caras = linea.tintasRetiro>0 ? `${linea.tintasTiro}x${linea.tintasRetiro}` : `${linea.tintasTiro}x0`;
+              if(esDigital){
+                impresionTxt = `Impresión ${caras} — ${det.nClics} clic(s) digital(es) (descuento por volumen: ${(det.descuentoPct*100).toFixed(0)}%)`;
+              } else {
+                impresionTxt = `Impresión ${caras}${det.recargoRetiro?' (mismas planchas, con recargo de secado)':''}${det.via&&det.via.includes('planchas propias')?' (retiro con juego de planchas propio)':''} — ${det.nPlanchas} juego(s) de plancha(s), ${det.nMillares} millar(es)`;
+              }
+            }
+            const tamanoCorte = clave.toLowerCase().includes('carat') ? `${r.tamanoMaquinaCaratula[0]} x ${r.tamanoMaquinaCaratula[1]} cm (montaje de carátula)` : `${linea.ancho} x ${linea.alto} cm`;
+            const acabadosTxt = (linea.acabadosList||[]).map(a=>a.tipo).join(', ') || 'Sin acabados';
+            bloques += `
+              <div class="doc-linea-block">
+                <h4>${clave}</h4>
+                <table class="doc-table">
+                  <tr><td style="width:22%;"><strong>Máquina</strong></td><td>${maquina}</td></tr>
+                  <tr><td><strong>Impresión</strong></td><td>${impresionTxt}</td></tr>
+                  <tr><td><strong>Papel</strong></td><td>${linea.sustrato.nombre} ${linea.sustrato.gramaje}gr — pliego ${mat.formato} — <strong>${mat.nPliegos} pliegos</strong> a comprar</td></tr>
+                  <tr><td><strong>Tamaño de corte</strong></td><td>${tamanoCorte}</td></tr>
+                  <tr><td><strong>Acabados</strong></td><td>${acabadosTxt}</td></tr>
+                </table>
+              </div>`;
+          }
+
+          const html = `
+            <div class="doc-header">
+              <div><h1>${TACTICAL_INFO.nombre}</h1><div class="doc-tipo" style="background:var(--secondary);">ORDEN DE PRODUCCIÓN — USO INTERNO</div></div>
+              <div class="doc-empresa-datos">${new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'})}</div>
+            </div>
+            <table class="doc-table">
+              <tr><th>Producto</th><td>${nombresLinea[p.lineaProducto]}</td><th>Cantidad</th><td>${p.cantidad} unidades</td></tr>
+              <tr><th>Tamaño</th><td>${p.anchoCm} x ${p.altoCm} cm</td><th>Tapa</th><td>${nombresTapa[p.tapaTipo]}</td></tr>
+              <tr><th>Encuadernación</th><td>${p.encuadernacionTipo}</td><th>Hojas del taco</th><td>${p.tacoHojas}</td></tr>
+            </table>
+            <div class="doc-section-title">Insumos y Montajes por Línea</div>
+            ${bloques}
+            <div class="doc-section-title">Armado / Encuadernación</div>
+            <p style="font-size:0.9rem;">${nombresLinea[p.lineaProducto]} — ${p.encuadernacionTipo}${p.anilladoDosSecciones?' — Anillado en 2 secciones':''}</p>
+          `;
+          document.getElementById('print-area').innerHTML = html;
+          document.getElementById('print-area').style.display = 'block';
+          setTimeout(() => { window.print(); document.getElementById('print-area').style.display = 'none'; }, 100);
+        }
+
+        /* ---- MÓDULO 5: REPORTES ---- */
+        function renderReportes(){
+          // Comercial
+          const totalCot = db_cotizaciones.length;
+          const ganadas = db_historial_cierres.filter(h=>h.estado==='ganado');
+          const perdidas = db_historial_cierres.filter(h=>h.estado==='perdido');
+          const totalCerrados = ganadas.length+perdidas.length;
+          const tasaCierre = totalCerrados===0?0:Math.round((ganadas.length/totalCerrados)*100);
+          const valorGanado = ganadas.reduce((s,o)=>s+o.monto,0);
+          const ticketProm = ganadas.length===0?0:Math.round(valorGanado/ganadas.length);
+          document.getElementById('rep-comercial-kpis').innerHTML = `
+            <div class="kpi-box"><div class="kpi-label">Cotizaciones Generadas</div><div class="kpi-value">${totalCot}</div></div>
+            <div class="kpi-box" style="border-color:var(--ganado);"><div class="kpi-label">Tasa de Cierre</div><div class="kpi-value" style="color:var(--ganado);">${tasaCierre}%</div></div>
+            <div class="kpi-box" style="border-color:var(--primary);"><div class="kpi-label">Valor Ganado</div><div class="kpi-value" style="color:var(--primary);">${cotFormatoCop(valorGanado)}</div></div>
+            <div class="kpi-box"><div class="kpi-label">Ticket Promedio (Ganado)</div><div class="kpi-value">${cotFormatoCop(ticketProm)}</div></div>
+          `;
+          const topCli = [...db_clientes].sort((a,b)=>b.ltv-a.ltv).slice(0,5);
+          document.getElementById('rep-top-clientes').innerHTML = topCli.length ? topCli.map(c=>`• ${c.empresa}: <strong>${cotFormatoCop(c.ltv)}</strong>`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin datos todavía.</span>';
+
+          const porLinea = {};
+          db_cotizaciones.forEach(c=>{ const l=c.params.lineaProducto; porLinea[l]=(porLinea[l]||0)+c.params.cantidad; });
+          const nombresLinea = {escolar:"Escolar", cuaderno_anillado:"Cuaderno Anillado", agenda_ejecutiva:"Agenda Ejecutiva", libretas:"Libretas"};
+          document.getElementById('rep-lineas').innerHTML = Object.keys(porLinea).length ? Object.keys(porLinea).map(l=>`• ${nombresLinea[l]||l}: <strong>${porLinea[l]} unidades</strong>`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin cotizaciones todavía.</span>';
+
+          const motivos = {};
+          perdidas.forEach(p=>{ motivos[p.motivo]=(motivos[p.motivo]||0)+1; });
+          document.getElementById('rep-motivos').innerHTML = Object.keys(motivos).length ? Object.keys(motivos).map(m=>`• ${m}: <strong>${motivos[m]}</strong>`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin negocios perdidos todavía.</span>';
+
+          // Producción: consumo de papel
+          const consumoPapel = {};
+          db_cotizaciones.forEach(c=>{
+            Object.values(c.resultado.detalleLineas).forEach(linea=>{
+              if(!linea.detalleMaterial) return;
+              const key = `${linea.sustrato.nombre} ${linea.sustrato.gramaje}g`;
+              consumoPapel[key] = (consumoPapel[key]||0) + linea.detalleMaterial.nPliegos;
+            });
+          });
+          document.getElementById('rep-consumo-papel').innerHTML = Object.keys(consumoPapel).length ? Object.keys(consumoPapel).sort((a,b)=>consumoPapel[b]-consumoPapel[a]).map(k=>`• ${k}: <strong>${consumoPapel[k]} pliegos</strong>`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin cotizaciones todavía.</span>';
+
+          const usoMaquinas = {};
+          db_cotizaciones.forEach(c=>{
+            Object.values(c.resultado.detalleLineas).forEach(linea=>{
+              const det = linea.detalleImpresion;
+              if(!det) return;
+              const fraccion = det.fraccion || (det.via&&det.via.includes('digital')?'digital':'otro');
+              const nombre = COT_NOMBRE_MAQUINA[fraccion] || fraccion;
+              usoMaquinas[nombre] = (usoMaquinas[nombre]||0)+1;
+            });
+          });
+          document.getElementById('rep-maquinas').innerHTML = Object.keys(usoMaquinas).length ? Object.keys(usoMaquinas).sort((a,b)=>usoMaquinas[b]-usoMaquinas[a]).map(k=>`• ${k}: <strong>${usoMaquinas[k]} líneas de impresión</strong>`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin cotizaciones todavía.</span>';
+
+          // Calidad
+          const totalPerdidoReprocesos = db_reprocesos.reduce((s,i)=>s+i.costoTotal,0);
+          const escapes = db_reprocesos.filter(i=>i.deteccion==='Cliente').length;
+          document.getElementById('rep-calidad-kpis').innerHTML = `
+            <div class="kpi-box" style="border-color:var(--peligro);"><div class="kpi-label">Incidentes Registrados</div><div class="kpi-value">${db_reprocesos.length}</div></div>
+            <div class="kpi-box" style="border-color:var(--peligro);"><div class="kpi-label">Dinero Perdido</div><div class="kpi-value" style="color:var(--peligro);">${cotFormatoCop(totalPerdidoReprocesos)}</div></div>
+            <div class="kpi-box"><div class="kpi-label">Escapes de Calidad al Cliente</div><div class="kpi-value">${escapes}</div></div>
+          `;
+
+          // Tareas
+          const evaluables = db_historico.filter(t=>t.status!=='externo');
+          const aTiempo = evaluables.filter(t=>t.delay===0).length;
+          const eficienciaGeneral = evaluables.length===0?100:Math.round((aTiempo/evaluables.length)*100);
+          const bloqueadasExternas = db_historico.filter(t=>t.status==='externo').length;
+          document.getElementById('rep-tareas-kpis').innerHTML = `
+            <div class="kpi-box" style="border-color:var(--listo);"><div class="kpi-label">Eficiencia General del Equipo</div><div class="kpi-value" style="color:var(--listo);">${eficienciaGeneral}%</div></div>
+            <div class="kpi-box" style="border-color:var(--externo);"><div class="kpi-label">Tareas Bloqueadas (Histórico)</div><div class="kpi-value" style="color:var(--externo);">${bloqueadasExternas}</div></div>
+            <div class="kpi-box"><div class="kpi-label">Tareas Cerradas (Histórico)</div><div class="kpi-value">${db_historico.length}</div></div>
+          `;
+        }
+
+        // CARGA GENERAL INICIAL
+        window.onload = () => {
+            const elFecha = document.getElementById('display-fecha');
+            if (elFecha) elFecha.innerText = formatDate(currentDate);
+            activeTasks.forEach(t => addTask(t.area, t.desc, t.espec, t.emp, t.status, t.origin, t.delay, t.aclaracion));
+        };
+    </script>
+</body>
+</html>
