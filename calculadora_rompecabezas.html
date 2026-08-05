@@ -229,7 +229,6 @@ const OFFSET_MILLAR_COP = {medio_pliego_color:25000, medio_pliego_policromia_4x0
 const OFFSET_FORMATOS_CM = {medio_pliego:[50,70], cuarto:[35,50], octavo:[25,35]};
 
 /* ============ REGLAS PROPIAS DE ROMPECABEZAS (confirmadas por Conde) ============ */
-const MERMA_REGISTRO_PCT = 0.20;               // "Regla Oro": +20% merma por registro
 const CANTIDAD_MINIMA_VENTA = 50;
 const UMBRAL_FICHAS_CHICO = 30; // Conde 2026-07-24: "30 fichas hacia abajo" -> troquelado/diseño/sherpa/moto más económicos
 const TROQUELADO_ROMPECABEZAS_MINIMO_COP = 60000;
@@ -245,6 +244,12 @@ const MARCO_EXTRA_CM_CON = 3;
 const MARCO_BASE_SUSTRATO = "Cartulina C14";
 const MARCO_BASE_GRAMAJE = 225;
 const MARCO_BASE_MERMA_PCT = 0.02;
+
+// Merma absoluta por unidades fijas (no porcentual) — confirmada por Conde 2026-07-24.
+const MERMA_IMPRESION_OFFSET_UND = 100;   // litografía — igual para línea chica y Macro
+const MERMA_IMPRESION_DIGITAL_UND = 30;   // digital — solo aplica a línea chica (<70 fichas)
+const MERMA_COLAMINADO_GRANDE_UND = 50;   // backing, >=70 fichas
+const MERMA_COLAMINADO_CHICO_UND = 30;    // backing, <70 fichas
 
 /* ============ OVERHEAD GENERAL DEL MOTOR (reutilizado 1:1 de Cuadernos, a pedido de Conde 2026-07-24) ============ */
 const ESCUDO_BAJOS_MONTOS_UMBRAL = 150000;
@@ -438,29 +443,36 @@ function cotizarRompecabezas(p){
   const anchoMontaje = troquel.marcoFabrica ? troquel.ancho : troquel.ancho + extraCm;
   const altoMontaje  = troquel.marcoFabrica ? troquel.alto  : troquel.alto  + extraCm;
 
-  const piezasFisicas = Math.ceil(p.cantidad * (1 + MERMA_REGISTRO_PCT));
+  const esLineaMacro = troquel.fichas>=UMBRAL_FICHAS_LINEA_MACRO;
 
   const [sustratoNombre, gramajeStr] = p.sustrato.split("__");
   const gramaje = parseFloat(gramajeStr);
 
-  const detalleMaterial = costoMaterialPliegos(anchoMontaje, altoMontaje, sustratoNombre, gramaje, piezasFisicas, 0);
+  // Merma de impresión: unidades fijas, no porcentual. $100 extra si litografía (chica o Macro),
+  // $30 extra si digital (solo línea chica — Macro no evalúa digital, no aplica a ese tamaño).
+  const piezasOffset = p.cantidad + MERMA_IMPRESION_OFFSET_UND;
+  const piezasDigital = p.cantidad + MERMA_IMPRESION_DIGITAL_UND;
+  const impDigital = esLineaMacro ? null : mejorImpresionDigitalMontaje(piezasDigital, 1, true, anchoMontaje, altoMontaje, piezasDigital, gramaje);
+  const impOffset = costoImpresionOffset(piezasOffset, 4, 0, true, anchoMontaje, altoMontaje);
+  const usaDigital = !!(impDigital && impDigital.total < impOffset.total);
+  const detalleImpresion = usaDigital ? impDigital : impOffset;
+  const piezasFisicasImpresion = usaDigital ? piezasDigital : piezasOffset;
 
-  const impDigital = mejorImpresionDigitalMontaje(piezasFisicas, 1, true, anchoMontaje, altoMontaje, piezasFisicas, gramaje);
-  const impOffset = costoImpresionOffset(piezasFisicas, 4, 0, true, anchoMontaje, altoMontaje);
-  const detalleImpresion = (impDigital && impDigital.total < impOffset.total) ? impDigital : impOffset;
+  const detalleMaterial = costoMaterialPliegos(anchoMontaje, altoMontaje, sustratoNombre, gramaje, piezasFisicasImpresion, 0);
 
   const areaM2 = (anchoMontaje*altoMontaje)/10000;
   const costoPlastificado = Math.max(areaM2*p.cantidad*PLASTIFICADO_COP_M2, PLASTIFICADO_PISO_COP);
   const costoColaminadoManoObra = areaM2*p.cantidad*COLAMINADO_COP_M2;
 
   // Backing del colaminado (Conde 2026-07-24): <70 fichas -> Cartón 1.5mm; >=70 fichas -> Maule C22.
-  // Ambos se cubican por pliego según el tamaño real del troquel (antes el cartón usaba una
-  // tarifa plana de Cuadernos que salía carísima para piezas chicas — corregido).
-  const sustratoBackingKey = troquel.fichas<UMBRAL_FICHAS_LINEA_MACRO ? "Cartón 1.5mm__400" : SUSTRATO_BACKING_FICHAS_MAYOR;
+  // Merma propia del colaminado (distinta de la de impresión): +50 unidades si Macro, +30 si chica.
+  const sustratoBackingKey = esLineaMacro ? SUSTRATO_BACKING_FICHAS_MAYOR : "Cartón 1.5mm__400";
   const [backNombre, backGramajeStr] = sustratoBackingKey.split("__");
-  const detalleBacking = costoMaterialPliegos(anchoMontaje, altoMontaje, backNombre, parseFloat(backGramajeStr), piezasFisicas, 0);
+  const mermaColaminadoUnd = esLineaMacro ? MERMA_COLAMINADO_GRANDE_UND : MERMA_COLAMINADO_CHICO_UND;
+  const piezasColaminado = p.cantidad + mermaColaminadoUnd;
+  const detalleBacking = costoMaterialPliegos(anchoMontaje, altoMontaje, backNombre, parseFloat(backGramajeStr), piezasColaminado, 0);
   const costoBackingMaterial = detalleBacking.costoTotal;
-  const backingEtiqueta = troquel.fichas<UMBRAL_FICHAS_LINEA_MACRO ? "Cartón 1.5mm" : "Maule C22";
+  const backingEtiqueta = esLineaMacro ? "Maule C22" : "Cartón 1.5mm";
   const costoColaminado = costoColaminadoManoObra + costoBackingMaterial;
 
   let costoBaseMarco = 0, detalleBaseMarco = null;
@@ -474,7 +486,6 @@ function cotizarRompecabezas(p){
   const costoDespiece = troquel.despiece*p.cantidad;
   const costoBolsa = troquel.bolsa*p.cantidad;
   const esFichaChica = troquel.fichas<=UMBRAL_FICHAS_CHICO;
-  const esLineaMacro = troquel.fichas>=UMBRAL_FICHAS_LINEA_MACRO;
   let tarifaMillarTroquelado, pisoTroquelado;
   if(esFichaChica){ tarifaMillarTroquelado = TROQUELADO_ROMPECABEZAS_COP_MILLAR_CHICO; pisoTroquelado = TROQUELADO_ROMPECABEZAS_COP_MILLAR_CHICO; }
   else if(esLineaMacro){ tarifaMillarTroquelado = TROQUELADO_ROMPECABEZAS_COP_MILLAR_GRANDE; pisoTroquelado = TROQUELADO_ROMPECABEZAS_MINIMO_COP; }
@@ -506,7 +517,7 @@ function cotizarRompecabezas(p){
   const precioFinalTotal = precioVentaTotal+ivaTotal;
 
   return {
-    troquel, conMarco, piezasFisicas, anchoMontaje, altoMontaje,
+    troquel, conMarco, piezasFisicasImpresion, piezasColaminado, usaDigital, anchoMontaje, altoMontaje,
     detalleMaterial, detalleImpresion, detalleBaseMarco,
     costoPlastificado, costoColaminado, costoColaminadoManoObra, costoBackingMaterial, detalleBacking, backingEtiqueta,
     costoBaseMarco, costoDespiece, costoBolsa,
@@ -599,11 +610,11 @@ function calcular(){
       : `Offset (${r.detalleImpresion.fraccion}) — ${r.detalleImpresion.nPlanchas} plancha(s), ${r.detalleImpresion.nMillares} millar(es)`;
 
     let filas = avisoMinimo + `<table class="resultado-tabla">`;
-    filas += `<tr class="detalle"><td colspan="2">Troquel ${r.troquel.id} — montaje ${r.anchoMontaje}x${r.altoMontaje}cm — ${r.piezasFisicas} piezas físicas (con merma de registro)</td></tr>`;
+    filas += `<tr class="detalle"><td colspan="2">Troquel ${r.troquel.id} — montaje ${r.anchoMontaje}x${r.altoMontaje}cm — ${r.piezasFisicasImpresion} tamaños a imprimir (merma de ${r.usaDigital?'30':'100'}u incluida) — ${r.piezasColaminado} tamaños de backing a colaminar</td></tr>`;
     filas += `<tr><td>Material impreso (${r.detalleMaterial.formato}, ${r.detalleMaterial.nPliegos} pliegos)</td><td class="num">${cop(r.detalleMaterial.costoTotal)}</td></tr>`;
     filas += `<tr><td>Impresión — ${viaImpresionTxt}</td><td class="num">${cop(r.detalleImpresion.total)}</td></tr>`;
     filas += `<tr><td>Plastificado (obligatorio, $950/m²)</td><td class="num">${cop(r.costoPlastificado)}</td></tr>`;
-    filas += `<tr><td>Colaminado — backing ${r.backingEtiqueta}${r.detalleBacking?` (${r.detalleBacking.nPliegos} pliegos)`:''}</td><td class="num">${cop(r.costoBackingMaterial)}</td></tr>`;
+    filas += `<tr><td>Colaminado — backing ${r.backingEtiqueta}${r.detalleBacking?` (${r.detalleBacking.nPliegos} pliegos, ${r.piezasColaminado} tamaños)`:''}</td><td class="num">${cop(r.costoBackingMaterial)}</td></tr>`;
     filas += `<tr class="detalle"><td colspan="2">↳ Mano de obra + pegante del colaminado ($900/m²): ${cop(r.costoColaminadoManoObra)}</td></tr>`;
     if(r.conMarco){
       filas += `<tr><td>Base para marco (Cartón C14, ${r.detalleBaseMarco.nPliegos} pliegos)</td><td class="num">${cop(r.costoBaseMarco)}</td></tr>`;
