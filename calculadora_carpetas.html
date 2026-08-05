@@ -348,8 +348,11 @@ function costoImpresionOffset(nPiezasFinales,tintasTiro,tintasRetiro,esPolicromi
   const tiroJob = costoTrabajo(tintasTiro);
   let retiroJob = null, recargoRetiro = false, total = tiroJob.total;
 
+  // Conde 2026-08-05: si tiro y retiro usan las MISMAS tintas se reutiliza la misma plancha
+  // (1 millar + recargo por secado) sin importar el tamaño de máquina — antes esto solo
+  // aplicaba en medio_pliego, restricción incorrecta.
   if(tintasRetiro>0){
-    if(fraccion!=="medio_pliego" || tintasTiro!==tintasRetiro){
+    if(tintasTiro!==tintasRetiro){
       retiroJob = costoTrabajo(tintasRetiro);
       total += retiroJob.total;
     } else if(esPolicromia){

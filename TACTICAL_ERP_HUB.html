@@ -2094,9 +2094,13 @@
           let costoNormal=costoCtpNormal+costoMillarNormal;
           let recargoRetiro=0, viaExtra="";
           const tieneRetiro=tintasRetiro>0;
+          // Conde 2026-08-05: si tiro y retiro usan las MISMAS tintas, se reutiliza la misma
+          // plancha (1 millar + recargo por secado) sin importar el tamaño de máquina
+          // (octavo/cuarto/medio pliego) — antes esto solo aplicaba en medio_pliego, restricción
+          // incorrecta que encareció innecesariamente productos con tiro=retiro en cuarto/octavo.
           if(tieneRetiro && !cuadriculaUniforme){
             const mismasPlanchas=tintasRetiro===tintasTiro;
-            if(fraccion!=="medio_pliego" || !mismasPlanchas){
+            if(!mismasPlanchas){
               const nPlanchasRetiro=Math.max(tintasRetiro,1);
               const costoCtpRetiro=OFFSET_CTP_COP[fraccion]*nPlanchasRetiro;
               let costoMillarRetiro;
