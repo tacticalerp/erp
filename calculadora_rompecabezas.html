@@ -197,13 +197,12 @@ const SUSTRATOS = {
   // producto/especificación que Cartulina C20/C22, mismo precio.
   "Maule C20__305": {p6090:864.00, p70100:1120.50},
   "Maule C22__330": {p6090:null, p70100:1212.30},
-  // Cartón Prensado 1.5mm: $4.000/pliego según "LISTA DE PRECIO 13 MARZO 2026.pdf" — no
-  // especifica si es pliego 60x90 o 70x100 (a diferencia de los demás papeles de esa lista),
-  // se usa el mismo valor en ambos formatos hasta que Conde aclare. ⚠️ Conde señaló 2026-07-24
-  // que este precio cambia si la cantidad a comprar es grande (posible descuento por volumen del
-  // proveedor) — no encontrado en ninguna de las 2 listas de precios del proyecto, falta que
-  // Conde dé los tramos/cantidades reales.
-  "Cartón 1.5mm__400": {p6090:4000.00, p70100:4000.00},
+  // Cartón Prensado 1.5mm: mismo precio ya validado y en uso en Cuadernos
+  // (CARTON_1_5MM_COP en datos_maestros.py) — $3.500 por UN pliego 70x100 completo. Cuadernos
+  // nunca usa 60x90 para cartón (M.piezas_por_pliego se llama siempre con 70,100 fijo en
+  // cotizador.py), por eso aquí tampoco se ofrece esa opción. Conde 2026-07-24: el $4.000 de
+  // la lista de precios de marzo NO es el valor correcto — usar el mismo que ya tiene Cuadernos.
+  "Cartón 1.5mm__400": {p6090:null, p70100:3500.00},
 };
 const PLIEGOS_CM = {"60x90":[60,90], "70x100":[70,100]};
 const SUSTRATO_IMPRESO_FICHAS_MENOR = "Propalcote__150";   // "Cote 150gr", <70 fichas (90% de los casos)
