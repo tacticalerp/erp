@@ -467,8 +467,10 @@ function cotizarRompecabezas(p){
   const detalleMaterial = costoMaterialPliegos(anchoMontaje, altoMontaje, sustratoNombre, gramaje, piezasFisicasImpresion, 0);
 
   const areaM2 = (anchoMontaje*altoMontaje)/10000;
-  const costoPlastificado = Math.max(areaM2*p.cantidad*PLASTIFICADO_COP_M2, PLASTIFICADO_PISO_COP);
-  const costoColaminadoManoObra = Math.max(areaM2*p.cantidad*COLAMINADO_COP_M2, COLAMINADO_PISO_COP);
+  // Plastificado se hace sobre TODO lo que se imprime, incluida la merma — no solo sobre la
+  // cantidad pedida (corregido 2026-07-24, Conde: "no se está calculando el plastificado de la
+  // merma y se debe plastificar").
+  const costoPlastificado = Math.max(areaM2*piezasFisicasImpresion*PLASTIFICADO_COP_M2, PLASTIFICADO_PISO_COP);
 
   // Backing del colaminado (Conde 2026-07-24): <70 fichas -> Cartón 1.5mm; >=70 fichas -> Maule C22.
   // Merma propia del colaminado (distinta de la de impresión): +50 unidades si Macro, +30 si chica.
@@ -476,6 +478,9 @@ function cotizarRompecabezas(p){
   const [backNombre, backGramajeStr] = sustratoBackingKey.split("__");
   const mermaColaminadoUnd = esLineaMacro ? MERMA_COLAMINADO_GRANDE_UND : MERMA_COLAMINADO_CHICO_UND;
   const piezasColaminado = p.cantidad + mermaColaminadoUnd;
+  // Igual que el plastificado, la mano de obra del colaminado se paga sobre TODAS las piezas
+  // de backing que pasan por el proceso (incluida su propia merma), no solo la cantidad pedida.
+  const costoColaminadoManoObra = Math.max(areaM2*piezasColaminado*COLAMINADO_COP_M2, COLAMINADO_PISO_COP);
   const detalleBacking = costoMaterialPliegos(anchoMontaje, altoMontaje, backNombre, parseFloat(backGramajeStr), piezasColaminado, 0);
   const costoBackingMaterial = detalleBacking.costoTotal;
   const backingEtiqueta = esLineaMacro ? "Maule C22" : "Cartón 1.5mm";
