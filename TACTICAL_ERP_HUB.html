@@ -234,14 +234,14 @@
                     <div class="card-footer">Ingresar al Módulo ➔</div>
                 </div>
 
-                <!-- MÓDULO 4: COTIZADOR CUADERNOS -->
-                <div class="hub-card active-card" onclick="showView('cotizador')">
+                <!-- MÓDULO 4: CALCULADORA DE COSTOS -->
+                <div class="hub-card active-card" onclick="showView('calculadoras')">
                     <div>
                         <div class="card-header">
-                            <h3 class="card-title">🧮 Cotizador Cuadernos</h3>
+                            <h3 class="card-title">🧮 Calculadora de Costos</h3>
                             <span class="badge badge-active">Activo</span>
                         </div>
-                        <p class="card-desc">Motor de cotización validado contra casos reales de Litoplan: Escolar, Cuaderno Anillado, Agenda Ejecutiva y Libretas. Genera PDF para el cliente y Orden de Producción. Alimenta el CRM automáticamente.</p>
+                        <p class="card-desc">Cotizadores por línea de producto: Cuadernos (validado, con PDF/Orden de Producción/CRM), Rompecabezas y Cubo Rubik (BETA, en pruebas).</p>
                     </div>
                     <div class="card-footer">Ingresar al Módulo ➔</div>
                 </div>
@@ -477,8 +477,8 @@
                     </div>
                     <div id="directorio" class="accordion-content active">
                         <div class="form-grid">
-                            <div class="form-group"><label>Nombre de la Empresa / Cliente:</label><input type="text" id="cli-empresa" placeholder="Ej: Gráficas JP S.A.S."></div>
-                            <div class="form-group"><label>Contacto Principal (Persona):</label><input type="text" id="cli-nombre" placeholder="Ej: Juan Pérez"></div>
+                            <div class="form-group"><label>Nombre de la Empresa / Cliente:</label><input type="text" id="cli-empresa" list="cot-clientes-datalist" placeholder="Ej: GRÁFICAS JP S.A.S." style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
+                            <div class="form-group"><label>Contacto Principal (Persona):</label><input type="text" id="cli-nombre" placeholder="Ej: JUAN PÉREZ" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
                             <div class="form-group"><label>WhatsApp de Negocios:</label><input type="text" id="cli-wp" placeholder="Ej: 3001234567"></div>
                             <div class="form-group"><label>Correo Electrónico:</label><input type="text" id="cli-correo" placeholder="Ej: compras@graficasjp.com"></div>
                             <div class="form-group">
@@ -562,6 +562,46 @@
                         <h4 style="color:var(--dark); border-bottom:2px solid #cbd5e0; padding-bottom:5px;">🔍 Análisis de Razones de Pérdida</h4>
                         <div id="lista-motivos" style="background:var(--light-gray); padding:15px; border-radius:6px; border:1px solid #cbd5e0; font-size:0.95rem; line-height:1.6;"></div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISTA 4a: CALCULADORA DE COSTOS (sub-hub de cotizadores por producto) -->
+        <div id="view-calculadoras" class="app-view">
+            <div style="padding: 25px 20px 0 20px; text-align: center;">
+                <h3 style="margin: 0; font-size: 1.4rem; color: var(--dark);">Calculadora de Costos</h3>
+                <p style="color: #718096; margin-top: 6px; font-size: 0.95rem;">Elige el producto que quieres cotizar:</p>
+            </div>
+            <div class="hub-grid" style="padding: 20px;">
+                <div class="hub-card active-card" onclick="showView('cotizador')">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title">📓 Cuadernos</h3>
+                            <span class="badge badge-active">Activo</span>
+                        </div>
+                        <p class="card-desc">Escolar, Cuaderno Anillado, Agenda Ejecutiva y Libretas. Validado contra casos reales de Litoplan. Genera PDF y Orden de Producción, alimenta el CRM automáticamente.</p>
+                    </div>
+                    <div class="card-footer">Ingresar al Módulo ➔</div>
+                </div>
+                <div class="hub-card active-card" onclick="window.open('calculadora_rompecabezas.html', '_blank')">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title">🧩 Rompecabezas</h3>
+                            <span class="badge badge-active">Beta</span>
+                        </div>
+                        <p class="card-desc">Línea ROMB/ROMC, troqueles chicos y línea Macro. Herramienta BETA aparte, en pruebas paralelas contra Litoplan — se abre en una pestaña nueva.</p>
+                    </div>
+                    <div class="card-footer">Abrir calculadora ➔</div>
+                </div>
+                <div class="hub-card active-card" onclick="window.open('calculadora_cubo_rubik.html', '_blank')">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title">🎲 Cubo Rubik Premium</h3>
+                            <span class="badge badge-active">Beta</span>
+                        </div>
+                        <p class="card-desc">Marcación por caras, Brillo UV y caja de empaque opcional. Herramienta BETA aparte, sin validar todavía — se abre en una pestaña nueva.</p>
+                    </div>
+                    <div class="card-footer">Abrir calculadora ➔</div>
                 </div>
             </div>
         </div>
@@ -808,7 +848,7 @@
                         </table></div>
                         <h4 style="color:var(--dark); border-bottom:2px solid #cbd5e0; padding-bottom:5px; margin-top:20px;">Cuentas por Pagar (Proveedores)</h4>
                         <div class="table-responsive"><table>
-                            <thead><tr><th>N°</th><th>Proveedor</th><th>Categoría</th><th>Monto</th><th>Vencimiento</th><th>Estado</th></tr></thead>
+                            <thead><tr><th>N°</th><th>Proveedor</th><th>Categoría</th><th>Saldo Pendiente</th><th>Vencimiento</th><th>Estado</th></tr></thead>
                             <tbody id="cont-tabla-cxp"></tbody>
                         </table></div>
                     </div>
@@ -824,14 +864,13 @@
                             <div class="form-group"><label>Cliente:</label><select id="doc-cliente" onchange="contAutocompletarTipoDoc()"></select></div>
                             <div class="form-group">
                                 <label>Tipo de Documento:</label>
-                                <select id="doc-tipoDoc">
+                                <select id="doc-tipoDoc" onchange="contSugerirNumeroDoc()">
                                     <option value="cuenta_cobro">Cuenta de Cobro (se imprime desde el ERP)</option>
                                     <option value="factura">Factura (ya facturada por fuera — DIAN)</option>
                                 </select>
                             </div>
-                            <div class="form-group" style="flex-basis:100%;"><label>Descripción:</label><input type="text" id="doc-desc" placeholder="Ej: 500 Agendas Ejecutivas tapa dura"></div>
-                            <div class="form-group"><label>Valor Bruto (sin IVA):</label><input type="number" id="doc-valorBruto" value="0"></div>
-                            <div class="form-group"><label>Valor Envío (no es ingreso, pass-through transportadora):</label><input type="number" id="doc-valorEnvio" value="0"></div>
+                            <div class="form-group"><label>N° de Documento:</label><input type="text" id="doc-numero" placeholder="Ej: FV-0001 / CC-0001" oninput="this.dataset.auto=''"></div>
+                            <div class="form-group"><label>Valor Envío (no es ingreso, pass-through transportadora):</label><input type="text" inputmode="numeric" id="doc-valorEnvio" value="0" oninput="contFormatearMiles(this)"></div>
                             <div class="form-group">
                                 <label>Condición de Pago:</label>
                                 <select id="doc-condicionPago">
@@ -844,10 +883,15 @@
                                 <div class="checkbox-row"><input type="checkbox" id="doc-aplicaReteiva"><label for="doc-aplicaReteiva" style="font-weight:normal; margin:0;">Cliente aplica RETEIVA 15% (agente retenedor)</label></div>
                             </div>
                             <div class="form-group"><label>Vendedor:</label><select id="doc-vendedor"></select></div>
-                            <div class="form-group" style="display:flex; align-items:flex-end;">
-                                <button class="btn-submit" onclick="contGuardarDocVenta()">+ Registrar Documento de Venta</button>
-                            </div>
                         </div>
+                        <label style="display:block; font-weight:bold; margin-bottom:5px; font-size:0.88rem; color:var(--secondary);">Ítems del documento (hasta 10):</label>
+                        <div class="table-responsive"><table>
+                            <thead><tr><th>Descripción</th><th style="width:90px;">Cantidad</th><th style="width:150px;">Valor Unitario</th><th style="width:150px;">Valor Total</th><th></th></tr></thead>
+                            <tbody id="doc-items-body"></tbody>
+                        </table></div>
+                        <button class="btn-add-item" type="button" onclick="contAgregarItemDoc()">+ Agregar ítem</button>
+                        <div class="metric-total" id="doc-valorBruto-total" style="margin-top:10px;">Valor Bruto Total: $0</div>
+                        <button class="btn-submit" style="margin-top:12px;" onclick="contGuardarDocVenta()">+ Registrar Documento de Venta</button>
                         <div class="card-grid" id="lista-docventa"></div>
                     </div>
                 </div>
@@ -859,13 +903,14 @@
                     <div id="cont-ingreso" class="accordion-content">
                         <div class="form-grid">
                             <div class="form-group" style="flex-basis:100%;"><label>Documento de Venta a abonar:</label><select id="ing-docventa"></select></div>
-                            <div class="form-group"><label>Valor Recibido:</label><input type="number" id="ing-valor" value="0"></div>
+                            <div class="form-group"><label>N° de Comprobante:</label><input type="text" id="ing-numero" placeholder="Ej: IN-0001" oninput="this.dataset.auto=''"></div>
+                            <div class="form-group"><label>Valor Recibido:</label><input type="text" inputmode="numeric" id="ing-valor" value="0" oninput="contFormatearMiles(this)"></div>
                             <div class="form-group">
                                 <label>Medio de Pago:</label>
                                 <select id="ing-medioPago"><option value="banco">Banco / Transferencia</option><option value="efectivo">Efectivo</option></select>
                             </div>
                             <div class="form-group"><label>Concepto:</label><input type="text" id="ing-concepto" placeholder="Ej: Abono factura CC-0004"></div>
-                            <div class="form-group"><label>Referencia del soporte:</label><input type="text" id="ing-referencia" placeholder="Ej: Transferencia Bancolombia #123456"></div>
+                            <div class="form-group"><label>Referencia del soporte (banco al que ingresó el dinero):</label><input type="text" id="ing-referencia" placeholder="Ej: Bancolombia #123456"></div>
                             <div class="form-group" style="display:flex; align-items:flex-end;">
                                 <button class="btn-submit" onclick="contGuardarIngreso()">+ Registrar Comprobante de Ingreso</button>
                             </div>
@@ -880,8 +925,9 @@
                     </div>
                     <div id="cont-cxp" class="accordion-content">
                         <div class="form-grid">
-                            <div class="form-group"><label>Proveedor:</label><input type="text" id="cxp-proveedor" placeholder="Nombre del proveedor"></div>
+                            <div class="form-group"><label>Proveedor:</label><input type="text" id="cxp-proveedor" list="cxp-proveedores-datalist" placeholder="Ej: PAPELES DEL NORTE SAS" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"><datalist id="cxp-proveedores-datalist"></datalist></div>
                             <div class="form-group"><label>N° Factura del Proveedor:</label><input type="text" id="cxp-numFactura"></div>
+                            <div class="form-group"><label>N° Interno CxP:</label><input type="text" id="cxp-numero" placeholder="Ej: CP-0001" oninput="this.dataset.auto=''"></div>
                             <div class="form-group">
                                 <label>Categoría:</label>
                                 <select id="cxp-categoria" onchange="contLlenarSubcategorias()">
@@ -890,12 +936,16 @@
                                 </select>
                             </div>
                             <div class="form-group"><label>Subcategoría:</label><select id="cxp-subcategoria"></select></div>
-                            <div class="form-group"><label>Monto:</label><input type="number" id="cxp-monto" value="0"></div>
                             <div class="form-group"><label>Fecha de Vencimiento:</label><input type="text" id="cxp-fechaVenc" placeholder="AAAA-MM-DD"></div>
-                            <div class="form-group" style="display:flex; align-items:flex-end;">
-                                <button class="btn-submit" onclick="contGuardarCxp()">+ Registrar Cuenta por Pagar</button>
-                            </div>
                         </div>
+                        <label style="display:block; font-weight:bold; margin-bottom:5px; font-size:0.88rem; color:var(--secondary);">Ítems de la factura de compra (hasta 10):</label>
+                        <div class="table-responsive"><table>
+                            <thead><tr><th>Descripción</th><th style="width:90px;">Cantidad</th><th style="width:150px;">Valor Unitario</th><th style="width:150px;">Valor Total</th><th></th></tr></thead>
+                            <tbody id="cxp-items-body"></tbody>
+                        </table></div>
+                        <button class="btn-add-item" type="button" onclick="contAgregarItemCxp()">+ Agregar ítem</button>
+                        <div class="metric-total" id="cxp-monto-total" style="margin-top:10px;">Monto Total: $0</div>
+                        <button class="btn-submit" style="margin-top:12px;" onclick="contGuardarCxp()">+ Registrar Cuenta por Pagar</button>
                         <div class="card-grid" id="lista-cxp"></div>
                     </div>
                 </div>
@@ -907,9 +957,10 @@
                     <div id="cont-egreso" class="accordion-content">
                         <div class="form-grid">
                             <div class="form-group" style="flex-basis:100%;"><label>Cuenta por Pagar a pagar (opcional):</label><select id="egr-cxp" onchange="contAutocompletarEgresoDesdeCxp()"></select></div>
+                            <div class="form-group"><label>N° de Comprobante:</label><input type="text" id="egr-numero" placeholder="Ej: EG-0001" oninput="this.dataset.auto=''"></div>
                             <div class="form-group"><label>Beneficiario:</label><input type="text" id="egr-beneficiario"></div>
                             <div class="form-group"><label>Concepto:</label><input type="text" id="egr-concepto"></div>
-                            <div class="form-group"><label>Monto:</label><input type="number" id="egr-monto" value="0"></div>
+                            <div class="form-group"><label>Monto:</label><input type="text" inputmode="numeric" id="egr-monto" value="0" oninput="contFormatearMiles(this)"></div>
                             <div class="form-group">
                                 <label>Categoría:</label>
                                 <select id="egr-categoria"><option value="fijo">Gasto Fijo</option><option value="variable">Gasto Variable</option></select>
@@ -982,7 +1033,7 @@
             'tactical_crm_clientes_v2', 'tactical_crm_opps_v2', 'tactical_crm_historial_v2',
             'tactical_ot_counter', 'tactical_cotizaciones_v1',
             'tactical_docventa_v1', 'tactical_ingresos_v1', 'tactical_cxp_v1', 'tactical_egresos_v1',
-            'tactical_gastos_fijos_config_v1',
+            'tactical_gastos_fijos_config_v1', 'tactical_proveedores_v1',
             'tactical_fv_counter', 'tactical_cc_counter', 'tactical_ingreso_counter', 'tactical_cxp_counter', 'tactical_egreso_counter',
         ];
 
@@ -1050,6 +1101,10 @@
                 renderClientes();
                 llenarSelectClientes();
                 renderOportunidades();
+            } else if (viewId === 'calculadoras') {
+                navContainer.style.display = 'block';
+                mainTitle.innerText = "CALCULADORA DE COSTOS";
+                subTitle.innerText = "Selecciona el producto a cotizar (2026)";
             } else if (viewId === 'cotizador') {
                 navContainer.style.display = 'block';
                 mainTitle.innerText = "COTIZADOR CUADERNOS";
@@ -1601,8 +1656,8 @@
         const tags_etapa = { 'req': {lbl: '🎯 Nuevo Req.', cls: 'stage-req'}, 'cot': {lbl: '📝 Cotización Enviada', cls: 'stage-cot'}, 'neg': {lbl: '💬 Seguimiento', cls: 'stage-neg'} };
 
         function guardarCliente() {
-            const empresa = document.getElementById('cli-empresa').value.trim();
-            const nombre = document.getElementById('cli-nombre').value.trim();
+            const empresa = document.getElementById('cli-empresa').value.trim().toUpperCase();
+            const nombre = document.getElementById('cli-nombre').value.trim().toUpperCase();
             const wp = document.getElementById('cli-wp').value.trim();
             const correo = document.getElementById('cli-correo').value.trim();
             const clase = document.getElementById('cli-clase').value;
@@ -1611,8 +1666,15 @@
 
             if(!empresa && !nombre) { alert("Debe ingresar al menos la Empresa o el Contacto."); return; }
 
+            const empresaFinal = empresa || 'CLIENTE PARTICULAR';
+            const yaExiste = db_clientes.find(c => c.empresa.toUpperCase() === empresaFinal);
+            if(yaExiste){
+                alert(`Ya existe un cliente registrado como "${yaExiste.empresa}". Use ese registro (búsquelo en el directorio) en vez de crear uno nuevo con otro nombre.`);
+                return;
+            }
+
             db_clientes.push({
-                id: Date.now().toString(), empresa: empresa || 'Cliente Particular', nombre: nombre || 'Sin contacto directo',
+                id: Date.now().toString(), empresa: empresaFinal, nombre: nombre || 'SIN CONTACTO DIRECTO',
                 wp: wp || '', correo: correo || '', clase, ltv: 0, tipo, identificacion
             });
             localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
@@ -2607,17 +2669,17 @@
 
         function cotGuardarYGenerarPDF(){
           if(!cotUltimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
-          const empresa = document.getElementById('cot-cli-empresa').value.trim();
-          const encargado = document.getElementById('cot-cli-encargado').value.trim();
+          const empresa = document.getElementById('cot-cli-empresa').value.trim().toUpperCase();
+          const encargado = document.getElementById('cot-cli-encargado').value.trim().toUpperCase();
           const telefono = document.getElementById('cot-cli-telefono').value.trim();
           const correo = document.getElementById('cot-cli-correo').value.trim();
           const vendedor = document.getElementById('cot-vendedor').value;
           if(!empresa && !encargado){ alert("Ingresa al menos el Cliente o el Encargado antes de generar el PDF."); return; }
 
           // Buscar o crear cliente en el CRM
-          let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
+          let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toUpperCase()===(empresa||'CLIENTE PARTICULAR') && c.nombre.toUpperCase()===(encargado||'SIN CONTACTO DIRECTO')));
           if(!cli){
-            cli = { id: Date.now().toString(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo: '', identificacion: '' };
+            cli = { id: Date.now().toString(), empresa: empresa || 'CLIENTE PARTICULAR', nombre: encargado || 'SIN CONTACTO DIRECTO', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo: '', identificacion: '' };
             db_clientes.push(cli);
             localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
           } else {
@@ -2841,9 +2903,26 @@
         // ==========================================
         // MÓDULO 6: CONTABILIDAD
         // ==========================================
+        let db_proveedores = JSON.parse(localStorage.getItem('tactical_proveedores_v1')) || [];
+        // Devuelve el proveedor existente que coincida exacto (ya en mayúsculas) o crea uno nuevo — evita duplicados por variaciones de nombre.
+        function contObtenerOCrearProveedor(nombreMayus){
+            let prov = db_proveedores.find(p => p.nombre === nombreMayus);
+            if(!prov){
+                prov = { id: Date.now().toString(), nombre: nombreMayus };
+                db_proveedores.push(prov);
+                contGuardar('tactical_proveedores_v1', db_proveedores);
+            }
+            return prov;
+        }
+        function contLlenarDatalistProveedores(){
+            const dl = document.getElementById('cxp-proveedores-datalist');
+            if(!dl) return;
+            dl.innerHTML = db_proveedores.map(p => `<option value="${p.nombre}"></option>`).join('');
+        }
         let db_docventa = JSON.parse(localStorage.getItem('tactical_docventa_v1')) || [];
         let db_ingresos = JSON.parse(localStorage.getItem('tactical_ingresos_v1')) || [];
         let db_cxp = JSON.parse(localStorage.getItem('tactical_cxp_v1')) || [];
+        db_cxp.forEach(c => { if(c.saldoPendiente === undefined) c.saldoPendiente = c.estado==='pagado' ? 0 : c.monto; });
         let db_egresos = JSON.parse(localStorage.getItem('tactical_egresos_v1')) || [];
         let db_gastosFijos = JSON.parse(localStorage.getItem('tactical_gastos_fijos_config_v1')) || [
             {concepto:'Arriendo', monto:2350000}, {concepto:'Luz', monto:300000}, {concepto:'Agua', monto:80000},
@@ -2854,7 +2933,7 @@
 
         const CONT_SUBCATEGORIAS = {
             fijo: ['Arriendo','Nómina y prestaciones sociales','Servicios públicos (celular/internet)','Seguros/pólizas','Honorarios','Impuestos y licencias','Hosting y web','Amortizaciones y depreciación'],
-            variable: ['Insumos y servicios (proveedores)','Importados','Servicios públicos de producción (luz)','Mantenimiento correctivo','IVA/Retefuente','Comisiones pasarela de pago','Publicidad digital','Producción y operación (mano de obra temporal)','Logística y distribución'],
+            variable: ['Insumos (proveedores)','Servicios (proveedores)','Importados','Servicios públicos de producción (luz)','Mantenimiento correctivo','IVA/Retefuente','Comisiones pasarela de pago','Publicidad digital','Producción y operación (mano de obra temporal)','Logística y distribución'],
         };
 
         function contGuardar(clave, arr){ localStorage.setItem(clave, JSON.stringify(arr)); }
@@ -2863,8 +2942,128 @@
             localStorage.setItem(counterKey, String(n));
             return prefijo + String(n).padStart(4,'0');
         }
+        // Sugerencia editable: NO consume el contador, solo propone el próximo. El usuario puede
+        // sobreescribirla con su propio consecutivo; al guardar, el contador se sincroniza hacia
+        // adelante desde lo que haya quedado escrito (ver contActualizarContadorDesdeNumero).
+        function contSugerirNumero(counterKey, prefijo){
+            let n = parseInt(localStorage.getItem(counterKey)||'0') + 1;
+            return prefijo + String(n).padStart(4,'0');
+        }
+        function contActualizarContadorDesdeNumero(counterKey, numero){
+            const match = String(numero).match(/(\d+)\s*$/);
+            if(!match) return;
+            const n = parseInt(match[1], 10);
+            const actual = parseInt(localStorage.getItem(counterKey)||'0');
+            if(n > actual) localStorage.setItem(counterKey, String(n));
+        }
         function contHoy(){ return new Date().toISOString().slice(0,10); }
         function contSumarDias(fechaISO, dias){ const d = new Date(fechaISO); d.setDate(d.getDate()+dias); return d.toISOString().slice(0,10); }
+
+        /* ---- SEPARADOR DE MILES en campos de dinero ---- */
+        function contFormatearMiles(input){
+            const raw = input.value.replace(/\D/g, '');
+            input.value = raw ? Number(raw).toLocaleString('es-CO') : '';
+        }
+        function contNumeroDesdeInput(input){
+            if(!input) return 0;
+            return parseInt(String(input.value).replace(/\D/g, ''), 10) || 0;
+        }
+
+        /* ---- ÍTEMS: Documento de Venta (hasta 10 renglones, se suman a Valor Bruto) ---- */
+        let contDocItemContador = 0;
+        function contAgregarItemDoc(descripcion, cantidad, valorUnitario){
+            if(document.querySelectorAll('#doc-items-body tr').length >= 10){ alert('Máximo 10 ítems por documento.'); return; }
+            contDocItemContador++;
+            const id = 'docitem_'+contDocItemContador;
+            const tr = document.createElement('tr');
+            tr.id = id;
+            tr.innerHTML = `
+                <td><input type="text" id="${id}_desc" value="${descripcion||''}" placeholder="Descripción del ítem"></td>
+                <td><input type="number" id="${id}_cant" value="${cantidad||1}" min="1" oninput="contRecalcularItemDoc('${id}')"></td>
+                <td><input type="text" inputmode="numeric" id="${id}_valorU" value="${valorUnitario?Number(valorUnitario).toLocaleString('es-CO'):''}" oninput="contFormatearMiles(this); contRecalcularItemDoc('${id}')"></td>
+                <td id="${id}_total">$0</td>
+                <td><button type="button" class="btn-action btn-del-row" onclick="contQuitarItemDoc('${id}')">✕</button></td>`;
+            document.getElementById('doc-items-body').appendChild(tr);
+            contRecalcularItemDoc(id);
+        }
+        function contRecalcularItemDoc(id){
+            const cant = parseFloat(document.getElementById(id+'_cant').value) || 0;
+            const valorU = contNumeroDesdeInput(document.getElementById(id+'_valorU'));
+            document.getElementById(id+'_total').innerText = cotFormatoCop(cant*valorU);
+            contActualizarTotalDoc();
+        }
+        function contQuitarItemDoc(id){
+            const el = document.getElementById(id);
+            if(el) el.remove();
+            contActualizarTotalDoc();
+        }
+        function contActualizarTotalDoc(){
+            const total = contObtenerItemsDoc().reduce((s,i)=>s+i.valorTotal,0);
+            document.getElementById('doc-valorBruto-total').innerText = 'Valor Bruto Total: ' + cotFormatoCop(total);
+            return total;
+        }
+        function contObtenerItemsDoc(){
+            const items = [];
+            document.querySelectorAll('#doc-items-body tr').forEach(tr => {
+                const descripcion = document.getElementById(tr.id+'_desc').value.trim();
+                const cantidad = parseFloat(document.getElementById(tr.id+'_cant').value) || 0;
+                const valorUnitario = contNumeroDesdeInput(document.getElementById(tr.id+'_valorU'));
+                if(descripcion || cantidad || valorUnitario) items.push({descripcion, cantidad, valorUnitario, valorTotal: cantidad*valorUnitario});
+            });
+            return items;
+        }
+        function contLimpiarItemsDoc(){
+            document.getElementById('doc-items-body').innerHTML = '';
+            contActualizarTotalDoc();
+        }
+
+        /* ---- ÍTEMS: Cuenta por Pagar (hasta 10 renglones, se suman al Monto de la factura de compra) ---- */
+        let contCxpItemContador = 0;
+        function contAgregarItemCxp(descripcion, cantidad, valorUnitario){
+            if(document.querySelectorAll('#cxp-items-body tr').length >= 10){ alert('Máximo 10 ítems por factura.'); return; }
+            contCxpItemContador++;
+            const id = 'cxpitem_'+contCxpItemContador;
+            const tr = document.createElement('tr');
+            tr.id = id;
+            tr.innerHTML = `
+                <td><input type="text" id="${id}_desc" value="${descripcion||''}" placeholder="Descripción del ítem"></td>
+                <td><input type="number" id="${id}_cant" value="${cantidad||1}" min="1" oninput="contRecalcularItemCxp('${id}')"></td>
+                <td><input type="text" inputmode="numeric" id="${id}_valorU" value="${valorUnitario?Number(valorUnitario).toLocaleString('es-CO'):''}" oninput="contFormatearMiles(this); contRecalcularItemCxp('${id}')"></td>
+                <td id="${id}_total">$0</td>
+                <td><button type="button" class="btn-action btn-del-row" onclick="contQuitarItemCxp('${id}')">✕</button></td>`;
+            document.getElementById('cxp-items-body').appendChild(tr);
+            contRecalcularItemCxp(id);
+        }
+        function contRecalcularItemCxp(id){
+            const cant = parseFloat(document.getElementById(id+'_cant').value) || 0;
+            const valorU = contNumeroDesdeInput(document.getElementById(id+'_valorU'));
+            document.getElementById(id+'_total').innerText = cotFormatoCop(cant*valorU);
+            contActualizarTotalCxp();
+        }
+        function contQuitarItemCxp(id){
+            const el = document.getElementById(id);
+            if(el) el.remove();
+            contActualizarTotalCxp();
+        }
+        function contActualizarTotalCxp(){
+            const total = contObtenerItemsCxp().reduce((s,i)=>s+i.valorTotal,0);
+            document.getElementById('cxp-monto-total').innerText = 'Monto Total: ' + cotFormatoCop(total);
+            return total;
+        }
+        function contObtenerItemsCxp(){
+            const items = [];
+            document.querySelectorAll('#cxp-items-body tr').forEach(tr => {
+                const descripcion = document.getElementById(tr.id+'_desc').value.trim();
+                const cantidad = parseFloat(document.getElementById(tr.id+'_cant').value) || 0;
+                const valorUnitario = contNumeroDesdeInput(document.getElementById(tr.id+'_valorU'));
+                if(descripcion || cantidad || valorUnitario) items.push({descripcion, cantidad, valorUnitario, valorTotal: cantidad*valorUnitario});
+            });
+            return items;
+        }
+        function contLimpiarItemsCxp(){
+            document.getElementById('cxp-items-body').innerHTML = '';
+            contActualizarTotalCxp();
+        }
 
         /* ---- CRUCE AUTOMÁTICO: negocio Ganado en CRM → Documento de Venta ---- */
         function contCrearDocVentaDesdeOpp(opp, cli){
@@ -2872,12 +3071,13 @@
             const cot = db_cotizaciones.find(c => c.idOpp === opp.id);
             const tipoDoc = cli.tipo === 'corporativo' ? 'factura' : 'cuenta_cobro';
             let valorBruto, iva;
-            if(cot){
-                valorBruto = cot.resultado.precioVentaTotal;
-                iva = cot.resultado.ivaTotal;
+            if(tipoDoc === 'factura'){
+                if(cot){ valorBruto = cot.resultado.precioVentaTotal; iva = cot.resultado.ivaTotal; }
+                else { valorBruto = Math.round(opp.monto / 1.19); iva = opp.monto - valorBruto; }
             } else {
-                valorBruto = Math.round(opp.monto / 1.19);
-                iva = opp.monto - valorBruto;
+                // Cuenta de Cobro no calcula IVA — se registra el valor total ya acordado con el cliente como un solo bruto.
+                valorBruto = cot ? cot.resultado.precioFinalTotal : opp.monto;
+                iva = 0;
             }
             const aplicaReteiva = tipoDoc === 'factura';
             const reteiva = aplicaReteiva ? Math.round(iva*0.15) : 0;
@@ -2889,6 +3089,7 @@
             const doc = {
                 id: Date.now().toString(), numero: contSiguienteNumero(counterKey, prefijo), tipoDoc, fecha: contHoy(),
                 idCli: cli.id, idCot: cot ? cot.id : null, idOpp: opp.id, descripcion: opp.desc,
+                items: [{descripcion: opp.desc, cantidad: 1, valorUnitario: valorBruto, valorTotal: valorBruto}],
                 valorBruto, iva, reteiva, valorEnvio: 0, totalDocumento, totalCobrar: totalDocumento,
                 condicionPago, fechaVencimiento, saldoPendiente: totalDocumento,
                 estado: 'pendiente', vendedor: cot ? cot.vendedor : '',
@@ -2909,6 +3110,25 @@
         function contAutocompletarTipoDoc(){
             const cli = db_clientes.find(c => c.id === document.getElementById('doc-cliente').value);
             if(cli && cli.tipo) document.getElementById('doc-tipoDoc').value = cli.tipo === 'corporativo' ? 'factura' : 'cuenta_cobro';
+            contSugerirNumeroDoc();
+        }
+        // Sugiere el próximo N° según el tipo de documento actual. Si el campo está vacío o todavía
+        // tiene una sugerencia sin editar (dataset.auto), la reemplaza; si el usuario ya escribió su
+        // propio consecutivo (oninput limpia dataset.auto), no lo toca.
+        function contSugerirNumeroDoc(){
+            const campo = document.getElementById('doc-numero');
+            if(!campo) return;
+            if(campo.value.trim() && campo.dataset.auto !== 'true') return;
+            const tipoDoc = document.getElementById('doc-tipoDoc').value;
+            campo.value = tipoDoc === 'factura' ? contSugerirNumero('tactical_fv_counter','FV-') : contSugerirNumero('tactical_cc_counter','CC-');
+            campo.dataset.auto = 'true';
+        }
+        function contSugerirNumeroSiVacio(campoId, counterKey, prefijo){
+            const campo = document.getElementById(campoId);
+            if(!campo) return;
+            if(campo.value.trim() && campo.dataset.auto !== 'true') return;
+            campo.value = contSugerirNumero(counterKey, prefijo);
+            campo.dataset.auto = 'true';
         }
         function contLlenarSelectVendedorDoc(){
             const sel = document.getElementById('doc-vendedor');
@@ -2926,30 +3146,38 @@
             const idCli = document.getElementById('doc-cliente').value;
             const cli = db_clientes.find(c => c.id === idCli);
             const tipoDoc = document.getElementById('doc-tipoDoc').value;
-            const descripcion = document.getElementById('doc-desc').value.trim();
-            const valorBruto = parseFloat(document.getElementById('doc-valorBruto').value) || 0;
-            const valorEnvio = parseFloat(document.getElementById('doc-valorEnvio').value) || 0;
+            const items = contObtenerItemsDoc();
+            const valorBruto = items.reduce((s,i)=>s+i.valorTotal,0);
+            const descripcion = items.map(i => `${i.cantidad}x ${i.descripcion}`).join(', ');
+            const valorEnvio = contNumeroDesdeInput(document.getElementById('doc-valorEnvio'));
             const condicionPago = document.getElementById('doc-condicionPago').value;
             const aplicaReteiva = document.getElementById('doc-aplicaReteiva').checked;
             const vendedor = document.getElementById('doc-vendedor').value;
+            const counterKey = tipoDoc==='factura'?'tactical_fv_counter':'tactical_cc_counter';
+            const prefijo = tipoDoc==='factura'?'FV-':'CC-';
+            const numero = document.getElementById('doc-numero').value.trim() || contSugerirNumero(counterKey, prefijo);
 
-            if(!cli || !descripcion || valorBruto<=0){ alert("Debe seleccionar cliente, descripción y un valor bruto mayor a 0."); return; }
+            if(!cli || items.length===0 || valorBruto<=0){ alert("Debe seleccionar cliente y agregar al menos un ítem con valor mayor a 0."); return; }
 
-            const iva = Math.round(valorBruto*0.19);
-            const reteiva = aplicaReteiva ? Math.round(iva*0.15) : 0;
+            // La Cuenta de Cobro (Personalizado) no calcula IVA — solo la Factura (Corporativo) lo hace.
+            const iva = tipoDoc === 'factura' ? Math.round(valorBruto*0.19) : 0;
+            const reteiva = (tipoDoc === 'factura' && aplicaReteiva) ? Math.round(iva*0.15) : 0;
             const totalDocumento = valorBruto + iva - reteiva;
             const totalCobrar = totalDocumento + valorEnvio;
             const fechaVencimiento = condicionPago === 'credito30' ? contSumarDias(contHoy(),30) : (condicionPago === 'contado' ? contHoy() : '');
 
             db_docventa.push({
-                id: Date.now().toString(), numero: contSiguienteNumero(tipoDoc==='factura'?'tactical_fv_counter':'tactical_cc_counter', tipoDoc==='factura'?'FV-':'CC-'),
-                tipoDoc, fecha: contHoy(), idCli, idCot: null, idOpp: null, descripcion,
+                id: Date.now().toString(), numero,
+                tipoDoc, fecha: contHoy(), idCli, idCot: null, idOpp: null, descripcion, items,
                 valorBruto, iva, reteiva, valorEnvio, totalDocumento, totalCobrar,
                 condicionPago, fechaVencimiento, saldoPendiente: totalCobrar, estado: 'pendiente', vendedor,
             });
             contGuardar('tactical_docventa_v1', db_docventa);
+            contActualizarContadorDesdeNumero(counterKey, numero);
 
-            document.getElementById('doc-desc').value = ''; document.getElementById('doc-valorBruto').value = '0'; document.getElementById('doc-valorEnvio').value = '0';
+            contLimpiarItemsDoc();
+            document.getElementById('doc-valorEnvio').value = '0';
+            document.getElementById('doc-numero').value = ''; document.getElementById('doc-numero').dataset.auto = '';
             renderContabilidad();
         }
 
@@ -2967,12 +3195,15 @@
                 <tr><td style="width:20%;"><strong>Fecha</strong></td><td>${fecha}</td><td style="width:20%;"><strong>Cliente</strong></td><td>${cli?cli.empresa:'-'}</td></tr>
                 <tr><td><strong>Identificación</strong></td><td>${cli?(cli.identificacion||'-'):'-'}</td><td><strong>Condición de pago</strong></td><td>${doc.condicionPago}</td></tr>
               </table>
-              <div class="doc-section-title">Descripción</div>
-              <table class="doc-table"><tr><th>Descripción</th><td>${doc.descripcion}</td></tr></table>
+              <div class="doc-section-title">Ítems</div>
+              <table class="doc-table">
+                <tr><th>Descripción</th><th>Cantidad</th><th>Valor Unitario</th><th>Valor Total</th></tr>
+                ${(doc.items||[]).map(i => `<tr><td>${i.descripcion}</td><td>${i.cantidad}</td><td style="text-align:right;">${cotFormatoCop(i.valorUnitario)}</td><td style="text-align:right;">${cotFormatoCop(i.valorTotal)}</td></tr>`).join('')}
+              </table>
               <div class="doc-section-title">Valor</div>
               <table class="doc-table">
                 <tr><td>Valor Bruto</td><td style="text-align:right;">${cotFormatoCop(doc.valorBruto)}</td></tr>
-                <tr><td>IVA (19%)</td><td style="text-align:right;">${cotFormatoCop(doc.iva)}</td></tr>
+                ${doc.iva>0?`<tr><td>IVA (19%)</td><td style="text-align:right;">${cotFormatoCop(doc.iva)}</td></tr>`:''}
                 ${doc.reteiva>0?`<tr><td>RETEIVA (15%)</td><td style="text-align:right;">-${cotFormatoCop(doc.reteiva)}</td></tr>`:''}
                 ${doc.valorEnvio>0?`<tr><td>Envío (no incluido en el ingreso)</td><td style="text-align:right;">${cotFormatoCop(doc.valorEnvio)}</td></tr>`:''}
               </table>
@@ -2996,7 +3227,7 @@
                     <div class="data-card">
                         <span class="tag" style="float:right; background:${doc.estado==='pagada'?'var(--ganado)':(doc.estado==='abonado_parcial'?'var(--proceso)':'var(--pendiente)')}; color:${doc.estado==='pendiente'?'#744210':'white'};">${doc.estado.toUpperCase()}</span>
                         <div class="card-title">${doc.numero} — ${cli?cli.empresa:'Cliente eliminado'}</div>
-                        <div class="card-subtitle">${badgeTipo} — ${doc.descripcion}</div>
+                        <div class="card-subtitle">${badgeTipo} — ${(doc.items||[]).length} ítem(s): ${doc.descripcion}</div>
                         <div style="font-size:0.9rem; line-height:1.5;">
                             Total a cobrar: <strong>${cotFormatoCop(doc.totalCobrar)}</strong><br>
                             Saldo pendiente: <strong style="color:var(--primary);">${cotFormatoCop(doc.saldoPendiente)}</strong><br>
@@ -3021,24 +3252,27 @@
         function contGuardarIngreso(){
             const idDocVenta = document.getElementById('ing-docventa').value;
             const doc = db_docventa.find(d => d.id === idDocVenta);
-            const valor = parseFloat(document.getElementById('ing-valor').value) || 0;
+            const valor = contNumeroDesdeInput(document.getElementById('ing-valor'));
             const medioPago = document.getElementById('ing-medioPago').value;
             const concepto = document.getElementById('ing-concepto').value.trim();
             const referenciaSoporte = document.getElementById('ing-referencia').value.trim();
+            const numero = document.getElementById('ing-numero').value.trim() || contSugerirNumero('tactical_ingreso_counter','IN-');
 
             if(!doc || valor<=0){ alert("Debe seleccionar un documento de venta y un valor mayor a 0."); return; }
 
             db_ingresos.push({
-                id: Date.now().toString(), numero: contSiguienteNumero('tactical_ingreso_counter','IN-'), fecha: contHoy(),
+                id: Date.now().toString(), numero, fecha: contHoy(),
                 idCli: doc.idCli, idDocVenta, valor, concepto: concepto || `Abono a ${doc.numero}`, medioPago, referenciaSoporte,
             });
             contGuardar('tactical_ingresos_v1', db_ingresos);
+            contActualizarContadorDesdeNumero('tactical_ingreso_counter', numero);
 
             doc.saldoPendiente = Math.max(0, doc.saldoPendiente - valor);
             doc.estado = doc.saldoPendiente<=0 ? 'pagada' : (doc.saldoPendiente<doc.totalCobrar ? 'abonado_parcial' : 'pendiente');
             contGuardar('tactical_docventa_v1', db_docventa);
 
             document.getElementById('ing-valor').value = '0'; document.getElementById('ing-concepto').value = ''; document.getElementById('ing-referencia').value = '';
+            document.getElementById('ing-numero').value = ''; document.getElementById('ing-numero').dataset.auto = '';
             renderContabilidad();
         }
 
@@ -3060,22 +3294,28 @@
 
         /* ---- CUENTAS POR PAGAR (CxP) ---- */
         function contGuardarCxp(){
-            const proveedor = document.getElementById('cxp-proveedor').value.trim();
+            const proveedor = document.getElementById('cxp-proveedor').value.trim().toUpperCase();
             const numeroFacturaProveedor = document.getElementById('cxp-numFactura').value.trim();
             const categoria = document.getElementById('cxp-categoria').value;
             const subcategoria = document.getElementById('cxp-subcategoria').value;
-            const monto = parseFloat(document.getElementById('cxp-monto').value) || 0;
+            const items = contObtenerItemsCxp();
+            const monto = items.reduce((s,i)=>s+i.valorTotal,0);
             const fechaVencimiento = document.getElementById('cxp-fechaVenc').value.trim();
+            const numero = document.getElementById('cxp-numero').value.trim() || contSugerirNumero('tactical_cxp_counter','CP-');
 
-            if(!proveedor || monto<=0){ alert("Debe ingresar el proveedor y un monto mayor a 0."); return; }
+            if(!proveedor || items.length===0 || monto<=0){ alert("Debe ingresar el proveedor y agregar al menos un ítem con valor mayor a 0."); return; }
 
+            contObtenerOCrearProveedor(proveedor); // registra el proveedor si es nuevo, o simplemente reutiliza el ya existente por nombre exacto
             db_cxp.push({
-                id: Date.now().toString(), numero: contSiguienteNumero('tactical_cxp_counter','CP-'), fecha: contHoy(),
-                proveedor, numeroFacturaProveedor, categoria, subcategoria, monto, fechaVencimiento, estado: 'pendiente', idEgreso: null,
+                id: Date.now().toString(), numero, fecha: contHoy(),
+                proveedor, numeroFacturaProveedor, categoria, subcategoria, items, monto, saldoPendiente: monto, fechaVencimiento, estado: 'pendiente', idEgreso: null,
             });
             contGuardar('tactical_cxp_v1', db_cxp);
+            contActualizarContadorDesdeNumero('tactical_cxp_counter', numero);
 
-            document.getElementById('cxp-proveedor').value=''; document.getElementById('cxp-numFactura').value=''; document.getElementById('cxp-monto').value='0'; document.getElementById('cxp-fechaVenc').value='';
+            document.getElementById('cxp-proveedor').value=''; document.getElementById('cxp-numFactura').value=''; document.getElementById('cxp-fechaVenc').value='';
+            contLimpiarItemsCxp();
+            document.getElementById('cxp-numero').value=''; document.getElementById('cxp-numero').dataset.auto='';
             renderContabilidad();
         }
 
@@ -3086,10 +3326,10 @@
             [...db_cxp].reverse().forEach(c => {
                 container.innerHTML += `
                     <div class="data-card">
-                        <span class="tag" style="float:right; background:${c.estado==='pagado'?'var(--ganado)':'var(--pendiente)'}; color:${c.estado==='pendiente'?'#744210':'white'};">${c.estado.toUpperCase()}</span>
+                        <span class="tag" style="float:right; background:${c.estado==='pagado'?'var(--ganado)':(c.estado==='abonado_parcial'?'var(--proceso)':'var(--pendiente)')}; color:${c.estado==='pendiente'?'#744210':'white'};">${c.estado.toUpperCase()}</span>
                         <div class="card-title">${c.numero} — ${c.proveedor}</div>
                         <div class="card-subtitle">${c.categoria==='fijo'?'Gasto Fijo':'Gasto Variable'} — ${c.subcategoria||''}</div>
-                        <div style="font-size:0.9rem;">Monto: <strong>${cotFormatoCop(c.monto)}</strong> — Vence: <strong>${c.fechaVencimiento||'-'}</strong></div>
+                        <div style="font-size:0.9rem;">Monto factura: <strong>${cotFormatoCop(c.monto)}</strong><br>Saldo pendiente: <strong style="color:var(--primary);">${cotFormatoCop(c.saldoPendiente)}</strong> — Vence: <strong>${c.fechaVencimiento||'-'}</strong></div>
                     </div>`;
             });
             if(db_cxp.length===0) container.innerHTML = '<p style="color:#718096; grid-column: 1/-1;">No hay cuentas por pagar registradas.</p>';
@@ -3097,8 +3337,8 @@
             const selEgreso = document.getElementById('egr-cxp');
             if(selEgreso){
                 selEgreso.innerHTML = '<option value="">-- Gasto directo (sin CxP) --</option>';
-                db_cxp.filter(c => c.estado==='pendiente').forEach(c => {
-                    selEgreso.innerHTML += `<option value="${c.id}">${c.numero} — ${c.proveedor} — ${cotFormatoCop(c.monto)}</option>`;
+                db_cxp.filter(c => c.saldoPendiente>0).forEach(c => {
+                    selEgreso.innerHTML += `<option value="${c.id}">${c.numero} — ${c.proveedor} — saldo ${cotFormatoCop(c.saldoPendiente)}</option>`;
                 });
             }
         }
@@ -3109,8 +3349,8 @@
             const cxp = db_cxp.find(c => c.id === idCxp);
             if(cxp){
                 document.getElementById('egr-beneficiario').value = cxp.proveedor;
-                document.getElementById('egr-concepto').value = `Pago factura ${cxp.numeroFacturaProveedor||cxp.numero}`;
-                document.getElementById('egr-monto').value = cxp.monto;
+                document.getElementById('egr-concepto').value = `Abono factura ${cxp.numeroFacturaProveedor||cxp.numero}`;
+                document.getElementById('egr-monto').value = cxp.saldoPendiente.toLocaleString('es-CO');
                 document.getElementById('egr-categoria').value = cxp.categoria;
             }
         }
@@ -3119,27 +3359,35 @@
             const idCxp = document.getElementById('egr-cxp').value || null;
             const beneficiario = document.getElementById('egr-beneficiario').value.trim();
             const concepto = document.getElementById('egr-concepto').value.trim();
-            const monto = parseFloat(document.getElementById('egr-monto').value) || 0;
+            const monto = contNumeroDesdeInput(document.getElementById('egr-monto'));
             const categoria = document.getElementById('egr-categoria').value;
             const medioPago = document.getElementById('egr-medioPago').value;
             const referenciaSoporte = document.getElementById('egr-referencia').value.trim();
+            const numero = document.getElementById('egr-numero').value.trim() || contSugerirNumero('tactical_egreso_counter','EG-');
 
             if(!beneficiario || monto<=0){ alert("Debe ingresar el beneficiario y un monto mayor a 0."); return; }
 
             const nuevoEgreso = {
-                id: Date.now().toString(), numero: contSiguienteNumero('tactical_egreso_counter','EG-'), fecha: contHoy(),
+                id: Date.now().toString(), numero, fecha: contHoy(),
                 beneficiario, concepto, monto, categoria, medioPago, referenciaSoporte, idCxp,
             };
             db_egresos.push(nuevoEgreso);
             contGuardar('tactical_egresos_v1', db_egresos);
+            contActualizarContadorDesdeNumero('tactical_egreso_counter', numero);
 
             if(idCxp){
                 const cxp = db_cxp.find(c => c.id === idCxp);
-                if(cxp){ cxp.estado = 'pagado'; cxp.idEgreso = nuevoEgreso.id; contGuardar('tactical_cxp_v1', db_cxp); }
+                if(cxp){
+                    cxp.saldoPendiente = Math.max(0, cxp.saldoPendiente - monto);
+                    cxp.estado = cxp.saldoPendiente<=0 ? 'pagado' : (cxp.saldoPendiente<cxp.monto ? 'abonado_parcial' : 'pendiente');
+                    cxp.idEgreso = nuevoEgreso.id;
+                    contGuardar('tactical_cxp_v1', db_cxp);
+                }
             }
 
             document.getElementById('egr-beneficiario').value=''; document.getElementById('egr-concepto').value=''; document.getElementById('egr-monto').value='0'; document.getElementById('egr-referencia').value='';
             document.getElementById('egr-cxp').value='';
+            document.getElementById('egr-numero').value=''; document.getElementById('egr-numero').dataset.auto='';
             renderContabilidad();
         }
 
@@ -3174,9 +3422,9 @@
             const tbodyCxp = document.getElementById('cont-tabla-cxp');
             if(tbodyCxp){
                 let filas = '';
-                db_cxp.filter(c => c.estado==='pendiente').forEach(c => {
+                db_cxp.filter(c => c.saldoPendiente>0).forEach(c => {
                     const vencida = c.fechaVencimiento && c.fechaVencimiento < hoy;
-                    filas += `<tr><td>${c.numero}</td><td>${c.proveedor}</td><td>${c.categoria==='fijo'?'Fijo':'Variable'}</td><td>${cotFormatoCop(c.monto)}</td><td>${c.fechaVencimiento||'-'}</td><td style="color:${vencida?'var(--peligro)':'inherit'}; font-weight:${vencida?'bold':'normal'};">${vencida?'⚠️ Vencida':'Pendiente'}</td></tr>`;
+                    filas += `<tr><td>${c.numero}</td><td>${c.proveedor}</td><td>${c.categoria==='fijo'?'Fijo':'Variable'}</td><td>${cotFormatoCop(c.saldoPendiente)}</td><td>${c.fechaVencimiento||'-'}</td><td style="color:${vencida?'var(--peligro)':'inherit'}; font-weight:${vencida?'bold':'normal'};">${vencida?'⚠️ Vencida':c.estado}</td></tr>`;
                 });
                 tbodyCxp.innerHTML = filas || '<tr><td colspan="6" style="color:#718096;">Sin cartera por pagar pendiente.</td></tr>';
             }
@@ -3184,7 +3432,7 @@
 
         /* ---- GASTOS FIJOS (config) ---- */
         function contActualizarGastoFijo(idx, campo, valor){
-            db_gastosFijos[idx][campo] = campo==='monto' ? (parseFloat(valor)||0) : valor;
+            db_gastosFijos[idx][campo] = campo==='monto' ? (parseInt(String(valor).replace(/\D/g,''),10)||0) : valor;
             contGuardar('tactical_gastos_fijos_config_v1', db_gastosFijos);
             renderGastosFijos(); renderContTablero();
         }
@@ -3204,7 +3452,7 @@
             tbody.innerHTML = db_gastosFijos.map((g,idx) => `
                 <tr>
                     <td><input type="text" value="${g.concepto}" onchange="contActualizarGastoFijo(${idx},'concepto',this.value)"></td>
-                    <td><input type="number" value="${g.monto}" onchange="contActualizarGastoFijo(${idx},'monto',this.value)"></td>
+                    <td><input type="text" inputmode="numeric" value="${g.monto.toLocaleString('es-CO')}" oninput="contFormatearMiles(this)" onchange="contActualizarGastoFijo(${idx},'monto',this.value)"></td>
                     <td><button class="btn-action btn-del-row" onclick="contEliminarGastoFijo(${idx})">✕</button></td>
                 </tr>`).join('');
             const total = db_gastosFijos.reduce((s,g)=>s+g.monto,0);
@@ -3267,6 +3515,7 @@
         function renderContabilidad(){
             contLlenarSelectClienteDoc();
             contLlenarSelectVendedorDoc();
+            contLlenarDatalistProveedores();
             if(document.getElementById('cxp-subcategoria') && !document.getElementById('cxp-subcategoria').options.length) contLlenarSubcategorias();
             renderDocVenta();
             renderIngresos();
@@ -3275,6 +3524,10 @@
             renderCartera();
             renderGastosFijos();
             renderContTablero();
+            contSugerirNumeroDoc();
+            contSugerirNumeroSiVacio('ing-numero', 'tactical_ingreso_counter', 'IN-');
+            contSugerirNumeroSiVacio('cxp-numero', 'tactical_cxp_counter', 'CP-');
+            contSugerirNumeroSiVacio('egr-numero', 'tactical_egreso_counter', 'EG-');
         }
 
         // CARGA GENERAL INICIAL
