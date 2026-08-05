@@ -2594,9 +2594,20 @@
 
         /* ============ RECOMENDACIONES DE PRODUCCIÓN (Cotizador Cuadernos) ============ */
         // Mismo patrón que calculadora_rompecabezas.html — lista extensible de reglas.
-        // Vacía por ahora: agregar aquí cuando Conde confirme advertencias específicas de
-        // Cuadernos (ej. tipo de cartón, encuadernación, etc.) — no inventar reglas sin confirmar.
+        // Confirmadas por Conde 2026-08-05.
         const RECOMENDACIONES_PRODUCCION_COT = [
+          // --- Cuaderno Escolar ---
+          { aplica:(r,p)=>p.lineaProducto==="escolar", texto:"Hacer pruebas de corte para evitar que al doblar no se refile cuadrícula o logos." },
+          { aplica:(r,p)=>p.lineaProducto==="escolar", texto:"Programar la pinza por el lado del ancho para que cubra más la carátula y no quede línea blanca en la impresión." },
+          { aplica:(r,p)=>p.lineaProducto==="escolar", texto:"Para la cinta hay que dejar al menos 1 día antes de doblar — si no, se puede despegar la cinta." },
+          { aplica:(r,p)=>p.lineaProducto==="escolar", texto:"No dejar el tamaño final para después de costura/trifilado — se corren las hojas de la carátula y hay que refilar de nuevo." },
+          { aplica:(r,p)=>p.lineaProducto==="escolar", texto:"Siempre grafar la carátula para evitar que se arrugue al doblar." },
+          // --- Cuaderno Anillado ---
+          { aplica:(r,p)=>p.lineaProducto==="cuaderno_anillado" && p.tacoHojas>100, texto:"Con más de 100 hojas en el taco, la carátula debe quedar un poco más grande (+5mm) porque se sale el taco." },
+          { aplica:(r,p)=>p.lineaProducto==="cuaderno_anillado", texto:"Plastificar las guardas para evitar que se peguen durante el armado." },
+          { aplica:(r,p)=>p.lineaProducto==="cuaderno_anillado", texto:"Verificar el tamaño de los insertos según el taco, para que no queden ni más grandes ni más pequeños." },
+          // --- Agenda Ejecutiva ---
+          { aplica:(r,p)=>p.lineaProducto==="agenda_ejecutiva", texto:"Al cotizar policromías internas, verificar la distribución de los insertos para no terminar haciendo muchos montajes con policromía." },
         ];
         function renderRecomendacionesCot(r, p){
           const card = document.getElementById("card-recomendaciones-cot");
