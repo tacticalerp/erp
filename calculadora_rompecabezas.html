@@ -81,7 +81,7 @@
         </div>
         <div class="campo chico">
           <label>Cantidad:</label>
-          <input type="number" id="in-cantidad" value="100" min="1">
+          <input type="number" id="in-cantidad" value="100" min="1" oninput="actualizarSugerenciaMoto()">
           <div class="hint">Mínimo de venta: 50 unidades.</div>
         </div>
       </div>
@@ -141,7 +141,7 @@
       <div class="fila">
         <div class="checkbox-row">
           <input type="checkbox" id="in-cabeEnMoto">
-          <label for="in-cabeEnMoto" style="font-weight:normal;">Pedido chico, cabe en moto (transporte fijo $20.000 en vez del % sobre subtotal)</label>
+          <label for="in-cabeEnMoto" style="font-weight:normal;">Cabe en moto (transporte fijo $20.000) — se marca sola si son ≤30 fichas y menos de 200 unidades, editable</label>
         </div>
       </div>
     </div>
@@ -231,10 +231,11 @@ const OFFSET_FORMATOS_CM = {medio_pliego:[50,70], cuarto:[35,50], octavo:[25,35]
 /* ============ REGLAS PROPIAS DE ROMPECABEZAS (confirmadas por Conde) ============ */
 const MERMA_REGISTRO_PCT = 0.20;               // "Regla Oro": +20% merma por registro
 const CANTIDAD_MINIMA_VENTA = 50;
+const UMBRAL_FICHAS_CHICO = 30; // Conde 2026-07-24: "30 fichas hacia abajo" -> troquelado/diseño/sherpa/moto más económicos
 const TROQUELADO_ROMPECABEZAS_MINIMO_COP = 60000;
 const TROQUELADO_ROMPECABEZAS_COP_MILLAR = 80000;
-const TROQUELADO_ROMPECABEZAS_COP_MILLAR_CHICO = 40000; // Conde 2026-07-24: <30 fichas, tarifa más económica
-const TROQUELADO_FICHAS_UMBRAL_CHICO = 30;
+const TROQUELADO_ROMPECABEZAS_COP_MILLAR_CHICO = 40000; // <=30 fichas: tarifa Y piso más económicos
+const TRANSPORTE_MOTO_CANTIDAD_MAX = 200; // Conde: <200 rompecabezas de <=30 fichas se despachan en moto
 const AYUDANTE_ARMADO_COP_POR_100 = 20000;
 const AYUDANTE_ARMADO_FICHAS_MINIMO = 70;      // línea Macro >=70 fichas
 const DESGASTE_CUCHILLA_COP = {baja:30000, media:60000, alta:120000, especial:200000};
@@ -250,7 +251,6 @@ const DISENO_COSTO_NORMAL = 40000;
 const DISENO_COSTO_REDUCIDO = 20000;
 const FONDO_SEGURIDAD_TRAMOS = [[500000,0.09],[1000000,0.07],[3000000,0.05],[Infinity,0.03]];
 const SHERPA_BASE_COP = 20000;
-const SHERPA_FICHAS_REDUCIDO_MAX = 30;      // Conde 2026-07-24: rompecabezas de 30 fichas o menos
 const SHERPA_COP_FICHAS_REDUCIDO = 10000;
 const SHERPA_MAXIMO_COP = 40000;
 const TRANSPORTE_TRAMOS = [[3000000,0.04],[5000000,0.03],[Infinity,0.02]];
@@ -411,7 +411,7 @@ function tramoFondoSeguridad(costoDirecto){
   return FONDO_SEGURIDAD_TRAMOS[FONDO_SEGURIDAD_TRAMOS.length-1][1];
 }
 function costoSherpa(fichas, totalPaginasInsertos=0){
-  if(fichas<=SHERPA_FICHAS_REDUCIDO_MAX) return SHERPA_COP_FICHAS_REDUCIDO;
+  if(fichas<=UMBRAL_FICHAS_CHICO) return SHERPA_COP_FICHAS_REDUCIDO;
   return Math.min(SHERPA_BASE_COP + 1000*totalPaginasInsertos, SHERPA_MAXIMO_COP);
 }
 function costoEmpaque(cantidad, unidadesPorCaja){
@@ -472,8 +472,10 @@ function cotizarRompecabezas(p){
 
   const costoDespiece = troquel.despiece*p.cantidad;
   const costoBolsa = troquel.bolsa*p.cantidad;
-  const tarifaMillarTroquelado = troquel.fichas<TROQUELADO_FICHAS_UMBRAL_CHICO ? TROQUELADO_ROMPECABEZAS_COP_MILLAR_CHICO : TROQUELADO_ROMPECABEZAS_COP_MILLAR;
-  const costoTroqueladoServicio = Math.max(TROQUELADO_ROMPECABEZAS_MINIMO_COP, Math.ceil(p.cantidad/1000)*tarifaMillarTroquelado);
+  const esFichaChica = troquel.fichas<=UMBRAL_FICHAS_CHICO;
+  const tarifaMillarTroquelado = esFichaChica ? TROQUELADO_ROMPECABEZAS_COP_MILLAR_CHICO : TROQUELADO_ROMPECABEZAS_COP_MILLAR;
+  const pisoTroquelado = esFichaChica ? TROQUELADO_ROMPECABEZAS_COP_MILLAR_CHICO : TROQUELADO_ROMPECABEZAS_MINIMO_COP;
+  const costoTroqueladoServicio = Math.max(pisoTroquelado, Math.ceil(p.cantidad/1000)*tarifaMillarTroquelado);
 
   let costoUsoTroquel;
   if(p.troquelEsNuevo){ costoUsoTroquel = p.costoTroquelNuevoManual||0; }
@@ -484,7 +486,7 @@ function cotizarRompecabezas(p){
   const costoDirecto = detalleMaterial.costoTotal + detalleImpresion.total + costoPlastificado + costoColaminado
     + costoBaseMarco + costoDespiece + costoBolsa + costoTroqueladoServicio + costoUsoTroquel + costoAyudante;
 
-  const disenoCop = disenoYPreprensa(costoDirecto);
+  const disenoCop = disenoYPreprensa(costoDirecto) * (esFichaChica ? 0.5 : 1);
   const fondoSeguridadPct = tramoFondoSeguridad(costoDirecto);
   const fondoSeguridadCop = costoDirecto*fondoSeguridadPct;
   const sherpaCop = costoSherpa(troquel.fichas, 0);
@@ -542,6 +544,14 @@ function onCambioTroquel(){
   notas.push(t.fichas<UMBRAL_FICHAS_LINEA_MACRO ? "sustrato sugerido: Cote 150gr, colaminado con Cartón 1.5mm" : "sustrato sugerido: Maule C20, colaminado con Maule C22");
   hint.innerText = "Grupo " + t.grupo + (notas.length ? " — " + notas.join("; ") : "");
   poblarComplejidad(t.grupo);
+  actualizarSugerenciaMoto();
+}
+function actualizarSugerenciaMoto(){
+  const id = document.getElementById("in-troquel").value;
+  const t = TROQUELES_ROMPECABEZAS.find(x=>x.id===id);
+  if(!t) return;
+  const cantidad = parseFloat(document.getElementById("in-cantidad").value)||0;
+  document.getElementById("in-cabeEnMoto").checked = t.fichas<=UMBRAL_FICHAS_CHICO && cantidad<TRANSPORTE_MOTO_CANTIDAD_MAX;
 }
 function poblarComplejidad(grupo){
   const sel = document.getElementById("in-complejidad");
