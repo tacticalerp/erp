@@ -168,6 +168,10 @@
       <h2>Resultado</h2>
       <div id="resultado-contenido"><div class="placeholder">Completa el formulario y presiona Calcular.</div></div>
     </div>
+    <div class="card" id="card-recomendaciones" style="display:none;">
+      <h2>⚠️ Recomendaciones de Producción</h2>
+      <div id="recomendaciones-contenido"></div>
+    </div>
   </div>
 </div>
 
@@ -596,6 +600,30 @@ function onCambioTroquelNuevo(){
   document.getElementById("fila-troquelManual").style.display = esNuevo ? "flex" : "none";
 }
 
+/* ============ RECOMENDACIONES DE PRODUCCIÓN ============ */
+// Lista extensible: cada regla define cuándo aplica (según el resultado/parámetros de la
+// cotización) y el texto de advertencia para producción. Agregar aquí nuevas reglas a medida
+// que Conde las confirme — no inventar reglas nuevas sin que él las dé.
+const RECOMENDACIONES_PRODUCCION = [
+  {
+    aplica: (r) => r.backingEtiqueta === "Cartón 1.5mm",
+    texto: "Este rompecabezas se colamina con Cartón 1.5mm para troquelar. Tener en cuenta: el cartón nacional se hojaldra (se abren las capas) al troquelar, el importado no — verificar con el proveedor cuál se está usando antes de trabajar la orden.",
+  },
+  {
+    aplica: (r) => r.conMarco,
+    texto: "Rompecabezas con marco: si se entrega armado, se debe indicar al troquelador que NO troquele con toda la presión, para evitar que las fichas se desarmen.",
+  },
+];
+
+function renderRecomendaciones(r){
+  const card = document.getElementById("card-recomendaciones");
+  const cont = document.getElementById("recomendaciones-contenido");
+  const aplicables = RECOMENDACIONES_PRODUCCION.filter(reg => reg.aplica(r)).map(reg => reg.texto);
+  if(aplicables.length === 0){ card.style.display = "none"; cont.innerHTML = ""; return; }
+  card.style.display = "block";
+  cont.innerHTML = aplicables.map(txt => `<div class="warn-box">${txt}</div>`).join("");
+}
+
 function calcular(){
   const cont = document.getElementById("resultado-contenido");
   try{
@@ -614,6 +642,7 @@ function calcular(){
       comisionPct: parseFloat(document.getElementById("in-comisionPct").value)/100,
     };
     const r = cotizarRompecabezas(p);
+    renderRecomendaciones(r);
 
     let avisoMinimo = "";
     if(cantidad < CANTIDAD_MINIMA_VENTA){
@@ -656,6 +685,7 @@ function calcular(){
     cont.innerHTML = filas;
   } catch(err){
     cont.innerHTML = `<div class="error-box">Error en el cálculo: ${err.message}</div>`;
+    document.getElementById("card-recomendaciones").style.display = "none";
   }
 }
 
