@@ -233,8 +233,9 @@ const MERMA_REGISTRO_PCT = 0.20;               // "Regla Oro": +20% merma por re
 const CANTIDAD_MINIMA_VENTA = 50;
 const UMBRAL_FICHAS_CHICO = 30; // Conde 2026-07-24: "30 fichas hacia abajo" -> troquelado/diseño/sherpa/moto más económicos
 const TROQUELADO_ROMPECABEZAS_MINIMO_COP = 60000;
-const TROQUELADO_ROMPECABEZAS_COP_MILLAR = 80000;
-const TROQUELADO_ROMPECABEZAS_COP_MILLAR_CHICO = 40000; // <=30 fichas: tarifa Y piso más económicos
+const TROQUELADO_ROMPECABEZAS_COP_MILLAR = 80000;             // 31-69 fichas
+const TROQUELADO_ROMPECABEZAS_COP_MILLAR_CHICO = 40000;       // <=30 fichas: tarifa Y piso más económicos
+const TROQUELADO_ROMPECABEZAS_COP_MILLAR_GRANDE = 100000;     // >=70 fichas (línea Macro/ROMC)
 const TRANSPORTE_MOTO_CANTIDAD_MAX = 200; // Conde: <200 rompecabezas de <=30 fichas se despachan en moto
 const AYUDANTE_ARMADO_COP_POR_100 = 20000;
 const AYUDANTE_ARMADO_FICHAS_MINIMO = 70;      // línea Macro >=70 fichas
@@ -473,8 +474,11 @@ function cotizarRompecabezas(p){
   const costoDespiece = troquel.despiece*p.cantidad;
   const costoBolsa = troquel.bolsa*p.cantidad;
   const esFichaChica = troquel.fichas<=UMBRAL_FICHAS_CHICO;
-  const tarifaMillarTroquelado = esFichaChica ? TROQUELADO_ROMPECABEZAS_COP_MILLAR_CHICO : TROQUELADO_ROMPECABEZAS_COP_MILLAR;
-  const pisoTroquelado = esFichaChica ? TROQUELADO_ROMPECABEZAS_COP_MILLAR_CHICO : TROQUELADO_ROMPECABEZAS_MINIMO_COP;
+  const esLineaMacro = troquel.fichas>=UMBRAL_FICHAS_LINEA_MACRO;
+  let tarifaMillarTroquelado, pisoTroquelado;
+  if(esFichaChica){ tarifaMillarTroquelado = TROQUELADO_ROMPECABEZAS_COP_MILLAR_CHICO; pisoTroquelado = TROQUELADO_ROMPECABEZAS_COP_MILLAR_CHICO; }
+  else if(esLineaMacro){ tarifaMillarTroquelado = TROQUELADO_ROMPECABEZAS_COP_MILLAR_GRANDE; pisoTroquelado = TROQUELADO_ROMPECABEZAS_MINIMO_COP; }
+  else { tarifaMillarTroquelado = TROQUELADO_ROMPECABEZAS_COP_MILLAR; pisoTroquelado = TROQUELADO_ROMPECABEZAS_MINIMO_COP; }
   const costoTroqueladoServicio = Math.max(pisoTroquelado, Math.ceil(p.cantidad/1000)*tarifaMillarTroquelado);
 
   let costoUsoTroquel;
