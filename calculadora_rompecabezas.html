@@ -193,9 +193,8 @@ const SUSTRATOS = {
   "Cartulina C18__275": {p6090:779.40, p70100:1009.80},
   "Cartulina C20__305": {p6090:864.00, p70100:1120.50},
   "Cartulina C22__330": {p6090:null, p70100:1212.30},
-  // ⚠️ Maule C20/C22: Conde confirmó 2026-07-24 que son los sustratos reales de Rompecabezas
-  // línea Macro (>=70 fichas), pero no dio el precio — se usa el mismo precio de Cartulina C20/C22
-  // como estimado temporal. CORREGIR con el precio real de Maule apenas Conde lo confirme.
+  // Maule es solo la marca — Conde confirmó 2026-07-24 que Maule C20/C22 es el mismo
+  // producto/especificación que Cartulina C20/C22, mismo precio.
   "Maule C20__305": {p6090:864.00, p70100:1120.50},
   "Maule C22__330": {p6090:null, p70100:1212.30},
 };
@@ -555,9 +554,6 @@ function calcular(){
     let avisoMinimo = "";
     if(cantidad < CANTIDAD_MINIMA_VENTA){
       avisoMinimo += `<div class="warn-box">⚠️ La cantidad (${cantidad}) está por debajo del mínimo de venta (${CANTIDAD_MINIMA_VENTA} unidades).</div>`;
-    }
-    if(r.troquel.fichas>=UMBRAL_FICHAS_LINEA_MACRO){
-      avisoMinimo += `<div class="warn-box">⚠️ Precio de Maule C20/C22 SIN CONFIRMAR — se está usando el mismo precio de Cartulina C20/C22 como estimado temporal. Avísame el precio real para corregirlo.</div>`;
     }
 
     const viaImpresionTxt = r.detalleImpresion.via==="digital"
