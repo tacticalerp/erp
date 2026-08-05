@@ -513,7 +513,8 @@ function cotizarRompecabezas(p){
     + costoBaseMarco + costoDespiece + costoBolsa + costoTroqueladoServicio + costoUsoTroquel + costoAyudante;
 
   const disenoCop = disenoYPreprensa(costoDirecto) * (esFichaChica ? 0.5 : 1);
-  const fondoSeguridadPct = tramoFondoSeguridad(costoDirecto);
+  // Conde 2026-07-24: el % de Fondo de Seguridad se duplica para rompecabezas de línea Macro (>=70 fichas).
+  const fondoSeguridadPct = tramoFondoSeguridad(costoDirecto) * (esLineaMacro ? 2 : 1);
   const fondoSeguridadCop = costoDirecto*fondoSeguridadPct;
   const sherpaCop = costoSherpa(troquel.fichas, 0);
   const empaqueCop = costoEmpaque(p.cantidad, p.unidadesPorCaja);
