@@ -130,14 +130,7 @@
     </div>
 
     <div class="card">
-      <h2>4. Logística (empaque y transporte)</h2>
-      <div class="fila">
-        <div class="campo chico">
-          <label>Unidades por caja de despacho:</label>
-          <input type="number" id="in-unidadesPorCaja" value="30" min="1">
-          <div class="hint">Sin tabla confirmada por tamaño de troquel todavía — ajusta manualmente. $3.000/caja.</div>
-        </div>
-      </div>
+      <h2>4. Logística (transporte)</h2>
       <div class="fila">
         <div class="checkbox-row">
           <input type="checkbox" id="in-cabeEnMoto">
@@ -268,7 +261,16 @@ const TRANSPORTE_TRAMOS = [[3000000,0.04],[5000000,0.03],[Infinity,0.02]];
 const TRANSPORTE_PISO_COP = 45000;
 const TRANSPORTE_MOTO_COP = 20000;          // Conde 2026-07-24: pedidos chicos que caben en moto
 const EMPAQUE_CAJA_COP = 3000;
-const EMPAQUE_UNIDADES_POR_CAJA_DEFAULT = 30; // manual, ajustar por tamaño de troquel — sin tabla confirmada todavía
+// Conde 2026-08-05: tabla fija por fichas, ya no se digita manual. 31-69 fichas (entre los dos
+// tramos que dio) se deja en el mismo valor que 70-499 (60/caja) hasta que Conde confirme si debe
+// ser distinto.
+const EMPAQUE_TRAMOS_UNIDADES_POR_CAJA = [[30,100],[69,60],[499,60],[Infinity,40]];
+function empaqueUnidadesPorCaja(fichas){
+  for(const [tope,unidades] of EMPAQUE_TRAMOS_UNIDADES_POR_CAJA){
+    if(fichas<=tope) return unidades;
+  }
+  return EMPAQUE_TRAMOS_UNIDADES_POR_CAJA[EMPAQUE_TRAMOS_UNIDADES_POR_CAJA.length-1][1];
+}
 
 /* Tabla de 19 troqueles — [Docs, índice maestro], con 2 correcciones de despiece confirmadas por Conde 2026-07-24 */
 const TROQUELES_ROMPECABEZAS = [
@@ -524,7 +526,8 @@ function cotizarRompecabezas(p){
   const fondoSeguridadPct = tramoFondoSeguridad(costoDirecto) * (esLineaMacro ? 2 : 1);
   const fondoSeguridadCop = costoDirecto*fondoSeguridadPct;
   const sherpaCop = costoSherpa(troquel.fichas, 0);
-  const empaqueCop = costoEmpaque(p.cantidad, p.unidadesPorCaja);
+  const unidadesPorCaja = empaqueUnidadesPorCaja(troquel.fichas);
+  const empaqueCop = costoEmpaque(p.cantidad, unidadesPorCaja);
 
   const subtotalPreTransporte = costoDirecto + disenoCop + fondoSeguridadCop + sherpaCop + empaqueCop;
   const transporteCop = costoTransporte(subtotalPreTransporte, p.cabeEnMoto);
@@ -543,7 +546,7 @@ function cotizarRompecabezas(p){
     costoPlastificado, costoColaminado, costoColaminadoManoObra, costoBackingMaterial, detalleBacking, backingEtiqueta,
     costoBaseMarco, costoDespiece, costoBolsa,
     costoTroqueladoServicio, costoUsoTroquel, costoAyudante, costoDirecto,
-    disenoCop, fondoSeguridadPct, fondoSeguridadCop, sherpaCop, empaqueCop, transporteCop,
+    disenoCop, fondoSeguridadPct, fondoSeguridadCop, sherpaCop, empaqueCop, unidadesPorCaja, transporteCop,
     subtotal, precioVentaTotal, precioVentaUnitario, ivaTotal, precioFinalTotal,
     gananciaTotal, gananciaUnitaria,
   };
@@ -655,7 +658,6 @@ function calcular(){
       troquelEsNuevo: document.getElementById("in-troquelNuevo").value === "nuevo",
       complejidadDesgaste: document.getElementById("in-complejidad").value,
       costoTroquelNuevoManual: parseFloat(document.getElementById("in-troquelManualCop").value)||0,
-      unidadesPorCaja: parseFloat(document.getElementById("in-unidadesPorCaja").value)||EMPAQUE_UNIDADES_POR_CAJA_DEFAULT,
       cabeEnMoto: document.getElementById("in-cabeEnMoto").checked,
       utilidadPct: parseFloat(document.getElementById("in-utilidadPct").value)/100,
       comisionPct: parseFloat(document.getElementById("in-comisionPct").value)/100,
@@ -693,7 +695,7 @@ function calcular(){
     filas += `<tr><td>Diseño / Preprensa</td><td class="num">${cop(r.disenoCop)}</td></tr>`;
     filas += `<tr><td>Fondo de Seguridad (${(r.fondoSeguridadPct*100).toFixed(1)}%)</td><td class="num">${cop(r.fondoSeguridadCop)}</td></tr>`;
     filas += `<tr><td>Sherpa (muestra de color)</td><td class="num">${cop(r.sherpaCop)}</td></tr>`;
-    filas += `<tr><td>Empaque (caja para despachar las bolsas, ${p.unidadesPorCaja}u/caja)</td><td class="num">${cop(r.empaqueCop)}</td></tr>`;
+    filas += `<tr><td>Empaque (caja para despachar las bolsas, ${r.unidadesPorCaja}u/caja)</td><td class="num">${cop(r.empaqueCop)}</td></tr>`;
     filas += `<tr><td>Transporte${p.cabeEnMoto?' (moto, fijo)':''}</td><td class="num">${cop(r.transporteCop)}</td></tr>`;
     filas += `<tr class="sub"><td>Subtotal</td><td class="num">${cop(r.subtotal)}</td></tr>`;
     filas += `<tr><td>Precio de venta (total pedido)</td><td class="num">${cop(r.precioVentaTotal)}</td></tr>`;
