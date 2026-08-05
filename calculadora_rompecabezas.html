@@ -439,6 +439,11 @@ function cotizarRompecabezas(p){
   if(!troquel) throw new Error("Troquel no encontrado: "+p.troquelId);
 
   const conMarco = !!(troquel.marcoOpcional && p.usarMarco);
+  // Excedente de 1cm por cada lado del troquel (confirmado por Conde 2026-07-24: ej. troquel
+  // 10x10cm se imprime y se colamina en material de 12x12cm) = +2cm total por dimensión sin
+  // marco. Con marco perimetral es +3cm (embone más grande). Este mismo tamaño de montaje se usa
+  // TANTO para el material impreso como para el backing del colaminado — ambos llevan el mismo
+  // excedente, por eso salen del mismo tamaño.
   const extraCm = conMarco ? MARCO_EXTRA_CM_CON : MARCO_EXTRA_CM_SIN;
   // ROMB-008 ya trae marco de fábrica incluido en la medida de troquel — no se le suma nada extra.
   const anchoMontaje = troquel.marcoFabrica ? troquel.ancho : troquel.ancho + extraCm;
