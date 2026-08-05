@@ -197,9 +197,13 @@ const SUSTRATOS = {
   // producto/especificación que Cartulina C20/C22, mismo precio.
   "Maule C20__305": {p6090:864.00, p70100:1120.50},
   "Maule C22__330": {p6090:null, p70100:1212.30},
+  // ⚠️ ESTIMADO SIN CONFIRMAR — Conde señaló 2026-07-24 que el cartón 1.5mm estaba saliendo
+  // muy caro con la tarifa plana de Cuadernos ($3.500/unidad, calibrada para tapas de cuaderno
+  // ya cortadas, no para piezas chicas de rompecabezas). Se cambió a costeo por pliego como
+  // cualquier otro sustrato — pero este precio es un estimado, falta que Conde confirme el real.
+  "Cartón 1.5mm__400": {p6090:1400.00, p70100:1800.00},
 };
 const PLIEGOS_CM = {"60x90":[60,90], "70x100":[70,100]};
-const CARTON_1_5MM_COP = 3500; // reutilizado de Cuadernos — tarifa plana por unidad, no por m²
 const SUSTRATO_IMPRESO_FICHAS_MENOR = "Propalcote__150";   // "Cote 150gr", <70 fichas (90% de los casos)
 const SUSTRATO_IMPRESO_FICHAS_MAYOR = "Maule C20__305";    // >=70 fichas
 const SUSTRATO_BACKING_FICHAS_MAYOR = "Maule C22__330";    // colaminado, >=70 fichas
@@ -228,6 +232,8 @@ const MERMA_REGISTRO_PCT = 0.20;               // "Regla Oro": +20% merma por re
 const CANTIDAD_MINIMA_VENTA = 50;
 const TROQUELADO_ROMPECABEZAS_MINIMO_COP = 60000;
 const TROQUELADO_ROMPECABEZAS_COP_MILLAR = 80000;
+const TROQUELADO_ROMPECABEZAS_COP_MILLAR_CHICO = 40000; // Conde 2026-07-24: <30 fichas, tarifa más económica
+const TROQUELADO_FICHAS_UMBRAL_CHICO = 30;
 const AYUDANTE_ARMADO_COP_POR_100 = 20000;
 const AYUDANTE_ARMADO_FICHAS_MINIMO = 70;      // línea Macro >=70 fichas
 const DESGASTE_CUCHILLA_COP = {baja:30000, media:60000, alta:120000, especial:200000};
@@ -338,6 +344,29 @@ function costoImpresionDigital(nPaginas,caras,esColor,ancho,alto,cantidadUnidade
   return {total, via:"digital", nClics, precioClic, descuentoPct:descuento};
 }
 
+// Para piezas chicas (como muchos troqueles de Rompecabezas) conviene montar varias piezas
+// en el pliego digital MÁS GRANDE que la máquina admita, no solo en el que "clasifica" por
+// tamaño individual — eso baja los clics necesarios y por lo tanto el costo. Se prueban las
+// 3 clases de pliego digital y se toma la que dé el menor costo total (Conde 2026-07-24).
+function mejorImpresionDigitalMontaje(nPaginas,caras,esColor,ancho,alto,cantidadUnidades,gramaje){
+  if(gramaje>DIGITAL_GRAMAJE_MAX || cantidadUnidades>200) return null;
+  const margenCm=DIGITAL_PINZA_MM/10;
+  let mejor=null;
+  for(const clase of Object.keys(DIGITAL_FORMATOS_CM)){
+    const [sheetW,sheetH]=DIGITAL_FORMATOS_CM[clase];
+    const piezasPorClic=piezasPorPliego(ancho,alto,sheetW,sheetH-margenCm);
+    if(piezasPorClic===0) continue;
+    const nClics=Math.ceil(nPaginas/piezasPorClic)*caras;
+    const precioClic=DIGITAL_CLIC_COP[clase][esColor?"color":"negro"];
+    const descuento=descuentoVolumenDigital(cantidadUnidades);
+    const total=nClics*precioClic*(1-descuento);
+    if(!mejor || total<mejor.total){
+      mejor={total, via:"digital", nClics, precioClic, descuentoPct:descuento, clase, piezasPorClic};
+    }
+  }
+  return mejor;
+}
+
 function fraccionPliegoOffset(ancho,alto,esPolicromia=false){
   const [a,b]=ordenar2(ancho,alto);
   if(a<=25 && b<=35 && !esPolicromia) return "octavo";
@@ -414,10 +443,7 @@ function cotizarRompecabezas(p){
 
   const detalleMaterial = costoMaterialPliegos(anchoMontaje, altoMontaje, sustratoNombre, gramaje, piezasFisicas, 0);
 
-  let impDigital = null;
-  if(elegibleDigital(anchoMontaje, altoMontaje, gramaje, piezasFisicas)){
-    impDigital = costoImpresionDigital(piezasFisicas, 1, true, anchoMontaje, altoMontaje, piezasFisicas);
-  }
+  const impDigital = mejorImpresionDigitalMontaje(piezasFisicas, 1, true, anchoMontaje, altoMontaje, piezasFisicas, gramaje);
   const impOffset = costoImpresionOffset(piezasFisicas, 4, 0, true, anchoMontaje, altoMontaje);
   const detalleImpresion = (impDigital && impDigital.total < impOffset.total) ? impDigital : impOffset;
 
@@ -425,18 +451,14 @@ function cotizarRompecabezas(p){
   const costoPlastificado = Math.max(areaM2*p.cantidad*PLASTIFICADO_COP_M2, PLASTIFICADO_PISO_COP);
   const costoColaminadoManoObra = areaM2*p.cantidad*COLAMINADO_COP_M2;
 
-  // Backing del colaminado (Conde 2026-07-24): <70 fichas -> Cartón 1.5mm (tarifa plana);
-  // >=70 fichas -> Maule C22, cubicado igual que el sustrato impreso.
-  let costoBackingMaterial, detalleBacking = null, backingEtiqueta;
-  if(troquel.fichas<UMBRAL_FICHAS_LINEA_MACRO){
-    costoBackingMaterial = CARTON_1_5MM_COP*p.cantidad;
-    backingEtiqueta = "Cartón 1.5mm";
-  } else {
-    const [backNombre, backGramajeStr] = SUSTRATO_BACKING_FICHAS_MAYOR.split("__");
-    detalleBacking = costoMaterialPliegos(anchoMontaje, altoMontaje, backNombre, parseFloat(backGramajeStr), piezasFisicas, 0);
-    costoBackingMaterial = detalleBacking.costoTotal;
-    backingEtiqueta = "Maule C22";
-  }
+  // Backing del colaminado (Conde 2026-07-24): <70 fichas -> Cartón 1.5mm; >=70 fichas -> Maule C22.
+  // Ambos se cubican por pliego según el tamaño real del troquel (antes el cartón usaba una
+  // tarifa plana de Cuadernos que salía carísima para piezas chicas — corregido).
+  const sustratoBackingKey = troquel.fichas<UMBRAL_FICHAS_LINEA_MACRO ? "Cartón 1.5mm__400" : SUSTRATO_BACKING_FICHAS_MAYOR;
+  const [backNombre, backGramajeStr] = sustratoBackingKey.split("__");
+  const detalleBacking = costoMaterialPliegos(anchoMontaje, altoMontaje, backNombre, parseFloat(backGramajeStr), piezasFisicas, 0);
+  const costoBackingMaterial = detalleBacking.costoTotal;
+  const backingEtiqueta = troquel.fichas<UMBRAL_FICHAS_LINEA_MACRO ? "Cartón 1.5mm" : "Maule C22";
   const costoColaminado = costoColaminadoManoObra + costoBackingMaterial;
 
   let costoBaseMarco = 0, detalleBaseMarco = null;
@@ -449,7 +471,8 @@ function cotizarRompecabezas(p){
 
   const costoDespiece = troquel.despiece*p.cantidad;
   const costoBolsa = troquel.bolsa*p.cantidad;
-  const costoTroqueladoServicio = Math.max(TROQUELADO_ROMPECABEZAS_MINIMO_COP, Math.ceil(p.cantidad/1000)*TROQUELADO_ROMPECABEZAS_COP_MILLAR);
+  const tarifaMillarTroquelado = troquel.fichas<TROQUELADO_FICHAS_UMBRAL_CHICO ? TROQUELADO_ROMPECABEZAS_COP_MILLAR_CHICO : TROQUELADO_ROMPECABEZAS_COP_MILLAR;
+  const costoTroqueladoServicio = Math.max(TROQUELADO_ROMPECABEZAS_MINIMO_COP, Math.ceil(p.cantidad/1000)*tarifaMillarTroquelado);
 
   let costoUsoTroquel;
   if(p.troquelEsNuevo){ costoUsoTroquel = p.costoTroquelNuevoManual||0; }
@@ -557,7 +580,7 @@ function calcular(){
     }
 
     const viaImpresionTxt = r.detalleImpresion.via==="digital"
-      ? `Digital — ${r.detalleImpresion.nClics} clics, descuento ${(r.detalleImpresion.descuentoPct*100).toFixed(0)}%`
+      ? `Digital (pliego ${r.detalleImpresion.clase}, ${r.detalleImpresion.piezasPorClic} rompecabezas por clic) — ${r.detalleImpresion.nClics} clics, descuento ${(r.detalleImpresion.descuentoPct*100).toFixed(0)}%`
       : `Offset (${r.detalleImpresion.fraccion}) — ${r.detalleImpresion.nPlanchas} plancha(s), ${r.detalleImpresion.nMillares} millar(es)`;
 
     let filas = avisoMinimo + `<table class="resultado-tabla">`;
