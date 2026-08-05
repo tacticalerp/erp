@@ -189,6 +189,14 @@
                 <p style="color: #718096; margin-top: 6px; font-size: 0.95rem;">Seleccione el módulo en el que desea trabajar hoy:</p>
             </div>
 
+            <div style="margin: 15px 20px 0 20px; background: var(--light-gray); border: 1px solid #cbd5e0; border-radius: 6px; padding: 12px 15px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <span style="font-weight:bold; color:var(--dark);">💾 Copia de Seguridad (este modelo es beta — la información vive solo en este navegador):</span>
+                <button class="btn-action" onclick="contExportarRespaldo()">⬇️ Exportar todo (backup)</button>
+                <button class="btn-action" onclick="document.getElementById('input-respaldo').click()">⬆️ Importar copia</button>
+                <input type="file" id="input-respaldo" accept="application/json" style="display:none;" onchange="contImportarRespaldoArchivo(event)">
+                <span id="respaldo-nota" style="font-size:0.82rem; color:#718096;"></span>
+            </div>
+
             <div class="hub-grid">
                 <!-- MÓDULO 1: TAREAS -->
                 <div class="hub-card active-card" onclick="showView('tareas')">
@@ -246,6 +254,18 @@
                             <span class="badge badge-active">Activo</span>
                         </div>
                         <p class="card-desc">Indicadores cruzados de Ventas, Producción, Calidad y Tareas — a partir de los datos que ya se capturan en los demás módulos.</p>
+                    </div>
+                    <div class="card-footer">Ingresar al Módulo ➔</div>
+                </div>
+
+                <!-- MÓDULO 6: CONTABILIDAD -->
+                <div class="hub-card active-card" onclick="showView('contabilidad')">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title">💵 Contabilidad</h3>
+                            <span class="badge badge-active">Activo</span>
+                        </div>
+                        <p class="card-desc">Cuenta de Cobro, Comprobantes de Ingreso/Egreso, Cartera CxC/CxP, Gastos Fijos y Tablero Financiero en tiempo real (Punto de Equilibrio, mejor cliente, producto más rentable). Se alimenta automáticamente del CRM y el Cotizador.</p>
                     </div>
                     <div class="card-footer">Ingresar al Módulo ➔</div>
                 </div>
@@ -470,6 +490,15 @@
                                     <option value="vip">VIP (Top 20%)</option>
                                 </select>
                             </div>
+                            <div class="form-group">
+                                <label>Tipo de Cliente (para Contabilidad):</label>
+                                <select id="cli-tipo">
+                                    <option value="">-- Sin definir --</option>
+                                    <option value="corporativo">Corporativo (Factura electrónica)</option>
+                                    <option value="personalizado">Personalizado (Cuenta de Cobro)</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label>Identificación (NIT / CC):</label><input type="text" id="cli-identificacion" placeholder="Ej: 900.123.456-7"></div>
                             <div class="form-group" style="display:flex; align-items:flex-end;">
                                 <button class="btn-submit" onclick="guardarCliente()">+ Registrar Cliente B2B</button>
                             </div>
@@ -739,6 +768,177 @@
                 </div>
             </div>
         </div>
+
+        <!-- VISTA 6: CONTABILIDAD -->
+        <div id="view-contabilidad" class="app-view">
+            <div style="padding:10px;">
+
+                <div class="accordion-item">
+                    <div class="accordion-header header-special" id="head-cont-tablero" onclick="toggleSection('cont-tablero')">
+                        <span>📊 Tablero Financiero (Tiempo Real)</span><span class="arrow" id="arrow-cont-tablero">▼</span>
+                    </div>
+                    <div id="cont-tablero" class="accordion-content active">
+                        <div class="dash-grid" id="cont-tablero-kpis"></div>
+                        <div class="card-grid" style="margin-top:15px;">
+                            <div class="data-card">
+                                <div class="card-title">🏆 Mejor Cliente (por cobros reales)</div>
+                                <div id="cont-mejor-cliente" style="font-size:0.9rem; line-height:1.6; margin-top:8px;"></div>
+                            </div>
+                            <div class="data-card">
+                                <div class="card-title">📈 Producto/Línea más rentable (margen)</div>
+                                <div id="cont-producto-rentable" style="font-size:0.9rem; line-height:1.6; margin-top:8px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header" id="head-cont-cartera" onclick="toggleSection('cont-cartera')">
+                        <span>📇 Cartera — CxC / CxP</span><span class="arrow" id="arrow-cont-cartera">►</span>
+                    </div>
+                    <div id="cont-cartera" class="accordion-content">
+                        <h4 style="color:var(--dark); border-bottom:2px solid #cbd5e0; padding-bottom:5px;">Cuentas por Cobrar (Clientes)</h4>
+                        <div class="table-responsive"><table>
+                            <thead><tr><th>N°</th><th>Cliente</th><th>Tipo</th><th>Saldo Pendiente</th><th>Vencimiento</th><th>Estado</th></tr></thead>
+                            <tbody id="cont-tabla-cxc"></tbody>
+                        </table></div>
+                        <h4 style="color:var(--dark); border-bottom:2px solid #cbd5e0; padding-bottom:5px; margin-top:20px;">Cuentas por Pagar (Proveedores)</h4>
+                        <div class="table-responsive"><table>
+                            <thead><tr><th>N°</th><th>Proveedor</th><th>Categoría</th><th>Monto</th><th>Vencimiento</th><th>Estado</th></tr></thead>
+                            <tbody id="cont-tabla-cxp"></tbody>
+                        </table></div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header" id="head-cont-docventa" onclick="toggleSection('cont-docventa')">
+                        <span>🧾 Documentos de Venta (Factura ref. / Cuenta de Cobro)</span><span class="arrow" id="arrow-cont-docventa">►</span>
+                    </div>
+                    <div id="cont-docventa" class="accordion-content">
+                        <p style="font-size:0.85rem; color:#718096; margin-top:0;">Los negocios marcados "Ganado" en el CRM generan este documento automáticamente. Use este formulario solo para ventas que no vienen de una cotización/oportunidad.</p>
+                        <div class="form-grid">
+                            <div class="form-group"><label>Cliente:</label><select id="doc-cliente" onchange="contAutocompletarTipoDoc()"></select></div>
+                            <div class="form-group">
+                                <label>Tipo de Documento:</label>
+                                <select id="doc-tipoDoc">
+                                    <option value="cuenta_cobro">Cuenta de Cobro (se imprime desde el ERP)</option>
+                                    <option value="factura">Factura (ya facturada por fuera — DIAN)</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="flex-basis:100%;"><label>Descripción:</label><input type="text" id="doc-desc" placeholder="Ej: 500 Agendas Ejecutivas tapa dura"></div>
+                            <div class="form-group"><label>Valor Bruto (sin IVA):</label><input type="number" id="doc-valorBruto" value="0"></div>
+                            <div class="form-group"><label>Valor Envío (no es ingreso, pass-through transportadora):</label><input type="number" id="doc-valorEnvio" value="0"></div>
+                            <div class="form-group">
+                                <label>Condición de Pago:</label>
+                                <select id="doc-condicionPago">
+                                    <option value="contado">Contado</option>
+                                    <option value="credito30">Crédito 30 días</option>
+                                    <option value="anticipo50">Anticipo 50%</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="display:flex; align-items:flex-end;">
+                                <div class="checkbox-row"><input type="checkbox" id="doc-aplicaReteiva"><label for="doc-aplicaReteiva" style="font-weight:normal; margin:0;">Cliente aplica RETEIVA 15% (agente retenedor)</label></div>
+                            </div>
+                            <div class="form-group"><label>Vendedor:</label><select id="doc-vendedor"></select></div>
+                            <div class="form-group" style="display:flex; align-items:flex-end;">
+                                <button class="btn-submit" onclick="contGuardarDocVenta()">+ Registrar Documento de Venta</button>
+                            </div>
+                        </div>
+                        <div class="card-grid" id="lista-docventa"></div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header" id="head-cont-ingreso" onclick="toggleSection('cont-ingreso')">
+                        <span>💰 Comprobante de Ingreso</span><span class="arrow" id="arrow-cont-ingreso">►</span>
+                    </div>
+                    <div id="cont-ingreso" class="accordion-content">
+                        <div class="form-grid">
+                            <div class="form-group" style="flex-basis:100%;"><label>Documento de Venta a abonar:</label><select id="ing-docventa"></select></div>
+                            <div class="form-group"><label>Valor Recibido:</label><input type="number" id="ing-valor" value="0"></div>
+                            <div class="form-group">
+                                <label>Medio de Pago:</label>
+                                <select id="ing-medioPago"><option value="banco">Banco / Transferencia</option><option value="efectivo">Efectivo</option></select>
+                            </div>
+                            <div class="form-group"><label>Concepto:</label><input type="text" id="ing-concepto" placeholder="Ej: Abono factura CC-0004"></div>
+                            <div class="form-group"><label>Referencia del soporte:</label><input type="text" id="ing-referencia" placeholder="Ej: Transferencia Bancolombia #123456"></div>
+                            <div class="form-group" style="display:flex; align-items:flex-end;">
+                                <button class="btn-submit" onclick="contGuardarIngreso()">+ Registrar Comprobante de Ingreso</button>
+                            </div>
+                        </div>
+                        <div class="card-grid" id="lista-ingresos"></div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header" id="head-cont-cxp" onclick="toggleSection('cont-cxp')">
+                        <span>📥 Cuenta por Pagar (Factura de Proveedor)</span><span class="arrow" id="arrow-cont-cxp">►</span>
+                    </div>
+                    <div id="cont-cxp" class="accordion-content">
+                        <div class="form-grid">
+                            <div class="form-group"><label>Proveedor:</label><input type="text" id="cxp-proveedor" placeholder="Nombre del proveedor"></div>
+                            <div class="form-group"><label>N° Factura del Proveedor:</label><input type="text" id="cxp-numFactura"></div>
+                            <div class="form-group">
+                                <label>Categoría:</label>
+                                <select id="cxp-categoria" onchange="contLlenarSubcategorias()">
+                                    <option value="fijo">Gasto Fijo</option>
+                                    <option value="variable">Gasto Variable</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label>Subcategoría:</label><select id="cxp-subcategoria"></select></div>
+                            <div class="form-group"><label>Monto:</label><input type="number" id="cxp-monto" value="0"></div>
+                            <div class="form-group"><label>Fecha de Vencimiento:</label><input type="text" id="cxp-fechaVenc" placeholder="AAAA-MM-DD"></div>
+                            <div class="form-group" style="display:flex; align-items:flex-end;">
+                                <button class="btn-submit" onclick="contGuardarCxp()">+ Registrar Cuenta por Pagar</button>
+                            </div>
+                        </div>
+                        <div class="card-grid" id="lista-cxp"></div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header" id="head-cont-egreso" onclick="toggleSection('cont-egreso')">
+                        <span>💸 Comprobante de Egreso</span><span class="arrow" id="arrow-cont-egreso">►</span>
+                    </div>
+                    <div id="cont-egreso" class="accordion-content">
+                        <div class="form-grid">
+                            <div class="form-group" style="flex-basis:100%;"><label>Cuenta por Pagar a pagar (opcional):</label><select id="egr-cxp" onchange="contAutocompletarEgresoDesdeCxp()"></select></div>
+                            <div class="form-group"><label>Beneficiario:</label><input type="text" id="egr-beneficiario"></div>
+                            <div class="form-group"><label>Concepto:</label><input type="text" id="egr-concepto"></div>
+                            <div class="form-group"><label>Monto:</label><input type="number" id="egr-monto" value="0"></div>
+                            <div class="form-group">
+                                <label>Categoría:</label>
+                                <select id="egr-categoria"><option value="fijo">Gasto Fijo</option><option value="variable">Gasto Variable</option></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Medio de Pago:</label>
+                                <select id="egr-medioPago"><option value="banco">Banco / Transferencia</option><option value="efectivo">Efectivo</option></select>
+                            </div>
+                            <div class="form-group"><label>Referencia del soporte:</label><input type="text" id="egr-referencia" placeholder="Ej: Copia factura proveedor + comprobante banco"></div>
+                            <div class="form-group" style="display:flex; align-items:flex-end;">
+                                <button class="btn-submit" onclick="contGuardarEgreso()">+ Registrar Comprobante de Egreso</button>
+                            </div>
+                        </div>
+                        <div class="card-grid" id="lista-egresos"></div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header" id="head-cont-gastosfijos" onclick="toggleSection('cont-gastosfijos')">
+                        <span>🏠 Gastos Fijos (meta mensual para Punto de Equilibrio)</span><span class="arrow" id="arrow-cont-gastosfijos">►</span>
+                    </div>
+                    <div id="cont-gastosfijos" class="accordion-content">
+                        <div class="table-responsive"><table>
+                            <thead><tr><th>Concepto</th><th>Monto Mensual</th><th></th></tr></thead>
+                            <tbody id="cont-tabla-gastosfijos"></tbody>
+                        </table></div>
+                        <button class="btn-add-item" onclick="contAgregarGastoFijo()">+ Agregar partida de gasto fijo</button>
+                        <div class="metric-total" id="cont-total-gastosfijos" style="margin-top:10px;"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
     </div>
 
     <!-- CONTENEDOR OCULTO PARA IMPRESIÓN (PDF / ORDEN DE PRODUCCIÓN) -->
@@ -746,7 +946,77 @@
 
     <script>
         // NAVEGACIÓN SPA DEL HUB
+        let contAutenticado = false;
+        const CONT_PASSWORD = 'JHVHa10.@';
+        function contVerificarAcceso(){
+            if(contAutenticado) return true;
+            const intento = prompt('🔒 Módulo Contabilidad protegido.\nIngrese la contraseña de acceso:');
+            if(intento === CONT_PASSWORD){ contAutenticado = true; return true; }
+            if(intento !== null) alert('Contraseña incorrecta.');
+            return false;
+        }
+
+        let modAutenticado = false;
+        const MOD_PASSWORD = '1984';
+        const MOD_VISTAS_PROTEGIDAS = ['reportes', 'cotizador', 'crm'];
+        function modVerificarAcceso(){
+            if(modAutenticado) return true;
+            const intento = prompt('🔒 Módulo protegido.\nIngrese la clave de acceso:');
+            if(intento === MOD_PASSWORD){ modAutenticado = true; return true; }
+            if(intento !== null) alert('Clave incorrecta.');
+            return false;
+        }
+
+        /* ---- COPIA DE SEGURIDAD (export/import de TODA la información) ----
+           Todo el ERP vive en localStorage, que es local a este navegador/máquina y NO viaja
+           solo si esto se despliega como web real más adelante. Este backup en JSON es el
+           puente: sirve como respaldo manual hoy, y como fuente para migrar los datos cuando
+           haya un backend real. */
+        const TACTICAL_BACKUP_KEYS = [
+            'tactical_date', 'tactical_db_historico', 'tactical_active_tasks',
+            'tactical_db_reprocesos_v4',
+            'tactical_crm_clientes_v2', 'tactical_crm_opps_v2', 'tactical_crm_historial_v2',
+            'tactical_ot_counter', 'tactical_cotizaciones_v1',
+            'tactical_docventa_v1', 'tactical_ingresos_v1', 'tactical_cxp_v1', 'tactical_egresos_v1',
+            'tactical_gastos_fijos_config_v1',
+            'tactical_fv_counter', 'tactical_cc_counter', 'tactical_ingreso_counter', 'tactical_cxp_counter', 'tactical_egreso_counter',
+        ];
+
+        function contExportarRespaldo(){
+            const data = {};
+            TACTICAL_BACKUP_KEYS.forEach(k => { const v = localStorage.getItem(k); if(v!==null) data[k] = v; });
+            const respaldo = { version: 1, exportadoEn: new Date().toISOString(), data };
+            const blob = new Blob([JSON.stringify(respaldo, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const fecha = new Date().toISOString().slice(0,10);
+            a.href = url; a.download = `tactical-erp-backup-${fecha}.json`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            const nota = document.getElementById('respaldo-nota');
+            if(nota) nota.innerText = `✓ Backup descargado (${fecha})`;
+        }
+
+        function contImportarRespaldoArchivo(event){
+            const file = event.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e){
+                let respaldo;
+                try { respaldo = JSON.parse(e.target.result); } catch(err){ alert('El archivo no es un backup JSON válido.'); return; }
+                if(!respaldo.data){ alert('El archivo no tiene el formato esperado de backup del ERP.'); return; }
+                const ok = confirm(`Esto reemplazará TODA la información actual del ERP en este navegador por la del backup (exportado el ${respaldo.exportadoEn||'—'}). ¿Continuar?`);
+                if(!ok) { event.target.value = ''; return; }
+                Object.keys(respaldo.data).forEach(k => { localStorage.setItem(k, respaldo.data[k]); });
+                alert('Backup restaurado. La página se va a recargar.');
+                location.reload();
+            };
+            reader.readAsText(file);
+        }
+
         function showView(viewId) {
+            if(viewId === 'contabilidad' && !contVerificarAcceso()) return;
+            if(MOD_VISTAS_PROTEGIDAS.includes(viewId) && !modVerificarAcceso()) return;
             document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active-view'));
             document.getElementById('view-' + viewId).classList.add('active-view');
 
@@ -787,6 +1057,11 @@
                 mainTitle.innerText = "REPORTES";
                 subTitle.innerText = "Indicadores de Ventas, Producción, Calidad y Tareas (2026)";
                 if (typeof renderReportes === 'function') renderReportes();
+            } else if (viewId === 'contabilidad') {
+                navContainer.style.display = 'block';
+                mainTitle.innerText = "CONTABILIDAD";
+                subTitle.innerText = "Cartera, Comprobantes y Tablero Financiero en Tiempo Real (2026)";
+                if (typeof renderContabilidad === 'function') renderContabilidad();
             }
         }
 
@@ -1327,17 +1602,20 @@
             const wp = document.getElementById('cli-wp').value.trim();
             const correo = document.getElementById('cli-correo').value.trim();
             const clase = document.getElementById('cli-clase').value;
+            const tipo = document.getElementById('cli-tipo').value;
+            const identificacion = document.getElementById('cli-identificacion').value.trim();
 
             if(!empresa && !nombre) { alert("Debe ingresar al menos la Empresa o el Contacto."); return; }
 
             db_clientes.push({
                 id: Date.now().toString(), empresa: empresa || 'Cliente Particular', nombre: nombre || 'Sin contacto directo',
-                wp: wp || '', correo: correo || '', clase, ltv: 0
+                wp: wp || '', correo: correo || '', clase, ltv: 0, tipo, identificacion
             });
             localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
 
             document.getElementById('cli-empresa').value = ''; document.getElementById('cli-nombre').value = '';
             document.getElementById('cli-wp').value = ''; document.getElementById('cli-correo').value = '';
+            document.getElementById('cli-tipo').value = ''; document.getElementById('cli-identificacion').value = '';
             renderClientes(); llenarSelectClientes();
         }
 
@@ -1358,6 +1636,7 @@
                 let totalCotizaciones = oppsCliente.length + cierresCliente.length;
                 let ganadasCount = cierresCliente.filter(h => h.estado === 'ganado').length;
 
+                const tipoLbl = c.tipo === 'corporativo' ? '🏢 Corporativo' : (c.tipo === 'personalizado' ? '🎨 Personalizado' : '');
                 container.innerHTML += `
                     <div class="data-card" style="border-left-color: ${borderCls};">
                         <span class="tag ${tags_clase[c.clase]}" style="float:right;">${c.clase.toUpperCase()}</span>
@@ -1365,7 +1644,8 @@
                         <div class="card-subtitle">👤 Contacto: <strong>${c.nombre}</strong></div>
                         <div style="font-size:0.85rem; color:#4a5568; line-height:1.4;">
                             📱 WA: <strong>${c.wp || 'No registrado'}</strong><br>
-                            ✉️ Email: <strong>${c.correo || 'No registrado'}</strong>
+                            ✉️ Email: <strong>${c.correo || 'No registrado'}</strong><br>
+                            ${tipoLbl ? tipoLbl + '<br>' : ''}${c.identificacion ? '🆔 ' + c.identificacion + '<br>' : ''}
                         </div>
                         <div class="client-stats-box">
                             📋 Total Cotizaciones/Solicitudes: <strong>${totalCotizaciones}</strong><br>
@@ -1445,6 +1725,7 @@
                     if(cli.clase === 'nuevo' && cli.ltv > 0) cli.clase = 'recurrente';
                     localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
                 }
+                if(typeof contCrearDocVentaDesdeOpp === 'function') contCrearDocVentaDesdeOpp(opp, cli);
             }
 
             db_historial_cierres.push({ ...opp, estado, motivo, fechaCierre: new Date().toISOString() });
@@ -2315,7 +2596,7 @@
           // Buscar o crear cliente en el CRM
           let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
           if(!cli){
-            cli = { id: Date.now().toString(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0 };
+            cli = { id: Date.now().toString(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo: '', identificacion: '' };
             db_clientes.push(cli);
             localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
           } else {
@@ -2534,6 +2815,445 @@
             <div class="kpi-box" style="border-color:var(--externo);"><div class="kpi-label">Tareas Bloqueadas (Histórico)</div><div class="kpi-value" style="color:var(--externo);">${bloqueadasExternas}</div></div>
             <div class="kpi-box"><div class="kpi-label">Tareas Cerradas (Histórico)</div><div class="kpi-value">${db_historico.length}</div></div>
           `;
+        }
+
+        // ==========================================
+        // MÓDULO 6: CONTABILIDAD
+        // ==========================================
+        let db_docventa = JSON.parse(localStorage.getItem('tactical_docventa_v1')) || [];
+        let db_ingresos = JSON.parse(localStorage.getItem('tactical_ingresos_v1')) || [];
+        let db_cxp = JSON.parse(localStorage.getItem('tactical_cxp_v1')) || [];
+        let db_egresos = JSON.parse(localStorage.getItem('tactical_egresos_v1')) || [];
+        let db_gastosFijos = JSON.parse(localStorage.getItem('tactical_gastos_fijos_config_v1')) || [
+            {concepto:'Arriendo', monto:2350000}, {concepto:'Luz', monto:300000}, {concepto:'Agua', monto:80000},
+            {concepto:'Celulares', monto:100000}, {concepto:'Internet', monto:90000}, {concepto:'Google Workspace', monto:250000},
+            {concepto:'Contadora', monto:400000}, {concepto:'Seguridad', monto:380000}, {concepto:'Seguro Camioneta', monto:270000},
+            {concepto:'Gerencia', monto:4000000}, {concepto:'Comercial/Ventas', monto:3000000}, {concepto:'MOD (3 operarios)', monto:5850000},
+        ];
+
+        const CONT_SUBCATEGORIAS = {
+            fijo: ['Arriendo','Nómina y prestaciones sociales','Servicios públicos (celular/internet)','Seguros/pólizas','Honorarios','Impuestos y licencias','Hosting y web','Amortizaciones y depreciación'],
+            variable: ['Insumos y servicios (proveedores)','Importados','Servicios públicos de producción (luz)','Mantenimiento correctivo','IVA/Retefuente','Comisiones pasarela de pago','Publicidad digital','Producción y operación (mano de obra temporal)','Logística y distribución'],
+        };
+
+        function contGuardar(clave, arr){ localStorage.setItem(clave, JSON.stringify(arr)); }
+        function contSiguienteNumero(counterKey, prefijo){
+            let n = parseInt(localStorage.getItem(counterKey)||'0') + 1;
+            localStorage.setItem(counterKey, String(n));
+            return prefijo + String(n).padStart(4,'0');
+        }
+        function contHoy(){ return new Date().toISOString().slice(0,10); }
+        function contSumarDias(fechaISO, dias){ const d = new Date(fechaISO); d.setDate(d.getDate()+dias); return d.toISOString().slice(0,10); }
+
+        /* ---- CRUCE AUTOMÁTICO: negocio Ganado en CRM → Documento de Venta ---- */
+        function contCrearDocVentaDesdeOpp(opp, cli){
+            if(!cli) return;
+            const cot = db_cotizaciones.find(c => c.idOpp === opp.id);
+            const tipoDoc = cli.tipo === 'corporativo' ? 'factura' : 'cuenta_cobro';
+            let valorBruto, iva;
+            if(cot){
+                valorBruto = cot.resultado.precioVentaTotal;
+                iva = cot.resultado.ivaTotal;
+            } else {
+                valorBruto = Math.round(opp.monto / 1.19);
+                iva = opp.monto - valorBruto;
+            }
+            const aplicaReteiva = tipoDoc === 'factura';
+            const reteiva = aplicaReteiva ? Math.round(iva*0.15) : 0;
+            const totalDocumento = valorBruto + iva - reteiva;
+            const condicionPago = 'credito30';
+            const fechaVencimiento = contSumarDias(contHoy(), 30);
+            const prefijo = tipoDoc === 'factura' ? 'FV-' : 'CC-';
+            const counterKey = tipoDoc === 'factura' ? 'tactical_fv_counter' : 'tactical_cc_counter';
+            const doc = {
+                id: Date.now().toString(), numero: contSiguienteNumero(counterKey, prefijo), tipoDoc, fecha: contHoy(),
+                idCli: cli.id, idCot: cot ? cot.id : null, idOpp: opp.id, descripcion: opp.desc,
+                valorBruto, iva, reteiva, valorEnvio: 0, totalDocumento, totalCobrar: totalDocumento,
+                condicionPago, fechaVencimiento, saldoPendiente: totalDocumento,
+                estado: 'pendiente', vendedor: cot ? cot.vendedor : '',
+            };
+            db_docventa.push(doc);
+            contGuardar('tactical_docventa_v1', db_docventa);
+        }
+
+        /* ---- SELECTS COMPARTIDOS ---- */
+        function contLlenarSelectClienteDoc(){
+            const sel = document.getElementById('doc-cliente');
+            if(!sel) return;
+            const actual = sel.value;
+            sel.innerHTML = '<option value="">-- Seleccione un Cliente --</option>';
+            db_clientes.forEach(c => { sel.innerHTML += `<option value="${c.id}">${c.empresa} (${c.nombre})</option>`; });
+            if(actual) sel.value = actual;
+        }
+        function contAutocompletarTipoDoc(){
+            const cli = db_clientes.find(c => c.id === document.getElementById('doc-cliente').value);
+            if(cli && cli.tipo) document.getElementById('doc-tipoDoc').value = cli.tipo === 'corporativo' ? 'factura' : 'cuenta_cobro';
+        }
+        function contLlenarSelectVendedorDoc(){
+            const sel = document.getElementById('doc-vendedor');
+            if(!sel || sel.options.length) return;
+            Object.keys(VENDEDORES).forEach(v => { sel.innerHTML += `<option value="${v}">${v}</option>`; });
+        }
+        function contLlenarSubcategorias(){
+            const cat = document.getElementById('cxp-categoria').value;
+            const sel = document.getElementById('cxp-subcategoria');
+            sel.innerHTML = CONT_SUBCATEGORIAS[cat].map(s => `<option value="${s}">${s}</option>`).join('');
+        }
+
+        /* ---- DOCUMENTOS DE VENTA ---- */
+        function contGuardarDocVenta(){
+            const idCli = document.getElementById('doc-cliente').value;
+            const cli = db_clientes.find(c => c.id === idCli);
+            const tipoDoc = document.getElementById('doc-tipoDoc').value;
+            const descripcion = document.getElementById('doc-desc').value.trim();
+            const valorBruto = parseFloat(document.getElementById('doc-valorBruto').value) || 0;
+            const valorEnvio = parseFloat(document.getElementById('doc-valorEnvio').value) || 0;
+            const condicionPago = document.getElementById('doc-condicionPago').value;
+            const aplicaReteiva = document.getElementById('doc-aplicaReteiva').checked;
+            const vendedor = document.getElementById('doc-vendedor').value;
+
+            if(!cli || !descripcion || valorBruto<=0){ alert("Debe seleccionar cliente, descripción y un valor bruto mayor a 0."); return; }
+
+            const iva = Math.round(valorBruto*0.19);
+            const reteiva = aplicaReteiva ? Math.round(iva*0.15) : 0;
+            const totalDocumento = valorBruto + iva - reteiva;
+            const totalCobrar = totalDocumento + valorEnvio;
+            const fechaVencimiento = condicionPago === 'credito30' ? contSumarDias(contHoy(),30) : (condicionPago === 'contado' ? contHoy() : '');
+
+            db_docventa.push({
+                id: Date.now().toString(), numero: contSiguienteNumero(tipoDoc==='factura'?'tactical_fv_counter':'tactical_cc_counter', tipoDoc==='factura'?'FV-':'CC-'),
+                tipoDoc, fecha: contHoy(), idCli, idCot: null, idOpp: null, descripcion,
+                valorBruto, iva, reteiva, valorEnvio, totalDocumento, totalCobrar,
+                condicionPago, fechaVencimiento, saldoPendiente: totalCobrar, estado: 'pendiente', vendedor,
+            });
+            contGuardar('tactical_docventa_v1', db_docventa);
+
+            document.getElementById('doc-desc').value = ''; document.getElementById('doc-valorBruto').value = '0'; document.getElementById('doc-valorEnvio').value = '0';
+            renderContabilidad();
+        }
+
+        function contImprimirCuentaCobro(id){
+            const doc = db_docventa.find(d => d.id === id);
+            const cli = db_clientes.find(c => c.id === doc.idCli);
+            const vend = VENDEDORES[doc.vendedor] || {correo:'', telefono:''};
+            const fecha = new Date(doc.fecha).toLocaleDateString('es-CO', {year:'numeric', month:'long', day:'numeric'});
+            const html = `
+              <div class="doc-header">
+                <div><h1>${TACTICAL_INFO.nombre}</h1><div class="doc-tipo">CUENTA DE COBRO ${doc.numero}</div></div>
+                <div class="doc-empresa-datos">${TACTICAL_INFO.nit}<br>${TACTICAL_INFO.direccion}<br>${TACTICAL_INFO.web}<br>Vendedor: <strong>${doc.vendedor||'-'}</strong> — ${vend.telefono} — ${vend.correo}</div>
+              </div>
+              <table class="doc-table">
+                <tr><td style="width:20%;"><strong>Fecha</strong></td><td>${fecha}</td><td style="width:20%;"><strong>Cliente</strong></td><td>${cli?cli.empresa:'-'}</td></tr>
+                <tr><td><strong>Identificación</strong></td><td>${cli?(cli.identificacion||'-'):'-'}</td><td><strong>Condición de pago</strong></td><td>${doc.condicionPago}</td></tr>
+              </table>
+              <div class="doc-section-title">Descripción</div>
+              <table class="doc-table"><tr><th>Descripción</th><td>${doc.descripcion}</td></tr></table>
+              <div class="doc-section-title">Valor</div>
+              <table class="doc-table">
+                <tr><td>Valor Bruto</td><td style="text-align:right;">${cotFormatoCop(doc.valorBruto)}</td></tr>
+                <tr><td>IVA (19%)</td><td style="text-align:right;">${cotFormatoCop(doc.iva)}</td></tr>
+                ${doc.reteiva>0?`<tr><td>RETEIVA (15%)</td><td style="text-align:right;">-${cotFormatoCop(doc.reteiva)}</td></tr>`:''}
+                ${doc.valorEnvio>0?`<tr><td>Envío (no incluido en el ingreso)</td><td style="text-align:right;">${cotFormatoCop(doc.valorEnvio)}</td></tr>`:''}
+              </table>
+              <div class="doc-total-box">TOTAL A PAGAR: ${cotFormatoCop(doc.totalCobrar)} COP</div>
+              <div class="doc-section-title">Saldo</div>
+              <div class="doc-condiciones"><p>Saldo pendiente: <strong>${cotFormatoCop(doc.saldoPendiente)}</strong> — Estado: <strong>${doc.estado}</strong></p></div>
+            `;
+            document.getElementById('print-area').innerHTML = html;
+            document.getElementById('print-area').style.display = 'block';
+            setTimeout(() => { window.print(); document.getElementById('print-area').style.display = 'none'; }, 100);
+        }
+
+        function renderDocVenta(){
+            const container = document.getElementById('lista-docventa');
+            if(!container) return;
+            container.innerHTML = '';
+            [...db_docventa].reverse().forEach(doc => {
+                const cli = db_clientes.find(c => c.id === doc.idCli);
+                const badgeTipo = doc.tipoDoc==='factura' ? '🏢 Factura (DIAN externa)' : '🎨 Cuenta de Cobro';
+                container.innerHTML += `
+                    <div class="data-card">
+                        <span class="tag" style="float:right; background:${doc.estado==='pagada'?'var(--ganado)':(doc.estado==='abonado_parcial'?'var(--proceso)':'var(--pendiente)')}; color:${doc.estado==='pendiente'?'#744210':'white'};">${doc.estado.toUpperCase()}</span>
+                        <div class="card-title">${doc.numero} — ${cli?cli.empresa:'Cliente eliminado'}</div>
+                        <div class="card-subtitle">${badgeTipo} — ${doc.descripcion}</div>
+                        <div style="font-size:0.9rem; line-height:1.5;">
+                            Total a cobrar: <strong>${cotFormatoCop(doc.totalCobrar)}</strong><br>
+                            Saldo pendiente: <strong style="color:var(--primary);">${cotFormatoCop(doc.saldoPendiente)}</strong><br>
+                            Vencimiento: <strong>${doc.fechaVencimiento||'-'}</strong>
+                        </div>
+                        ${doc.tipoDoc==='cuenta_cobro'?`<div class="action-row"><button class="btn-stage btn-avanzar" style="flex:none; padding:8px 14px;" onclick="contImprimirCuentaCobro('${doc.id}')">🖨️ Imprimir</button></div>`:''}
+                    </div>`;
+            });
+            if(db_docventa.length===0) container.innerHTML = '<p style="color:#718096; grid-column: 1/-1;">No hay documentos de venta todavía.</p>';
+
+            const selIngreso = document.getElementById('ing-docventa');
+            if(selIngreso){
+                selIngreso.innerHTML = '<option value="">-- Seleccione un documento con saldo pendiente --</option>';
+                db_docventa.filter(d => d.saldoPendiente>0).forEach(d => {
+                    const cli = db_clientes.find(c => c.id === d.idCli);
+                    selIngreso.innerHTML += `<option value="${d.id}">${d.numero} — ${cli?cli.empresa:'-'} — saldo ${cotFormatoCop(d.saldoPendiente)}</option>`;
+                });
+            }
+        }
+
+        /* ---- COMPROBANTE DE INGRESO ---- */
+        function contGuardarIngreso(){
+            const idDocVenta = document.getElementById('ing-docventa').value;
+            const doc = db_docventa.find(d => d.id === idDocVenta);
+            const valor = parseFloat(document.getElementById('ing-valor').value) || 0;
+            const medioPago = document.getElementById('ing-medioPago').value;
+            const concepto = document.getElementById('ing-concepto').value.trim();
+            const referenciaSoporte = document.getElementById('ing-referencia').value.trim();
+
+            if(!doc || valor<=0){ alert("Debe seleccionar un documento de venta y un valor mayor a 0."); return; }
+
+            db_ingresos.push({
+                id: Date.now().toString(), numero: contSiguienteNumero('tactical_ingreso_counter','IN-'), fecha: contHoy(),
+                idCli: doc.idCli, idDocVenta, valor, concepto: concepto || `Abono a ${doc.numero}`, medioPago, referenciaSoporte,
+            });
+            contGuardar('tactical_ingresos_v1', db_ingresos);
+
+            doc.saldoPendiente = Math.max(0, doc.saldoPendiente - valor);
+            doc.estado = doc.saldoPendiente<=0 ? 'pagada' : (doc.saldoPendiente<doc.totalCobrar ? 'abonado_parcial' : 'pendiente');
+            contGuardar('tactical_docventa_v1', db_docventa);
+
+            document.getElementById('ing-valor').value = '0'; document.getElementById('ing-concepto').value = ''; document.getElementById('ing-referencia').value = '';
+            renderContabilidad();
+        }
+
+        function renderIngresos(){
+            const container = document.getElementById('lista-ingresos');
+            if(!container) return;
+            container.innerHTML = '';
+            [...db_ingresos].reverse().forEach(i => {
+                const cli = db_clientes.find(c => c.id === i.idCli);
+                container.innerHTML += `
+                    <div class="data-card">
+                        <div class="card-title">${i.numero} — ${cotFormatoCop(i.valor)}</div>
+                        <div class="card-subtitle">${cli?cli.empresa:'-'} — ${i.fecha}</div>
+                        <div style="font-size:0.85rem; color:#4a5568;">${i.concepto}<br>💳 ${i.medioPago==='banco'?'Banco':'Efectivo'} ${i.referenciaSoporte?'— '+i.referenciaSoporte:''}</div>
+                    </div>`;
+            });
+            if(db_ingresos.length===0) container.innerHTML = '<p style="color:#718096; grid-column: 1/-1;">No hay comprobantes de ingreso todavía.</p>';
+        }
+
+        /* ---- CUENTAS POR PAGAR (CxP) ---- */
+        function contGuardarCxp(){
+            const proveedor = document.getElementById('cxp-proveedor').value.trim();
+            const numeroFacturaProveedor = document.getElementById('cxp-numFactura').value.trim();
+            const categoria = document.getElementById('cxp-categoria').value;
+            const subcategoria = document.getElementById('cxp-subcategoria').value;
+            const monto = parseFloat(document.getElementById('cxp-monto').value) || 0;
+            const fechaVencimiento = document.getElementById('cxp-fechaVenc').value.trim();
+
+            if(!proveedor || monto<=0){ alert("Debe ingresar el proveedor y un monto mayor a 0."); return; }
+
+            db_cxp.push({
+                id: Date.now().toString(), numero: contSiguienteNumero('tactical_cxp_counter','CP-'), fecha: contHoy(),
+                proveedor, numeroFacturaProveedor, categoria, subcategoria, monto, fechaVencimiento, estado: 'pendiente', idEgreso: null,
+            });
+            contGuardar('tactical_cxp_v1', db_cxp);
+
+            document.getElementById('cxp-proveedor').value=''; document.getElementById('cxp-numFactura').value=''; document.getElementById('cxp-monto').value='0'; document.getElementById('cxp-fechaVenc').value='';
+            renderContabilidad();
+        }
+
+        function renderCxp(){
+            const container = document.getElementById('lista-cxp');
+            if(!container) return;
+            container.innerHTML = '';
+            [...db_cxp].reverse().forEach(c => {
+                container.innerHTML += `
+                    <div class="data-card">
+                        <span class="tag" style="float:right; background:${c.estado==='pagado'?'var(--ganado)':'var(--pendiente)'}; color:${c.estado==='pendiente'?'#744210':'white'};">${c.estado.toUpperCase()}</span>
+                        <div class="card-title">${c.numero} — ${c.proveedor}</div>
+                        <div class="card-subtitle">${c.categoria==='fijo'?'Gasto Fijo':'Gasto Variable'} — ${c.subcategoria||''}</div>
+                        <div style="font-size:0.9rem;">Monto: <strong>${cotFormatoCop(c.monto)}</strong> — Vence: <strong>${c.fechaVencimiento||'-'}</strong></div>
+                    </div>`;
+            });
+            if(db_cxp.length===0) container.innerHTML = '<p style="color:#718096; grid-column: 1/-1;">No hay cuentas por pagar registradas.</p>';
+
+            const selEgreso = document.getElementById('egr-cxp');
+            if(selEgreso){
+                selEgreso.innerHTML = '<option value="">-- Gasto directo (sin CxP) --</option>';
+                db_cxp.filter(c => c.estado==='pendiente').forEach(c => {
+                    selEgreso.innerHTML += `<option value="${c.id}">${c.numero} — ${c.proveedor} — ${cotFormatoCop(c.monto)}</option>`;
+                });
+            }
+        }
+
+        /* ---- COMPROBANTE DE EGRESO ---- */
+        function contAutocompletarEgresoDesdeCxp(){
+            const idCxp = document.getElementById('egr-cxp').value;
+            const cxp = db_cxp.find(c => c.id === idCxp);
+            if(cxp){
+                document.getElementById('egr-beneficiario').value = cxp.proveedor;
+                document.getElementById('egr-concepto').value = `Pago factura ${cxp.numeroFacturaProveedor||cxp.numero}`;
+                document.getElementById('egr-monto').value = cxp.monto;
+                document.getElementById('egr-categoria').value = cxp.categoria;
+            }
+        }
+
+        function contGuardarEgreso(){
+            const idCxp = document.getElementById('egr-cxp').value || null;
+            const beneficiario = document.getElementById('egr-beneficiario').value.trim();
+            const concepto = document.getElementById('egr-concepto').value.trim();
+            const monto = parseFloat(document.getElementById('egr-monto').value) || 0;
+            const categoria = document.getElementById('egr-categoria').value;
+            const medioPago = document.getElementById('egr-medioPago').value;
+            const referenciaSoporte = document.getElementById('egr-referencia').value.trim();
+
+            if(!beneficiario || monto<=0){ alert("Debe ingresar el beneficiario y un monto mayor a 0."); return; }
+
+            const nuevoEgreso = {
+                id: Date.now().toString(), numero: contSiguienteNumero('tactical_egreso_counter','EG-'), fecha: contHoy(),
+                beneficiario, concepto, monto, categoria, medioPago, referenciaSoporte, idCxp,
+            };
+            db_egresos.push(nuevoEgreso);
+            contGuardar('tactical_egresos_v1', db_egresos);
+
+            if(idCxp){
+                const cxp = db_cxp.find(c => c.id === idCxp);
+                if(cxp){ cxp.estado = 'pagado'; cxp.idEgreso = nuevoEgreso.id; contGuardar('tactical_cxp_v1', db_cxp); }
+            }
+
+            document.getElementById('egr-beneficiario').value=''; document.getElementById('egr-concepto').value=''; document.getElementById('egr-monto').value='0'; document.getElementById('egr-referencia').value='';
+            document.getElementById('egr-cxp').value='';
+            renderContabilidad();
+        }
+
+        function renderEgresos(){
+            const container = document.getElementById('lista-egresos');
+            if(!container) return;
+            container.innerHTML = '';
+            [...db_egresos].reverse().forEach(e => {
+                container.innerHTML += `
+                    <div class="data-card">
+                        <div class="card-title">${e.numero} — ${cotFormatoCop(e.monto)}</div>
+                        <div class="card-subtitle">${e.beneficiario} — ${e.categoria==='fijo'?'Fijo':'Variable'} — ${e.fecha}</div>
+                        <div style="font-size:0.85rem; color:#4a5568;">${e.concepto}<br>💳 ${e.medioPago==='banco'?'Banco':'Efectivo'} ${e.referenciaSoporte?'— '+e.referenciaSoporte:''}</div>
+                    </div>`;
+            });
+            if(db_egresos.length===0) container.innerHTML = '<p style="color:#718096; grid-column: 1/-1;">No hay comprobantes de egreso todavía.</p>';
+        }
+
+        /* ---- CARTERA CxC / CxP (grillas) ---- */
+        function renderCartera(){
+            const hoy = contHoy();
+            const tbodyCxc = document.getElementById('cont-tabla-cxc');
+            if(tbodyCxc){
+                let filas = '';
+                db_docventa.filter(d => d.saldoPendiente>0).forEach(d => {
+                    const cli = db_clientes.find(c => c.id === d.idCli);
+                    const vencida = d.fechaVencimiento && d.fechaVencimiento < hoy;
+                    filas += `<tr><td>${d.numero}</td><td>${cli?cli.empresa:'-'}</td><td>${d.tipoDoc==='factura'?'Factura':'Cta. Cobro'}</td><td>${cotFormatoCop(d.saldoPendiente)}</td><td>${d.fechaVencimiento||'-'}</td><td style="color:${vencida?'var(--peligro)':'inherit'}; font-weight:${vencida?'bold':'normal'};">${vencida?'⚠️ Vencida':d.estado}</td></tr>`;
+                });
+                tbodyCxc.innerHTML = filas || '<tr><td colspan="6" style="color:#718096;">Sin cartera por cobrar pendiente.</td></tr>';
+            }
+            const tbodyCxp = document.getElementById('cont-tabla-cxp');
+            if(tbodyCxp){
+                let filas = '';
+                db_cxp.filter(c => c.estado==='pendiente').forEach(c => {
+                    const vencida = c.fechaVencimiento && c.fechaVencimiento < hoy;
+                    filas += `<tr><td>${c.numero}</td><td>${c.proveedor}</td><td>${c.categoria==='fijo'?'Fijo':'Variable'}</td><td>${cotFormatoCop(c.monto)}</td><td>${c.fechaVencimiento||'-'}</td><td style="color:${vencida?'var(--peligro)':'inherit'}; font-weight:${vencida?'bold':'normal'};">${vencida?'⚠️ Vencida':'Pendiente'}</td></tr>`;
+                });
+                tbodyCxp.innerHTML = filas || '<tr><td colspan="6" style="color:#718096;">Sin cartera por pagar pendiente.</td></tr>';
+            }
+        }
+
+        /* ---- GASTOS FIJOS (config) ---- */
+        function contActualizarGastoFijo(idx, campo, valor){
+            db_gastosFijos[idx][campo] = campo==='monto' ? (parseFloat(valor)||0) : valor;
+            contGuardar('tactical_gastos_fijos_config_v1', db_gastosFijos);
+            renderGastosFijos(); renderContTablero();
+        }
+        function contEliminarGastoFijo(idx){
+            db_gastosFijos.splice(idx,1);
+            contGuardar('tactical_gastos_fijos_config_v1', db_gastosFijos);
+            renderGastosFijos(); renderContTablero();
+        }
+        function contAgregarGastoFijo(){
+            db_gastosFijos.push({concepto:'Nueva partida', monto:0});
+            contGuardar('tactical_gastos_fijos_config_v1', db_gastosFijos);
+            renderGastosFijos();
+        }
+        function renderGastosFijos(){
+            const tbody = document.getElementById('cont-tabla-gastosfijos');
+            if(!tbody) return;
+            tbody.innerHTML = db_gastosFijos.map((g,idx) => `
+                <tr>
+                    <td><input type="text" value="${g.concepto}" onchange="contActualizarGastoFijo(${idx},'concepto',this.value)"></td>
+                    <td><input type="number" value="${g.monto}" onchange="contActualizarGastoFijo(${idx},'monto',this.value)"></td>
+                    <td><button class="btn-action btn-del-row" onclick="contEliminarGastoFijo(${idx})">✕</button></td>
+                </tr>`).join('');
+            const total = db_gastosFijos.reduce((s,g)=>s+g.monto,0);
+            document.getElementById('cont-total-gastosfijos').innerText = `Total Gastos Fijos: ${cotFormatoCop(total)} / mes`;
+        }
+
+        /* ---- TABLERO FINANCIERO ---- */
+        function renderContTablero(){
+            const hoy = new Date();
+            const mesActual = hoy.getMonth(), anioActual = hoy.getFullYear();
+            const enMesActual = (fechaISO) => { if(!fechaISO) return false; const d = new Date(fechaISO); return d.getMonth()===mesActual && d.getFullYear()===anioActual; };
+
+            const ventasFacturadasMes = db_docventa.filter(d => enMesActual(d.fecha)).reduce((s,d)=>s+d.totalDocumento,0);
+            const ingresosCobradosMes = db_ingresos.filter(i => enMesActual(i.fecha)).reduce((s,i)=>s+i.valor,0);
+            const gastosFijosMes = db_egresos.filter(e => enMesActual(e.fecha) && e.categoria==='fijo').reduce((s,e)=>s+e.monto,0);
+            const gastosVariablesMes = db_egresos.filter(e => enMesActual(e.fecha) && e.categoria==='variable').reduce((s,e)=>s+e.monto,0);
+
+            let sumaMargen=0, sumaVentas=0;
+            const margenPorLinea = {};
+            db_cotizaciones.forEach(c => {
+                const cierre = db_historial_cierres.find(h => h.id===c.idOpp && h.estado==='ganado');
+                if(cierre && c.resultado){
+                    const margen = c.resultado.precioVentaTotal - c.resultado.subtotal;
+                    sumaMargen += margen; sumaVentas += c.resultado.precioVentaTotal;
+                    const linea = c.params.lineaProducto;
+                    margenPorLinea[linea] = (margenPorLinea[linea]||0) + margen;
+                }
+            });
+            const margenContribPct = sumaVentas>0 ? (sumaMargen/sumaVentas) : 0.2284;
+            const gastosFijosTotalConfig = db_gastosFijos.reduce((s,g)=>s+g.monto,0);
+            const puntoEquilibrio = margenContribPct>0 ? (gastosFijosTotalConfig/margenContribPct) : 0;
+            const cumplimientoPct = puntoEquilibrio>0 ? Math.round((ventasFacturadasMes/puntoEquilibrio)*100) : 0;
+            const colorSemaforo = cumplimientoPct>=100 ? 'var(--ganado)' : (cumplimientoPct>=70 ? 'var(--proceso)' : 'var(--peligro)');
+
+            const carteraVencida = db_docventa.filter(d => d.saldoPendiente>0 && d.fechaVencimiento && d.fechaVencimiento < contHoy()).reduce((s,d)=>s+d.saldoPendiente,0);
+            const utilidadNetaMes = ingresosCobradosMes - (gastosFijosMes + gastosVariablesMes);
+
+            document.getElementById('cont-tablero-kpis').innerHTML = `
+                <div class="kpi-box" style="border-color:var(--info);"><div class="kpi-label">Ventas Facturadas (mes)</div><div class="kpi-value">${cotFormatoCop(ventasFacturadasMes)}</div></div>
+                <div class="kpi-box" style="border-color:var(--ganado);"><div class="kpi-label">Ingresos Cobrados (mes, caja)</div><div class="kpi-value" style="color:var(--ganado);">${cotFormatoCop(ingresosCobradosMes)}</div></div>
+                <div class="kpi-box" style="border-color:${colorSemaforo};"><div class="kpi-label">Punto de Equilibrio (meta mes)</div><div class="kpi-value" style="color:${colorSemaforo};">${cotFormatoCop(puntoEquilibrio)}</div></div>
+                <div class="kpi-box" style="border-color:${colorSemaforo};"><div class="kpi-label">% Cumplimiento Punto Equilibrio</div><div class="kpi-value" style="color:${colorSemaforo};">${cumplimientoPct}%</div></div>
+                <div class="kpi-box" style="border-color:var(--peligro);"><div class="kpi-label">Cartera CxC Vencida</div><div class="kpi-value" style="color:var(--peligro);">${cotFormatoCop(carteraVencida)}</div></div>
+                <div class="kpi-box"><div class="kpi-label">Gastos Fijos (mes)</div><div class="kpi-value">${cotFormatoCop(gastosFijosMes)}</div></div>
+                <div class="kpi-box"><div class="kpi-label">Gastos Variables (mes)</div><div class="kpi-value">${cotFormatoCop(gastosVariablesMes)}</div></div>
+                <div class="kpi-box" style="border-color:${utilidadNetaMes>=0?'var(--ganado)':'var(--peligro)'};"><div class="kpi-label">Utilidad Neta Estimada (mes)</div><div class="kpi-value" style="color:${utilidadNetaMes>=0?'var(--ganado)':'var(--peligro)'};">${cotFormatoCop(utilidadNetaMes)}</div></div>
+            `;
+
+            const porClienteCobro = {};
+            db_ingresos.forEach(i => { porClienteCobro[i.idCli] = (porClienteCobro[i.idCli]||0) + i.valor; });
+            const topClientesCobro = Object.keys(porClienteCobro).map(idCli => ({cli: db_clientes.find(c=>c.id===idCli), total: porClienteCobro[idCli]})).filter(x=>x.cli).sort((a,b)=>b.total-a.total).slice(0,5);
+            document.getElementById('cont-mejor-cliente').innerHTML = topClientesCobro.length ? topClientesCobro.map(x=>`• ${x.cli.empresa}: <strong>${cotFormatoCop(x.total)}</strong>`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin cobros registrados todavía.</span>';
+
+            const nombresLinea = {escolar:"Cuaderno Escolar", cuaderno_anillado:"Cuaderno Anillado", agenda_ejecutiva:"Agenda Ejecutiva", libretas:"Libretas"};
+            const rankingLinea = Object.keys(margenPorLinea).sort((a,b)=>margenPorLinea[b]-margenPorLinea[a]);
+            document.getElementById('cont-producto-rentable').innerHTML = rankingLinea.length ? rankingLinea.map(l=>`• ${nombresLinea[l]||l}: <strong>${cotFormatoCop(margenPorLinea[l])}</strong> margen acumulado`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin negocios ganados con cotización todavía.</span>';
+        }
+
+        /* ---- ORQUESTADOR DEL MÓDULO ---- */
+        function renderContabilidad(){
+            contLlenarSelectClienteDoc();
+            contLlenarSelectVendedorDoc();
+            if(document.getElementById('cxp-subcategoria') && !document.getElementById('cxp-subcategoria').options.length) contLlenarSubcategorias();
+            renderDocVenta();
+            renderIngresos();
+            renderCxp();
+            renderEgresos();
+            renderCartera();
+            renderGastosFijos();
+            renderContTablero();
         }
 
         // CARGA GENERAL INICIAL
