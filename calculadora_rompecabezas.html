@@ -497,9 +497,12 @@ function cotizarRompecabezas(p){
   const costoDespiece = troquel.despiece*p.cantidad;
   const costoBolsa = troquel.bolsa*p.cantidad;
   const esFichaChica = troquel.fichas<=UMBRAL_FICHAS_CHICO;
+  // Conde 2026-07-24: en línea Macro se cobran varios "pasos" de troquelado (el troquel no corta
+  // todo en una sola pasada) — 2 pasos (x2 la tarifa) para 70-499 fichas, 3 pasos (x3) para 500+.
+  const pasosTroquelado = troquel.fichas>=500 ? 3 : (esLineaMacro ? 2 : 1);
   let tarifaMillarTroquelado, pisoTroquelado;
   if(esFichaChica){ tarifaMillarTroquelado = TROQUELADO_ROMPECABEZAS_COP_MILLAR_CHICO; pisoTroquelado = TROQUELADO_ROMPECABEZAS_COP_MILLAR_CHICO; }
-  else if(esLineaMacro){ tarifaMillarTroquelado = TROQUELADO_ROMPECABEZAS_COP_MILLAR_GRANDE; pisoTroquelado = TROQUELADO_ROMPECABEZAS_MINIMO_COP; }
+  else if(esLineaMacro){ tarifaMillarTroquelado = TROQUELADO_ROMPECABEZAS_COP_MILLAR_GRANDE * pasosTroquelado; pisoTroquelado = TROQUELADO_ROMPECABEZAS_MINIMO_COP; }
   else { tarifaMillarTroquelado = TROQUELADO_ROMPECABEZAS_COP_MILLAR; pisoTroquelado = TROQUELADO_ROMPECABEZAS_MINIMO_COP; }
   const costoTroqueladoServicio = Math.max(pisoTroquelado, Math.ceil(p.cantidad/1000)*tarifaMillarTroquelado);
 
