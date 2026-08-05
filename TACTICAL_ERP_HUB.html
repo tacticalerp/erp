@@ -2353,11 +2353,14 @@
           const iva=precioVenta*IVA_PCT;
           const precioFinal=precioVenta+iva;
           const precioVentaUnitario=precioVenta/p.cantidad;
+          const gananciaTotal = precioVenta - subtotal; // utilidad + comisión en pesos (sin IVA, que no es ganancia)
+          const gananciaUnitaria = gananciaTotal/p.cantidad;
           return {
             desgloseDirecto:desglose, detalleLineas, costoDirectoTotal:costoDirecto, costoDirectoUnitario:costoDirecto/p.cantidad,
             disenoCop, fondoSeguridadCop, fondoSeguridadPct, empaqueCop, sherpaCop, transporteCop, subtotal,
             utilidadPct:p.utilidadPct, ventasPct:p.ventasPct, precioVentaTotal:precioVenta, precioVentaUnitario,
             ivaTotal:iva, precioFinalTotal:precioFinal, catClave, tamanoMaquinaCaratula,
+            gananciaTotal, gananciaUnitaria,
           };
         }
 
@@ -2628,6 +2631,8 @@
           filas += `<tr style="font-weight:bold; color:var(--primary); font-size:1.05rem; border-top:2px solid var(--primary);"><td>Precio de venta UNITARIO</td><td style="text-align:right;">${cotFormatoCop(r.precioVentaUnitario)}</td></tr>`;
           filas += `<tr><td>IVA (19%)</td><td style="text-align:right;">${cotFormatoCop(r.ivaTotal)}</td></tr>`;
           filas += `<tr style="font-weight:bold;"><td>Precio final total (con IVA)</td><td style="text-align:right;">${cotFormatoCop(r.precioFinalTotal)}</td></tr>`;
+          filas += `<tr style="font-weight:bold; color:var(--ganado); border-top:2px solid var(--ganado);"><td>Ganancia total del pedido (utilidad+comisión, sin IVA)</td><td style="text-align:right;">${cotFormatoCop(r.gananciaTotal)}</td></tr>`;
+          filas += `<tr style="color:#718096; font-size:0.85rem;"><td style="padding-left:12px;">↳ Ganancia por unidad</td><td style="text-align:right;">${cotFormatoCop(r.gananciaUnitaria)}</td></tr>`;
           filas += `</table>`;
           document.getElementById("cot-resultado-contenido").innerHTML = filas;
         }

@@ -534,6 +534,8 @@ function cotizarRompecabezas(p){
   const precioVentaUnitario = precioVentaTotal/p.cantidad;
   const ivaTotal = precioVentaTotal*0.19;
   const precioFinalTotal = precioVentaTotal+ivaTotal;
+  const gananciaTotal = precioVentaTotal - subtotal; // utilidad + comisión en pesos (sin IVA, que no es ganancia)
+  const gananciaUnitaria = gananciaTotal/p.cantidad;
 
   return {
     troquel, conMarco, piezasFisicasImpresion, piezasColaminado, usaDigital, anchoMontaje, altoMontaje,
@@ -543,6 +545,7 @@ function cotizarRompecabezas(p){
     costoTroqueladoServicio, costoUsoTroquel, costoAyudante, costoDirecto,
     disenoCop, fondoSeguridadPct, fondoSeguridadCop, sherpaCop, empaqueCop, transporteCop,
     subtotal, precioVentaTotal, precioVentaUnitario, ivaTotal, precioFinalTotal,
+    gananciaTotal, gananciaUnitaria,
   };
 }
 
@@ -681,6 +684,8 @@ function calcular(){
     filas += `<tr class="sub"><td>Precio de venta UNITARIO</td><td class="num">${cop(r.precioVentaUnitario)}</td></tr>`;
     filas += `<tr><td>IVA (19%)</td><td class="num">${cop(r.ivaTotal)}</td></tr>`;
     filas += `<tr class="total"><td>Precio final total (con IVA)</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
+    filas += `<tr class="total" style="color:var(--verde);"><td>Ganancia total del pedido (utilidad+comisión, sin IVA)</td><td class="num">${cop(r.gananciaTotal)}</td></tr>`;
+    filas += `<tr class="detalle"><td colspan="2">↳ Ganancia por unidad: ${cop(r.gananciaUnitaria)}</td></tr>`;
     filas += `</table>`;
     cont.innerHTML = filas;
   } catch(err){
