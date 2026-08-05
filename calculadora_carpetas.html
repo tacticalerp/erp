@@ -217,9 +217,9 @@ const EMPAQUE_CAJA_COP = 3000;
 
 /* ============ REGLAS PROPIAS DE CARPETAS (confirmadas por Conde 2026-08-05) ============ */
 const CARPETA_PINZA_CM = 1; // +1cm al ALTO de planta, obligatorio
-const CARPETA_PEGUE_1_BOLSILLO_COP_MILLAR = 150000;
-const CARPETA_PEGUE_2_BOLSILLOS_COP_MILLAR = 250000;
-const CARPETA_PEGUE_PISO_COP = 30000;
+const CARPETA_PEGUE_COP_UNIDAD_POR_BOLSILLO = 120; // Conde 2026-08-05: $120/u por cada bolsillo (reemplaza tarifa por millar)
+const CARPETA_PEGUE_PISO_COP = 20000;
+const OFFSET_RECARGO_RETIRO_MEDIO_PLIEGO_POLICROMIA_PCT = 0.30;
 const CARPETA_TROQUELADO_COP_MILLAR = 35000; // tarifa genérica del banco de troqueles (sección 8 índice maestro)
 const CARPETA_DESGASTE_CUCHILLA_COP = 20000; // flat, sin escala de complejidad (a diferencia de Rompecabezas)
 const CARPETA_EMPAQUE_UNIDADES_POR_CAJA = 200; // fijo, confirmado por Conde
@@ -318,6 +318,11 @@ function mermaOffsetHojas(nHojasFisicas,cantTintas){
   if(cantTintas>=2) base*=OFFSET_MERMA_FACTOR_2_MAS_TINTAS;
   return base;
 }
+// Tiro/Retiro dependiente del tamaño de máquina (mismo criterio ya validado en Cuadernos):
+// en Cuarto/Octavo el retiro necesita su propio juego de planchas -> se factura como un segundo
+// trabajo independiente completo (plancha + millar a su propia cantidad de tintas). En Medio
+// Pliego con las MISMAS tintas en ambos lados se reutilizan las planchas y solo se recarga el
+// tiempo de secado (+30% si policromía); con tintas distintas también necesita plancha propia.
 function costoImpresionOffset(nPiezasFinales,tintasTiro,tintasRetiro,esPolicromia,ancho,alto){
   const fraccion=fraccionPliegoOffset(ancho,alto,esPolicromia);
   const [sheetW,sheetH]=OFFSET_FORMATOS_CM[fraccion];
@@ -325,19 +330,36 @@ function costoImpresionOffset(nPiezasFinales,tintasTiro,tintasRetiro,esPolicromi
   if(piezasPorPasada===0) piezasPorPasada=1;
   const nPasadas=Math.ceil(nPiezasFinales/piezasPorPasada);
   const millares=Math.ceil(nPasadas/1000);
-  const cantTintas=Math.max(tintasTiro,tintasRetiro,1);
-  const nPlanchas=Math.max(cantTintas,1);
-  const costoCtp=OFFSET_CTP_COP[fraccion]*nPlanchas;
-  let costoMillar;
-  if(fraccion==="medio_pliego" && esPolicromia){
-    costoMillar=OFFSET_MILLAR_COP.medio_pliego_policromia_4x0*millares;
-  } else if(fraccion==="medio_pliego"){
-    costoMillar=OFFSET_MILLAR_COP.medio_pliego_color*nPlanchas*millares;
-  } else {
-    costoMillar=OFFSET_MILLAR_COP[fraccion]*nPlanchas*millares;
+
+  function costoTrabajo(nTintas){
+    const nPlanchas=Math.max(nTintas,1);
+    const costoCtp=OFFSET_CTP_COP[fraccion]*nPlanchas;
+    let costoMillar;
+    if(fraccion==="medio_pliego" && esPolicromia && nTintas>=4){
+      costoMillar=OFFSET_MILLAR_COP.medio_pliego_policromia_4x0*millares;
+    } else if(fraccion==="medio_pliego"){
+      costoMillar=OFFSET_MILLAR_COP.medio_pliego_color*nPlanchas*millares;
+    } else {
+      costoMillar=OFFSET_MILLAR_COP[fraccion]*nPlanchas*millares;
+    }
+    return {nPlanchas, costoCtp, costoMillar, total:costoCtp+costoMillar};
   }
-  const total=costoCtp+costoMillar;
-  return {total, via:"offset", fraccion, nPlanchas, nMillares:millares, costoCtp, costoMillar, piezasPorPasada, cantTintas};
+
+  const tiroJob = costoTrabajo(tintasTiro);
+  let retiroJob = null, recargoRetiro = false, total = tiroJob.total;
+
+  if(tintasRetiro>0){
+    if(fraccion!=="medio_pliego" || tintasTiro!==tintasRetiro){
+      retiroJob = costoTrabajo(tintasRetiro);
+      total += retiroJob.total;
+    } else if(esPolicromia){
+      total += tiroJob.total*OFFSET_RECARGO_RETIRO_MEDIO_PLIEGO_POLICROMIA_PCT;
+      recargoRetiro = true;
+    }
+  }
+
+  const nPlanchas = tiroJob.nPlanchas + (retiroJob?retiroJob.nPlanchas:0);
+  return {total, via:"offset", fraccion, nPlanchas, nMillares:millares, tiroJob, retiroJob, recargoRetiro, piezasPorPasada};
 }
 
 function precioVentaDesdeSubtotal(subtotal,utilidadPct=0.40,comisionPct=0.03){
@@ -397,8 +419,7 @@ function cotizarCarpeta(p){
     costoPlastificado = Math.max(areaM2*p.cantidad*p.carasPlastificado*PLASTIFICADO_COP_M2, PLASTIFICADO_PISO_COP);
   }
 
-  const tarifaPegueMillar = troquel.bolsillos>=2 ? CARPETA_PEGUE_2_BOLSILLOS_COP_MILLAR : CARPETA_PEGUE_1_BOLSILLO_COP_MILLAR;
-  const costoPegue = Math.max(Math.ceil(p.cantidad/1000)*tarifaPegueMillar, CARPETA_PEGUE_PISO_COP);
+  const costoPegue = Math.max(CARPETA_PEGUE_COP_UNIDAD_POR_BOLSILLO*troquel.bolsillos*p.cantidad, CARPETA_PEGUE_PISO_COP);
 
   const costoTroqueladoServicio = Math.ceil(p.cantidad/1000)*CARPETA_TROQUELADO_COP_MILLAR;
   let costoUsoTroquel;
@@ -422,6 +443,8 @@ function cotizarCarpeta(p){
   const precioVentaUnitario = precioVentaTotal/p.cantidad;
   const ivaTotal = precioVentaTotal*0.19;
   const precioFinalTotal = precioVentaTotal+ivaTotal;
+  const gananciaTotal = precioVentaTotal - subtotal; // utilidad + comisión en pesos (sin IVA, que no es ganancia)
+  const gananciaUnitaria = gananciaTotal/p.cantidad;
 
   return {
     troquel, anchoMontaje, altoMontaje, usaDigital, detalleImpresion, detalleMaterial,
@@ -429,6 +452,7 @@ function cotizarCarpeta(p){
     costoPegue, costoTroqueladoServicio, costoUsoTroquel, costoDirecto,
     disenoCop, fondoSeguridadPct, fondoSeguridadCop, sherpaCop, empaqueCop, transporteCop,
     subtotal, precioVentaTotal, precioVentaUnitario, ivaTotal, precioFinalTotal,
+    gananciaTotal, gananciaUnitaria,
   };
 }
 
@@ -501,6 +525,11 @@ function calcular(){
     filas += `<tr class="detalle"><td colspan="2">Troquel ${r.troquel.id} — montaje ${r.anchoMontaje}x${r.altoMontaje}cm (con pinza)</td></tr>`;
     filas += `<tr><td>Material (${r.detalleMaterial.formato}, ${r.detalleMaterial.nPliegos} pliegos)</td><td class="num">${cop(r.detalleMaterial.costoTotal)}</td></tr>`;
     filas += `<tr><td>Impresión — ${viaImpresionTxt}</td><td class="num">${cop(r.detalleImpresion.total)}</td></tr>`;
+    if(r.detalleImpresion.via==="offset" && r.detalleImpresion.retiroJob){
+      filas += `<tr class="detalle"><td colspan="2">↳ Tiro: ${cop(r.detalleImpresion.tiroJob.total)} (${r.detalleImpresion.tiroJob.nPlanchas} plancha/s) + Retiro (juego propio): ${cop(r.detalleImpresion.retiroJob.total)} (${r.detalleImpresion.retiroJob.nPlanchas} plancha/s)</td></tr>`;
+    } else if(r.detalleImpresion.via==="offset" && r.detalleImpresion.recargoRetiro){
+      filas += `<tr class="detalle"><td colspan="2">↳ Incluye recargo +30% por retiro policromía (mismas planchas)</td></tr>`;
+    }
     if(r.plastificado){
       filas += `<tr><td>Plastificado (${r.carasPlastificado} cara${r.carasPlastificado>1?'s':''}, $950/m²)</td><td class="num">${cop(r.costoPlastificado)}</td></tr>`;
     } else {
@@ -520,6 +549,8 @@ function calcular(){
     filas += `<tr class="sub"><td>Precio de venta UNITARIO</td><td class="num">${cop(r.precioVentaUnitario)}</td></tr>`;
     filas += `<tr><td>IVA (19%)</td><td class="num">${cop(r.ivaTotal)}</td></tr>`;
     filas += `<tr class="total"><td>Precio final total (con IVA)</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
+    filas += `<tr class="total" style="color:var(--verde);"><td>Ganancia total del pedido (utilidad+comisión, sin IVA)</td><td class="num">${cop(r.gananciaTotal)}</td></tr>`;
+    filas += `<tr class="detalle"><td colspan="2">↳ Ganancia por unidad: ${cop(r.gananciaUnitaria)}</td></tr>`;
     filas += `</table>`;
     cont.innerHTML = filas;
   } catch(err){
