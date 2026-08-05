@@ -211,6 +211,16 @@ const MARCO_BASE_SUSTRATO = "Cartulina C14";
 const MARCO_BASE_GRAMAJE = 225;
 const MARCO_BASE_MERMA_PCT = 0.02;
 
+/* ============ OVERHEAD GENERAL DEL MOTOR (reutilizado 1:1 de Cuadernos, a pedido de Conde 2026-07-24) ============ */
+const ESCUDO_BAJOS_MONTOS_UMBRAL = 150000;
+const DISENO_COSTO_NORMAL = 40000;
+const DISENO_COSTO_REDUCIDO = 20000;
+const FONDO_SEGURIDAD_TRAMOS = [[500000,0.09],[1000000,0.07],[3000000,0.05],[Infinity,0.03]];
+const SHERPA_BASE_COP = 20000;
+const SHERPA_MAXIMO_COP = 40000;
+const TRANSPORTE_TRAMOS = [[3000000,0.04],[5000000,0.03],[Infinity,0.02]];
+const TRANSPORTE_PISO_COP = 45000;
+
 /* Tabla de 19 troqueles — [Docs, índice maestro], con 2 correcciones de despiece confirmadas por Conde 2026-07-24 */
 const TROQUELES_ROMPECABEZAS = [
   {id:"ROMB-001", grupo:1, fichas:6,    ancho:10,   alto:10,   despiece:100,  bolsa:100, marcoOpcional:true},
@@ -329,6 +339,26 @@ function precioVentaDesdeSubtotal(subtotal,utilidadPct=0.40,comisionPct=0.03){
   return subtotal*(1+utilidadPct)*(1+comisionPct);
 }
 
+function disenoYPreprensa(montoOt){
+  if(montoOt<ESCUDO_BAJOS_MONTOS_UMBRAL) return DISENO_COSTO_REDUCIDO;
+  return DISENO_COSTO_NORMAL;
+}
+function tramoFondoSeguridad(costoDirecto){
+  for(const [tope,pct] of FONDO_SEGURIDAD_TRAMOS){
+    if(costoDirecto<=tope) return pct;
+  }
+  return FONDO_SEGURIDAD_TRAMOS[FONDO_SEGURIDAD_TRAMOS.length-1][1];
+}
+function costoSherpa(totalPaginasInsertos=0){
+  return Math.min(SHERPA_BASE_COP + 1000*totalPaginasInsertos, SHERPA_MAXIMO_COP);
+}
+function costoTransporte(baseCop){
+  for(const [tope,pct] of TRANSPORTE_TRAMOS){
+    if(baseCop<=tope) return Math.max(baseCop*pct, TRANSPORTE_PISO_COP);
+  }
+  return Math.max(baseCop*TRANSPORTE_TRAMOS[TRANSPORTE_TRAMOS.length-1][1], TRANSPORTE_PISO_COP);
+}
+
 /* ============ CÁLCULO PRINCIPAL — ROMPECABEZAS ============ */
 function cotizarRompecabezas(p){
   const troquel = TROQUELES_ROMPECABEZAS.find(t=>t.id===p.troquelId);
@@ -376,8 +406,17 @@ function cotizarRompecabezas(p){
 
   const costoAyudante = troquel.fichas>=AYUDANTE_ARMADO_FICHAS_MINIMO ? Math.ceil(p.cantidad/100)*AYUDANTE_ARMADO_COP_POR_100 : 0;
 
-  const subtotal = detalleMaterial.costoTotal + detalleImpresion.total + costoPlastificado + costoColaminado
+  const costoDirecto = detalleMaterial.costoTotal + detalleImpresion.total + costoPlastificado + costoColaminado
     + costoBaseMarco + costoDespiece + costoBolsa + costoTroqueladoServicio + costoUsoTroquel + costoAyudante;
+
+  const disenoCop = disenoYPreprensa(costoDirecto);
+  const fondoSeguridadPct = tramoFondoSeguridad(costoDirecto);
+  const fondoSeguridadCop = costoDirecto*fondoSeguridadPct;
+  const sherpaCop = costoSherpa(0); // sin concepto de "páginas de inserto" en rompecabezas -> solo el piso base $20.000
+
+  const subtotalPreTransporte = costoDirecto + disenoCop + fondoSeguridadCop + sherpaCop;
+  const transporteCop = costoTransporte(subtotalPreTransporte);
+  const subtotal = subtotalPreTransporte + transporteCop;
 
   const precioVentaTotal = precioVentaDesdeSubtotal(subtotal, p.utilidadPct, p.comisionPct);
   const precioVentaUnitario = precioVentaTotal/p.cantidad;
@@ -388,7 +427,8 @@ function cotizarRompecabezas(p){
     troquel, conMarco, piezasFisicas, anchoMontaje, altoMontaje,
     detalleMaterial, detalleImpresion, detalleBaseMarco,
     costoPlastificado, costoColaminado, costoBaseMarco, costoDespiece, costoBolsa,
-    costoTroqueladoServicio, costoUsoTroquel, costoAyudante,
+    costoTroqueladoServicio, costoUsoTroquel, costoAyudante, costoDirecto,
+    disenoCop, fondoSeguridadPct, fondoSeguridadCop, sherpaCop, transporteCop,
     subtotal, precioVentaTotal, precioVentaUnitario, ivaTotal, precioFinalTotal,
   };
 }
@@ -479,13 +519,18 @@ function calcular(){
     if(r.costoAyudante>0){
       filas += `<tr><td>Ayudante de armado (línea Macro)</td><td class="num">${cop(r.costoAyudante)}</td></tr>`;
     }
-    filas += `<tr class="sub"><td>Subtotal (costo de fabricación)</td><td class="num">${cop(r.subtotal)}</td></tr>`;
+    filas += `<tr class="sub"><td>Costo directo total</td><td class="num">${cop(r.costoDirecto)}</td></tr>`;
+    filas += `<tr><td>Diseño / Preprensa</td><td class="num">${cop(r.disenoCop)}</td></tr>`;
+    filas += `<tr><td>Fondo de Seguridad (${(r.fondoSeguridadPct*100).toFixed(1)}%)</td><td class="num">${cop(r.fondoSeguridadCop)}</td></tr>`;
+    filas += `<tr><td>Sherpa (muestra de color)</td><td class="num">${cop(r.sherpaCop)}</td></tr>`;
+    filas += `<tr><td>Transporte</td><td class="num">${cop(r.transporteCop)}</td></tr>`;
+    filas += `<tr class="sub"><td>Subtotal</td><td class="num">${cop(r.subtotal)}</td></tr>`;
     filas += `<tr><td>Precio de venta (total pedido)</td><td class="num">${cop(r.precioVentaTotal)}</td></tr>`;
     filas += `<tr class="sub"><td>Precio de venta UNITARIO</td><td class="num">${cop(r.precioVentaUnitario)}</td></tr>`;
     filas += `<tr><td>IVA (19%)</td><td class="num">${cop(r.ivaTotal)}</td></tr>`;
     filas += `<tr class="total"><td>Precio final total (con IVA)</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
     filas += `</table>`;
-    filas += `<div class="hint" style="margin-top:10px;">⚠️ No incluye (todavía, pendiente confirmar si aplica aquí): Fondo de Seguridad, Diseño/Preprensa, Transporte, Sherpa — los overhead generales que sí tiene Cuadernos. Si Litoplan los suma, avísame y se agregan.</div>`;
+    filas += `<div class="hint" style="margin-top:10px;">Nota: Empaque no se suma aparte — la tabla de troqueles ya trae su propio costo de "Bolsa" por unidad, que cumple ese rol para esta línea.</div>`;
     cont.innerHTML = filas;
   } catch(err){
     cont.innerHTML = `<div class="error-box">Error en el cálculo: ${err.message}</div>`;
