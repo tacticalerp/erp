@@ -438,18 +438,18 @@ function cotizarRompecabezas(p){
   const troquel = TROQUELES_ROMPECABEZAS.find(t=>t.id===p.troquelId);
   if(!troquel) throw new Error("Troquel no encontrado: "+p.troquelId);
 
+  const esLineaMacro = troquel.fichas>=UMBRAL_FICHAS_LINEA_MACRO;
   const conMarco = !!(troquel.marcoOpcional && p.usarMarco);
   // Excedente de 1cm por cada lado del troquel (confirmado por Conde 2026-07-24: ej. troquel
-  // 10x10cm se imprime y se colamina en material de 12x12cm) = +2cm total por dimensión sin
-  // marco. Con marco perimetral es +3cm (embone más grande). Este mismo tamaño de montaje se usa
-  // TANTO para el material impreso como para el backing del colaminado — ambos llevan el mismo
-  // excedente, por eso salen del mismo tamaño.
-  const extraCm = conMarco ? MARCO_EXTRA_CM_CON : MARCO_EXTRA_CM_SIN;
+  // 10x10cm se imprime y se colamina en material de 12x12cm) = +2cm total por dimensión —
+  // pero SOLO aplica a la línea chica (<70 fichas). En línea Macro (>=70 fichas) NO se excede
+  // nada, se usa el tamaño de listado tal cual (genera mucho desperdicio a esa escala). Con
+  // marco perimetral (solo ROMB-001, siempre chica) es +3cm en vez de +2cm. Este mismo tamaño
+  // de montaje se usa TANTO para el material impreso como para el backing del colaminado.
+  const extraCm = esLineaMacro ? 0 : (conMarco ? MARCO_EXTRA_CM_CON : MARCO_EXTRA_CM_SIN);
   // ROMB-008 ya trae marco de fábrica incluido en la medida de troquel — no se le suma nada extra.
   const anchoMontaje = troquel.marcoFabrica ? troquel.ancho : troquel.ancho + extraCm;
   const altoMontaje  = troquel.marcoFabrica ? troquel.alto  : troquel.alto  + extraCm;
-
-  const esLineaMacro = troquel.fichas>=UMBRAL_FICHAS_LINEA_MACRO;
 
   const [sustratoNombre, gramajeStr] = p.sustrato.split("__");
   const gramaje = parseFloat(gramajeStr);
