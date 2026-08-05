@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de Cotización — Cubo Rubik Premium (Tactical Marketing) — BETA</title>
+<style>
+  :root{
+    --azul:#1e3a5f; --azul-claro:#2c5282; --fondo:#f4f6f8; --tarjeta:#ffffff;
+    --borde:#d7dee5; --texto:#1a202c; --texto-suave:#5a6472; --verde:#1a7d3f;
+    --rojo:#b91c1c; --acento:#e8792c;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    background:var(--fondo); color:var(--texto); line-height:1.4;
+  }
+  header{background:var(--azul); color:#fff; padding:18px 24px;}
+  header h1{margin:0; font-size:20px;}
+  header p{margin:4px 0 0; font-size:13px; color:#cbd8e8;}
+  .beta-banner{background:#fff3cd; color:#7a5b00; padding:10px 24px; font-size:13px; border-bottom:1px solid #f0d98c;}
+  .layout{
+    display:flex; gap:20px; padding:20px; max-width:1400px; margin:0 auto;
+    align-items:flex-start; flex-wrap:wrap;
+  }
+  .col-form{flex:1 1 620px; min-width:340px;}
+  .col-resultado{flex:1 1 380px; min-width:320px; position:sticky; top:20px;}
+  .card{
+    background:var(--tarjeta); border:1px solid var(--borde); border-radius:8px;
+    padding:16px 18px; margin-bottom:16px;
+  }
+  .card h2{margin:0 0 12px; font-size:15px; color:var(--azul); border-bottom:1px solid var(--borde); padding-bottom:8px;}
+  .fila{display:flex; flex-wrap:wrap; gap:12px; margin-bottom:10px;}
+  .campo{flex:1 1 140px; display:flex; flex-direction:column; gap:4px;}
+  .campo.chico{flex:0 1 130px;}
+  label{font-size:12px; color:var(--texto-suave); font-weight:600;}
+  input[type=number], input[type=text], select{
+    padding:7px 8px; border:1px solid var(--borde); border-radius:5px; font-size:13.5px;
+    background:#fff; color:var(--texto);
+  }
+  input[type=number]{width:100%;}
+  .checkbox-row{display:flex; align-items:center; gap:6px; font-size:13px; color:var(--texto);}
+  .checkbox-row input{margin:0;}
+  button{cursor:pointer; border:none; border-radius:6px; font-size:13.5px; padding:8px 14px; font-weight:600;}
+  .btn-primario{background:var(--acento); color:#fff; width:100%; padding:12px; font-size:15px;}
+  .btn-primario:hover{background:#d4691f;}
+  .hint{font-size:11.5px; color:var(--texto-suave); margin-top:2px;}
+  .resultado-tabla{width:100%; border-collapse:collapse; font-size:13px;}
+  .resultado-tabla td{padding:5px 4px; border-bottom:1px solid #eef1f4;}
+  .resultado-tabla td.num{text-align:right; font-variant-numeric:tabular-nums;}
+  .resultado-tabla tr.sub td{font-weight:700; border-top:2px solid var(--borde);}
+  .resultado-tabla tr.total td{font-weight:700; color:var(--azul); font-size:15px; border-top:2px solid var(--azul);}
+  .resultado-tabla tr.detalle td{color:var(--texto-suave); font-size:12px; padding-left:14px;}
+  .resultado-tabla tr.grupo td{font-weight:700; color:var(--azul-claro); padding-top:12px;}
+  .placeholder{color:var(--texto-suave); font-size:13.5px; text-align:center; padding:30px 10px;}
+  .error-box{background:#fde8e8; color:var(--rojo); border:1px solid #f3b4b4; border-radius:6px; padding:10px 12px; font-size:13px; margin-bottom:12px;}
+  .warn-box{background:#fff3cd; color:#7a5b00; border:1px solid #f0d98c; border-radius:6px; padding:8px 12px; font-size:12.5px; margin-bottom:8px;}
+  @media (max-width:900px){ .col-resultado{position:static;} }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Calculadora de Cotización — Cubo Rubik Premium (BETA)</h1>
+  <p>Herramienta de pruebas paralelas — Tactical Marketing Group SAS. Reutiliza el motor de impresión digital/offset ya validado en Cuadernos/Rompecabezas.</p>
+</header>
+<div class="beta-banner">
+  ⚠️ Versión BETA sin validar contra cotizaciones reales todavía. No incluye (pendiente de confirmar si aplica): Diseño/Preprensa, Fondo de Seguridad, Sherpa, Empaque genérico — mismo patrón que Rompecabezas al arrancar.
+</div>
+
+<div class="layout">
+  <div class="col-form">
+
+    <div class="card">
+      <h2>1. Cantidad y marcación</h2>
+      <div class="fila">
+        <div class="campo chico">
+          <label>Cantidad de cubos:</label>
+          <input type="number" id="in-cantidad" value="200" min="1">
+        </div>
+        <div class="campo chico">
+          <label>Caras a marcar:</label>
+          <select id="in-caras">
+            <option value="1">1 cara — $200/u</option>
+            <option value="2">2 caras — $400/u</option>
+            <option value="3">3 caras — $600/u</option>
+            <option value="4">4 caras — $800/u</option>
+            <option value="5">5 caras — $900/u</option>
+            <option value="6" selected>6 caras — $1.000/u</option>
+          </select>
+        </div>
+      </div>
+      <div class="hint">Brillo UV Parcial es obligatorio en todos los casos (siempre se cobra, no se puede quitar).</div>
+    </div>
+
+    <div class="card">
+      <h2>2. ¿Va con caja?</h2>
+      <div class="fila">
+        <div class="checkbox-row">
+          <input type="checkbox" id="in-conCaja">
+          <label for="in-conCaja" style="font-weight:normal;">Sí, incluir caja de empaque (26x23cm, Cote 300gr, 4x0, plastificado 1 cara, troquelada y pegada)</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3. Condiciones comerciales</h2>
+      <div class="fila">
+        <div class="campo chico">
+          <label>% Utilidad:</label>
+          <input type="number" id="in-utilidadPct" value="40" step="1">
+        </div>
+        <div class="campo chico">
+          <label>% Comisión:</label>
+          <input type="number" id="in-comisionPct" value="3" step="0.5">
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-primario" onclick="calcular()">Calcular Cotización</button>
+  </div>
+
+  <div class="col-resultado">
+    <div class="card">
+      <h2>Resultado</h2>
+      <div id="resultado-contenido"><div class="placeholder">Completa el formulario y presiona Calcular.</div></div>
+    </div>
+    <div class="card" id="card-recomendaciones">
+      <h2>⚠️ Recomendaciones de Producción</h2>
+      <div id="recomendaciones-contenido"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============ CONSTANTES REUTILIZADAS DEL MOTOR YA VALIDADO ============ */
+const SUSTRATOS = {
+  "Propalcote__300": {p6090:910.80, p70100:1182.60},
+};
+const PLIEGOS_CM = {"60x90":[60,90], "70x100":[70,100]};
+
+const PLASTIFICADO_COP_M2 = 950;     // ya validado (Cuadernos/Rompecabezas)
+const PLASTIFICADO_PISO_COP = 30000;
+
+const DIGITAL_MERMA_HOJAS = {policromia:20, negro:10, promedio:18}; // reutilizado de Cuadernos, confirmado por Conde 2026-07-24
+const DIGITAL_SEMICORTE_COP = 1500;  // aquí SÍ aplica: sustrato adhesivo (a diferencia de Cuadernos/papel)
+
+const OFFSET_CTP_COP = {medio_pliego:22000, cuarto:11000, octavo:9000};
+const OFFSET_MILLAR_COP = {medio_pliego_color:25000, medio_pliego_policromia_4x0:100000, cuarto:16000, octavo:12000};
+const OFFSET_FORMATOS_CM = {medio_pliego:[50,70], cuarto:[35,50], octavo:[25,35]};
+
+/* ============ REGLAS PROPIAS DE CUBO RUBIK (confirmadas por Conde 2026-07-24) ============ */
+const CUBO_INSUMO_COP = 3200;
+const CUBO_MERMA_PCT = 0.02;
+const CUBO_MARCACION_CARAS_COP = {1:200, 2:400, 3:600, 4:800, 5:900, 6:1000};
+
+const CUBO_UV_TRAMOS = [[200,50000],[1000,100000],[2000,150000]];
+const CUBO_UV_INCREMENTO_POR_1000 = 50000;
+
+const CUBO_DIGITAL_CUBOS_POR_PLIEGO = 7;      // pliego 50x33cm (=pliego_max)
+const CUBO_DIGITAL_CLIC_COP = {color:1000, negro:550}; // tabla propia de esta línea, distinta de Cuadernos/Rompecabezas
+
+const CUBO_TROQUELADO_COP_MILLAR = 35000;     // tarifa genérica del banco de troqueles (sección 8 índice maestro)
+
+const CUBO_CAJA_ANCHO_CM = 26, CUBO_CAJA_ALTO_CM = 23;
+const CUBO_CAJA_SUSTRATO = "Propalcote__300"; // "Cote 300gr"
+
+const CUBO_TRANSPORTE_TRAMOS = [[400,40000],[1000,90000],[2000,120000]]; // Ruta 2 (propia de Cubo Rubik, no la % de Cuadernos/Rompecabezas)
+const CUBO_TRANSPORTE_INCREMENTO_POR_1000 = 40000;
+
+const CUBO_PEGADO_CAJA_COP_TRAMOS = [[200,260],[400,220],[Infinity,200]]; // Conde 2026-07-24
+const CUBO_PEGADO_CAJA_MINIMO_COP = 25000;
+
+/* ============ OVERHEAD GENERAL DEL MOTOR (reutilizado 1:1 de Cuadernos/Rompecabezas, a pedido de Conde 2026-07-24) ============ */
+const ESCUDO_BAJOS_MONTOS_UMBRAL = 150000;
+const DISENO_COSTO_NORMAL = 40000;
+const DISENO_COSTO_REDUCIDO = 20000;
+const FONDO_SEGURIDAD_TRAMOS = [[500000,0.09],[1000000,0.07],[3000000,0.05],[Infinity,0.03]];
+const SHERPA_BASE_COP = 20000;
+const EMPAQUE_CAJA_COP = 3000;
+const EMPAQUE_UNIDADES_POR_CAJA = 50; // Conde 2026-07-24: 50 cubos por caja, fijo (sin clasificación manual)
+
+function disenoYPreprensa(montoOt){
+  if(montoOt<ESCUDO_BAJOS_MONTOS_UMBRAL) return DISENO_COSTO_REDUCIDO;
+  return DISENO_COSTO_NORMAL;
+}
+function tramoFondoSeguridad(costoDirecto){
+  for(const [tope,pct] of FONDO_SEGURIDAD_TRAMOS){
+    if(costoDirecto<=tope) return pct;
+  }
+  return FONDO_SEGURIDAD_TRAMOS[FONDO_SEGURIDAD_TRAMOS.length-1][1];
+}
+function costoEmpaqueCubo(cantidad){
+  const nCajas = Math.ceil(cantidad/EMPAQUE_UNIDADES_POR_CAJA);
+  return nCajas*EMPAQUE_CAJA_COP;
+}
+
+/* ============ FUNCIONES DE MOTOR (copiadas 1:1 del motor ya validado) ============ */
+function piezasPorPliego(pa,pal,pw,ph){
+  const sinRotar = Math.floor(pw/pa)*Math.floor(ph/pal);
+  const rotada = Math.floor(pw/pal)*Math.floor(ph/pa);
+  return Math.max(sinRotar,rotada,0);
+}
+function ordenar2(a,b){ return a<=b ? [a,b] : [b,a]; }
+
+function costoMaterialPliegos(pa,pal,sustratoNombre,gramaje,piezasNecesarias,mermaHojas=0){
+  const key = sustratoNombre+"__"+gramaje;
+  const precios = SUSTRATOS[key];
+  if(!precios) throw new Error("Sustrato no encontrado: "+sustratoNombre+" "+gramaje+"g");
+  const piezasTotales = piezasNecesarias + mermaHojas;
+  let mejores=[];
+  const precioMap = {"60x90":precios.p6090, "70x100":precios.p70100};
+  for(const formato of Object.keys(PLIEGOS_CM)){
+    const [pw,ph]=PLIEGOS_CM[formato];
+    const precioPliego = precioMap[formato];
+    if(precioPliego==null) continue;
+    const nPorPliego = piezasPorPliego(pa,pal,pw,ph);
+    if(nPorPliego===0) continue;
+    const nPliegos = Math.ceil(piezasTotales/nPorPliego);
+    const costoTotal = nPliegos*precioPliego;
+    mejores.push([costoTotal, formato, nPorPliego, nPliegos, precioPliego]);
+  }
+  if(mejores.length===0) throw new Error(`La pieza ${pa}x${pal}cm no cabe en ningún pliego disponible para ${sustratoNombre} ${gramaje}g`);
+  mejores.sort((x,y)=>x[0]-y[0]);
+  const [costoTotal, formato, nPorPliego, nPliegos, precioPliego] = mejores[0];
+  return {formato, piezasPorPliego:nPorPliego, nPliegos, precioPliego, costoTotal};
+}
+
+function fraccionPliegoOffset(ancho,alto,esPolicromia=false){
+  const [a,b]=ordenar2(ancho,alto);
+  if(a<=25 && b<=35 && !esPolicromia) return "octavo";
+  if(a<=35 && b<=50) return "cuarto";
+  return "medio_pliego";
+}
+function costoImpresionOffset(nPiezasFinales,tintasTiro,tintasRetiro,esPolicromia,ancho,alto){
+  const fraccion=fraccionPliegoOffset(ancho,alto,esPolicromia);
+  const [sheetW,sheetH]=OFFSET_FORMATOS_CM[fraccion];
+  let piezasPorPasada=piezasPorPliego(ancho,alto,sheetW,sheetH);
+  if(piezasPorPasada===0) piezasPorPasada=1;
+  const nPasadas=Math.ceil(nPiezasFinales/piezasPorPasada);
+  const millares=Math.ceil(nPasadas/1000);
+  const cantTintas=Math.max(tintasTiro,tintasRetiro,1);
+  const nPlanchas=Math.max(cantTintas,1);
+  const costoCtp=OFFSET_CTP_COP[fraccion]*nPlanchas;
+  let costoMillar;
+  if(fraccion==="medio_pliego" && esPolicromia){
+    costoMillar=OFFSET_MILLAR_COP.medio_pliego_policromia_4x0*millares;
+  } else if(fraccion==="medio_pliego"){
+    costoMillar=OFFSET_MILLAR_COP.medio_pliego_color*nPlanchas*millares;
+  } else {
+    costoMillar=OFFSET_MILLAR_COP[fraccion]*nPlanchas*millares;
+  }
+  const total=costoCtp+costoMillar;
+  return {total, via:"offset", fraccion, nPlanchas, nMillares:millares, costoCtp, costoMillar, piezasPorPasada};
+}
+
+function precioVentaDesdeSubtotal(subtotal,utilidadPct=0.40,comisionPct=0.03){
+  return subtotal*(1+utilidadPct)*(1+comisionPct);
+}
+
+/* ============ CUBO RUBIK — IMPRESIÓN DEL CUBO (digital vs litográfico, elige el más barato) ============ */
+function costoImpresionDigitalCubo(cantidad){
+  const nPliegosBase = Math.ceil(cantidad/CUBO_DIGITAL_CUBOS_POR_PLIEGO);
+  const nPliegos = nPliegosBase + DIGITAL_MERMA_HOJAS.policromia; // color, merma de alistamiento
+  const costoClics = nPliegos*CUBO_DIGITAL_CLIC_COP.color;
+  const costoSemicorte = nPliegos*DIGITAL_SEMICORTE_COP;
+  return {total: costoClics+costoSemicorte, via:"digital", nPliegos, costoClics, costoSemicorte};
+}
+function costoImpresionLitograficoCubo(cantidad){
+  const impresion = costoImpresionOffset(cantidad, 4, 0, true, 24, 17); // montaje 24x17cm por cubo
+  const costoTroquelado = Math.ceil(cantidad/1000)*CUBO_TROQUELADO_COP_MILLAR;
+  return {total: impresion.total+costoTroquelado, via:"offset", detalleImpresion:impresion, costoTroquelado};
+}
+function costoPegadoCaja(cantidad){
+  let tarifa = CUBO_PEGADO_CAJA_COP_TRAMOS[CUBO_PEGADO_CAJA_COP_TRAMOS.length-1][1];
+  for(const [tope,precio] of CUBO_PEGADO_CAJA_COP_TRAMOS){
+    if(cantidad<=tope){ tarifa = precio; break; }
+  }
+  return Math.max(cantidad*tarifa, CUBO_PEGADO_CAJA_MINIMO_COP);
+}
+function costoUVCubo(cantidad){
+  for(const [tope,costo] of CUBO_UV_TRAMOS){
+    if(cantidad<=tope) return costo;
+  }
+  const bloquesExtra = Math.ceil((cantidad-2000)/1000);
+  return 150000 + bloquesExtra*CUBO_UV_INCREMENTO_POR_1000;
+}
+function costoTransporteCubo(cantidad){
+  for(const [tope,costo] of CUBO_TRANSPORTE_TRAMOS){
+    if(cantidad<=tope) return costo;
+  }
+  const bloquesExtra = Math.ceil((cantidad-2000)/1000);
+  return 120000 + bloquesExtra*CUBO_TRANSPORTE_INCREMENTO_POR_1000;
+}
+
+/* ============ CÁLCULO PRINCIPAL — CUBO RUBIK ============ */
+function cotizarCuboRubik(p){
+  const costoInsumo = p.cantidad * (1+CUBO_MERMA_PCT) * CUBO_INSUMO_COP;
+  const costoMarcacion = CUBO_MARCACION_CARAS_COP[p.caras] * p.cantidad;
+  const costoUV = costoUVCubo(p.cantidad); // obligatorio, fijo por tramo de orden
+
+  const digital = costoImpresionDigitalCubo(p.cantidad);
+  const litografico = costoImpresionLitograficoCubo(p.cantidad);
+  const usaDigital = digital.total < litografico.total;
+  const detalleImpresionCubo = usaDigital ? digital : litografico;
+  const costoImpresionCubo = detalleImpresionCubo.total;
+
+  let costoCaja = 0, detalleCaja = null;
+  if(p.conCaja){
+    const areaCajaM2 = (CUBO_CAJA_ANCHO_CM*CUBO_CAJA_ALTO_CM)/10000;
+    // Impresión de la caja usa offset directo (línea Cuarto) — no hay formato digital propio para
+    // 26x23cm definido por Conde todavía; se deja la comparación digital-vs-offset para una
+    // iteración futura si Conde la pide, igual que se hizo con la impresión del cubo mismo.
+    const impresionCajaOffset = costoImpresionOffset(p.cantidad, 4, 0, true, CUBO_CAJA_ANCHO_CM, CUBO_CAJA_ALTO_CM);
+    const costoPlastificadoCaja = Math.max(areaCajaM2*p.cantidad*PLASTIFICADO_COP_M2, PLASTIFICADO_PISO_COP);
+    const costoTroqueladoCaja = Math.ceil(p.cantidad/1000)*CUBO_TROQUELADO_COP_MILLAR;
+    const costoPegadoCajaTotal = costoPegadoCaja(p.cantidad);
+    costoCaja = impresionCajaOffset.total + costoPlastificadoCaja + costoTroqueladoCaja + costoPegadoCajaTotal;
+    detalleCaja = {impresionCajaOffset, costoPlastificadoCaja, costoTroqueladoCaja, costoPegadoCajaTotal};
+  }
+
+  const costoDirecto = costoInsumo + costoMarcacion + costoUV + costoImpresionCubo + costoCaja;
+
+  const disenoCop = disenoYPreprensa(costoDirecto);
+  const fondoSeguridadPct = tramoFondoSeguridad(costoDirecto);
+  const fondoSeguridadCop = costoDirecto*fondoSeguridadPct;
+  const sherpaCop = SHERPA_BASE_COP;
+  const empaqueCop = costoEmpaqueCubo(p.cantidad);
+  const costoTransporte = costoTransporteCubo(p.cantidad);
+
+  const subtotal = costoDirecto + disenoCop + fondoSeguridadCop + sherpaCop + empaqueCop + costoTransporte;
+
+  const precioVentaTotal = precioVentaDesdeSubtotal(subtotal, p.utilidadPct, p.comisionPct);
+  const precioVentaUnitario = precioVentaTotal/p.cantidad;
+  const ivaTotal = precioVentaTotal*0.19;
+  const precioFinalTotal = precioVentaTotal+ivaTotal;
+
+  return {
+    costoInsumo, costoMarcacion, costoUV, usaDigital, detalleImpresionCubo, costoImpresionCubo,
+    conCaja: p.conCaja, costoCaja, detalleCaja, costoDirecto,
+    disenoCop, fondoSeguridadPct, fondoSeguridadCop, sherpaCop, empaqueCop, costoTransporte,
+    subtotal, precioVentaTotal, precioVentaUnitario, ivaTotal, precioFinalTotal,
+  };
+}
+
+/* ============ RECOMENDACIONES DE PRODUCCIÓN ============ */
+const RECOMENDACIONES_PRODUCCION = [
+  { aplica: () => true, texto: "Siempre usar Adhesivo P4 para el cubo (sustrato confirmado, no cambiar sin autorización)." },
+  { aplica: () => true, texto: "El Brillo UV siempre debe hacerse por técnica de Screen (serigrafía) total — no usar otra técnica de UV." },
+  { aplica: () => true, texto: "Siempre preguntar al cliente si el pedido va con caja de empaque antes de cerrar la cotización." },
+];
+function renderRecomendaciones(r){
+  const cont = document.getElementById("recomendaciones-contenido");
+  const aplicables = RECOMENDACIONES_PRODUCCION.filter(reg => reg.aplica(r)).map(reg => reg.texto);
+  cont.innerHTML = aplicables.map(txt => `<div class="warn-box">${txt}</div>`).join("");
+}
+
+/* ============ UI ============ */
+function cop(n){ return "$" + Math.round(n).toLocaleString("es-CO"); }
+
+function calcular(){
+  const cont = document.getElementById("resultado-contenido");
+  try{
+    const p = {
+      cantidad: parseFloat(document.getElementById("in-cantidad").value),
+      caras: parseInt(document.getElementById("in-caras").value),
+      conCaja: document.getElementById("in-conCaja").checked,
+      utilidadPct: parseFloat(document.getElementById("in-utilidadPct").value)/100,
+      comisionPct: parseFloat(document.getElementById("in-comisionPct").value)/100,
+    };
+    const r = cotizarCuboRubik(p);
+    renderRecomendaciones(r);
+
+    const viaTxt = r.usaDigital
+      ? `Digital — ${r.detalleImpresionCubo.nPliegos} pliegos (50x33cm, ${CUBO_DIGITAL_CUBOS_POR_PLIEGO} cubos/pliego, con merma) — clics ${cop(r.detalleImpresionCubo.costoClics)} + semicorte ${cop(r.detalleImpresionCubo.costoSemicorte)}`
+      : `Litográfico — Cuarto de Pliego, ${r.detalleImpresionCubo.detalleImpresion.nPlanchas} plancha(s), ${r.detalleImpresionCubo.detalleImpresion.nMillares} millar(es) + troquelado ${cop(r.detalleImpresionCubo.costoTroquelado)}`;
+
+    let filas = `<table class="resultado-tabla">`;
+    filas += `<tr><td>Insumo cubo (con 2% merma)</td><td class="num">${cop(r.costoInsumo)}</td></tr>`;
+    filas += `<tr><td>Marcación (${p.caras} cara${p.caras>1?'s':''})</td><td class="num">${cop(r.costoMarcacion)}</td></tr>`;
+    filas += `<tr><td>Brillo UV Parcial (obligatorio, por tramo)</td><td class="num">${cop(r.costoUV)}</td></tr>`;
+    filas += `<tr><td>Impresión — ${viaTxt}</td><td class="num">${cop(r.costoImpresionCubo)}</td></tr>`;
+    if(r.conCaja){
+      filas += `<tr class="grupo"><td colspan="2">Caja de empaque (26x23cm, Cote 300gr, 4x0)</td></tr>`;
+      filas += `<tr class="detalle"><td colspan="2">Impresión: ${cop(r.detalleCaja.impresionCajaOffset.total)}</td></tr>`;
+      filas += `<tr class="detalle"><td colspan="2">Plastificado 1 cara: ${cop(r.detalleCaja.costoPlastificadoCaja)}</td></tr>`;
+      filas += `<tr class="detalle"><td colspan="2">Troquelado: ${cop(r.detalleCaja.costoTroqueladoCaja)}</td></tr>`;
+      filas += `<tr class="detalle"><td colspan="2">Pegado: ${cop(r.detalleCaja.costoPegadoCajaTotal)}</td></tr>`;
+      filas += `<tr><td>Subtotal caja</td><td class="num">${cop(r.costoCaja)}</td></tr>`;
+    }
+    filas += `<tr class="sub"><td>Costo directo total</td><td class="num">${cop(r.costoDirecto)}</td></tr>`;
+    filas += `<tr><td>Diseño / Preprensa</td><td class="num">${cop(r.disenoCop)}</td></tr>`;
+    filas += `<tr><td>Fondo de Seguridad (${(r.fondoSeguridadPct*100).toFixed(1)}%)</td><td class="num">${cop(r.fondoSeguridadCop)}</td></tr>`;
+    filas += `<tr><td>Sherpa (muestra de color)</td><td class="num">${cop(r.sherpaCop)}</td></tr>`;
+    filas += `<tr><td>Empaque (${EMPAQUE_UNIDADES_POR_CAJA}u/caja)</td><td class="num">${cop(r.empaqueCop)}</td></tr>`;
+    filas += `<tr><td>Transporte (Ruta 2, por volumen de cubos)</td><td class="num">${cop(r.costoTransporte)}</td></tr>`;
+    filas += `<tr class="sub"><td>Subtotal</td><td class="num">${cop(r.subtotal)}</td></tr>`;
+    filas += `<tr><td>Precio de venta (total pedido)</td><td class="num">${cop(r.precioVentaTotal)}</td></tr>`;
+    filas += `<tr class="sub"><td>Precio de venta UNITARIO</td><td class="num">${cop(r.precioVentaUnitario)}</td></tr>`;
+    filas += `<tr><td>IVA (19%)</td><td class="num">${cop(r.ivaTotal)}</td></tr>`;
+    filas += `<tr class="total"><td>Precio final total (con IVA)</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
+    filas += `</table>`;
+    cont.innerHTML = filas;
+  } catch(err){
+    cont.innerHTML = `<div class="error-box">Error en el cálculo: ${err.message}</div>`;
+  }
+}
+</script>
+</body>
+</html>
