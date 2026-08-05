@@ -130,7 +130,24 @@
     </div>
 
     <div class="card">
-      <h2>4. Condiciones comerciales</h2>
+      <h2>4. Logística (empaque y transporte)</h2>
+      <div class="fila">
+        <div class="campo chico">
+          <label>Unidades por caja de despacho:</label>
+          <input type="number" id="in-unidadesPorCaja" value="30" min="1">
+          <div class="hint">Sin tabla confirmada por tamaño de troquel todavía — ajusta manualmente. $3.000/caja.</div>
+        </div>
+      </div>
+      <div class="fila">
+        <div class="checkbox-row">
+          <input type="checkbox" id="in-cabeEnMoto">
+          <label for="in-cabeEnMoto" style="font-weight:normal;">Pedido chico, cabe en moto (transporte fijo $20.000 en vez del % sobre subtotal)</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>5. Condiciones comerciales</h2>
       <div class="fila">
         <div class="campo chico">
           <label>% Utilidad:</label>
@@ -217,9 +234,14 @@ const DISENO_COSTO_NORMAL = 40000;
 const DISENO_COSTO_REDUCIDO = 20000;
 const FONDO_SEGURIDAD_TRAMOS = [[500000,0.09],[1000000,0.07],[3000000,0.05],[Infinity,0.03]];
 const SHERPA_BASE_COP = 20000;
+const SHERPA_FICHAS_REDUCIDO_MAX = 30;      // Conde 2026-07-24: rompecabezas de 30 fichas o menos
+const SHERPA_COP_FICHAS_REDUCIDO = 10000;
 const SHERPA_MAXIMO_COP = 40000;
 const TRANSPORTE_TRAMOS = [[3000000,0.04],[5000000,0.03],[Infinity,0.02]];
 const TRANSPORTE_PISO_COP = 45000;
+const TRANSPORTE_MOTO_COP = 20000;          // Conde 2026-07-24: pedidos chicos que caben en moto
+const EMPAQUE_CAJA_COP = 3000;
+const EMPAQUE_UNIDADES_POR_CAJA_DEFAULT = 30; // manual, ajustar por tamaño de troquel — sin tabla confirmada todavía
 
 /* Tabla de 19 troqueles — [Docs, índice maestro], con 2 correcciones de despiece confirmadas por Conde 2026-07-24 */
 const TROQUELES_ROMPECABEZAS = [
@@ -349,10 +371,16 @@ function tramoFondoSeguridad(costoDirecto){
   }
   return FONDO_SEGURIDAD_TRAMOS[FONDO_SEGURIDAD_TRAMOS.length-1][1];
 }
-function costoSherpa(totalPaginasInsertos=0){
+function costoSherpa(fichas, totalPaginasInsertos=0){
+  if(fichas<=SHERPA_FICHAS_REDUCIDO_MAX) return SHERPA_COP_FICHAS_REDUCIDO;
   return Math.min(SHERPA_BASE_COP + 1000*totalPaginasInsertos, SHERPA_MAXIMO_COP);
 }
-function costoTransporte(baseCop){
+function costoEmpaque(cantidad, unidadesPorCaja){
+  const nCajas = Math.ceil(cantidad/Math.max(unidadesPorCaja,1));
+  return nCajas*EMPAQUE_CAJA_COP;
+}
+function costoTransporte(baseCop, cabeEnMoto){
+  if(cabeEnMoto) return TRANSPORTE_MOTO_COP;
   for(const [tope,pct] of TRANSPORTE_TRAMOS){
     if(baseCop<=tope) return Math.max(baseCop*pct, TRANSPORTE_PISO_COP);
   }
@@ -412,10 +440,11 @@ function cotizarRompecabezas(p){
   const disenoCop = disenoYPreprensa(costoDirecto);
   const fondoSeguridadPct = tramoFondoSeguridad(costoDirecto);
   const fondoSeguridadCop = costoDirecto*fondoSeguridadPct;
-  const sherpaCop = costoSherpa(0); // sin concepto de "páginas de inserto" en rompecabezas -> solo el piso base $20.000
+  const sherpaCop = costoSherpa(troquel.fichas, 0);
+  const empaqueCop = costoEmpaque(p.cantidad, p.unidadesPorCaja);
 
-  const subtotalPreTransporte = costoDirecto + disenoCop + fondoSeguridadCop + sherpaCop;
-  const transporteCop = costoTransporte(subtotalPreTransporte);
+  const subtotalPreTransporte = costoDirecto + disenoCop + fondoSeguridadCop + sherpaCop + empaqueCop;
+  const transporteCop = costoTransporte(subtotalPreTransporte, p.cabeEnMoto);
   const subtotal = subtotalPreTransporte + transporteCop;
 
   const precioVentaTotal = precioVentaDesdeSubtotal(subtotal, p.utilidadPct, p.comisionPct);
@@ -428,7 +457,7 @@ function cotizarRompecabezas(p){
     detalleMaterial, detalleImpresion, detalleBaseMarco,
     costoPlastificado, costoColaminado, costoBaseMarco, costoDespiece, costoBolsa,
     costoTroqueladoServicio, costoUsoTroquel, costoAyudante, costoDirecto,
-    disenoCop, fondoSeguridadPct, fondoSeguridadCop, sherpaCop, transporteCop,
+    disenoCop, fondoSeguridadPct, fondoSeguridadCop, sherpaCop, empaqueCop, transporteCop,
     subtotal, precioVentaTotal, precioVentaUnitario, ivaTotal, precioFinalTotal,
   };
 }
@@ -489,6 +518,8 @@ function calcular(){
       troquelEsNuevo: document.getElementById("in-troquelNuevo").value === "nuevo",
       complejidadDesgaste: document.getElementById("in-complejidad").value,
       costoTroquelNuevoManual: parseFloat(document.getElementById("in-troquelManualCop").value)||0,
+      unidadesPorCaja: parseFloat(document.getElementById("in-unidadesPorCaja").value)||EMPAQUE_UNIDADES_POR_CAJA_DEFAULT,
+      cabeEnMoto: document.getElementById("in-cabeEnMoto").checked,
       utilidadPct: parseFloat(document.getElementById("in-utilidadPct").value)/100,
       comisionPct: parseFloat(document.getElementById("in-comisionPct").value)/100,
     };
@@ -523,14 +554,14 @@ function calcular(){
     filas += `<tr><td>Diseño / Preprensa</td><td class="num">${cop(r.disenoCop)}</td></tr>`;
     filas += `<tr><td>Fondo de Seguridad (${(r.fondoSeguridadPct*100).toFixed(1)}%)</td><td class="num">${cop(r.fondoSeguridadCop)}</td></tr>`;
     filas += `<tr><td>Sherpa (muestra de color)</td><td class="num">${cop(r.sherpaCop)}</td></tr>`;
-    filas += `<tr><td>Transporte</td><td class="num">${cop(r.transporteCop)}</td></tr>`;
+    filas += `<tr><td>Empaque (caja para despachar las bolsas, ${p.unidadesPorCaja}u/caja)</td><td class="num">${cop(r.empaqueCop)}</td></tr>`;
+    filas += `<tr><td>Transporte${p.cabeEnMoto?' (moto, fijo)':''}</td><td class="num">${cop(r.transporteCop)}</td></tr>`;
     filas += `<tr class="sub"><td>Subtotal</td><td class="num">${cop(r.subtotal)}</td></tr>`;
     filas += `<tr><td>Precio de venta (total pedido)</td><td class="num">${cop(r.precioVentaTotal)}</td></tr>`;
     filas += `<tr class="sub"><td>Precio de venta UNITARIO</td><td class="num">${cop(r.precioVentaUnitario)}</td></tr>`;
     filas += `<tr><td>IVA (19%)</td><td class="num">${cop(r.ivaTotal)}</td></tr>`;
     filas += `<tr class="total"><td>Precio final total (con IVA)</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
     filas += `</table>`;
-    filas += `<div class="hint" style="margin-top:10px;">Nota: Empaque no se suma aparte — la tabla de troqueles ya trae su propio costo de "Bolsa" por unidad, que cumple ese rol para esta línea.</div>`;
     cont.innerHTML = filas;
   } catch(err){
     cont.innerHTML = `<div class="error-box">Error en el cálculo: ${err.message}</div>`;
