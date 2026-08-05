@@ -695,6 +695,10 @@
                     <div id="cot-resultado" class="accordion-content active">
                         <button class="btn-submit" onclick="cotCalcular()">🧮 Calcular Cotización</button>
                         <div id="cot-resultado-contenido" style="margin-top:15px;"></div>
+                        <div id="card-recomendaciones-cot" style="display:none; margin-top:12px;">
+                            <div style="font-weight:bold; color:var(--dark); margin-bottom:6px;">⚠️ Recomendaciones de Producción</div>
+                            <div id="recomendaciones-contenido-cot"></div>
+                        </div>
                         <div style="display:flex; gap:10px; margin-top:15px; flex-wrap:wrap;">
                             <button class="btn-submit" style="flex:1; min-width:220px;" onclick="cotGuardarYGenerarPDF()">📄 Guardar y Generar PDF Cliente</button>
                             <button class="btn-submit" style="flex:1; min-width:220px; background:var(--secondary);" onclick="cotGenerarOrdenProduccion()">🏭 Generar Orden de Producción</button>
@@ -2516,9 +2520,26 @@
             const notaOt = document.getElementById('cot-ot-nota');
             if(notaOt) notaOt.style.display = 'none';
             cotRenderResultado(r, p);
+            renderRecomendacionesCot(r, p);
           } catch(err){
             document.getElementById("cot-resultado-contenido").innerHTML = `<div style="background:#fde8e8; color:var(--peligro); border:1px solid #f3b4b4; border-radius:6px; padding:10px 12px; font-size:13px;">Error en el cálculo: ${err.message}</div>`;
+            document.getElementById("card-recomendaciones-cot").style.display = 'none';
           }
+        }
+
+        /* ============ RECOMENDACIONES DE PRODUCCIÓN (Cotizador Cuadernos) ============ */
+        // Mismo patrón que calculadora_rompecabezas.html — lista extensible de reglas.
+        // Vacía por ahora: agregar aquí cuando Conde confirme advertencias específicas de
+        // Cuadernos (ej. tipo de cartón, encuadernación, etc.) — no inventar reglas sin confirmar.
+        const RECOMENDACIONES_PRODUCCION_COT = [
+        ];
+        function renderRecomendacionesCot(r, p){
+          const card = document.getElementById("card-recomendaciones-cot");
+          const cont = document.getElementById("recomendaciones-contenido-cot");
+          const aplicables = RECOMENDACIONES_PRODUCCION_COT.filter(reg => reg.aplica(r, p)).map(reg => reg.texto);
+          if(aplicables.length === 0){ card.style.display = "none"; cont.innerHTML = ""; return; }
+          card.style.display = "block";
+          cont.innerHTML = aplicables.map(txt => `<div style="background:#fff3cd; color:#7a5b00; border:1px solid #f0d98c; border-radius:6px; padding:8px 12px; font-size:12.5px; margin-bottom:8px;">${txt}</div>`).join("");
         }
 
         const COT_ETIQUETAS_DESGLOSE = {
