@@ -211,6 +211,7 @@ const SUSTRATO_BACKING_FICHAS_MAYOR = "Maule C22__330";    // colaminado, >=70 f
 const UMBRAL_FICHAS_LINEA_MACRO = 70;
 
 const COLAMINADO_COP_M2 = 900;       // confirmado por Conde (incluye pegante + mano de obra)
+const COLAMINADO_PISO_COP = 30000;   // Conde 2026-07-24: mínimo de mano de obra/pegante, aparte del cartón
 const PLASTIFICADO_COP_M2 = 950;     // unificado por Conde 2026-07-24
 const PLASTIFICADO_PISO_COP = 30000;
 
@@ -462,7 +463,7 @@ function cotizarRompecabezas(p){
 
   const areaM2 = (anchoMontaje*altoMontaje)/10000;
   const costoPlastificado = Math.max(areaM2*p.cantidad*PLASTIFICADO_COP_M2, PLASTIFICADO_PISO_COP);
-  const costoColaminadoManoObra = areaM2*p.cantidad*COLAMINADO_COP_M2;
+  const costoColaminadoManoObra = Math.max(areaM2*p.cantidad*COLAMINADO_COP_M2, COLAMINADO_PISO_COP);
 
   // Backing del colaminado (Conde 2026-07-24): <70 fichas -> Cartón 1.5mm; >=70 fichas -> Maule C22.
   // Merma propia del colaminado (distinta de la de impresión): +50 unidades si Macro, +30 si chica.
@@ -615,7 +616,7 @@ function calcular(){
     filas += `<tr><td>Impresión — ${viaImpresionTxt}</td><td class="num">${cop(r.detalleImpresion.total)}</td></tr>`;
     filas += `<tr><td>Plastificado (obligatorio, $950/m²)</td><td class="num">${cop(r.costoPlastificado)}</td></tr>`;
     filas += `<tr><td>Colaminado — backing ${r.backingEtiqueta}${r.detalleBacking?` (${r.detalleBacking.nPliegos} pliegos, ${r.piezasColaminado} tamaños)`:''}</td><td class="num">${cop(r.costoBackingMaterial)}</td></tr>`;
-    filas += `<tr class="detalle"><td colspan="2">↳ Mano de obra + pegante del colaminado ($900/m²): ${cop(r.costoColaminadoManoObra)}</td></tr>`;
+    filas += `<tr class="detalle"><td colspan="2">↳ Mano de obra + pegante del colaminado ($900/m², mínimo $30.000): ${cop(r.costoColaminadoManoObra)}</td></tr>`;
     if(r.conMarco){
       filas += `<tr><td>Base para marco (Cartón C14, ${r.detalleBaseMarco.nPliegos} pliegos)</td><td class="num">${cop(r.costoBaseMarco)}</td></tr>`;
     }
