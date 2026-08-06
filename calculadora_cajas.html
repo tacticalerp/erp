@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de Cotización — Cajas Blandas 1 Pieza CJB1 (Tactical Marketing) — BETA</title>
+<style>
+  :root{
+    --azul:#1e3a5f; --azul-claro:#2c5282; --fondo:#f4f6f8; --tarjeta:#ffffff;
+    --borde:#d7dee5; --texto:#1a202c; --texto-suave:#5a6472; --verde:#1a7d3f;
+    --rojo:#b91c1c; --acento:#e8792c;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    background:var(--fondo); color:var(--texto); line-height:1.4;
+  }
+  header{background:var(--azul); color:#fff; padding:18px 24px;}
+  header h1{margin:0; font-size:20px;}
+  header p{margin:4px 0 0; font-size:13px; color:#cbd8e8;}
+  .beta-banner{background:#fff3cd; color:#7a5b00; padding:10px 24px; font-size:13px; border-bottom:1px solid #f0d98c;}
+  .layout{
+    display:flex; gap:20px; padding:20px; max-width:1400px; margin:0 auto;
+    align-items:flex-start; flex-wrap:wrap;
+  }
+  .col-form{flex:1 1 620px; min-width:340px;}
+  .col-resultado{flex:1 1 380px; min-width:320px; position:sticky; top:20px;}
+  .card{
+    background:var(--tarjeta); border:1px solid var(--borde); border-radius:8px;
+    padding:16px 18px; margin-bottom:16px;
+  }
+  .card h2{margin:0 0 12px; font-size:15px; color:var(--azul); border-bottom:1px solid var(--borde); padding-bottom:8px;}
+  .fila{display:flex; flex-wrap:wrap; gap:12px; margin-bottom:10px;}
+  .campo{flex:1 1 140px; display:flex; flex-direction:column; gap:4px;}
+  .campo.chico{flex:0 1 160px;}
+  label{font-size:12px; color:var(--texto-suave); font-weight:600;}
+  input[type=number], input[type=text], select{
+    padding:7px 8px; border:1px solid var(--borde); border-radius:5px; font-size:13.5px;
+    background:#fff; color:var(--texto);
+  }
+  input[type=number]{width:100%;}
+  .checkbox-row{display:flex; align-items:center; gap:6px; font-size:13px; color:var(--texto);}
+  .checkbox-row input{margin:0;}
+  button{cursor:pointer; border:none; border-radius:6px; font-size:13.5px; padding:8px 14px; font-weight:600;}
+  .btn-primario{background:var(--acento); color:#fff; width:100%; padding:12px; font-size:15px;}
+  .btn-primario:hover{background:#d4691f;}
+  .hint{font-size:11.5px; color:var(--texto-suave); margin-top:2px;}
+  .resultado-tabla{width:100%; border-collapse:collapse; font-size:13px;}
+  .resultado-tabla td{padding:5px 4px; border-bottom:1px solid #eef1f4;}
+  .resultado-tabla td.num{text-align:right; font-variant-numeric:tabular-nums;}
+  .resultado-tabla tr.sub td{font-weight:700; border-top:2px solid var(--borde);}
+  .resultado-tabla tr.total td{font-weight:700; color:var(--azul); font-size:15px; border-top:2px solid var(--azul);}
+  .resultado-tabla tr.detalle td{color:var(--texto-suave); font-size:12px; padding-left:14px;}
+  .placeholder{color:var(--texto-suave); font-size:13.5px; text-align:center; padding:30px 10px;}
+  .error-box{background:#fde8e8; color:var(--rojo); border:1px solid #f3b4b4; border-radius:6px; padding:10px 12px; font-size:13px; margin-bottom:12px;}
+  .warn-box{background:#fff3cd; color:#7a5b00; border:1px solid #f0d98c; border-radius:6px; padding:8px 12px; font-size:12.5px; margin-bottom:8px;}
+  @media (max-width:900px){ .col-resultado{position:static;} }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Calculadora de Cotización — Cajas Blandas 1 Pieza CJB1 (BETA)</h1>
+  <p>Herramienta de pruebas paralelas — Tactical Marketing Group SAS. Reutiliza el motor de impresión digital/offset de Cuadernos, tal cual confirmó Conde.</p>
+</header>
+<div class="beta-banner">
+  ⚠️ Versión BETA sin validar contra cotizaciones reales todavía. Solo cubre Cajas Blandas 1 Pieza (CJB1) — las líneas CJB2 (2 piezas) y Cajas Duras (CJD1/CJD2) no tienen datos en los documentos fuente todavía.
+</div>
+
+<div class="layout">
+  <div class="col-form">
+
+    <div class="card">
+      <h2>0. Datos del Cliente</h2>
+      <div class="fila">
+        <div class="campo">
+          <label>Cliente:</label>
+          <input type="text" id="in-cli-empresa" list="cli-datalist" placeholder="Nombre de la empresa o persona" oninput="autocompletarCliente()">
+          <datalist id="cli-datalist"></datalist>
+          <div id="cli-existente-nota" style="display:none; font-size:0.8rem; color:var(--verde); margin-top:2px;">✓ Cliente existente — datos cargados automáticamente</div>
+        </div>
+        <div class="campo"><label>Encargado:</label><input type="text" id="in-cli-encargado" placeholder="Persona de contacto"></div>
+        <div class="campo"><label>Teléfono:</label><input type="text" id="in-cli-telefono" placeholder="Ej: 3001234567"></div>
+        <div class="campo">
+          <label>Correo:</label>
+          <input type="text" id="in-cli-correo" list="cli-correo-datalist" placeholder="cliente@empresa.com" oninput="autocompletarCliente()">
+          <datalist id="cli-correo-datalist"></datalist>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>1. Troquel y cantidad</h2>
+      <div class="fila">
+        <div class="campo" style="flex:1 1 320px;">
+          <label>Referencia de troquel:</label>
+          <select id="in-troquel" onchange="onCambioTroquel()"></select>
+          <div class="hint" id="hint-troquel"></div>
+        </div>
+        <div class="campo chico">
+          <label>Cantidad de cajas:</label>
+          <input type="number" id="in-cantidad" value="500" min="1">
+        </div>
+      </div>
+      <div id="alerta-maquina-externa" class="warn-box" style="display:none;"></div>
+    </div>
+
+    <div class="card">
+      <h2>2. Sustrato e impresión</h2>
+      <div class="fila">
+        <div class="campo">
+          <label>Papel/Sustrato (Cote desde 200gr, o cualquier calibre de cartulina):</label>
+          <select id="in-sustrato"></select>
+          <div class="hint">Digital solo es elegible en Cote 240gr — con sustratos más pesados va siempre litográfico.</div>
+        </div>
+      </div>
+      <div class="fila">
+        <div class="campo chico">
+          <label>Tintas tiro:</label>
+          <input type="number" id="in-tintasTiro" value="4" min="0" max="4">
+        </div>
+        <div class="campo chico">
+          <label>Tintas retiro:</label>
+          <input type="number" id="in-tintasRetiro" value="0" min="0" max="4">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3. Troquel — uso</h2>
+      <div class="fila">
+        <div class="campo">
+          <label>¿El troquel ya existe en el banco, o hay que fabricarlo?</label>
+          <select id="in-troquelNuevo" onchange="onCambioTroquelNuevo()">
+            <option value="existente">Usar troquel existente (banco) — desgaste cuchilla</option>
+            <option value="nuevo">Crear troquel nuevo</option>
+          </select>
+        </div>
+        <div class="campo chico" id="fila-desgaste-existente">
+          <label>Desgaste cuchilla (COP, editable):</label>
+          <input type="number" id="in-desgasteCop" value="30000" min="0">
+          <div class="hint">Sin confirmar la complejidad exacta por troquel — tarifas generales del banco: Baja $30k / Media $60k / Alta $120k / Especial $200k.</div>
+        </div>
+      </div>
+      <div class="fila" id="fila-troquelManual" style="display:none;">
+        <div class="campo">
+          <label>Costo troquel nuevo (COP, manual):</label>
+          <input type="number" id="in-troquelManualCop" value="0" min="0">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>4. Empaque</h2>
+      <div class="fila">
+        <div class="campo chico">
+          <label>Cajas por caja de empaque:</label>
+          <input type="number" id="in-empaqueUnidadesPorCaja" value="100" min="1">
+        </div>
+        <div class="campo chico">
+          <label>Costo por caja de empaque (COP):</label>
+          <input type="number" id="in-empaqueCostoCaja" value="3000" min="0">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>5. Condiciones comerciales</h2>
+      <div class="fila">
+        <div class="campo chico">
+          <label>% Utilidad:</label>
+          <input type="number" id="in-utilidadPct" value="40" step="1">
+        </div>
+        <div class="campo chico">
+          <label>% Comisión:</label>
+          <input type="number" id="in-comisionPct" value="3" step="0.5">
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-primario" onclick="calcular()">Calcular Cotización</button>
+  </div>
+
+  <div class="col-resultado">
+    <div class="card">
+      <h2>Resultado</h2>
+      <div id="resultado-contenido"><div class="placeholder">Completa el formulario y presiona Calcular.</div></div>
+      <button class="btn-primario" style="margin-top:10px; background:var(--verde);" onclick="guardarCotizacionClick()">💾 Guardar cotización (CRM)</button>
+      <div id="cot-ot-nota" style="display:none; margin-top:10px; padding:8px 12px; background:#eef2f7; border-left:4px solid var(--azul); border-radius:4px; font-size:0.9rem;"></div>
+    </div>
+    <div class="card" id="card-recomendaciones">
+      <h2>⚠️ Recomendaciones de Producción</h2>
+      <div id="recomendaciones-contenido"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============ CONSTANTES REUTILIZADAS DEL MOTOR DE CUADERNOS (ya validadas en el hub) ============ */
+const SUSTRATOS = {
+  // Conde 2026-08-06: "calibres de cote desde los 200 gramos y toda la gama de cartulinas".
+  // Valores de Propalcote 200/300/350 tomados del motor validado del hub (TACTICAL_ERP_HUB.html).
+  // Propalcote 240gr no existe en esa lista maestra — se reutiliza el valor ya usado en Carpetas
+  // (807.00/1050.00) por consistencia, sin fuente adicional que lo confirme.
+  "Propalcote__200": {p6090:603.90, p70100:810.00},
+  "Propalcote__240": {p6090:807.00, p70100:1050.00},   // "Cote 240gr" — único elegible para digital
+  "Propalcote__300": {p6090:910.80, p70100:1182.60},
+  "Propalcote__350": {p6090:null,   p70100:1381.50},
+  "Cartulina C11__190": {p6090:null,   p70100:684.00},
+  "Cartulina C12__205": {p6090:580.50, p70100:753.30},
+  "Cartulina C14__225": {p6090:637.20, p70100:826.20},
+  "Cartulina C16__255": {p6090:722.70, p70100:936.90},
+  "Cartulina C18__275": {p6090:779.40, p70100:1009.80},
+  "Cartulina C20__305": {p6090:864.00, p70100:1120.50},
+  "Cartulina C22__330": {p6090:null,   p70100:1212.30},
+};
+const PLIEGOS_CM = {"60x90":[60,90], "70x100":[70,100]};
+
+const DIGITAL_GRAMAJE_MAX = 240;
+const DIGITAL_PINZA_MM = 5;
+const DIGITAL_CLIC_COP = {
+  carta:{color:1000, negro:250},
+  octavo:{color:1400, negro:350},
+  pliego_max:{color:2200, negro:550},
+};
+const DIGITAL_DESCUENTO_VOLUMEN = [[9,0.0],[50,0.10],[200,0.18],[400,0.26],[Infinity,0.30]];
+const DIGITAL_FORMATOS_CM = {carta:[21.5,28], octavo:[25,35], pliego_max:[33,50]};
+const DIGITAL_MERMA_HOJAS = {policromia:20, negro:10, promedio:18};
+
+const OFFSET_CTP_COP = {medio_pliego:22000, cuarto:11000, octavo:9000};
+const OFFSET_MILLAR_COP = {medio_pliego_color:25000, medio_pliego_policromia_4x0:100000, cuarto:16000, octavo:12000};
+const OFFSET_FORMATOS_CM = {medio_pliego:[50,70], cuarto:[35,50], octavo:[25,35]};
+const OFFSET_MERMA_HOJAS = [[1000,100],[2000,130],[Infinity,160]];
+const OFFSET_MERMA_FACTOR_2_MAS_TINTAS = 1.30;
+const OFFSET_RECARGO_RETIRO_MEDIO_PLIEGO_POLICROMIA_PCT = 0.30;
+
+const ESCUDO_BAJOS_MONTOS_UMBRAL = 150000;
+const DISENO_COSTO_NORMAL = 40000;
+const DISENO_COSTO_REDUCIDO = 20000;
+const FONDO_SEGURIDAD_TRAMOS = [[500000,0.09],[1000000,0.07],[3000000,0.05],[Infinity,0.03]];
+const SHERPA_BASE_COP = 20000;
+const TRANSPORTE_TRAMOS = [[3000000,0.04],[5000000,0.03],[Infinity,0.02]];
+const TRANSPORTE_PISO_COP = 45000;
+
+/* ============ REGLAS PROPIAS DE CAJAS BLANDAS CJB1 (confirmadas por Conde 2026-08-06) ============ */
+const CAJA_PEGUE_COP_UNIDAD = 200; // fijo por caja, docx dossier maestro
+const CAJA_TROQUELADO_COP_MILLAR = 35000; // $35.000 por millar de PLIEGOS procesados, o fracción — no por caja
+// Empaque: 100 cajas por caja de despacho (Conde 2026-08-06), costo editable en la UI.
+
+// "Tamaño Impreso" = medida real de montaje que se usa para TODO cálculo (material, impresión, plancha).
+// Ancho/Alto/Largo = medida de la caja ARMADA, solo referencia visual para el vendedor, no entra en ninguna fórmula.
+// cavidades: cuántas cajas terminadas produce UN solo montaje/golpe de troquel (multicavidad DENTRO del troquel,
+// distinto de cuántos montajes caben por pliego). Confirmado por Conde: son 2 o 3 cajas por golpe, no "pasos" de troquelado.
+const TROQUELES_CAJAS = [
+  {id:"CJB1-1",  ancho:7,    alto:1,    largo:15,   anchoImpreso:19.5, altoImpreso:17,   cavidades:1},
+  {id:"CJB1-2",  ancho:12.5, alto:3.7,  largo:20.5, anchoImpreso:32.5, altoImpreso:31.5, cavidades:1},
+  {id:"CJB1-3",  ancho:14.5, alto:4.2,  largo:15,   anchoImpreso:27,   altoImpreso:40.5, cavidades:1},
+  {id:"CJB1-4",  ancho:19.5, alto:1.3,  largo:12.5, anchoImpreso:22.7, altoImpreso:17.5, cavidades:1},
+  {id:"CJB1-5",  ancho:8,    alto:4,    largo:8,    anchoImpreso:25,   altoImpreso:19,   cavidades:1},
+  {id:"CJB1-6",  ancho:7.5,  alto:7.5,  largo:7.5,  anchoImpreso:31,   altoImpreso:25,   cavidades:1},
+  {id:"CJB1-7",  ancho:6.3,  alto:6,    largo:6.3,  anchoImpreso:26,   altoImpreso:21,   cavidades:1},
+  {id:"CJB1-8",  ancho:7,    alto:15.3, largo:7,    anchoImpreso:29.5, altoImpreso:29.5, cavidades:1},
+  {id:"CJB1-9",  ancho:22.5, alto:3,    largo:15,   anchoImpreso:39.5, altoImpreso:35,   cavidades:1},
+  {id:"CJB1-10", ancho:20,   alto:4,    largo:13.5, anchoImpreso:49.5, altoImpreso:34.5, cavidades:1},
+  {id:"CJB1-11", ancho:4.5,  alto:4.7,  largo:4.5,  anchoImpreso:18.5, altoImpreso:21,   cavidades:1},
+  {id:"CJB1-12", ancho:23.7, alto:9,    largo:8,    anchoImpreso:45,   altoImpreso:20,   cavidades:1},
+  {id:"CJB1-13", ancho:5.8,  alto:5.8,  largo:5.8,  anchoImpreso:24.5, altoImpreso:20,   cavidades:1},
+  {id:"CJB1-14", ancho:25,   alto:15,   largo:7.5,  anchoImpreso:66.5, altoImpreso:30.5, cavidades:1},
+  {id:"CJB1-15", ancho:6,    alto:24,   largo:6,    anchoImpreso:50,   altoImpreso:25.5, cavidades:2, nota:"Tubo — 2 cajas por golpe de troquel"},
+  {id:"CJB1-16", ancho:4.3,  alto:9.5,  largo:4.3,  anchoImpreso:28,   altoImpreso:28,   cavidades:1, nota:"El troquel tiene una medida alternativa (5.3cm) y un montaje alterno 22x21cm — se usa la opción de 4.3cm/28x28cm por defecto, confirmar con Conde cuál es la preferida"},
+  {id:"CJB1-17", ancho:9,    alto:2.5,  largo:9,    anchoImpreso:24,   altoImpreso:21.5, cavidades:1},
+  {id:"CJB1-18", ancho:8,    alto:2,    largo:17.8, anchoImpreso:35,   altoImpreso:27,   cavidades:3, nota:"3 cajas por golpe de troquel"},
+  {id:"CJB1-19", ancho:23.5, alto:5.5,  largo:25,   anchoImpreso:67.5, altoImpreso:48.5, cavidades:1},
+  {id:"CJB1-20", ancho:26,   alto:8,    largo:26,   anchoImpreso:77,   altoImpreso:52,   cavidades:1, requiereMaquinaExterna:true, nota:"Excede medio pliego (50x70) — necesita máquina de pliego completo, poco práctica en tiempos. Cotizar manual con proveedor externo."},
+  {id:"CJB1-21", ancho:15.5, alto:4,    largo:11,   anchoImpreso:23,   altoImpreso:20,   cavidades:3, nota:"3 cajas por golpe de troquel (montaje alterno 50x14cm)"},
+  // CJB1-22 (3x7.5x16cm) excluido: la fuente (Tabla 1 troqueles.xlsx) no trae el dato de Tamaño Impreso.
+];
+
+/* ============ FUNCIONES DE MOTOR (copiadas 1:1 de motor_cotizacion/calculadora.html — Cuadernos) ============ */
+function piezasPorPliego(pa,pal,pw,ph){
+  const sinRotar = Math.floor(pw/pa)*Math.floor(ph/pal);
+  const rotada = Math.floor(pw/pal)*Math.floor(ph/pa);
+  return Math.max(sinRotar,rotada,0);
+}
+function ordenar2(a,b){ return a<=b ? [a,b] : [b,a]; }
+
+function costoMaterialPliegos(pa,pal,sustratoNombre,gramaje,piezasNecesarias,mermaHojas=0){
+  const key = sustratoNombre+"__"+gramaje;
+  const precios = SUSTRATOS[key];
+  if(!precios) throw new Error("Sustrato no encontrado: "+sustratoNombre+" "+gramaje+"g");
+  const piezasTotales = piezasNecesarias + mermaHojas;
+  let mejores=[];
+  const precioMap = {"60x90":precios.p6090, "70x100":precios.p70100};
+  for(const formato of Object.keys(PLIEGOS_CM)){
+    const [pw,ph]=PLIEGOS_CM[formato];
+    const precioPliego = precioMap[formato];
+    if(precioPliego==null) continue;
+    const nPorPliego = piezasPorPliego(pa,pal,pw,ph);
+    if(nPorPliego===0) continue;
+    const nPliegos = Math.ceil(piezasTotales/nPorPliego);
+    const costoTotal = nPliegos*precioPliego;
+    mejores.push([costoTotal, formato, nPorPliego, nPliegos, precioPliego]);
+  }
+  if(mejores.length===0) throw new Error(`La pieza ${pa}x${pal}cm no cabe en ningún pliego disponible para ${sustratoNombre} ${gramaje}g`);
+  mejores.sort((x,y)=>x[0]-y[0]);
+  const [costoTotal, formato, nPorPliego, nPliegos, precioPliego] = mejores[0];
+  return {formato, piezasPorPliego:nPorPliego, nPliegos, precioPliego, costoTotal};
+}
+
+function claseFormatoDigital(ancho,alto){
+  const [a,b]=ordenar2(ancho,alto);
+  if(a<=21.5 && b<=28) return "carta";
+  if(a<=25 && b<=35) return "octavo";
+  if(a<=33 && b<=50) return "pliego_max";
+  return null;
+}
+function elegibleDigital(ancho,alto,gramaje,cantidadUnidades=1){
+  if(gramaje>DIGITAL_GRAMAJE_MAX) return false;
+  if(cantidadUnidades>200) return false;
+  return claseFormatoDigital(ancho,alto)!==null;
+}
+function descuentoVolumenDigital(cantidadUnidades){
+  for(const [tope,pct] of DIGITAL_DESCUENTO_VOLUMEN){
+    if(cantidadUnidades<=tope) return pct;
+  }
+  return 0.0;
+}
+function mermaDigitalHojas(cantTintas){
+  return cantTintas>=2 ? DIGITAL_MERMA_HOJAS.policromia : DIGITAL_MERMA_HOJAS.negro;
+}
+function costoImpresionDigital(nPaginas,caras,esColor,ancho,alto,cantidadUnidades=1){
+  const clase=claseFormatoDigital(ancho,alto);
+  if(clase===null) return null;
+  const [sheetW,sheetH]=DIGITAL_FORMATOS_CM[clase];
+  const margenCm=DIGITAL_PINZA_MM/10;
+  let piezasPorClic=piezasPorPliego(ancho,alto,sheetW,sheetH-margenCm);
+  if(piezasPorClic===0) piezasPorClic=1;
+  const nClics=Math.ceil(nPaginas/piezasPorClic)*caras;
+  const precioClic=DIGITAL_CLIC_COP[clase][esColor?"color":"negro"];
+  const descuento=descuentoVolumenDigital(cantidadUnidades);
+  const total=nClics*precioClic*(1-descuento);
+  return {total, via:"digital", nClics, precioClic, descuentoPct:descuento, clase};
+}
+
+function fraccionPliegoOffset(ancho,alto,esPolicromia=false){
+  const [a,b]=ordenar2(ancho,alto);
+  if(a<=25 && b<=35 && !esPolicromia) return "octavo";
+  if(a<=35 && b<=50) return "cuarto";
+  return "medio_pliego";
+}
+function mermaOffsetHojas(nHojasFisicas,cantTintas){
+  let base=OFFSET_MERMA_HOJAS[OFFSET_MERMA_HOJAS.length-1][1];
+  for(const [tope,merma] of OFFSET_MERMA_HOJAS){
+    if(nHojasFisicas<=tope){ base=merma; break; }
+  }
+  if(cantTintas>=2) base*=OFFSET_MERMA_FACTOR_2_MAS_TINTAS;
+  return base;
+}
+// Conde 2026-08-06: la merma de ajuste de máquina no empuja a un millar adicional si el excedente
+// sobre el millar completo es de 180 unidades o menos. Ej: 1.180 piezas = 1 millar, 1.200 = 2 millares.
+function millaresConTolerancia(nPasadas){
+  if(nPasadas<=0) return 0;
+  const base=Math.ceil(nPasadas/1000);
+  if(base<=1) return 1;
+  const resto=nPasadas-(base-1)*1000;
+  return resto<=180 ? base-1 : base;
+}
+function costoImpresionOffset(nPiezasFinales,tintasTiro,tintasRetiro,esPolicromia,ancho,alto){
+  const fraccion=fraccionPliegoOffset(ancho,alto,esPolicromia);
+  const [sheetW,sheetH]=OFFSET_FORMATOS_CM[fraccion];
+  let piezasPorPasada=piezasPorPliego(ancho,alto,sheetW,sheetH);
+  if(piezasPorPasada===0) piezasPorPasada=1;
+  const nPasadas=Math.ceil(nPiezasFinales/piezasPorPasada);
+  const millares=millaresConTolerancia(nPasadas);
+
+  function costoTrabajo(nTintas){
+    const nPlanchas=Math.max(nTintas,1);
+    const costoCtp=OFFSET_CTP_COP[fraccion]*nPlanchas;
+    let costoMillar;
+    if(fraccion==="medio_pliego" && esPolicromia && nTintas>=4){
+      costoMillar=OFFSET_MILLAR_COP.medio_pliego_policromia_4x0*millares;
+    } else if(fraccion==="medio_pliego"){
+      costoMillar=OFFSET_MILLAR_COP.medio_pliego_color*nPlanchas*millares;
+    } else {
+      costoMillar=OFFSET_MILLAR_COP[fraccion]*nPlanchas*millares;
+    }
+    return {nPlanchas, costoCtp, costoMillar, total:costoCtp+costoMillar};
+  }
+
+  const tiroJob = costoTrabajo(tintasTiro);
+  let retiroJob = null, recargoRetiro = false, total = tiroJob.total;
+
+  if(tintasRetiro>0){
+    if(tintasTiro!==tintasRetiro){
+      retiroJob = costoTrabajo(tintasRetiro);
+      total += retiroJob.total;
+    } else if(esPolicromia){
+      total += tiroJob.total*OFFSET_RECARGO_RETIRO_MEDIO_PLIEGO_POLICROMIA_PCT;
+      recargoRetiro = true;
+    }
+  }
+
+  const nPlanchas = tiroJob.nPlanchas + (retiroJob?retiroJob.nPlanchas:0);
+  return {total, via:"offset", fraccion, nPlanchas, nMillares:millares, tiroJob, retiroJob, recargoRetiro, piezasPorPasada};
+}
+
+function precioVentaDesdeSubtotal(subtotal,utilidadPct=0.40,comisionPct=0.03){
+  return subtotal*(1+utilidadPct)*(1+comisionPct);
+}
+function disenoYPreprensa(montoOt){
+  if(montoOt<ESCUDO_BAJOS_MONTOS_UMBRAL) return DISENO_COSTO_REDUCIDO;
+  return DISENO_COSTO_NORMAL;
+}
+function tramoFondoSeguridad(costoDirecto){
+  for(const [tope,pct] of FONDO_SEGURIDAD_TRAMOS){
+    if(costoDirecto<=tope) return pct;
+  }
+  return FONDO_SEGURIDAD_TRAMOS[FONDO_SEGURIDAD_TRAMOS.length-1][1];
+}
+function costoTransporte(baseCop){
+  for(const [tope,pct] of TRANSPORTE_TRAMOS){
+    if(baseCop<=tope) return Math.max(baseCop*pct, TRANSPORTE_PISO_COP);
+  }
+  return Math.max(baseCop*TRANSPORTE_TRAMOS[TRANSPORTE_TRAMOS.length-1][1], TRANSPORTE_PISO_COP);
+}
+
+/* ============ CÁLCULO PRINCIPAL — CAJAS BLANDAS CJB1 ============ */
+function cotizarCaja(p){
+  const troquel = TROQUELES_CAJAS.find(t=>t.id===p.troquelId);
+  if(!troquel) throw new Error("Troquel no encontrado: "+p.troquelId);
+  if(troquel.requiereMaquinaExterna) throw new Error("Este troquel excede medio pliego (50x70cm) y necesita máquina de pliego completo — no hay tarifas propias para ese formato. Cotizar manual con el proveedor externo, no usar esta calculadora para este troquel.");
+
+  // El "Tamaño Impreso" del troquel es la medida que se usa para TODO el cálculo de
+  // material/impresión — es el montaje real, no la medida de la caja armada (Conde 2026-08-06).
+  const anchoMontaje = troquel.anchoImpreso;
+  const altoMontaje = troquel.altoImpreso;
+
+  // Multicavidad DENTRO del troquel (2 o 3 cajas por golpe): se necesitan menos "montajes"
+  // que cajas pedidas. bloquesNecesarios = cuántos golpes/montajes hay que imprimir y troquelar.
+  const bloquesNecesarios = Math.ceil(p.cantidad / troquel.cavidades);
+
+  const [sustratoNombre, gramajeStr] = p.sustrato.split("__");
+  const gramaje = parseFloat(gramajeStr);
+  const cantTintas = Math.max(p.tintasTiro, p.tintasRetiro, 1);
+  const esPolicromia = p.tintasTiro>=4 || p.tintasRetiro>=4;
+  const esColor = cantTintas>=2;
+
+  let impDigital = null;
+  if(elegibleDigital(anchoMontaje, altoMontaje, gramaje, bloquesNecesarios)){
+    const merma = mermaDigitalHojas(cantTintas);
+    impDigital = costoImpresionDigital(bloquesNecesarios+merma, p.tintasRetiro>0?2:1, esColor, anchoMontaje, altoMontaje, bloquesNecesarios);
+  }
+  const mermaOffset = mermaOffsetHojas(bloquesNecesarios, cantTintas);
+  const impOffset = costoImpresionOffset(bloquesNecesarios+mermaOffset, p.tintasTiro, p.tintasRetiro, esPolicromia, anchoMontaje, altoMontaje);
+  const usaDigital = !!(impDigital && impDigital.total < impOffset.total);
+  const detalleImpresion = usaDigital ? impDigital : impOffset;
+
+  const bloquesConMerma = bloquesNecesarios + (usaDigital ? mermaDigitalHojas(cantTintas) : mermaOffset);
+  const detalleMaterial = costoMaterialPliegos(anchoMontaje, altoMontaje, sustratoNombre, gramaje, bloquesConMerma, 0);
+
+  const costoPegue = CAJA_PEGUE_COP_UNIDAD * p.cantidad;
+
+  // Troquelado (servicio de máquina): se cobra por PLIEGOS procesados, no por caja — Conde
+  // 2026-08-06: "aunque el pliego solo rinda 1 caja, el troquelado sigue procesando el pliego completo".
+  const costoTroqueladoServicio = Math.ceil(detalleMaterial.nPliegos/1000)*CAJA_TROQUELADO_COP_MILLAR;
+  let costoUsoTroquel;
+  if(p.troquelEsNuevo){ costoUsoTroquel = p.costoTroquelNuevoManual||0; }
+  else { costoUsoTroquel = p.desgasteCop||0; }
+
+  const costoDirecto = detalleMaterial.costoTotal + detalleImpresion.total
+    + costoPegue + costoTroqueladoServicio + costoUsoTroquel;
+
+  const disenoCop = disenoYPreprensa(costoDirecto);
+  const fondoSeguridadPct = tramoFondoSeguridad(costoDirecto);
+  const fondoSeguridadCop = costoDirecto*fondoSeguridadPct;
+  const sherpaCop = SHERPA_BASE_COP;
+  const empaqueCop = Math.ceil(p.cantidad/p.empaqueUnidadesPorCaja)*p.empaqueCostoCaja;
+
+  const subtotalPreTransporte = costoDirecto + disenoCop + fondoSeguridadCop + sherpaCop + empaqueCop;
+  const transporteCop = costoTransporte(subtotalPreTransporte);
+  const subtotal = subtotalPreTransporte + transporteCop;
+
+  const precioVentaTotal = precioVentaDesdeSubtotal(subtotal, p.utilidadPct, p.comisionPct);
+  const precioVentaUnitario = precioVentaTotal/p.cantidad;
+  const ivaTotal = precioVentaTotal*0.19;
+  const precioFinalTotal = precioVentaTotal+ivaTotal;
+  const gananciaTotal = precioVentaTotal - subtotal;
+  const gananciaUnitaria = gananciaTotal/p.cantidad;
+
+  return {
+    troquel, anchoMontaje, altoMontaje, bloquesNecesarios, usaDigital, detalleImpresion, detalleMaterial,
+    costoPegue, costoTroqueladoServicio, costoUsoTroquel, costoDirecto,
+    disenoCop, fondoSeguridadPct, fondoSeguridadCop, sherpaCop, empaqueCop, transporteCop,
+    subtotal, precioVentaTotal, precioVentaUnitario, ivaTotal, precioFinalTotal,
+    gananciaTotal, gananciaUnitaria,
+  };
+}
+
+/* ============ RECOMENDACIONES DE PRODUCCIÓN ============ */
+const RECOMENDACIONES_PRODUCCION = [
+  { aplica: (r) => r.troquel.cavidades>1, texto: "Este troquel produce varias cajas por golpe — verificar en el montaje que todas las cavidades queden alineadas antes de correr producción completa." },
+  { aplica: (r) => r.troquel.requiereMaquinaExterna, texto: "Este tamaño excede medio pliego y requiere máquina de pliego completo — cotizar manual con el proveedor externo antes de confirmar precio al cliente." },
+  { aplica: (r) => !!r.troquel.nota, texto: (r) => r.troquel.nota },
+];
+function renderRecomendaciones(r){
+  const cont = document.getElementById("recomendaciones-contenido");
+  const aplicables = RECOMENDACIONES_PRODUCCION.filter(reg => reg.aplica(r)).map(reg => typeof reg.texto==="function" ? reg.texto(r) : reg.texto);
+  cont.innerHTML = aplicables.map(txt => `<div class="warn-box">${txt}</div>`).join("");
+}
+
+/* ============ UI ============ */
+function cop(n){ return "$" + Math.round(n).toLocaleString("es-CO"); }
+
+function poblarTroqueles(){
+  const sel = document.getElementById("in-troquel");
+  sel.innerHTML = TROQUELES_CAJAS.map(t =>
+    `<option value="${t.id}">${t.id} — anch ${t.ancho}cm, alt ${t.alto}cm, lar ${t.largo}cm${t.cavidades>1?' — x'+t.cavidades:''}</option>`
+  ).join("");
+  onCambioTroquel();
+}
+function poblarSustratos(){
+  const sel = document.getElementById("in-sustrato");
+  sel.innerHTML = Object.keys(SUSTRATOS).map(key => {
+    const [nombre,gramaje] = key.split("__");
+    return `<option value="${key}">${nombre} ${gramaje}g${gramaje==="240"?" (único elegible para digital)":""}</option>`;
+  }).join("");
+  sel.value = "Propalcote__200";
+}
+function onCambioTroquel(){
+  const id = document.getElementById("in-troquel").value;
+  const t = TROQUELES_CAJAS.find(x=>x.id===id);
+  let hint = `Caja armada ${t.ancho}x${t.alto}x${t.largo}cm — montaje de impresión ${t.anchoImpreso}x${t.altoImpreso}cm`;
+  if(t.cavidades>1) hint += ` (${t.cavidades} cajas por golpe de troquel)`;
+  document.getElementById("hint-troquel").innerText = hint;
+  const alerta = document.getElementById("alerta-maquina-externa");
+  if(t.requiereMaquinaExterna){
+    alerta.style.display = "block";
+    alerta.innerText = "⚠️ " + t.nota;
+  } else {
+    alerta.style.display = "none";
+  }
+}
+function onCambioTroquelNuevo(){
+  const esNuevo = document.getElementById("in-troquelNuevo").value === "nuevo";
+  document.getElementById("fila-troquelManual").style.display = esNuevo ? "flex" : "none";
+  document.getElementById("fila-desgaste-existente").style.display = esNuevo ? "none" : "flex";
+}
+
+function calcular(){
+  const cont = document.getElementById("resultado-contenido");
+  try{
+    const p = {
+      troquelId: document.getElementById("in-troquel").value,
+      cantidad: parseFloat(document.getElementById("in-cantidad").value),
+      sustrato: document.getElementById("in-sustrato").value,
+      tintasTiro: parseInt(document.getElementById("in-tintasTiro").value)||0,
+      tintasRetiro: parseInt(document.getElementById("in-tintasRetiro").value)||0,
+      troquelEsNuevo: document.getElementById("in-troquelNuevo").value === "nuevo",
+      desgasteCop: parseFloat(document.getElementById("in-desgasteCop").value)||0,
+      costoTroquelNuevoManual: parseFloat(document.getElementById("in-troquelManualCop").value)||0,
+      empaqueUnidadesPorCaja: parseFloat(document.getElementById("in-empaqueUnidadesPorCaja").value)||100,
+      empaqueCostoCaja: parseFloat(document.getElementById("in-empaqueCostoCaja").value)||0,
+      utilidadPct: parseFloat(document.getElementById("in-utilidadPct").value)/100,
+      comisionPct: parseFloat(document.getElementById("in-comisionPct").value)/100,
+    };
+    const r = cotizarCaja(p);
+    renderRecomendaciones(r);
+
+    const viaImpresionTxt = r.detalleImpresion.via==="digital"
+      ? `Digital (${r.detalleImpresion.clase}) — ${r.detalleImpresion.nClics} clics, descuento ${(r.detalleImpresion.descuentoPct*100).toFixed(0)}%`
+      : `Offset (${r.detalleImpresion.fraccion}) — ${r.detalleImpresion.nPlanchas} plancha(s), ${r.detalleImpresion.nMillares} millar(es)`;
+
+    let filas = `<table class="resultado-tabla">`;
+    filas += `<tr class="detalle"><td colspan="2">Troquel ${r.troquel.id} — montaje ${r.anchoMontaje}x${r.altoMontaje}cm${r.troquel.cavidades>1?` (${r.troquel.cavidades} cajas/golpe — ${r.bloquesNecesarios} golpes para ${document.getElementById('in-cantidad').value} cajas)`:''}</td></tr>`;
+    filas += `<tr><td>Material (${r.detalleMaterial.formato}, ${r.detalleMaterial.nPliegos} pliegos)</td><td class="num">${cop(r.detalleMaterial.costoTotal)}</td></tr>`;
+    filas += `<tr><td>Impresión — ${viaImpresionTxt}</td><td class="num">${cop(r.detalleImpresion.total)}</td></tr>`;
+    if(r.detalleImpresion.via==="offset" && r.detalleImpresion.retiroJob){
+      filas += `<tr class="detalle"><td colspan="2">↳ Tiro: ${cop(r.detalleImpresion.tiroJob.total)} (${r.detalleImpresion.tiroJob.nPlanchas} plancha/s) + Retiro (juego propio): ${cop(r.detalleImpresion.retiroJob.total)} (${r.detalleImpresion.retiroJob.nPlanchas} plancha/s)</td></tr>`;
+    } else if(r.detalleImpresion.via==="offset" && r.detalleImpresion.recargoRetiro){
+      filas += `<tr class="detalle"><td colspan="2">↳ Incluye recargo +30% por retiro policromía (mismas planchas)</td></tr>`;
+    }
+    filas += `<tr><td>Pegue</td><td class="num">${cop(r.costoPegue)}</td></tr>`;
+    filas += `<tr><td>Troquelado (servicio de máquina, por pliego)</td><td class="num">${cop(r.costoTroqueladoServicio)}</td></tr>`;
+    filas += `<tr><td>Uso del troquel</td><td class="num">${cop(r.costoUsoTroquel)}</td></tr>`;
+    filas += `<tr class="sub"><td>Costo directo total</td><td class="num">${cop(r.costoDirecto)}</td></tr>`;
+    filas += `<tr><td>Diseño / Preprensa</td><td class="num">${cop(r.disenoCop)}</td></tr>`;
+    filas += `<tr><td>Fondo de Seguridad (${(r.fondoSeguridadPct*100).toFixed(1)}%)</td><td class="num">${cop(r.fondoSeguridadCop)}</td></tr>`;
+    filas += `<tr><td>Sherpa (muestra de color)</td><td class="num">${cop(r.sherpaCop)}</td></tr>`;
+    filas += `<tr><td>Empaque</td><td class="num">${cop(r.empaqueCop)}</td></tr>`;
+    filas += `<tr><td>Transporte</td><td class="num">${cop(r.transporteCop)}</td></tr>`;
+    filas += `<tr class="sub"><td>Subtotal</td><td class="num">${cop(r.subtotal)}</td></tr>`;
+    filas += `<tr><td>Precio de venta (total pedido)</td><td class="num">${cop(r.precioVentaTotal)}</td></tr>`;
+    filas += `<tr class="sub"><td>Precio de venta UNITARIO</td><td class="num">${cop(r.precioVentaUnitario)}</td></tr>`;
+    filas += `<tr><td>IVA (19%)</td><td class="num">${cop(r.ivaTotal)}</td></tr>`;
+    filas += `<tr class="total"><td>Precio final total (con IVA)</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
+    filas += `<tr class="total" style="color:var(--verde);"><td>Ganancia total del pedido (utilidad+comisión, sin IVA)</td><td class="num">${cop(r.gananciaTotal)}</td></tr>`;
+    filas += `<tr class="detalle"><td colspan="2">↳ Ganancia por unidad: ${cop(r.gananciaUnitaria)}</td></tr>`;
+    filas += `</table>`;
+    cont.innerHTML = filas;
+    ultimoResultado = r; ultimoParams = p;
+    document.getElementById("cot-ot-nota").style.display = "none";
+  } catch(err){
+    cont.innerHTML = `<div class="error-box">Error en el cálculo: ${err.message}</div>`;
+    ultimoResultado = null; ultimoParams = null;
+  }
+}
+
+/* ============ CLIENTE Y CRM (comparte localStorage con TACTICAL_ERP_HUB.html) ============ */
+let db_clientes = JSON.parse(localStorage.getItem('tactical_crm_clientes_v2')) || [];
+let db_opps = JSON.parse(localStorage.getItem('tactical_crm_opps_v2')) || [];
+let ultimoResultado = null, ultimoParams = null, ultimoOT = null;
+
+function refrescarDatalistClientes(){
+  const dlEmpresa = document.getElementById('cli-datalist');
+  const dlCorreo = document.getElementById('cli-correo-datalist');
+  if(!dlEmpresa || !dlCorreo) return;
+  dlEmpresa.innerHTML = db_clientes.map(c => `<option value="${c.empresa}">${c.nombre||''}</option>`).join('');
+  dlCorreo.innerHTML = db_clientes.filter(c=>c.correo).map(c => `<option value="${c.correo}"></option>`).join('');
+}
+function autocompletarCliente(){
+  const empresaVal = document.getElementById('in-cli-empresa').value.trim();
+  const correoVal = document.getElementById('in-cli-correo').value.trim();
+  const nota = document.getElementById('cli-existente-nota');
+  const cli = db_clientes.find(c =>
+    (correoVal && c.correo && c.correo.toLowerCase() === correoVal.toLowerCase()) ||
+    (empresaVal && c.empresa.toLowerCase() === empresaVal.toLowerCase())
+  );
+  if(cli){
+    document.getElementById('in-cli-empresa').value = cli.empresa;
+    document.getElementById('in-cli-encargado').value = cli.nombre || '';
+    document.getElementById('in-cli-telefono').value = cli.wp || '';
+    document.getElementById('in-cli-correo').value = cli.correo || '';
+    nota.style.display = 'block';
+  } else {
+    nota.style.display = 'none';
+  }
+}
+function siguienteOT(){
+  let n = parseInt(localStorage.getItem('tactical_ot_counter')||'0') + 1;
+  localStorage.setItem('tactical_ot_counter', String(n));
+  return 'OT-' + String(n).padStart(4,'0');
+}
+function guardarCotizacionClick(){
+  if(!ultimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
+  const empresa = document.getElementById('in-cli-empresa').value.trim();
+  const encargado = document.getElementById('in-cli-encargado').value.trim();
+  const telefono = document.getElementById('in-cli-telefono').value.trim();
+  const correo = document.getElementById('in-cli-correo').value.trim();
+  if(!empresa && !encargado){ alert("Ingresa al menos el Cliente o el Encargado antes de guardar."); return; }
+
+  let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
+  if(!cli){
+    cli = { id: Date.now().toString(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0 };
+    db_clientes.push(cli);
+  } else {
+    if(telefono) cli.wp = telefono;
+    if(correo) cli.correo = correo;
+  }
+  localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
+
+  if(!ultimoOT) ultimoOT = siguienteOT();
+  const desc = `${ultimoParams.cantidad} Cajas ${ultimoResultado.troquel.id}`;
+  const opp = { id: Date.now().toString()+'_opp', ot: ultimoOT, idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, desc, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot' };
+  db_opps.push(opp);
+  localStorage.setItem('tactical_crm_opps_v2', JSON.stringify(db_opps));
+
+  refrescarDatalistClientes();
+  const nota = document.getElementById('cot-ot-nota');
+  nota.style.display = 'block';
+  nota.innerText = `📋 Cotización guardada en el CRM como ${ultimoOT} — cliente: ${cli.empresa}.`;
+}
+
+poblarSustratos();
+poblarTroqueles();
+refrescarDatalistClientes();
+onCambioTroquelNuevo();
+</script>
+</body>
+</html>
