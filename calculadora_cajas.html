@@ -91,12 +91,14 @@
 
     <div class="card">
       <h2>1. Troquel y cantidad</h2>
-      <div class="fila">
+      <div class="fila" id="fila-troquel-banco">
         <div class="campo" style="flex:1 1 320px;">
           <label>Referencia de troquel:</label>
           <select id="in-troquel" onchange="onCambioTroquel()"></select>
           <div class="hint" id="hint-troquel"></div>
         </div>
+      </div>
+      <div class="fila">
         <div class="campo chico">
           <label>Cantidad de cajas:</label>
           <input type="number" id="in-cantidad" value="500" min="1">
@@ -147,6 +149,21 @@
           <label>Costo troquel nuevo (COP, manual):</label>
           <input type="number" id="in-troquelManualCop" value="0" min="0">
         </div>
+      </div>
+      <div class="fila" id="fila-troquel-personalizado" style="display:none;">
+        <div class="campo chico">
+          <label>Cajas por golpe de troquel:</label>
+          <input type="number" id="in-cust-cavidades" value="1" min="1">
+        </div>
+        <div class="campo chico">
+          <label>Ancho a imprimir (cm):</label>
+          <input type="number" id="in-cust-anchoImpreso" value="25" min="1" step="0.5">
+        </div>
+        <div class="campo chico">
+          <label>Alto a imprimir (cm):</label>
+          <input type="number" id="in-cust-altoImpreso" value="19" min="1" step="0.5">
+        </div>
+        <div class="hint" style="flex:1 1 100%;">Medida del montaje de impresión (Tamaño Impreso), no la caja armada — es la que se usa para calcular material e impresión.</div>
       </div>
     </div>
 
@@ -426,9 +443,14 @@ function costoTransporte(baseCop){
 
 /* ============ CÁLCULO PRINCIPAL — CAJAS BLANDAS CJB1 ============ */
 function cotizarCaja(p){
-  const troquel = TROQUELES_CAJAS.find(t=>t.id===p.troquelId);
-  if(!troquel) throw new Error("Troquel no encontrado: "+p.troquelId);
-  if(troquel.requiereMaquinaExterna) throw new Error("Este troquel excede medio pliego (50x70cm) y necesita máquina de pliego completo — no hay tarifas propias para ese formato. Cotizar manual con el proveedor externo, no usar esta calculadora para este troquel.");
+  let troquel;
+  if(p.troquelEsNuevo){
+    troquel = { id:"PERSONALIZADO", ancho:null, alto:null, largo:null, anchoImpreso:p.custAnchoImpreso, altoImpreso:p.custAltoImpreso, cavidades:p.custCavidades };
+  } else {
+    troquel = TROQUELES_CAJAS.find(t=>t.id===p.troquelId);
+    if(!troquel) throw new Error("Troquel no encontrado: "+p.troquelId);
+    if(troquel.requiereMaquinaExterna) throw new Error("Este troquel excede medio pliego (50x70cm) y necesita máquina de pliego completo — no hay tarifas propias para ese formato. Cotizar manual con el proveedor externo, no usar esta calculadora para este troquel.");
+  }
 
   // El "Tamaño Impreso" del troquel es la medida que se usa para TODO el cálculo de
   // material/impresión — es el montaje real, no la medida de la caja armada (Conde 2026-08-06).
@@ -544,6 +566,10 @@ function onCambioTroquelNuevo(){
   const esNuevo = document.getElementById("in-troquelNuevo").value === "nuevo";
   document.getElementById("fila-troquelManual").style.display = esNuevo ? "flex" : "none";
   document.getElementById("fila-desgaste-existente").style.display = esNuevo ? "none" : "flex";
+  document.getElementById("fila-troquel-personalizado").style.display = esNuevo ? "flex" : "none";
+  document.getElementById("fila-troquel-banco").style.display = esNuevo ? "none" : "flex";
+  if(esNuevo) document.getElementById("alerta-maquina-externa").style.display = "none";
+  else onCambioTroquel();
 }
 
 function calcular(){
@@ -558,6 +584,9 @@ function calcular(){
       troquelEsNuevo: document.getElementById("in-troquelNuevo").value === "nuevo",
       desgasteCop: parseFloat(document.getElementById("in-desgasteCop").value)||0,
       costoTroquelNuevoManual: parseFloat(document.getElementById("in-troquelManualCop").value)||0,
+      custCavidades: parseInt(document.getElementById("in-cust-cavidades").value)||1,
+      custAnchoImpreso: parseFloat(document.getElementById("in-cust-anchoImpreso").value)||0,
+      custAltoImpreso: parseFloat(document.getElementById("in-cust-altoImpreso").value)||0,
       empaqueUnidadesPorCaja: parseFloat(document.getElementById("in-empaqueUnidadesPorCaja").value)||100,
       empaqueCostoCaja: parseFloat(document.getElementById("in-empaqueCostoCaja").value)||0,
       utilidadPct: parseFloat(document.getElementById("in-utilidadPct").value)/100,

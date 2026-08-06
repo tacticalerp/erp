@@ -91,12 +91,14 @@
 
     <div class="card">
       <h2>1. Troquel y cantidad</h2>
-      <div class="fila">
+      <div class="fila" id="fila-troquel-banco">
         <div class="campo" style="flex:1 1 320px;">
           <label>Referencia de troquel:</label>
           <select id="in-troquel" onchange="onCambioTroquel()"></select>
           <div class="hint" id="hint-troquel"></div>
         </div>
+      </div>
+      <div class="fila">
         <div class="campo chico">
           <label>Cantidad:</label>
           <input type="number" id="in-cantidad" value="500" min="1">
@@ -161,6 +163,25 @@
           <input type="number" id="in-troquelManualCop" value="0" min="0">
         </div>
       </div>
+      <div class="fila" id="fila-troquel-personalizado" style="display:none;">
+        <div class="campo chico">
+          <label>Bolsillos:</label>
+          <input type="number" id="in-cust-bolsillos" value="1" min="1">
+        </div>
+        <div class="campo chico">
+          <label>Profundidad bolsillo (cm):</label>
+          <input type="number" id="in-cust-profundidad" value="8" min="0" step="0.5">
+        </div>
+        <div class="campo chico">
+          <label>Ancho a imprimir (cm):</label>
+          <input type="number" id="in-cust-anchoImpreso" value="47" min="1" step="0.5">
+        </div>
+        <div class="campo chico">
+          <label>Alto a imprimir (cm):</label>
+          <input type="number" id="in-cust-altoImpreso" value="37" min="1" step="0.5">
+        </div>
+        <div class="hint" style="flex:1 1 100%;">Medida de la carpeta ABIERTA (planta de impresión), no la carpeta armada — es la que se usa para calcular material e impresión.</div>
+      </div>
     </div>
 
     <div class="card">
@@ -199,7 +220,7 @@
 const SUSTRATOS = {
   // Restringido a >=240g por regla de Carpetas — solo se ofrecen sustratos que cumplen.
   "Propalcote__240": {p6090:807.00, p70100:1050.00},   // "Cote 240gr" — único elegible para digital
-  "Propalcote__300": {p6090:1012.00, p70100:1314.00},
+  "Propalcote__300": {p6090:910.80, p70100:1182.60},
   "Cartulina C16__255": {p6090:722.70, p70100:936.90},
   "Cartulina C18__275": {p6090:779.40, p70100:1009.80},
   "Cartulina C20__305": {p6090:864.00, p70100:1120.50},
@@ -245,18 +266,22 @@ const CARPETA_TROQUELADO_COP_MILLAR = 35000; // tarifa genérica del banco de tr
 const CARPETA_DESGASTE_CUCHILLA_COP = 20000; // flat, sin escala de complejidad (a diferencia de Rompecabezas)
 const CARPETA_EMPAQUE_UNIDADES_POR_CAJA = 200; // fijo, confirmado por Conde
 
+// Conde 2026-08-06: ancho/alto son la medida ARMADA de la carpeta (solo referencia para el
+// vendedor) — el cálculo de material/impresión debe usar anchoImpreso/altoImpreso, el "Tamaño
+// Planta" real (carpeta abierta), tomado de Tabla 1 troqueles.xlsx hoja "Carpetas". Antes esta
+// calculadora usaba por error la medida armada para TODO el cálculo — quedaban subcotizadas.
 const TROQUELES_CARPETAS = [
-  {id:"CARP-001", bolsillos:1, profundidadBolsillo:8,   ancho:30,   alto:23},
-  {id:"CARP-002", bolsillos:2, profundidadBolsillo:3.5, ancho:30,   alto:22.5},
-  {id:"CARP-003", bolsillos:2, profundidadBolsillo:10,  ancho:32,   alto:22.5},
-  {id:"CARP-004", bolsillos:1, profundidadBolsillo:6.5, ancho:30.5, alto:23},
-  {id:"CARP-005", bolsillos:1, profundidadBolsillo:10,  ancho:30,   alto:22.7},
-  {id:"CARP-006", bolsillos:1, profundidadBolsillo:8,   ancho:33,   alto:23},
-  {id:"CARP-007", bolsillos:1, profundidadBolsillo:5,   ancho:29,   alto:22.5},
-  {id:"CARP-008", bolsillos:1, profundidadBolsillo:4,   ancho:30.5, alto:23},
-  {id:"CARP-009", bolsillos:2, profundidadBolsillo:10,  ancho:30.5, alto:24.2},
-  {id:"CARP-010", bolsillos:1, profundidadBolsillo:5,   ancho:28.3, alto:22.2},
-  {id:"CARP-011", bolsillos:1, profundidadBolsillo:3,   ancho:29,   alto:22.5},
+  {id:"CARP-001", bolsillos:1, profundidadBolsillo:8,   ancho:30,   alto:23,   anchoImpreso:46.5, altoImpreso:38.5},
+  {id:"CARP-002", bolsillos:2, profundidadBolsillo:3.5, ancho:30,   alto:22.5, anchoImpreso:49,   altoImpreso:34},
+  {id:"CARP-003", bolsillos:2, profundidadBolsillo:10,  ancho:32,   alto:22.5, anchoImpreso:56,   altoImpreso:45},
+  {id:"CARP-004", bolsillos:1, profundidadBolsillo:6.5, ancho:30.5, alto:23,   anchoImpreso:47.5, altoImpreso:37},
+  {id:"CARP-005", bolsillos:1, profundidadBolsillo:10,  ancho:30,   alto:22.7, anchoImpreso:47,   altoImpreso:40},
+  {id:"CARP-006", bolsillos:1, profundidadBolsillo:8,   ancho:33,   alto:23,   anchoImpreso:48,   altoImpreso:41},
+  {id:"CARP-007", bolsillos:1, profundidadBolsillo:5,   ancho:29,   alto:22.5, anchoImpreso:47,   altoImpreso:34},
+  {id:"CARP-008", bolsillos:1, profundidadBolsillo:4,   ancho:30.5, alto:23,   anchoImpreso:47.5, altoImpreso:34.5},
+  {id:"CARP-009", bolsillos:2, profundidadBolsillo:10,  ancho:30.5, alto:24.2, anchoImpreso:51,   altoImpreso:40.8},
+  {id:"CARP-010", bolsillos:1, profundidadBolsillo:5,   ancho:28.3, alto:22.2, anchoImpreso:47.5, altoImpreso:33.5},
+  {id:"CARP-011", bolsillos:1, profundidadBolsillo:3,   ancho:29,   alto:22.5, anchoImpreso:69,   altoImpreso:32, nota:"Carpeta de 3 cuerpos"},
 ];
 
 /* ============ FUNCIONES DE MOTOR (copiadas 1:1 de motor_cotizacion/calculadora.html — Cuadernos) ============ */
@@ -421,12 +446,21 @@ function costoEmpaqueCarpeta(cantidad){
 
 /* ============ CÁLCULO PRINCIPAL — CARPETAS ============ */
 function cotizarCarpeta(p){
-  const troquel = TROQUELES_CARPETAS.find(t=>t.id===p.troquelId);
-  if(!troquel) throw new Error("Troquel no encontrado: "+p.troquelId);
+  let troquel;
+  if(p.troquelEsNuevo){
+    troquel = {
+      id: "PERSONALIZADO", bolsillos: p.custBolsillos, profundidadBolsillo: p.custProfundidad,
+      ancho: null, alto: null, anchoImpreso: p.custAnchoImpreso, altoImpreso: p.custAltoImpreso,
+    };
+  } else {
+    troquel = TROQUELES_CARPETAS.find(t=>t.id===p.troquelId);
+    if(!troquel) throw new Error("Troquel no encontrado: "+p.troquelId);
+  }
 
-  // Pinza obligatoria: +1cm al ALTO de planta (no al ancho).
-  const anchoMontaje = troquel.ancho;
-  const altoMontaje = troquel.alto + CARPETA_PINZA_CM;
+  // El "Tamaño Planta" (anchoImpreso/altoImpreso) es la carpeta ABIERTA — la medida real que se usa
+  // para material/impresión (Conde 2026-08-06). Pinza obligatoria: +1cm al ALTO de planta.
+  const anchoMontaje = troquel.anchoImpreso;
+  const altoMontaje = troquel.altoImpreso + CARPETA_PINZA_CM;
 
   const [sustratoNombre, gramajeStr] = p.sustrato.split("__");
   const gramaje = parseFloat(gramajeStr);
@@ -507,7 +541,7 @@ function cop(n){ return "$" + Math.round(n).toLocaleString("es-CO"); }
 function poblarTroqueles(){
   const sel = document.getElementById("in-troquel");
   sel.innerHTML = TROQUELES_CARPETAS.map(t =>
-    `<option value="${t.id}">${t.id} — ${t.bolsillos} bolsillo${t.bolsillos>1?'s':''} (${t.profundidadBolsillo}cm) — ${t.ancho}x${t.alto}cm</option>`
+    `<option value="${t.id}">${t.id} — ${t.bolsillos} bolsillo${t.bolsillos>1?'s':''} (${t.profundidadBolsillo}cm) — armada ${t.ancho}x${t.alto}cm, planta ${t.anchoImpreso}x${t.altoImpreso}cm</option>`
   ).join("");
   onCambioTroquel();
 }
@@ -522,7 +556,7 @@ function poblarSustratos(){
 function onCambioTroquel(){
   const id = document.getElementById("in-troquel").value;
   const t = TROQUELES_CARPETAS.find(x=>x.id===id);
-  document.getElementById("hint-troquel").innerText = `${t.bolsillos} bolsillo(s) de ${t.profundidadBolsillo}cm de profundidad — planta ${t.ancho}x${t.alto}cm + 1cm de pinza al alto.`;
+  document.getElementById("hint-troquel").innerText = `Carpeta armada ${t.ancho}x${t.alto}cm, ${t.bolsillos} bolsillo(s) de ${t.profundidadBolsillo}cm de profundidad — planta de impresión ${t.anchoImpreso}x${t.altoImpreso}cm + 1cm de pinza al alto.${t.nota?' ('+t.nota+')':''}`;
 }
 function onCambioPlastificado(){
   document.getElementById("fila-caras-plastificado").style.display = document.getElementById("in-plastificado").checked ? "flex" : "none";
@@ -530,6 +564,8 @@ function onCambioPlastificado(){
 function onCambioTroquelNuevo(){
   const esNuevo = document.getElementById("in-troquelNuevo").value === "nuevo";
   document.getElementById("fila-troquelManual").style.display = esNuevo ? "flex" : "none";
+  document.getElementById("fila-troquel-personalizado").style.display = esNuevo ? "flex" : "none";
+  document.getElementById("fila-troquel-banco").style.display = esNuevo ? "none" : "flex";
 }
 
 function calcular(){
@@ -545,6 +581,10 @@ function calcular(){
       carasPlastificado: parseInt(document.getElementById("in-carasPlastificado").value)||1,
       troquelEsNuevo: document.getElementById("in-troquelNuevo").value === "nuevo",
       costoTroquelNuevoManual: parseFloat(document.getElementById("in-troquelManualCop").value)||0,
+      custBolsillos: parseInt(document.getElementById("in-cust-bolsillos").value)||1,
+      custProfundidad: parseFloat(document.getElementById("in-cust-profundidad").value)||0,
+      custAnchoImpreso: parseFloat(document.getElementById("in-cust-anchoImpreso").value)||0,
+      custAltoImpreso: parseFloat(document.getElementById("in-cust-altoImpreso").value)||0,
       utilidadPct: parseFloat(document.getElementById("in-utilidadPct").value)/100,
       comisionPct: parseFloat(document.getElementById("in-comisionPct").value)/100,
     };

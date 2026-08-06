@@ -130,7 +130,26 @@
     </div>
 
     <div class="card">
-      <h2>3. ¿Es plegable?</h2>
+      <h2>3. Plastificado (opcional)</h2>
+      <div class="fila">
+        <div class="checkbox-row">
+          <input type="checkbox" id="in-plastificado" onchange="onCambioPlastificado()">
+          <label for="in-plastificado" style="font-weight:normal;">El cliente sí pidió plastificado</label>
+        </div>
+      </div>
+      <div class="fila" id="fila-caras-plastificado" style="display:none;">
+        <div class="campo chico">
+          <label>Caras a plastificar:</label>
+          <select id="in-carasPlastificado">
+            <option value="1">1 cara</option>
+            <option value="2">2 caras</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>4. ¿Es plegable?</h2>
       <div class="fila">
         <div class="checkbox-row">
           <input type="checkbox" id="in-esPlegable" onchange="onCambioPlegable()">
@@ -149,7 +168,7 @@
     </div>
 
     <div class="card">
-      <h2>4. Condiciones comerciales</h2>
+      <h2>5. Condiciones comerciales</h2>
       <div class="fila">
         <div class="campo chico">
           <label>% Utilidad:</label>
@@ -193,7 +212,7 @@ const SUSTRATOS = {
   "Propalcote__150": {p6090:472.50, p70100:612.90},
   "Propalcote__200": {p6090:603.90, p70100:810.00},
   "Propalcote__240": {p6090:807.00, p70100:1050.00},
-  "Propalcote__300": {p6090:1012.00, p70100:1314.00},
+  "Propalcote__300": {p6090:910.80, p70100:1182.60},
   "Cartulina C11__190": {p6090:null, p70100:684.00},
   "Cartulina C12__205": {p6090:580.50, p70100:753.30},
   "Cartulina C14__225": {p6090:637.20, p70100:826.20},
@@ -203,6 +222,9 @@ const SUSTRATOS = {
   "Cartulina C22__330": {p6090:null, p70100:1212.30},
 };
 const PLIEGOS_CM = {"60x90":[60,90], "70x100":[70,100]};
+
+const PLASTIFICADO_COP_M2 = 950;     // ya validado (Cuadernos/Rompecabezas/Rubik/Carpetas)
+const PLASTIFICADO_PISO_COP = 30000;
 
 const DIGITAL_GRAMAJE_MAX = 240;
 const DIGITAL_PINZA_MM = 5;
@@ -455,7 +477,13 @@ function cotizarVolante(p){
   const costoEmpaque = costoEmpaqueComercial(tamano, p.cantidad);
   const costoPlegadoTotal = costoPlegado(p.esPlegable, p.cantidad);
 
-  const costoDirecto = detalleMaterial.costoTotal + detalleImpresion.total + costoRefile + costoEmpaque + costoPlegadoTotal;
+  const areaM2 = (p.ancho*p.alto)/10000;
+  let costoPlastificado = 0;
+  if(p.plastificado){
+    costoPlastificado = Math.max(areaM2*p.cantidad*p.carasPlastificado*PLASTIFICADO_COP_M2, PLASTIFICADO_PISO_COP);
+  }
+
+  const costoDirecto = detalleMaterial.costoTotal + detalleImpresion.total + costoRefile + costoEmpaque + costoPlegadoTotal + costoPlastificado;
 
   const disenoCop = disenoYPreprensa(costoDirecto);
   const fondoSeguridadPct = tramoFondoSeguridad(costoDirecto);
@@ -476,6 +504,7 @@ function cotizarVolante(p){
     tamano, usaDigital, detalleImpresion, detalleMaterial,
     esPlegable:p.esPlegable, secciones:p.secciones, gramaje,
     tintasTiro:p.tintasTiro, tintasRetiro:p.tintasRetiro,
+    plastificado:p.plastificado, carasPlastificado:p.carasPlastificado, costoPlastificado,
     costoRefile, costoEmpaque, costoPlegadoTotal, costoDirecto,
     disenoCop, fondoSeguridadPct, fondoSeguridadCop, sherpaCop, transporte,
     subtotal, precioVentaTotal, precioVentaUnitario, ivaTotal, precioFinalTotal,
@@ -516,6 +545,9 @@ function onCambioTamano(){
 function onCambioPlegable(){
   document.getElementById("fila-secciones").style.display = document.getElementById("in-esPlegable").checked ? "flex" : "none";
 }
+function onCambioPlastificado(){
+  document.getElementById("fila-caras-plastificado").style.display = document.getElementById("in-plastificado").checked ? "flex" : "none";
+}
 
 function calcular(){
   const cont = document.getElementById("resultado-contenido");
@@ -529,6 +561,8 @@ function calcular(){
       tintasRetiro: parseInt(document.getElementById("in-tintasRetiro").value)||0,
       esPlegable: document.getElementById("in-esPlegable").checked,
       secciones: parseInt(document.getElementById("in-secciones").value)||2,
+      plastificado: document.getElementById("in-plastificado").checked,
+      carasPlastificado: parseInt(document.getElementById("in-carasPlastificado").value)||1,
       utilidadPct: parseFloat(document.getElementById("in-utilidadPct").value)/100,
       comisionPct: parseFloat(document.getElementById("in-comisionPct").value)/100,
     };
@@ -552,6 +586,9 @@ function calcular(){
     filas += `<tr><td>Empaque comercial${p.cantidad<VOLANTE_EMPAQUE_CANTIDAD_MINIMA?' (no aplica, <1.000u)':''}</td><td class="num">${cop(r.costoEmpaque)}</td></tr>`;
     if(r.esPlegable){
       filas += `<tr><td>Plegado (${r.secciones===3?'Tríptico':'Díptico'})</td><td class="num">${cop(r.costoPlegadoTotal)}</td></tr>`;
+    }
+    if(r.plastificado){
+      filas += `<tr><td>Plastificado (${r.carasPlastificado} cara${r.carasPlastificado>1?'s':''}, $950/m²)</td><td class="num">${cop(r.costoPlastificado)}</td></tr>`;
     }
     filas += `<tr class="sub"><td>Costo directo total</td><td class="num">${cop(r.costoDirecto)}</td></tr>`;
     filas += `<tr><td>Diseño / Preprensa</td><td class="num">${cop(r.disenoCop)}</td></tr>`;
