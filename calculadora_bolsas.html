@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de Cotización — Bolsas de Papel (Tactical Marketing) — BETA</title>
+<style>
+  :root{
+    --azul:#1e3a5f; --azul-claro:#2c5282; --fondo:#f4f6f8; --tarjeta:#ffffff;
+    --borde:#d7dee5; --texto:#1a202c; --texto-suave:#5a6472; --verde:#1a7d3f;
+    --rojo:#b91c1c; --acento:#e8792c;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    background:var(--fondo); color:var(--texto); line-height:1.4;
+  }
+  header{background:var(--azul); color:#fff; padding:18px 24px;}
+  header h1{margin:0; font-size:20px;}
+  header p{margin:4px 0 0; font-size:13px; color:#cbd8e8;}
+  .beta-banner{background:#fff3cd; color:#7a5b00; padding:10px 24px; font-size:13px; border-bottom:1px solid #f0d98c;}
+  .layout{
+    display:flex; gap:20px; padding:20px; max-width:1400px; margin:0 auto;
+    align-items:flex-start; flex-wrap:wrap;
+  }
+  .col-form{flex:1 1 620px; min-width:340px;}
+  .col-resultado{flex:1 1 380px; min-width:320px; position:sticky; top:20px;}
+  .card{
+    background:var(--tarjeta); border:1px solid var(--borde); border-radius:8px;
+    padding:16px 18px; margin-bottom:16px;
+  }
+  .card h2{margin:0 0 12px; font-size:15px; color:var(--azul); border-bottom:1px solid var(--borde); padding-bottom:8px;}
+  .fila{display:flex; flex-wrap:wrap; gap:12px; margin-bottom:10px;}
+  .campo{flex:1 1 140px; display:flex; flex-direction:column; gap:4px;}
+  .campo.chico{flex:0 1 160px;}
+  label{font-size:12px; color:var(--texto-suave); font-weight:600;}
+  input[type=number], input[type=text], select{
+    padding:7px 8px; border:1px solid var(--borde); border-radius:5px; font-size:13.5px;
+    background:#fff; color:var(--texto);
+  }
+  input[type=number]{width:100%;}
+  .checkbox-row{display:flex; align-items:center; gap:6px; font-size:13px; color:var(--texto);}
+  .checkbox-row input{margin:0;}
+  button{cursor:pointer; border:none; border-radius:6px; font-size:13.5px; padding:8px 14px; font-weight:600;}
+  .btn-primario{background:var(--acento); color:#fff; width:100%; padding:12px; font-size:15px;}
+  .btn-primario:hover{background:#d4691f;}
+  .hint{font-size:11.5px; color:var(--texto-suave); margin-top:2px;}
+  .resultado-tabla{width:100%; border-collapse:collapse; font-size:13px;}
+  .resultado-tabla td{padding:5px 4px; border-bottom:1px solid #eef1f4;}
+  .resultado-tabla td.num{text-align:right; font-variant-numeric:tabular-nums;}
+  .resultado-tabla tr.sub td{font-weight:700; border-top:2px solid var(--borde);}
+  .resultado-tabla tr.total td{font-weight:700; color:var(--azul); font-size:15px; border-top:2px solid var(--azul);}
+  .resultado-tabla tr.detalle td{color:var(--texto-suave); font-size:12px; padding-left:14px;}
+  .placeholder{color:var(--texto-suave); font-size:13.5px; text-align:center; padding:30px 10px;}
+  .error-box{background:#fde8e8; color:var(--rojo); border:1px solid #f3b4b4; border-radius:6px; padding:10px 12px; font-size:13px; margin-bottom:12px;}
+  .warn-box{background:#fff3cd; color:#7a5b00; border:1px solid #f0d98c; border-radius:6px; padding:8px 12px; font-size:12.5px; margin-bottom:8px;}
+  @media (max-width:900px){ .col-resultado{position:static;} }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Calculadora de Cotización — Bolsas de Papel (BETA)</h1>
+  <p>Línea BOLS — Tactical Marketing Group SAS. Reutiliza el motor de impresión de Cuadernos, incluido Fondo Pleno.</p>
+</header>
+<div class="beta-banner">
+  ⚠️ Versión BETA sin validar contra cotizaciones reales todavía. El pegue/armado y el desgaste de cuchilla quedan como campos manuales — no se encontró una tabla de escalas por tamaño en los documentos del proyecto, pendiente que Conde la confirme.
+</div>
+
+<div class="layout">
+  <div class="col-form">
+
+    <div class="card">
+      <h2>1. Troquel y cantidad</h2>
+      <div class="fila">
+        <div class="campo" style="flex:1 1 320px;">
+          <label>Referencia de troquel:</label>
+          <select id="in-troquel" onchange="onCambioTroquel()"></select>
+          <div class="hint" id="hint-troquel"></div>
+        </div>
+        <div class="campo chico">
+          <label>Cantidad de bolsas:</label>
+          <input type="number" id="in-cantidad" value="500" min="1">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>2. Sustrato e impresión</h2>
+      <div class="fila">
+        <div class="campo">
+          <label>Papel/Sustrato:</label>
+          <select id="in-sustrato"></select>
+          <div class="hint">⚠️ No usar cartulinas/papeles gruesos — se rompen en el plegado. Digital solo elegible hasta 240gr.</div>
+        </div>
+      </div>
+      <div class="fila">
+        <div class="campo chico">
+          <label>Tintas tiro:</label>
+          <input type="number" id="in-tintasTiro" value="4" min="0" max="4">
+        </div>
+        <div class="campo chico">
+          <label>Tintas retiro:</label>
+          <input type="number" id="in-tintasRetiro" value="0" min="0" max="4">
+        </div>
+      </div>
+      <div class="fila">
+        <div class="checkbox-row">
+          <input type="checkbox" id="in-fondoPleno">
+          <label for="in-fondoPleno" style="font-weight:normal;">Lleva Fondo Pleno / Plastón (color sólido de borde a borde) — habitual en bolsas</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3. Agarradera y armado</h2>
+      <div class="fila">
+        <div class="campo">
+          <label>Tipo de agarradera:</label>
+          <select id="in-agarradera">
+            <option value="corona">Cordón (corona) — $700/u</option>
+            <option value="entorchado">Papel entorchado — $550/u</option>
+          </select>
+        </div>
+      </div>
+      <div class="fila">
+        <div class="campo chico">
+          <label>Costo de pegue/armado (COP/unidad, manual):</label>
+          <input type="number" id="in-costoPegue" value="950" min="0">
+          <div class="hint">⚠️ Sin escala por tamaño confirmada — ajusta según el troquel.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>4. Troquel — uso</h2>
+      <div class="fila">
+        <div class="campo chico">
+          <label>Costo de uso del troquel (COP/pedido, manual):</label>
+          <input type="number" id="in-costoUsoTroquel" value="0" min="0">
+          <div class="hint">⚠️ Sin valor de desgaste de cuchilla confirmado para Bolsas — deja $0 si es troquel de la casa sin costo adicional, o ingresa el valor si Conde lo confirma.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>5. Condiciones comerciales</h2>
+      <div class="fila">
+        <div class="campo chico">
+          <label>% Utilidad:</label>
+          <input type="number" id="in-utilidadPct" value="40" step="1">
+        </div>
+        <div class="campo chico">
+          <label>% Comisión:</label>
+          <input type="number" id="in-comisionPct" value="3" step="0.5">
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-primario" onclick="calcular()">Calcular Cotización</button>
+  </div>
+
+  <div class="col-resultado">
+    <div class="card">
+      <h2>Resultado</h2>
+      <div id="resultado-contenido"><div class="placeholder">Completa el formulario y presiona Calcular.</div></div>
+    </div>
+    <div class="card" id="card-recomendaciones">
+      <h2>⚠️ Recomendaciones de Producción</h2>
+      <div id="recomendaciones-contenido"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============ CONSTANTES REUTILIZADAS DEL MOTOR DE CUADERNOS (ya validadas) ============ */
+const SUSTRATOS = {
+  "Bond__60": {p6090:177.30, p70100:229.50},
+  "Bond__70": {p6090:206.10, p70100:267.30},
+  "Bond__75": {p6090:221.40, p70100:287.10},
+  "Bond__90": {p6090:265.50, p70100:343.80},
+  "Bond__115": {p6090:null, p70100:459.00},
+  "Propalcote__80": {p6090:null, p70100:308.70},
+  "Propalcote__90": {p6090:267.30, p70100:348.30},
+  "Propalcote__115": {p6090:343.80, p70100:448.20},
+  "Propalcote__150": {p6090:472.50, p70100:612.90},
+  "Propalcote__200": {p6090:603.90, p70100:810.00},
+  "Propalcote__240": {p6090:807.00, p70100:1050.00},
+};
+const PLIEGOS_CM = {"60x90":[60,90], "70x100":[70,100]};
+
+const DIGITAL_GRAMAJE_MAX = 240;
+const DIGITAL_PINZA_MM = 5;
+const DIGITAL_CLIC_COP = {
+  carta:{color:1000, negro:250},
+  octavo:{color:1400, negro:350},
+  pliego_max:{color:2200, negro:550},
+};
+const DIGITAL_DESCUENTO_VOLUMEN = [[9,0.0],[50,0.10],[200,0.18],[400,0.26],[Infinity,0.30]];
+const DIGITAL_FORMATOS_CM = {carta:[21.5,28], octavo:[25,35], pliego_max:[33,50]};
+const DIGITAL_MERMA_HOJAS = {policromia:20, negro:10, promedio:18};
+
+const OFFSET_CTP_COP = {medio_pliego:22000, cuarto:11000, octavo:9000};
+const OFFSET_MILLAR_COP = {medio_pliego_color:25000, medio_pliego_policromia_4x0:100000, cuarto:16000, octavo:12000};
+const OFFSET_FORMATOS_CM = {medio_pliego:[50,70], cuarto:[35,50], octavo:[25,35]};
+const OFFSET_MERMA_HOJAS = [[1000,100],[2000,130],[Infinity,160]];
+const OFFSET_MERMA_FACTOR_2_MAS_TINTAS = 1.30;
+const OFFSET_RECARGO_RETIRO_MEDIO_PLIEGO_POLICROMIA_PCT = 0.30;
+// Fondo Pleno / Plastón: recargo confirmado por Conde (ya usado en Cuadernos) por color sólido de
+// borde a borde — necesita una plancha extra + recargo fijo, según tamaño de máquina.
+const OFFSET_RECARGO_FONDO_PLENO_COP = {medio_pliego:90000, cuarto:50000, octavo:50000};
+
+const ESCUDO_BAJOS_MONTOS_UMBRAL = 150000;
+const DISENO_COSTO_NORMAL = 40000;
+const DISENO_COSTO_REDUCIDO = 20000;
+const FONDO_SEGURIDAD_TRAMOS = [[500000,0.09],[1000000,0.07],[3000000,0.05],[Infinity,0.03]];
+const SHERPA_BASE_COP = 20000;
+const EMPAQUE_CAJA_COP = 3000;
+const TRANSPORTE_TRAMOS = [[3000000,0.04],[5000000,0.03],[Infinity,0.02]];
+const TRANSPORTE_PISO_COP = 45000;
+
+/* ============ REGLAS PROPIAS DE BOLSAS (confirmadas por Conde 2026-08-05) ============ */
+const BOLSA_BASE_CARTULINA_MAULE_C16_COP = 400;
+const AGARRADERA_COP = {corona:700, entorchado:550};
+const BOLSA_TROQUELADO_COP_MILLAR = 35000; // tarifa genérica del banco de troqueles
+const BOLSA_EMPAQUE_UNIDADES_POR_CAJA = 50; // fijo, confirmado por Conde
+
+// Tabla de 16 troqueles — dimensiones armadas de "Copia de Dossier Maestro Absoluto.docx" sección
+// 5.3, tamaño impreso (montaje real de material/impresión) de "Tabla 1 troqueles.xlsx" hoja Bolsas.
+const TROQUELES_BOLSAS = [
+  {id:"BOLS-001", ancho:33,   alto:25,   profundo:13,  por2:true,  anchoImpreso:47.5, altoImpreso:37},
+  {id:"BOLS-002", ancho:25,   alto:25,   profundo:10,  por2:true,  anchoImpreso:34,   altoImpreso:36},
+  {id:"BOLS-003", ancho:21.5, alto:37,   profundo:9,   por2:true,  anchoImpreso:33,   altoImpreso:46.5},
+  {id:"BOLS-004", ancho:45,   alto:34,   profundo:13,  por2:true,  anchoImpreso:60,   altoImpreso:46},
+  {id:"BOLS-005", ancho:27,   alto:33,   profundo:6,   por2:true,  anchoImpreso:35,   altoImpreso:41},
+  {id:"BOLS-006", ancho:24,   alto:19,   profundo:7,   por2:false, anchoImpreso:63.5, altoImpreso:22.5, nota:"Una sola pieza"},
+  {id:"BOLS-007", ancho:25,   alto:19,   profundo:10,  por2:true,  anchoImpreso:38,   altoImpreso:31,   nota:"Trapecio 25/19.5cm — toma ancho mayor"},
+  {id:"BOLS-008", ancho:33,   alto:20.5, profundo:6,   por2:true,  anchoImpreso:41,   altoImpreso:30.5},
+  {id:"BOLS-009", ancho:30,   alto:33.5, profundo:13,  por2:true,  anchoImpreso:50.5, altoImpreso:42.5},
+  {id:"BOLS-010", ancho:38,   alto:35,   profundo:12,  por2:true,  anchoImpreso:52,   altoImpreso:45},
+  {id:"BOLS-011", ancho:30.5, alto:53.5, profundo:16,  por2:true,  anchoImpreso:48,   altoImpreso:67.5, nota:"Botellera"},
+  {id:"BOLS-012", ancho:24,   alto:32,   profundo:10,  por2:false, anchoImpreso:50,   altoImpreso:70},
+  {id:"BOLS-013", ancho:21.5, alto:30,   profundo:12,  por2:false, anchoImpreso:44,   altoImpreso:69},
+  {id:"BOLS-014", ancho:25,   alto:30,   profundo:8.5, por2:false, anchoImpreso:68.5, altoImpreso:49.5},
+  {id:"BOLS-015", ancho:25,   alto:35,   profundo:8.5, por2:false, anchoImpreso:69,   altoImpreso:50},
+  {id:"BOLS-016", ancho:34.5, alto:25,   profundo:6,   por2:true,  anchoImpreso:56,   altoImpreso:50},
+];
+
+/* ============ FUNCIONES DE MOTOR (copiadas 1:1 de motor_cotizacion/calculadora.html — Cuadernos) ============ */
+function piezasPorPliego(pa,pal,pw,ph){
+  const sinRotar = Math.floor(pw/pa)*Math.floor(ph/pal);
+  const rotada = Math.floor(pw/pal)*Math.floor(ph/pa);
+  return Math.max(sinRotar,rotada,0);
+}
+function ordenar2(a,b){ return a<=b ? [a,b] : [b,a]; }
+
+function costoMaterialPliegos(pa,pal,sustratoNombre,gramaje,piezasNecesarias,mermaHojas=0){
+  const key = sustratoNombre+"__"+gramaje;
+  const precios = SUSTRATOS[key];
+  if(!precios) throw new Error("Sustrato no encontrado: "+sustratoNombre+" "+gramaje+"g");
+  const piezasTotales = piezasNecesarias + mermaHojas;
+  let mejores=[];
+  const precioMap = {"60x90":precios.p6090, "70x100":precios.p70100};
+  for(const formato of Object.keys(PLIEGOS_CM)){
+    const [pw,ph]=PLIEGOS_CM[formato];
+    const precioPliego = precioMap[formato];
+    if(precioPliego==null) continue;
+    const nPorPliego = piezasPorPliego(pa,pal,pw,ph);
+    if(nPorPliego===0) continue;
+    const nPliegos = Math.ceil(piezasTotales/nPorPliego);
+    const costoTotal = nPliegos*precioPliego;
+    mejores.push([costoTotal, formato, nPorPliego, nPliegos, precioPliego]);
+  }
+  if(mejores.length===0) throw new Error(`La pieza ${pa}x${pal}cm no cabe en ningún pliego disponible para ${sustratoNombre} ${gramaje}g`);
+  mejores.sort((x,y)=>x[0]-y[0]);
+  const [costoTotal, formato, nPorPliego, nPliegos, precioPliego] = mejores[0];
+  return {formato, piezasPorPliego:nPorPliego, nPliegos, precioPliego, costoTotal};
+}
+
+function claseFormatoDigital(ancho,alto){
+  const [a,b]=ordenar2(ancho,alto);
+  if(a<=21.5 && b<=28) return "carta";
+  if(a<=25 && b<=35) return "octavo";
+  if(a<=33 && b<=50) return "pliego_max";
+  return null;
+}
+function elegibleDigital(ancho,alto,gramaje,cantidadUnidades=1){
+  if(gramaje>DIGITAL_GRAMAJE_MAX) return false;
+  if(cantidadUnidades>200) return false;
+  return claseFormatoDigital(ancho,alto)!==null;
+}
+function descuentoVolumenDigital(cantidadUnidades){
+  for(const [tope,pct] of DIGITAL_DESCUENTO_VOLUMEN){
+    if(cantidadUnidades<=tope) return pct;
+  }
+  return 0.0;
+}
+function mermaDigitalHojas(cantTintas){
+  return cantTintas>=2 ? DIGITAL_MERMA_HOJAS.policromia : DIGITAL_MERMA_HOJAS.negro;
+}
+function costoImpresionDigital(nPaginas,caras,esColor,ancho,alto,cantidadUnidades=1){
+  const clase=claseFormatoDigital(ancho,alto);
+  if(clase===null) return null;
+  const [sheetW,sheetH]=DIGITAL_FORMATOS_CM[clase];
+  const margenCm=DIGITAL_PINZA_MM/10;
+  let piezasPorClic=piezasPorPliego(ancho,alto,sheetW,sheetH-margenCm);
+  if(piezasPorClic===0) piezasPorClic=1;
+  const nClics=Math.ceil(nPaginas/piezasPorClic)*caras;
+  const precioClic=DIGITAL_CLIC_COP[clase][esColor?"color":"negro"];
+  const descuento=descuentoVolumenDigital(cantidadUnidades);
+  const total=nClics*precioClic*(1-descuento);
+  return {total, via:"digital", nClics, precioClic, descuentoPct:descuento, clase};
+}
+
+function fraccionPliegoOffset(ancho,alto,esPolicromia=false){
+  const [a,b]=ordenar2(ancho,alto);
+  if(a<=25 && b<=35 && !esPolicromia) return "octavo";
+  if(a<=35 && b<=50) return "cuarto";
+  return "medio_pliego";
+}
+function mermaOffsetHojas(nHojasFisicas,cantTintas){
+  let base=OFFSET_MERMA_HOJAS[OFFSET_MERMA_HOJAS.length-1][1];
+  for(const [tope,merma] of OFFSET_MERMA_HOJAS){
+    if(nHojasFisicas<=tope){ base=merma; break; }
+  }
+  if(cantTintas>=2) base*=OFFSET_MERMA_FACTOR_2_MAS_TINTAS;
+  return base;
+}
+// Tiro/Retiro: si usan las mismas tintas se reutiliza la misma plancha (1 millar + recargo 30% si
+// policromía) sin importar el tamaño de máquina (fix confirmado por Conde 2026-08-05).
+function costoImpresionOffset(nPiezasFinales,tintasTiro,tintasRetiro,esPolicromia,ancho,alto){
+  const fraccion=fraccionPliegoOffset(ancho,alto,esPolicromia);
+  const [sheetW,sheetH]=OFFSET_FORMATOS_CM[fraccion];
+  let piezasPorPasada=piezasPorPliego(ancho,alto,sheetW,sheetH);
+  if(piezasPorPasada===0) piezasPorPasada=1;
+  const nPasadas=Math.ceil(nPiezasFinales/piezasPorPasada);
+  const millares=Math.ceil(nPasadas/1000);
+
+  function costoTrabajo(nTintas){
+    const nPlanchas=Math.max(nTintas,1);
+    const costoCtp=OFFSET_CTP_COP[fraccion]*nPlanchas;
+    let costoMillar;
+    if(fraccion==="medio_pliego" && esPolicromia && nTintas>=4){
+      costoMillar=OFFSET_MILLAR_COP.medio_pliego_policromia_4x0*millares;
+    } else if(fraccion==="medio_pliego"){
+      costoMillar=OFFSET_MILLAR_COP.medio_pliego_color*nPlanchas*millares;
+    } else {
+      costoMillar=OFFSET_MILLAR_COP[fraccion]*nPlanchas*millares;
+    }
+    return {nPlanchas, costoCtp, costoMillar, total:costoCtp+costoMillar};
+  }
+
+  const tiroJob = costoTrabajo(tintasTiro);
+  let retiroJob = null, recargoRetiro = false, total = tiroJob.total;
+
+  if(tintasRetiro>0){
+    if(tintasTiro!==tintasRetiro){
+      retiroJob = costoTrabajo(tintasRetiro);
+      total += retiroJob.total;
+    } else if(esPolicromia){
+      total += tiroJob.total*OFFSET_RECARGO_RETIRO_MEDIO_PLIEGO_POLICROMIA_PCT;
+      recargoRetiro = true;
+    }
+  }
+
+  const nPlanchas = tiroJob.nPlanchas + (retiroJob?retiroJob.nPlanchas:0);
+  return {total, via:"offset", fraccion, nPlanchas, nMillares:millares, tiroJob, retiroJob, recargoRetiro, piezasPorPasada};
+}
+
+function precioVentaDesdeSubtotal(subtotal,utilidadPct=0.40,comisionPct=0.03){
+  return subtotal*(1+utilidadPct)*(1+comisionPct);
+}
+function disenoYPreprensa(montoOt){
+  if(montoOt<ESCUDO_BAJOS_MONTOS_UMBRAL) return DISENO_COSTO_REDUCIDO;
+  return DISENO_COSTO_NORMAL;
+}
+function tramoFondoSeguridad(costoDirecto){
+  for(const [tope,pct] of FONDO_SEGURIDAD_TRAMOS){
+    if(costoDirecto<=tope) return pct;
+  }
+  return FONDO_SEGURIDAD_TRAMOS[FONDO_SEGURIDAD_TRAMOS.length-1][1];
+}
+function costoTransporte(baseCop){
+  for(const [tope,pct] of TRANSPORTE_TRAMOS){
+    if(baseCop<=tope) return Math.max(baseCop*pct, TRANSPORTE_PISO_COP);
+  }
+  return Math.max(baseCop*TRANSPORTE_TRAMOS[TRANSPORTE_TRAMOS.length-1][1], TRANSPORTE_PISO_COP);
+}
+function costoEmpaqueBolsa(cantidad){
+  return Math.ceil(cantidad/BOLSA_EMPAQUE_UNIDADES_POR_CAJA)*EMPAQUE_CAJA_COP;
+}
+
+/* ============ CÁLCULO PRINCIPAL — BOLSAS ============ */
+function cotizarBolsa(p){
+  const troquel = TROQUELES_BOLSAS.find(t=>t.id===p.troquelId);
+  if(!troquel) throw new Error("Troquel no encontrado: "+p.troquelId);
+
+  const multiplicador = troquel.por2 ? 2 : 1; // "Bolsa Por 2": Q x 2
+  const piezasBase = p.cantidad * multiplicador;
+  const anchoMontaje = troquel.anchoImpreso;
+  const altoMontaje = troquel.altoImpreso;
+
+  const [sustratoNombre, gramajeStr] = p.sustrato.split("__");
+  const gramaje = parseFloat(gramajeStr);
+  const cantTintas = Math.max(p.tintasTiro, p.tintasRetiro, 1);
+  const esPolicromia = p.tintasTiro>=4 || p.tintasRetiro>=4;
+  const esColor = cantTintas>=2;
+
+  let detalleImpresion, piezasConMerma;
+  if(p.fondoPleno){
+    const fraccion = fraccionPliegoOffset(anchoMontaje, altoMontaje, esColor);
+    const mermaO = mermaOffsetHojas(piezasBase, cantTintas);
+    detalleImpresion = costoImpresionOffset(piezasBase+mermaO, p.tintasTiro, p.tintasRetiro, esColor, anchoMontaje, altoMontaje);
+    const recargo = OFFSET_RECARGO_FONDO_PLENO_COP[fraccion];
+    const planchaExtra = OFFSET_CTP_COP[fraccion];
+    detalleImpresion.total += recargo + planchaExtra;
+    detalleImpresion.nPlanchas += 1;
+    detalleImpresion.recargoFondoPleno = recargo;
+    detalleImpresion.planchaExtra = planchaExtra;
+    detalleImpresion.via = `offset (fondo pleno ${fraccion})`;
+    piezasConMerma = piezasBase + mermaO;
+  } else {
+    let impDigital = null;
+    if(elegibleDigital(anchoMontaje, altoMontaje, gramaje, p.cantidad)){
+      const merma = mermaDigitalHojas(cantTintas);
+      impDigital = costoImpresionDigital(piezasBase+merma, p.tintasRetiro>0?2:1, esColor, anchoMontaje, altoMontaje, p.cantidad);
+    }
+    const mermaOffset = mermaOffsetHojas(piezasBase, cantTintas);
+    const impOffset = costoImpresionOffset(piezasBase+mermaOffset, p.tintasTiro, p.tintasRetiro, esPolicromia, anchoMontaje, altoMontaje);
+    const usaDigital = !!(impDigital && impDigital.total < impOffset.total);
+    detalleImpresion = usaDigital ? impDigital : impOffset;
+    piezasConMerma = piezasBase + (usaDigital ? mermaDigitalHojas(cantTintas) : mermaOffset);
+  }
+
+  const detalleMaterial = costoMaterialPliegos(anchoMontaje, altoMontaje, sustratoNombre, gramaje, piezasConMerma, 0);
+
+  const costoBaseCartulina = BOLSA_BASE_CARTULINA_MAULE_C16_COP * p.cantidad;
+  const costoAgarradera = AGARRADERA_COP[p.tipoAgarradera] * p.cantidad;
+  const costoPegue = (p.costoPegue||0) * p.cantidad;
+  const costoTroqueladoServicio = Math.ceil(p.cantidad/1000)*BOLSA_TROQUELADO_COP_MILLAR;
+  const costoUsoTroquel = p.costoUsoTroquel||0;
+
+  const costoDirecto = detalleMaterial.costoTotal + detalleImpresion.total + costoBaseCartulina
+    + costoAgarradera + costoPegue + costoTroqueladoServicio + costoUsoTroquel;
+
+  const disenoCop = disenoYPreprensa(costoDirecto);
+  const fondoSeguridadPct = tramoFondoSeguridad(costoDirecto);
+  const fondoSeguridadCop = costoDirecto*fondoSeguridadPct;
+  const sherpaCop = SHERPA_BASE_COP;
+  const empaqueCop = costoEmpaqueBolsa(p.cantidad);
+
+  const subtotalPreTransporte = costoDirecto + disenoCop + fondoSeguridadCop + sherpaCop + empaqueCop;
+  const transporteCop = costoTransporte(subtotalPreTransporte);
+  const subtotal = subtotalPreTransporte + transporteCop;
+
+  const precioVentaTotal = precioVentaDesdeSubtotal(subtotal, p.utilidadPct, p.comisionPct);
+  const precioVentaUnitario = precioVentaTotal/p.cantidad;
+  const ivaTotal = precioVentaTotal*0.19;
+  const precioFinalTotal = precioVentaTotal+ivaTotal;
+  const gananciaTotal = precioVentaTotal - subtotal;
+  const gananciaUnitaria = gananciaTotal/p.cantidad;
+
+  return {
+    troquel, anchoMontaje, altoMontaje, piezasBase, detalleImpresion, detalleMaterial,
+    fondoPleno:p.fondoPleno, tipoAgarradera:p.tipoAgarradera,
+    costoBaseCartulina, costoAgarradera, costoPegue, costoTroqueladoServicio, costoUsoTroquel, costoDirecto,
+    disenoCop, fondoSeguridadPct, fondoSeguridadCop, sherpaCop, empaqueCop, transporteCop,
+    subtotal, precioVentaTotal, precioVentaUnitario, ivaTotal, precioFinalTotal,
+    gananciaTotal, gananciaUnitaria,
+  };
+}
+
+/* ============ RECOMENDACIONES DE PRODUCCIÓN ============ */
+const RECOMENDACIONES_PRODUCCION = [
+  { aplica: () => true, texto: "Las bolsas no se pueden hacer en cartulinas o papeles gruesos — se rompen en el plegado." },
+  { aplica: (r) => r.tipoAgarradera==="corona", texto: "El cordón que se usa es cordón sin alma." },
+  { aplica: () => true, texto: "Hay que perforar los refuerzos de las agarraderas." },
+];
+function renderRecomendaciones(r){
+  const cont = document.getElementById("recomendaciones-contenido");
+  const aplicables = RECOMENDACIONES_PRODUCCION.filter(reg => reg.aplica(r)).map(reg => reg.texto);
+  cont.innerHTML = aplicables.map(txt => `<div class="warn-box">${txt}</div>`).join("");
+}
+
+/* ============ UI ============ */
+function cop(n){ return "$" + Math.round(n).toLocaleString("es-CO"); }
+
+function poblarTroqueles(){
+  const sel = document.getElementById("in-troquel");
+  sel.innerHTML = TROQUELES_BOLSAS.map(t =>
+    `<option value="${t.id}">${t.id} — ${t.ancho}x${t.alto}x${t.profundo}cm — ${t.por2?'Por 2':'Por 1'}</option>`
+  ).join("");
+  onCambioTroquel();
+}
+function poblarSustratos(){
+  const sel = document.getElementById("in-sustrato");
+  sel.innerHTML = Object.keys(SUSTRATOS).map(key => {
+    const [nombre,gramaje] = key.split("__");
+    return `<option value="${key}">${nombre} ${gramaje}g${gramaje==="240"?" (máximo para digital)":""}</option>`;
+  }).join("");
+  sel.value = "Propalcote__150";
+}
+function onCambioTroquel(){
+  const id = document.getElementById("in-troquel").value;
+  const t = TROQUELES_BOLSAS.find(x=>x.id===id);
+  document.getElementById("hint-troquel").innerText =
+    `Tamaño impreso (montaje real): ${t.anchoImpreso}x${t.altoImpreso}cm${t.nota?' — '+t.nota:''}.`;
+}
+
+function calcular(){
+  const cont = document.getElementById("resultado-contenido");
+  try{
+    const p = {
+      troquelId: document.getElementById("in-troquel").value,
+      cantidad: parseFloat(document.getElementById("in-cantidad").value),
+      sustrato: document.getElementById("in-sustrato").value,
+      tintasTiro: parseInt(document.getElementById("in-tintasTiro").value)||0,
+      tintasRetiro: parseInt(document.getElementById("in-tintasRetiro").value)||0,
+      fondoPleno: document.getElementById("in-fondoPleno").checked,
+      tipoAgarradera: document.getElementById("in-agarradera").value,
+      costoPegue: parseFloat(document.getElementById("in-costoPegue").value)||0,
+      costoUsoTroquel: parseFloat(document.getElementById("in-costoUsoTroquel").value)||0,
+      utilidadPct: parseFloat(document.getElementById("in-utilidadPct").value)/100,
+      comisionPct: parseFloat(document.getElementById("in-comisionPct").value)/100,
+    };
+    const r = cotizarBolsa(p);
+    renderRecomendaciones(r);
+
+    const viaImpresionTxt = r.detalleImpresion.via==="digital"
+      ? `Digital (${r.detalleImpresion.clase}) — ${r.detalleImpresion.nClics} clics, descuento ${(r.detalleImpresion.descuentoPct*100).toFixed(0)}%`
+      : `Offset (${r.detalleImpresion.fraccion}) — ${r.detalleImpresion.nPlanchas} plancha(s), ${r.detalleImpresion.nMillares} millar(es)`;
+
+    let filas = `<table class="resultado-tabla">`;
+    filas += `<tr class="detalle"><td colspan="2">Troquel ${r.troquel.id} — montaje ${r.anchoMontaje}x${r.altoMontaje}cm — ${r.piezasBase} piezas (${r.troquel.por2?'x2':'x1'})</td></tr>`;
+    filas += `<tr><td>Material (${r.detalleMaterial.formato}, ${r.detalleMaterial.nPliegos} pliegos)</td><td class="num">${cop(r.detalleMaterial.costoTotal)}</td></tr>`;
+    filas += `<tr><td>Impresión — ${viaImpresionTxt}</td><td class="num">${cop(r.detalleImpresion.total)}</td></tr>`;
+    if(r.fondoPleno){
+      filas += `<tr class="detalle"><td colspan="2">↳ Incluye Fondo Pleno: plancha extra ${cop(r.detalleImpresion.planchaExtra)} + recargo ${cop(r.detalleImpresion.recargoFondoPleno)}</td></tr>`;
+    }
+    filas += `<tr><td>Base Cartulina Maule C16</td><td class="num">${cop(r.costoBaseCartulina)}</td></tr>`;
+    filas += `<tr><td>Agarradera (${r.tipoAgarradera==="corona"?"cordón":"papel entorchado"})</td><td class="num">${cop(r.costoAgarradera)}</td></tr>`;
+    filas += `<tr><td>Pegue / armado</td><td class="num">${cop(r.costoPegue)}</td></tr>`;
+    filas += `<tr><td>Troquelado (servicio de máquina)</td><td class="num">${cop(r.costoTroqueladoServicio)}</td></tr>`;
+    filas += `<tr><td>Uso del troquel</td><td class="num">${cop(r.costoUsoTroquel)}</td></tr>`;
+    filas += `<tr class="sub"><td>Costo directo total</td><td class="num">${cop(r.costoDirecto)}</td></tr>`;
+    filas += `<tr><td>Diseño / Preprensa</td><td class="num">${cop(r.disenoCop)}</td></tr>`;
+    filas += `<tr><td>Fondo de Seguridad (${(r.fondoSeguridadPct*100).toFixed(1)}%)</td><td class="num">${cop(r.fondoSeguridadCop)}</td></tr>`;
+    filas += `<tr><td>Sherpa (muestra de color)</td><td class="num">${cop(r.sherpaCop)}</td></tr>`;
+    filas += `<tr><td>Empaque (50u/caja)</td><td class="num">${cop(r.empaqueCop)}</td></tr>`;
+    filas += `<tr><td>Transporte</td><td class="num">${cop(r.transporteCop)}</td></tr>`;
+    filas += `<tr class="sub"><td>Subtotal</td><td class="num">${cop(r.subtotal)}</td></tr>`;
+    filas += `<tr><td>Precio de venta (total pedido)</td><td class="num">${cop(r.precioVentaTotal)}</td></tr>`;
+    filas += `<tr class="sub"><td>Precio de venta UNITARIO</td><td class="num">${cop(r.precioVentaUnitario)}</td></tr>`;
+    filas += `<tr><td>IVA (19%)</td><td class="num">${cop(r.ivaTotal)}</td></tr>`;
+    filas += `<tr class="total"><td>Precio final total (con IVA)</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
+    filas += `<tr class="total" style="color:var(--verde);"><td>Ganancia total del pedido (utilidad+comisión, sin IVA)</td><td class="num">${cop(r.gananciaTotal)}</td></tr>`;
+    filas += `<tr class="detalle"><td colspan="2">↳ Ganancia por unidad: ${cop(r.gananciaUnitaria)}</td></tr>`;
+    filas += `</table>`;
+    cont.innerHTML = filas;
+  } catch(err){
+    cont.innerHTML = `<div class="error-box">Error en el cálculo: ${err.message}</div>`;
+  }
+}
+
+poblarTroqueles();
+poblarSustratos();
+</script>
+</body>
+</html>
