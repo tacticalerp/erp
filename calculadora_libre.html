@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cotización Manual — Producto Libre (Tactical Marketing) — BETA</title>
+<style>
+  :root{
+    --azul:#1e3a5f; --azul-claro:#2c5282; --fondo:#f4f6f8; --tarjeta:#ffffff;
+    --borde:#d7dee5; --texto:#1a202c; --texto-suave:#5a6472; --verde:#1a7d3f;
+    --rojo:#b91c1c; --acento:#e8792c;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    background:var(--fondo); color:var(--texto); line-height:1.4;
+  }
+  header{background:var(--azul); color:#fff; padding:18px 24px;}
+  header h1{margin:0; font-size:20px;}
+  header p{margin:4px 0 0; font-size:13px; color:#cbd8e8;}
+  .beta-banner{background:#fff3cd; color:#7a5b00; padding:10px 24px; font-size:13px; border-bottom:1px solid #f0d98c;}
+  .layout{
+    display:flex; gap:20px; padding:20px; max-width:1400px; margin:0 auto;
+    align-items:flex-start; flex-wrap:wrap;
+  }
+  .col-form{flex:1 1 620px; min-width:340px;}
+  .col-resultado{flex:1 1 380px; min-width:320px; position:sticky; top:20px;}
+  .card{
+    background:var(--tarjeta); border:1px solid var(--borde); border-radius:8px;
+    padding:16px 18px; margin-bottom:16px;
+  }
+  .card h2{margin:0 0 12px; font-size:15px; color:var(--azul); border-bottom:1px solid var(--borde); padding-bottom:8px;}
+  .fila{display:flex; flex-wrap:wrap; gap:12px; margin-bottom:10px;}
+  .campo{flex:1 1 140px; display:flex; flex-direction:column; gap:4px;}
+  .campo.chico{flex:0 1 160px;}
+  .campo.ancho{flex:1 1 100%;}
+  label{font-size:12px; color:var(--texto-suave); font-weight:600;}
+  input[type=number], input[type=text], textarea, select{
+    padding:7px 8px; border:1px solid var(--borde); border-radius:5px; font-size:13.5px;
+    background:#fff; color:var(--texto); font-family:inherit;
+  }
+  input[type=number]{width:100%;}
+  textarea{width:100%; resize:vertical; min-height:70px;}
+  button{cursor:pointer; border:none; border-radius:6px; font-size:13.5px; padding:8px 14px; font-weight:600;}
+  .btn-primario{background:var(--acento); color:#fff; width:100%; padding:12px; font-size:15px;}
+  .btn-primario:hover{background:#d4691f;}
+  .hint{font-size:11.5px; color:var(--texto-suave); margin-top:2px;}
+  .resultado-tabla{width:100%; border-collapse:collapse; font-size:13px;}
+  .resultado-tabla td{padding:5px 4px; border-bottom:1px solid #eef1f4;}
+  .resultado-tabla td.num{text-align:right; font-variant-numeric:tabular-nums;}
+  .resultado-tabla tr.total td{font-weight:700; color:var(--azul); font-size:15px; border-top:2px solid var(--azul);}
+  .placeholder{color:var(--texto-suave); font-size:13.5px; text-align:center; padding:30px 10px;}
+  .error-box{background:#fde8e8; color:var(--rojo); border:1px solid #f3b4b4; border-radius:6px; padding:10px 12px; font-size:13px; margin-bottom:12px;}
+  @media (max-width:900px){ .col-resultado{position:static;} }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Cotización Manual — Producto Libre (BETA)</h1>
+  <p>Para productos o servicios que no están en ninguna de las calculadoras de línea — Tactical Marketing Group SAS.</p>
+</header>
+<div class="beta-banner">
+  ⚠️ Aquí no hay motor de cálculo — el precio lo define el vendedor manualmente (ej. cotización de un proveedor externo, un producto nuevo sin fórmula todavía, un servicio puntual). Se guarda en el mismo CRM que las demás calculadoras.
+</div>
+
+<div class="layout">
+  <div class="col-form">
+
+    <div class="card">
+      <h2>0. Datos del Cliente</h2>
+      <div class="fila">
+        <div class="campo">
+          <label>Cliente:</label>
+          <input type="text" id="in-cli-empresa" list="cli-datalist" placeholder="Nombre de la empresa o persona" oninput="autocompletarCliente()">
+          <datalist id="cli-datalist"></datalist>
+          <div id="cli-existente-nota" style="display:none; font-size:0.8rem; color:var(--verde); margin-top:2px;">✓ Cliente existente — datos cargados automáticamente</div>
+        </div>
+        <div class="campo"><label>Encargado:</label><input type="text" id="in-cli-encargado" placeholder="Persona de contacto"></div>
+        <div class="campo"><label>Teléfono:</label><input type="text" id="in-cli-telefono" placeholder="Ej: 3001234567"></div>
+        <div class="campo">
+          <label>Correo:</label>
+          <input type="text" id="in-cli-correo" list="cli-correo-datalist" placeholder="cliente@empresa.com" oninput="autocompletarCliente()">
+          <datalist id="cli-correo-datalist"></datalist>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>1. Producto o servicio</h2>
+      <div class="fila">
+        <div class="campo ancho">
+          <label>Descripción:</label>
+          <textarea id="in-descripcion" placeholder="Ej: Impresión de 200 vasos térmicos personalizados, cotizado con proveedor externo XYZ"></textarea>
+        </div>
+      </div>
+      <div class="fila">
+        <div class="campo chico">
+          <label>Cantidad:</label>
+          <input type="number" id="in-cantidad" value="1" min="1">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>2. Precio</h2>
+      <div class="fila">
+        <div class="campo chico">
+          <label>Precio de venta SIN IVA (COP, total del pedido):</label>
+          <input type="number" id="in-precioVentaTotal" value="0" min="0">
+        </div>
+      </div>
+      <div class="hint">Ingresa el precio ya negociado o cotizado con el cliente/proveedor — esta calculadora solo suma el IVA y lo guarda en el CRM, no recalcula costos.</div>
+    </div>
+
+    <button class="btn-primario" onclick="calcular()">Calcular</button>
+  </div>
+
+  <div class="col-resultado">
+    <div class="card">
+      <h2>Resultado</h2>
+      <div id="resultado-contenido"><div class="placeholder">Completa el formulario y presiona Calcular.</div></div>
+      <button class="btn-primario" style="margin-top:10px; background:var(--verde);" onclick="guardarCotizacionClick()">💾 Guardar cotización (CRM)</button>
+      <button class="btn-primario" style="margin-top:8px; background:var(--azul);" onclick="iniciarOAgregarPedido()">📦 Agregar a un pedido (varios productos, mismo cliente)</button>
+      <div id="cot-ot-nota" style="display:none; margin-top:10px; padding:8px 12px; background:#eef2f7; border-left:4px solid var(--azul); border-radius:4px; font-size:0.9rem;"></div>
+      <div id="pedido-banner" style="display:none; margin-top:10px; padding:8px 12px; background:#eafaf0; border-left:4px solid var(--verde); border-radius:4px; font-size:0.85rem;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function cop(n){ return "$" + Math.round(n).toLocaleString("es-CO"); }
+
+function cotizarLibre(p){
+  const precioVentaTotal = p.precioVentaTotal;
+  const precioVentaUnitario = precioVentaTotal/p.cantidad;
+  const ivaTotal = precioVentaTotal*0.19;
+  const precioFinalTotal = precioVentaTotal+ivaTotal;
+  return { descripcion:p.descripcion, cantidad:p.cantidad, precioVentaTotal, precioVentaUnitario, ivaTotal, precioFinalTotal };
+}
+
+function calcular(){
+  const cont = document.getElementById("resultado-contenido");
+  try{
+    const p = {
+      descripcion: document.getElementById("in-descripcion").value.trim(),
+      cantidad: parseFloat(document.getElementById("in-cantidad").value)||1,
+      precioVentaTotal: parseFloat(document.getElementById("in-precioVentaTotal").value)||0,
+    };
+    if(!p.descripcion){ throw new Error("Escribe una descripción del producto o servicio."); }
+    if(p.precioVentaTotal<=0){ throw new Error("Ingresa un precio de venta mayor a 0."); }
+    const r = cotizarLibre(p);
+
+    let filas = `<table class="resultado-tabla">`;
+    filas += `<tr><td colspan="2">${r.descripcion}</td></tr>`;
+    filas += `<tr><td>Cantidad</td><td class="num">${r.cantidad}</td></tr>`;
+    filas += `<tr><td>Precio de venta (total, sin IVA)</td><td class="num">${cop(r.precioVentaTotal)}</td></tr>`;
+    filas += `<tr><td>Precio de venta UNITARIO</td><td class="num">${cop(r.precioVentaUnitario)}</td></tr>`;
+    filas += `<tr><td>IVA (19%)</td><td class="num">${cop(r.ivaTotal)}</td></tr>`;
+    filas += `<tr class="total"><td>Precio final total (con IVA)</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
+    filas += `</table>`;
+    cont.innerHTML = filas;
+    ultimoResultado = r; ultimoParams = p;
+    document.getElementById("cot-ot-nota").style.display = "none";
+  } catch(err){
+    cont.innerHTML = `<div class="error-box">Error: ${err.message}</div>`;
+    ultimoResultado = null; ultimoParams = null;
+  }
+}
+
+/* ============ CLIENTE Y CRM (comparte localStorage con TACTICAL_ERP_HUB.html) ============ */
+let db_clientes = JSON.parse(localStorage.getItem('tactical_crm_clientes_v2')) || [];
+let db_opps = JSON.parse(localStorage.getItem('tactical_crm_opps_v2')) || [];
+let ultimoResultado = null, ultimoParams = null, ultimoOT = null;
+
+function refrescarDatalistClientes(){
+  const dlEmpresa = document.getElementById('cli-datalist');
+  const dlCorreo = document.getElementById('cli-correo-datalist');
+  if(!dlEmpresa || !dlCorreo) return;
+  dlEmpresa.innerHTML = db_clientes.map(c => `<option value="${c.empresa}">${c.nombre||''}</option>`).join('');
+  dlCorreo.innerHTML = db_clientes.filter(c=>c.correo).map(c => `<option value="${c.correo}"></option>`).join('');
+}
+function autocompletarCliente(){
+  const empresaVal = document.getElementById('in-cli-empresa').value.trim();
+  const correoVal = document.getElementById('in-cli-correo').value.trim();
+  const nota = document.getElementById('cli-existente-nota');
+  const cli = db_clientes.find(c =>
+    (correoVal && c.correo && c.correo.toLowerCase() === correoVal.toLowerCase()) ||
+    (empresaVal && c.empresa.toLowerCase() === empresaVal.toLowerCase())
+  );
+  if(cli){
+    document.getElementById('in-cli-empresa').value = cli.empresa;
+    document.getElementById('in-cli-encargado').value = cli.nombre || '';
+    document.getElementById('in-cli-telefono').value = cli.wp || '';
+    document.getElementById('in-cli-correo').value = cli.correo || '';
+    nota.style.display = 'block';
+  } else {
+    nota.style.display = 'none';
+  }
+}
+function siguienteOT(){
+  let n = parseInt(localStorage.getItem('tactical_ot_counter')||'0') + 1;
+  localStorage.setItem('tactical_ot_counter', String(n));
+  return 'OT-' + String(n).padStart(4,'0');
+}
+function guardarCotizacionClick(){
+  if(!ultimoResultado){ alert("Primero presiona 'Calcular'."); return; }
+  const empresa = document.getElementById('in-cli-empresa').value.trim();
+  const encargado = document.getElementById('in-cli-encargado').value.trim();
+  const telefono = document.getElementById('in-cli-telefono').value.trim();
+  const correo = document.getElementById('in-cli-correo').value.trim();
+  if(!empresa && !encargado){ alert("Ingresa al menos el Cliente o el Encargado antes de guardar."); return; }
+
+  let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
+  if(!cli){
+    cli = { id: Date.now().toString(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0 };
+    db_clientes.push(cli);
+  } else {
+    if(telefono) cli.wp = telefono;
+    if(correo) cli.correo = correo;
+  }
+  localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
+
+  if(!ultimoOT) ultimoOT = siguienteOT();
+  const opp = { id: Date.now().toString()+'_opp', ot: ultimoOT, idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, desc: ultimoResultado.descripcion, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'manual', cantidad: ultimoParams.cantidad, maquina: null, material: null, nPliegos: null };
+  db_opps.push(opp);
+  localStorage.setItem('tactical_crm_opps_v2', JSON.stringify(db_opps));
+
+  refrescarDatalistClientes();
+  const nota = document.getElementById('cot-ot-nota');
+  nota.style.display = 'block';
+  nota.innerText = `📋 Cotización guardada en el CRM como ${ultimoOT} — cliente: ${cli.empresa}.`;
+}
+
+/* ============ PEDIDO MULTI-PRODUCTO (varias líneas, un solo cliente/OT) ============ */
+function pedidoActivo(){ return JSON.parse(localStorage.getItem('tactical_pedido_activo')) || null; }
+function refrescarBannerPedido(){
+  const pd = pedidoActivo();
+  const el = document.getElementById('pedido-banner');
+  if(!el) return;
+  if(!pd){ el.style.display = 'none'; return; }
+  const total = pd.lineas.reduce((s,l)=>s+l.monto,0);
+  el.style.display = 'block';
+  el.innerHTML = `📦 Pedido en curso <b>${pd.ot}</b> — ${pd.nombreCli} — ${pd.lineas.length} producto(s), ${cop(total)}<br>
+    <button type="button" style="margin-top:6px; background:var(--verde); color:#fff;" onclick="cerrarPedido()">✅ Cerrar pedido y guardar en CRM</button>
+    <button type="button" style="margin-top:6px; background:var(--rojo); color:#fff;" onclick="cancelarPedido()">✕ Cancelar pedido</button>`;
+}
+function iniciarOAgregarPedido(){
+  if(!ultimoResultado){ alert("Primero presiona 'Calcular'."); return; }
+  const empresa = document.getElementById('in-cli-empresa').value.trim();
+  const encargado = document.getElementById('in-cli-encargado').value.trim();
+  const telefono = document.getElementById('in-cli-telefono').value.trim();
+  const correo = document.getElementById('in-cli-correo').value.trim();
+  if(!empresa && !encargado){ alert("Ingresa al menos el Cliente o el Encargado antes de agregar al pedido."); return; }
+
+  let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
+  if(!cli){
+    cli = { id: Date.now().toString(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0 };
+    db_clientes.push(cli);
+  } else {
+    if(telefono) cli.wp = telefono;
+    if(correo) cli.correo = correo;
+  }
+  localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
+  refrescarDatalistClientes();
+
+  let pd = pedidoActivo();
+  if(pd && pd.idCli !== cli.id){
+    if(!confirm(`Ya hay un pedido en curso para "${pd.nombreCli}". ¿Cerrarlo y empezar uno nuevo para "${cli.empresa}"?`)) return;
+    cerrarPedido();
+    pd = null;
+  }
+  if(!pd){
+    pd = { ot: siguienteOT(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, lineas: [], creado: new Date().toISOString() };
+  }
+
+  pd.lineas.push({ linea:'manual', desc: ultimoResultado.descripcion, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), maquina: null, material: null, nPliegos: null });
+  localStorage.setItem('tactical_pedido_activo', JSON.stringify(pd));
+  refrescarBannerPedido();
+  alert(`Agregado al pedido ${pd.ot}. Ahora tiene ${pd.lineas.length} producto(s).`);
+}
+function cerrarPedido(){
+  const pd = pedidoActivo();
+  if(!pd || pd.lineas.length===0){ localStorage.removeItem('tactical_pedido_activo'); refrescarBannerPedido(); return; }
+  const montoTotal = pd.lineas.reduce((s,l)=>s+l.monto,0);
+  const cantidadTotal = pd.lineas.reduce((s,l)=>s+(l.cantidad||0),0);
+  const descConsolidada = pd.lineas.map(l=>l.desc).join(' + ');
+  const opp = { id: Date.now().toString()+'_opp', ot: pd.ot, idCli: pd.idCli, nombreCli: pd.nombreCli, desc: descConsolidada, monto: montoTotal, etapa: 'cot', linea: 'multi', cantidad: cantidadTotal, lineas: pd.lineas };
+  db_opps.push(opp);
+  localStorage.setItem('tactical_crm_opps_v2', JSON.stringify(db_opps));
+  localStorage.removeItem('tactical_pedido_activo');
+  refrescarBannerPedido();
+  alert(`Pedido ${pd.ot} guardado en el CRM — ${pd.lineas.length} producto(s), total ${cop(montoTotal)}.`);
+}
+function cancelarPedido(){
+  const pd = pedidoActivo();
+  if(!pd) return;
+  if(!confirm(`¿Cancelar el pedido ${pd.ot} en curso? Se perderán las ${pd.lineas.length} línea(s) agregadas (no borra cotizaciones individuales ya guardadas aparte).`)) return;
+  localStorage.removeItem('tactical_pedido_activo');
+  refrescarBannerPedido();
+}
+
+refrescarDatalistClientes();
+refrescarBannerPedido();
+</script>
+</body>
+</html>

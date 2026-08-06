@@ -203,7 +203,9 @@
       <h2>Resultado</h2>
       <div id="resultado-contenido"><div class="placeholder">Completa el formulario y presiona Calcular.</div></div>
       <button class="btn-primario" style="margin-top:10px; background:var(--verde);" onclick="guardarCotizacionClick()">💾 Guardar cotización (CRM)</button>
+      <button class="btn-primario" style="margin-top:8px; background:var(--azul);" onclick="iniciarOAgregarPedido()">📦 Agregar a un pedido (varios productos, mismo cliente)</button>
       <div id="cot-ot-nota" style="display:none; margin-top:10px; padding:8px 12px; background:#eef2f7; border-left:4px solid var(--azul); border-radius:4px; font-size:0.9rem;"></div>
+      <div id="pedido-banner" style="display:none; margin-top:10px; padding:8px 12px; background:#eafaf0; border-left:4px solid var(--verde); border-radius:4px; font-size:0.85rem;"></div>
     </div>
     <div class="card" id="card-recomendaciones">
       <h2>⚠️ Recomendaciones de Producción</h2>
@@ -709,10 +711,90 @@ function guardarCotizacionClick(){
   nota.innerText = `📋 Cotización guardada en el CRM como ${ultimoOT} — cliente: ${cli.empresa}.`;
 }
 
+/* ============ PEDIDO MULTI-PRODUCTO (varias líneas, un solo cliente/OT) ============ */
+function pedidoActivo(){ return JSON.parse(localStorage.getItem('tactical_pedido_activo')) || null; }
+function refrescarBannerPedido(){
+  const pd = pedidoActivo();
+  const el = document.getElementById('pedido-banner');
+  if(!el) return;
+  if(!pd){ el.style.display = 'none'; return; }
+  const total = pd.lineas.reduce((s,l)=>s+l.monto,0);
+  el.style.display = 'block';
+  el.innerHTML = `📦 Pedido en curso <b>${pd.ot}</b> — ${pd.nombreCli} — ${pd.lineas.length} producto(s), ${cop(total)}<br>
+    <button type="button" style="margin-top:6px; background:var(--verde); color:#fff;" onclick="cerrarPedido()">✅ Cerrar pedido y guardar en CRM</button>
+    <button type="button" style="margin-top:6px; background:var(--rojo); color:#fff;" onclick="cancelarPedido()">✕ Cancelar pedido</button>`;
+}
+function iniciarOAgregarPedido(){
+  if(!ultimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
+  const empresa = document.getElementById('in-cli-empresa').value.trim();
+  const encargado = document.getElementById('in-cli-encargado').value.trim();
+  const telefono = document.getElementById('in-cli-telefono').value.trim();
+  const correo = document.getElementById('in-cli-correo').value.trim();
+  if(!empresa && !encargado){ alert("Ingresa al menos el Cliente o el Encargado antes de agregar al pedido."); return; }
+
+  let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
+  if(!cli){
+    cli = { id: Date.now().toString(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0 };
+    db_clientes.push(cli);
+  } else {
+    if(telefono) cli.wp = telefono;
+    if(correo) cli.correo = correo;
+  }
+  localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
+  refrescarDatalistClientes();
+
+  let pd = pedidoActivo();
+  if(pd && pd.idCli !== cli.id){
+    if(!confirm(`Ya hay un pedido en curso para "${pd.nombreCli}". ¿Cerrarlo y empezar uno nuevo para "${cli.empresa}"?`)) return;
+    cerrarPedido();
+    pd = null;
+  }
+  if(!pd){
+    pd = { ot: siguienteOT(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, lineas: [], creado: new Date().toISOString() };
+  }
+
+  const desc = `${ultimoParams.cantidad} Cajas ${ultimoResultado.troquel.id}`;
+  let maquina = 'otro', material = null, nPliegos = null;
+  if(ultimoResultado.detalleImpresion){
+    if(ultimoResultado.detalleImpresion.via === 'digital') maquina = 'digital';
+    else if(ultimoResultado.detalleImpresion.fraccion) maquina = ultimoResultado.detalleImpresion.fraccion;
+  }
+  if(ultimoResultado.detalleMaterial && ultimoParams.sustrato){
+    const [nombreSus, gramajeSus] = ultimoParams.sustrato.split('__');
+    material = `${nombreSus} ${gramajeSus}g`;
+    nPliegos = ultimoResultado.detalleMaterial.nPliegos;
+  }
+  pd.lineas.push({ linea:'cajas', desc, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), maquina, material, nPliegos });
+  localStorage.setItem('tactical_pedido_activo', JSON.stringify(pd));
+  refrescarBannerPedido();
+  alert(`Agregado al pedido ${pd.ot}. Ahora tiene ${pd.lineas.length} producto(s).`);
+}
+function cerrarPedido(){
+  const pd = pedidoActivo();
+  if(!pd || pd.lineas.length===0){ localStorage.removeItem('tactical_pedido_activo'); refrescarBannerPedido(); return; }
+  const montoTotal = pd.lineas.reduce((s,l)=>s+l.monto,0);
+  const cantidadTotal = pd.lineas.reduce((s,l)=>s+(l.cantidad||0),0);
+  const descConsolidada = pd.lineas.map(l=>l.desc).join(' + ');
+  const opp = { id: Date.now().toString()+'_opp', ot: pd.ot, idCli: pd.idCli, nombreCli: pd.nombreCli, desc: descConsolidada, monto: montoTotal, etapa: 'cot', linea: 'multi', cantidad: cantidadTotal, lineas: pd.lineas };
+  db_opps.push(opp);
+  localStorage.setItem('tactical_crm_opps_v2', JSON.stringify(db_opps));
+  localStorage.removeItem('tactical_pedido_activo');
+  refrescarBannerPedido();
+  alert(`Pedido ${pd.ot} guardado en el CRM — ${pd.lineas.length} producto(s), total ${cop(montoTotal)}.`);
+}
+function cancelarPedido(){
+  const pd = pedidoActivo();
+  if(!pd) return;
+  if(!confirm(`¿Cancelar el pedido ${pd.ot} en curso? Se perderán las ${pd.lineas.length} línea(s) agregadas (no borra cotizaciones individuales ya guardadas aparte).`)) return;
+  localStorage.removeItem('tactical_pedido_activo');
+  refrescarBannerPedido();
+}
+
 poblarSustratos();
 poblarTroqueles();
 refrescarDatalistClientes();
 onCambioTroquelNuevo();
+refrescarBannerPedido();
 </script>
 </body>
 </html>

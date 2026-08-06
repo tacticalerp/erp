@@ -643,6 +643,16 @@
                     </div>
                     <div class="card-footer">Abrir calculadora ➔</div>
                 </div>
+                <div class="hub-card active-card" onclick="window.open('calculadora_libre.html', '_blank')">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title">✏️ Cotización Manual</h3>
+                            <span class="badge badge-active">Beta</span>
+                        </div>
+                        <p class="card-desc">Para productos o servicios fuera de las demás calculadoras — precio manual, mismo CRM. Herramienta BETA aparte — se abre en una pestaña nueva.</p>
+                    </div>
+                    <div class="card-footer">Abrir calculadora ➔</div>
+                </div>
             </div>
         </div>
 
@@ -782,8 +792,10 @@
                         <div style="display:flex; gap:10px; margin-top:15px; flex-wrap:wrap;">
                             <button class="btn-submit" style="flex:1; min-width:220px;" onclick="cotGuardarYGenerarPDF()">📄 Guardar y Generar PDF Cliente</button>
                             <button class="btn-submit" style="flex:1; min-width:220px; background:var(--secondary);" onclick="cotGenerarOrdenProduccion()">🏭 Generar Orden de Producción</button>
+                            <button class="btn-submit" style="flex:1; min-width:220px; background:var(--primary);" onclick="cotIniciarOAgregarPedido()">📦 Agregar a un pedido (varios productos)</button>
                         </div>
                         <div id="cot-ot-nota" style="display:none; margin-top:10px; padding:8px 12px; background:#eef2f7; border-left:4px solid var(--primary); border-radius:4px; font-size:0.9rem;"></div>
+                        <div id="cot-pedido-banner" style="display:none; margin-top:10px; padding:8px 12px; background:#eafaf0; border-left:4px solid var(--ganado); border-radius:4px; font-size:0.9rem;"></div>
                     </div>
                 </div>
             </div>
@@ -2585,6 +2597,7 @@
 
           cotOnLineaProductoChange();
           cotOnTapaTipoChange();
+          cotRefrescarBannerPedido();
         }
         function cotOnLineaProductoChange(){
           const lp = document.getElementById("cot-lineaProducto").value;
@@ -2791,6 +2804,76 @@
           cotImprimirPDFCliente(cotizacion);
         }
 
+        /* ============ PEDIDO MULTI-PRODUCTO (varias líneas, un solo cliente/OT) ============ */
+        function cotPedidoActivo(){ return JSON.parse(localStorage.getItem('tactical_pedido_activo')) || null; }
+        function cotRefrescarBannerPedido(){
+          const pd = cotPedidoActivo();
+          const el = document.getElementById('cot-pedido-banner');
+          if(!el) return;
+          if(!pd){ el.style.display = 'none'; return; }
+          const total = pd.lineas.reduce((s,l)=>s+l.monto,0);
+          el.style.display = 'block';
+          el.innerHTML = `📦 Pedido en curso <b>${pd.ot}</b> — ${pd.nombreCli} — ${pd.lineas.length} producto(s), ${cotFormatoCop(total)}<br>
+            <button type="button" class="btn-submit" style="margin-top:6px; background:var(--ganado); display:inline-block; width:auto;" onclick="cotCerrarPedido()">✅ Cerrar pedido y guardar en CRM</button>
+            <button type="button" class="btn-submit" style="margin-top:6px; background:var(--peligro); display:inline-block; width:auto;" onclick="cotCancelarPedido()">✕ Cancelar pedido</button>`;
+        }
+        function cotIniciarOAgregarPedido(){
+          if(!cotUltimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
+          const empresa = document.getElementById('cot-cli-empresa').value.trim().toUpperCase();
+          const encargado = document.getElementById('cot-cli-encargado').value.trim().toUpperCase();
+          const telefono = document.getElementById('cot-cli-telefono').value.trim();
+          const correo = document.getElementById('cot-cli-correo').value.trim();
+          if(!empresa && !encargado){ alert("Ingresa al menos el Cliente o el Encargado antes de agregar al pedido."); return; }
+
+          let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toUpperCase()===(empresa||'CLIENTE PARTICULAR') && c.nombre.toUpperCase()===(encargado||'SIN CONTACTO DIRECTO')));
+          if(!cli){
+            cli = { id: Date.now().toString(), empresa: empresa || 'CLIENTE PARTICULAR', nombre: encargado || 'SIN CONTACTO DIRECTO', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo: '', identificacion: '' };
+            db_clientes.push(cli);
+          } else {
+            if(telefono) cli.wp = telefono;
+            if(correo) cli.correo = correo;
+          }
+          localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
+          cotRefrescarDatalistClientes();
+
+          let pd = cotPedidoActivo();
+          if(pd && pd.idCli !== cli.id){
+            if(!confirm(`Ya hay un pedido en curso para "${pd.nombreCli}". ¿Cerrarlo y empezar uno nuevo para "${cli.empresa}"?`)) return;
+            cotCerrarPedido();
+            pd = null;
+          }
+          if(!pd){
+            pd = { ot: cotSiguienteOT(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, lineas: [], creado: new Date().toISOString() };
+          }
+
+          const r = cotUltimoResultado, p = cotUltimoParams;
+          const desc = cotDescripcionProducto(p);
+          pd.lineas.push({ linea:'cuadernos', desc, cantidad: p.cantidad, monto: Math.round(r.precioFinalTotal), maquina: null, material: null, nPliegos: null });
+          localStorage.setItem('tactical_pedido_activo', JSON.stringify(pd));
+          cotRefrescarBannerPedido();
+          alert(`Agregado al pedido ${pd.ot}. Ahora tiene ${pd.lineas.length} producto(s).`);
+        }
+        function cotCerrarPedido(){
+          const pd = cotPedidoActivo();
+          if(!pd || pd.lineas.length===0){ localStorage.removeItem('tactical_pedido_activo'); cotRefrescarBannerPedido(); return; }
+          const montoTotal = pd.lineas.reduce((s,l)=>s+l.monto,0);
+          const cantidadTotal = pd.lineas.reduce((s,l)=>s+(l.cantidad||0),0);
+          const descConsolidada = pd.lineas.map(l=>l.desc).join(' + ');
+          const opp = { id: Date.now().toString()+'_opp', ot: pd.ot, idCli: pd.idCli, nombreCli: pd.nombreCli, desc: descConsolidada, monto: montoTotal, etapa: 'cot', linea: 'multi', cantidad: cantidadTotal, lineas: pd.lineas };
+          db_opps.push(opp);
+          localStorage.setItem('tactical_crm_opps_v2', JSON.stringify(db_opps));
+          localStorage.removeItem('tactical_pedido_activo');
+          cotRefrescarBannerPedido();
+          alert(`Pedido ${pd.ot} guardado en el CRM — ${pd.lineas.length} producto(s), total ${cotFormatoCop(montoTotal)}.`);
+        }
+        function cotCancelarPedido(){
+          const pd = cotPedidoActivo();
+          if(!pd) return;
+          if(!confirm(`¿Cancelar el pedido ${pd.ot} en curso? Se perderán las ${pd.lineas.length} línea(s) agregadas (no borra cotizaciones individuales ya guardadas aparte).`)) return;
+          localStorage.removeItem('tactical_pedido_activo');
+          cotRefrescarBannerPedido();
+        }
+
         function cotImprimirPDFCliente(cot){
           const p = cot.params, r = cot.resultado, vend = VENDEDORES[cot.vendedor] || {correo:'', telefono:''};
           const fecha = new Date(cot.fecha).toLocaleDateString('es-CO', {year:'numeric', month:'long', day:'numeric'});
@@ -2921,7 +3004,7 @@
         const NOMBRES_LINEA_PRODUCTO = {
           cuadernos:"Cuadernos/Agendas", rompecabezas:"Rompecabezas", cubo_rubik:"Cubo Rubik",
           carpetas:"Carpetas", volantes:"Volantes/Afiches/Plegables", bolsas:"Bolsas de Papel",
-          cajas:"Cajas Blandas", otro:"Sin clasificar",
+          cajas:"Cajas Blandas", manual:"Producto libre (fuera de catálogo)", otro:"Sin clasificar",
         };
         function renderReportes(){
           const todasCotizaciones = [...db_opps, ...db_historial_cierres];
@@ -2943,8 +3026,16 @@
           const topCli = [...db_clientes].sort((a,b)=>b.ltv-a.ltv).slice(0,5);
           document.getElementById('rep-top-clientes').innerHTML = topCli.length ? topCli.map(c=>`• ${c.empresa}: <strong>${cotFormatoCop(c.ltv)}</strong>`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin datos todavía.</span>';
 
+          // Pedidos multi-producto (linea:'multi') traen un array "lineas" -- se desglosa cada
+          // producto por separado en vez de contar el pedido completo como una sola línea "multi".
           const porLinea = {};
-          todasCotizaciones.forEach(c=>{ const l=c.linea||'otro'; porLinea[l]=(porLinea[l]||0)+(c.cantidad||0); });
+          todasCotizaciones.forEach(c=>{
+            if(c.lineas && c.lineas.length){
+              c.lineas.forEach(l=>{ const ln=l.linea||'otro'; porLinea[ln]=(porLinea[ln]||0)+(l.cantidad||0); });
+            } else {
+              const l=c.linea||'otro'; porLinea[l]=(porLinea[l]||0)+(c.cantidad||0);
+            }
+          });
           document.getElementById('rep-lineas').innerHTML = Object.keys(porLinea).length ? Object.keys(porLinea).map(l=>`• ${NOMBRES_LINEA_PRODUCTO[l]||l}: <strong>${porLinea[l]} unidades</strong>`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin cotizaciones todavía.</span>';
 
           const motivos = {};
@@ -2961,7 +3052,12 @@
             });
           });
           // ...más el resumen simple de las otras 6 líneas (no duplica Cuadernos: ya está arriba).
+          // Los pedidos multi-producto desglosan cada línea del array "lineas".
           todasCotizaciones.forEach(c=>{
+            if(c.lineas && c.lineas.length){
+              c.lineas.forEach(l=>{ if(l.linea==='cuadernos' || !l.material || !l.nPliegos) return; consumoPapel[l.material]=(consumoPapel[l.material]||0)+l.nPliegos; });
+              return;
+            }
             if(c.linea==='cuadernos' || !c.material || !c.nPliegos) return;
             consumoPapel[c.material] = (consumoPapel[c.material]||0) + c.nPliegos;
           });
@@ -2978,6 +3074,10 @@
             });
           });
           todasCotizaciones.forEach(c=>{
+            if(c.lineas && c.lineas.length){
+              c.lineas.forEach(l=>{ if(l.linea==='cuadernos' || !l.maquina) return; const nombre=COT_NOMBRE_MAQUINA[l.maquina]||l.maquina; usoMaquinas[nombre]=(usoMaquinas[nombre]||0)+1; });
+              return;
+            }
             if(c.linea==='cuadernos' || !c.maquina) return;
             const nombre = COT_NOMBRE_MAQUINA[c.maquina] || c.maquina;
             usoMaquinas[nombre] = (usoMaquinas[nombre]||0)+1;
