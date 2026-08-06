@@ -110,6 +110,12 @@
           <label for="in-fondoPleno" style="font-weight:normal;">Lleva Fondo Pleno / Plastón (color sólido de borde a borde) — habitual en bolsas</label>
         </div>
       </div>
+      <div class="fila">
+        <div class="checkbox-row">
+          <input type="checkbox" id="in-plastificado">
+          <label for="in-plastificado" style="font-weight:normal;">Lleva plastificado ($950/m², mínimo $30.000)</label>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -217,6 +223,9 @@ const OFFSET_RECARGO_RETIRO_MEDIO_PLIEGO_POLICROMIA_PCT = 0.30;
 // Fondo Pleno / Plastón: recargo confirmado por Conde (ya usado en Cuadernos) por color sólido de
 // borde a borde — necesita una plancha extra + recargo fijo, según tamaño de máquina.
 const OFFSET_RECARGO_FONDO_PLENO_COP = {medio_pliego:90000, cuarto:50000, octavo:50000};
+
+const PLASTIFICADO_COP_M2 = 950;     // ya validado (Cuadernos/Rompecabezas/Rubik/Carpetas)
+const PLASTIFICADO_PISO_COP = 30000;
 
 const ESCUDO_BAJOS_MONTOS_UMBRAL = 150000;
 const DISENO_COSTO_NORMAL = 40000;
@@ -444,13 +453,16 @@ function cotizarBolsa(p){
 
   const detalleMaterial = costoMaterialPliegos(anchoMontaje, altoMontaje, sustratoNombre, gramaje, piezasConMerma, 0);
 
+  const areaM2 = (anchoMontaje*altoMontaje)/10000;
+  const costoPlastificado = p.plastificado ? Math.max(areaM2*p.cantidad*PLASTIFICADO_COP_M2, PLASTIFICADO_PISO_COP) : 0;
+
   const costoBaseCartulina = BOLSA_BASE_CARTULINA_MAULE_C16_COP * p.cantidad;
   const costoAgarradera = AGARRADERA_COP[p.tipoAgarradera] * p.cantidad;
   const costoPegue = (p.costoPegue||0) * p.cantidad;
   const costoTroqueladoServicio = Math.ceil(p.cantidad/1000)*BOLSA_TROQUELADO_COP_MILLAR;
   const costoUsoTroquel = p.troquelEsNuevo ? (p.costoUsoTroquel||0) : BOLSA_DESGASTE_CUCHILLA_COP;
 
-  const costoDirecto = detalleMaterial.costoTotal + detalleImpresion.total + costoBaseCartulina
+  const costoDirecto = detalleMaterial.costoTotal + detalleImpresion.total + costoPlastificado + costoBaseCartulina
     + costoAgarradera + costoPegue + costoTroqueladoServicio + costoUsoTroquel;
 
   const disenoCop = disenoYPreprensa(costoDirecto);
@@ -473,6 +485,7 @@ function cotizarBolsa(p){
   return {
     troquel, anchoMontaje, altoMontaje, piezasBase, detalleImpresion, detalleMaterial,
     fondoPleno:p.fondoPleno, tipoAgarradera:p.tipoAgarradera,
+    plastificado:p.plastificado, costoPlastificado,
     costoBaseCartulina, costoAgarradera, costoPegue, costoTroqueladoServicio, costoUsoTroquel, costoDirecto,
     disenoCop, fondoSeguridadPct, fondoSeguridadCop, sherpaCop, empaqueCop, transporteCop,
     subtotal, precioVentaTotal, precioVentaUnitario, ivaTotal, precioFinalTotal,
@@ -532,6 +545,7 @@ function calcular(){
       tintasTiro: parseInt(document.getElementById("in-tintasTiro").value)||0,
       tintasRetiro: parseInt(document.getElementById("in-tintasRetiro").value)||0,
       fondoPleno: document.getElementById("in-fondoPleno").checked,
+      plastificado: document.getElementById("in-plastificado").checked,
       tipoAgarradera: document.getElementById("in-agarradera").value,
       costoPegue: parseFloat(document.getElementById("in-costoPegue").value)||0,
       troquelEsNuevo: document.getElementById("in-troquelNuevo").value === "nuevo",
@@ -552,6 +566,9 @@ function calcular(){
     filas += `<tr><td>Impresión — ${viaImpresionTxt}</td><td class="num">${cop(r.detalleImpresion.total)}</td></tr>`;
     if(r.fondoPleno){
       filas += `<tr class="detalle"><td colspan="2">↳ Incluye Fondo Pleno: plancha extra ${cop(r.detalleImpresion.planchaExtra)} + recargo ${cop(r.detalleImpresion.recargoFondoPleno)}</td></tr>`;
+    }
+    if(r.plastificado){
+      filas += `<tr><td>Plastificado ($950/m²)</td><td class="num">${cop(r.costoPlastificado)}</td></tr>`;
     }
     filas += `<tr><td>Base Cartulina Maule C16</td><td class="num">${cop(r.costoBaseCartulina)}</td></tr>`;
     filas += `<tr><td>Agarradera (${r.tipoAgarradera==="corona"?"cordón":"papel entorchado"})</td><td class="num">${cop(r.costoAgarradera)}</td></tr>`;
