@@ -72,6 +72,25 @@
   <div class="col-form">
 
     <div class="card">
+      <h2>0. Datos del Cliente</h2>
+      <div class="fila">
+        <div class="campo">
+          <label>Cliente:</label>
+          <input type="text" id="in-cli-empresa" list="cli-datalist" placeholder="Nombre de la empresa o persona" oninput="autocompletarCliente()">
+          <datalist id="cli-datalist"></datalist>
+          <div id="cli-existente-nota" style="display:none; font-size:0.8rem; color:var(--verde); margin-top:2px;">✓ Cliente existente — datos cargados automáticamente</div>
+        </div>
+        <div class="campo"><label>Encargado:</label><input type="text" id="in-cli-encargado" placeholder="Persona de contacto"></div>
+        <div class="campo"><label>Teléfono:</label><input type="text" id="in-cli-telefono" placeholder="Ej: 3001234567"></div>
+        <div class="campo">
+          <label>Correo:</label>
+          <input type="text" id="in-cli-correo" list="cli-correo-datalist" placeholder="cliente@empresa.com" oninput="autocompletarCliente()">
+          <datalist id="cli-correo-datalist"></datalist>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
       <h2>1. Cantidad y marcación</h2>
       <div class="fila">
         <div class="campo chico">
@@ -124,6 +143,8 @@
     <div class="card">
       <h2>Resultado</h2>
       <div id="resultado-contenido"><div class="placeholder">Completa el formulario y presiona Calcular.</div></div>
+      <button class="btn-primario" style="margin-top:10px; background:var(--verde);" onclick="guardarCotizacionClick()">💾 Guardar cotización (CRM)</button>
+      <div id="cot-ot-nota" style="display:none; margin-top:10px; padding:8px 12px; background:#eef2f7; border-left:4px solid var(--azul); border-radius:4px; font-size:0.9rem;"></div>
     </div>
     <div class="card" id="card-recomendaciones">
       <h2>⚠️ Recomendaciones de Producción</h2>
@@ -406,10 +427,79 @@ function calcular(){
     filas += `<tr class="detalle"><td colspan="2">↳ Ganancia por unidad: ${cop(r.gananciaUnitaria)}</td></tr>`;
     filas += `</table>`;
     cont.innerHTML = filas;
+    ultimoResultado = r; ultimoParams = p;
+    document.getElementById("cot-ot-nota").style.display = "none";
   } catch(err){
     cont.innerHTML = `<div class="error-box">Error en el cálculo: ${err.message}</div>`;
+    ultimoResultado = null; ultimoParams = null;
   }
 }
+
+/* ============ CLIENTE Y CRM (comparte localStorage con TACTICAL_ERP_HUB.html) ============ */
+let db_clientes = JSON.parse(localStorage.getItem('tactical_crm_clientes_v2')) || [];
+let db_opps = JSON.parse(localStorage.getItem('tactical_crm_opps_v2')) || [];
+let ultimoResultado = null, ultimoParams = null, ultimoOT = null;
+
+function refrescarDatalistClientes(){
+  const dlEmpresa = document.getElementById('cli-datalist');
+  const dlCorreo = document.getElementById('cli-correo-datalist');
+  if(!dlEmpresa || !dlCorreo) return;
+  dlEmpresa.innerHTML = db_clientes.map(c => `<option value="${c.empresa}">${c.nombre||''}</option>`).join('');
+  dlCorreo.innerHTML = db_clientes.filter(c=>c.correo).map(c => `<option value="${c.correo}"></option>`).join('');
+}
+function autocompletarCliente(){
+  const empresaVal = document.getElementById('in-cli-empresa').value.trim();
+  const correoVal = document.getElementById('in-cli-correo').value.trim();
+  const nota = document.getElementById('cli-existente-nota');
+  const cli = db_clientes.find(c =>
+    (correoVal && c.correo && c.correo.toLowerCase() === correoVal.toLowerCase()) ||
+    (empresaVal && c.empresa.toLowerCase() === empresaVal.toLowerCase())
+  );
+  if(cli){
+    document.getElementById('in-cli-empresa').value = cli.empresa;
+    document.getElementById('in-cli-encargado').value = cli.nombre || '';
+    document.getElementById('in-cli-telefono').value = cli.wp || '';
+    document.getElementById('in-cli-correo').value = cli.correo || '';
+    nota.style.display = 'block';
+  } else {
+    nota.style.display = 'none';
+  }
+}
+function siguienteOT(){
+  let n = parseInt(localStorage.getItem('tactical_ot_counter')||'0') + 1;
+  localStorage.setItem('tactical_ot_counter', String(n));
+  return 'OT-' + String(n).padStart(4,'0');
+}
+function guardarCotizacionClick(){
+  if(!ultimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
+  const empresa = document.getElementById('in-cli-empresa').value.trim();
+  const encargado = document.getElementById('in-cli-encargado').value.trim();
+  const telefono = document.getElementById('in-cli-telefono').value.trim();
+  const correo = document.getElementById('in-cli-correo').value.trim();
+  if(!empresa && !encargado){ alert("Ingresa al menos el Cliente o el Encargado antes de guardar."); return; }
+
+  let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
+  if(!cli){
+    cli = { id: Date.now().toString(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0 };
+    db_clientes.push(cli);
+  } else {
+    if(telefono) cli.wp = telefono;
+    if(correo) cli.correo = correo;
+  }
+  localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
+
+  if(!ultimoOT) ultimoOT = siguienteOT();
+  const desc = `${ultimoParams.cantidad} Cubo Rubik (${ultimoParams.caras} caras)${ultimoParams.conCaja?' con caja':''}`;
+  const opp = { id: Date.now().toString()+'_opp', ot: ultimoOT, idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, desc, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot' };
+  db_opps.push(opp);
+  localStorage.setItem('tactical_crm_opps_v2', JSON.stringify(db_opps));
+
+  refrescarDatalistClientes();
+  const nota = document.getElementById('cot-ot-nota');
+  nota.style.display = 'block';
+  nota.innerText = `📋 Cotización guardada en el CRM como ${ultimoOT} — cliente: ${cli.empresa}.`;
+}
+refrescarDatalistClientes();
 </script>
 </body>
 </html>
