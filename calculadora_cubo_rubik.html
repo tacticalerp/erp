@@ -253,13 +253,23 @@ function fraccionPliegoOffset(ancho,alto,esPolicromia=false){
   if(a<=35 && b<=50) return "cuarto";
   return "medio_pliego";
 }
+// Conde 2026-08-06: la merma de ajuste de máquina no empuja a un millar adicional si el excedente
+// sobre el millar completo es de 180 unidades o menos (material de calibración que posiblemente no
+// sirva al final). Ej: 1.180 piezas = 1 millar, 1.200 piezas = 2 millares. Aplica a toda impresión offset.
+function millaresConTolerancia(nPasadas){
+  if(nPasadas<=0) return 0;
+  const base=Math.ceil(nPasadas/1000);
+  if(base<=1) return 1;
+  const resto=nPasadas-(base-1)*1000;
+  return resto<=180 ? base-1 : base;
+}
 function costoImpresionOffset(nPiezasFinales,tintasTiro,tintasRetiro,esPolicromia,ancho,alto){
   const fraccion=fraccionPliegoOffset(ancho,alto,esPolicromia);
   const [sheetW,sheetH]=OFFSET_FORMATOS_CM[fraccion];
   let piezasPorPasada=piezasPorPliego(ancho,alto,sheetW,sheetH);
   if(piezasPorPasada===0) piezasPorPasada=1;
   const nPasadas=Math.ceil(nPiezasFinales/piezasPorPasada);
-  const millares=Math.ceil(nPasadas/1000);
+  const millares=millaresConTolerancia(nPasadas);
   const cantTintas=Math.max(tintasTiro,tintasRetiro,1);
   const nPlanchas=Math.max(cantTintas,1);
   const costoCtp=OFFSET_CTP_COP[fraccion]*nPlanchas;

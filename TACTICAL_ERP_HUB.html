@@ -1942,6 +1942,7 @@
         const OFFSET_RECARGO_RETIRO_MEDIO_PLIEGO_POLICROMIA_PCT = 0.30;
         const OFFSET_MERMA_HOJAS = [[1000,100],[2000,130],[Infinity,160]];
         const OFFSET_MERMA_FACTOR_2_MAS_TINTAS = 1.30;
+        const OFFSET_TOLERANCIA_MERMA_MILLAR = 180;
         const OFFSET_FORMATOS_CM = {octavo:[25,35], cuarto:[35,50], medio_pliego:[50,70]};
         const PINZA_ENTRADA_MM = 12, PINZA_SALIDA_MM = 5;
         const LINEAS_CON_PLIEGUE = new Set(["escolar","agenda_ejecutiva"]);
@@ -2087,13 +2088,25 @@
           if(a<=35 && b<=50) return "cuarto";
           return "medio_pliego";
         }
+        // Conde 2026-08-06: la merma de ajuste de máquina no empuja a un millar adicional si el
+        // excedente sobre el millar completo es de 180 unidades o menos (se sabe que ese material
+        // de calibración posiblemente no sirva al final, así que no se cobra como millar extra).
+        // Confirmado con ejemplos reales: 1.180 piezas = 1 millar, 1.200 piezas = 2 millares.
+        // Aplica a todo producto impreso en litografía (offset), no solo a Bolsas.
+        function millaresConTolerancia(nPasadas){
+          if(nPasadas<=0) return 0;
+          const base=Math.ceil(nPasadas/1000);
+          if(base<=1) return 1;
+          const resto=nPasadas-(base-1)*1000;
+          return resto<=OFFSET_TOLERANCIA_MERMA_MILLAR ? base-1 : base;
+        }
         function costoImpresionOffset(nPiezasFinales,tintasTiro,tintasRetiro,esPolicromia,ancho,alto,cuadriculaUniforme=false,pliegue=false){
           const fraccion=fraccionPliegoOffset(ancho,alto,esPolicromia);
           const [sheetW,sheetH]=OFFSET_FORMATOS_CM[fraccion];
           let piezasPorPasada=piezasPorPliego(ancho,alto,sheetW,sheetH);
           if(piezasPorPasada===0) piezasPorPasada=1;
           const nPasadas=Math.ceil(nPiezasFinales/piezasPorPasada);
-          const millares=Math.ceil(nPasadas/1000);
+          const millares=millaresConTolerancia(nPasadas);
           const cantTintas=Math.max(tintasTiro,tintasRetiro,1);
           const nPlanchasNormal=Math.max(cantTintas,1);
           const costoCtpNormal=OFFSET_CTP_COP[fraccion]*nPlanchasNormal;
@@ -2135,7 +2148,7 @@
           if(!cuadriculaUniforme) return detalleNormal;
           const piezasMedioPliego=piezasPorMedioPliegoOffset(ancho,alto,pliegue);
           const nPasadasMp=Math.ceil(nPiezasFinales/Math.max(piezasMedioPliego,1));
-          const millaresMp=Math.ceil(nPasadasMp/1000);
+          const millaresMp=millaresConTolerancia(nPasadasMp);
           const costoCtpCuadricula=OFFSET_CTP_COP.medio_pliego;
           const costoMillarCuadricula=RECARGO_TINTA_CUADRICULA_MILLAR_COP*millaresMp;
           return {
@@ -2151,7 +2164,7 @@
           const cantTintasEquiv=esColor?2:1;
           const merma=mermaOffsetHojas(cantidad,cantTintasEquiv);
           const impresionesPorPlancha=cantidad+merma;
-          const millaresPorPlancha=Math.ceil(impresionesPorPlancha/1000);
+          const millaresPorPlancha=millaresConTolerancia(impresionesPorPlancha);
           const nMillares=nPlanchas*millaresPorPlancha;
           const millarRate=esColor?OFFSET_MILLAR_COP.medio_pliego_policromia_4x0:RECARGO_TINTA_CUADRICULA_MILLAR_COP;
           const costoPlanchas=nPlanchas*OFFSET_CTP_COP.medio_pliego;
