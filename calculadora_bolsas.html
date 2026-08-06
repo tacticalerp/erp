@@ -64,7 +64,7 @@
   <p>Línea BOLS — Tactical Marketing Group SAS. Reutiliza el motor de impresión de Cuadernos, incluido Fondo Pleno.</p>
 </header>
 <div class="beta-banner">
-  ⚠️ Versión BETA sin validar contra cotizaciones reales todavía. El pegue/armado y el desgaste de cuchilla quedan como campos manuales — no se encontró una tabla de escalas por tamaño en los documentos del proyecto, pendiente que Conde la confirme.
+  ⚠️ Versión BETA sin validar contra cotizaciones reales todavía.
 </div>
 
 <div class="layout">
@@ -125,9 +125,9 @@
       </div>
       <div class="fila">
         <div class="campo chico">
-          <label>Costo de pegue/armado (COP/unidad, manual):</label>
+          <label>Costo de pegue/armado (COP/unidad):</label>
           <input type="number" id="in-costoPegue" value="950" min="0">
-          <div class="hint">⚠️ Sin escala por tamaño confirmada — ajusta según el troquel.</div>
+          <div class="hint">Se autocompleta según el troquel (doble $950 / sencilla $750) — editable si necesitas personalizarlo.</div>
         </div>
       </div>
     </div>
@@ -135,10 +135,18 @@
     <div class="card">
       <h2>4. Troquel — uso</h2>
       <div class="fila">
+        <div class="campo">
+          <label>¿El troquel ya existe en el banco, o hay que fabricarlo?</label>
+          <select id="in-troquelNuevo" onchange="onCambioTroquelNuevo()">
+            <option value="existente">Usar troquel existente (banco) — desgaste cuchilla $30.000</option>
+            <option value="nuevo">Crear troquel nuevo</option>
+          </select>
+        </div>
+      </div>
+      <div class="fila" id="fila-troquelManual" style="display:none;">
         <div class="campo chico">
-          <label>Costo de uso del troquel (COP/pedido, manual):</label>
+          <label>Costo troquel nuevo (COP, manual):</label>
           <input type="number" id="in-costoUsoTroquel" value="0" min="0">
-          <div class="hint">⚠️ Sin valor de desgaste de cuchilla confirmado para Bolsas — deja $0 si es troquel de la casa sin costo adicional, o ingresa el valor si Conde lo confirma.</div>
         </div>
       </div>
     </div>
@@ -216,14 +224,16 @@ const DISENO_COSTO_REDUCIDO = 20000;
 const FONDO_SEGURIDAD_TRAMOS = [[500000,0.09],[1000000,0.07],[3000000,0.05],[Infinity,0.03]];
 const SHERPA_BASE_COP = 20000;
 const EMPAQUE_CAJA_COP = 3000;
-const TRANSPORTE_TRAMOS = [[3000000,0.04],[5000000,0.03],[Infinity,0.02]];
-const TRANSPORTE_PISO_COP = 45000;
 
 /* ============ REGLAS PROPIAS DE BOLSAS (confirmadas por Conde 2026-08-05) ============ */
 const BOLSA_BASE_CARTULINA_MAULE_C16_COP = 400;
 const AGARRADERA_COP = {corona:700, entorchado:550};
+const PEGUE_ARMADO_COP = {doble:950, sencilla:750}; // Conde: bolsa doble (Por 2) $950/u, sencilla (Por 1) $750/u
+const BOLSA_DESGASTE_CUCHILLA_COP = 30000; // troquel existente
 const BOLSA_TROQUELADO_COP_MILLAR = 35000; // tarifa genérica del banco de troqueles
 const BOLSA_EMPAQUE_UNIDADES_POR_CAJA = 50; // fijo, confirmado por Conde
+// Transporte propio de Bolsas (tramos fijos, no la % genérica ni la Ruta 1 por peso).
+const BOLSA_TRANSPORTE_TRAMOS = [[300,45000],[500,60000],[1000,90000],[Infinity,110000]];
 
 // Tabla de 16 troqueles — dimensiones armadas de "Copia de Dossier Maestro Absoluto.docx" sección
 // 5.3, tamaño impreso (montaje real de material/impresión) de "Tabla 1 troqueles.xlsx" hoja Bolsas.
@@ -380,11 +390,11 @@ function tramoFondoSeguridad(costoDirecto){
   }
   return FONDO_SEGURIDAD_TRAMOS[FONDO_SEGURIDAD_TRAMOS.length-1][1];
 }
-function costoTransporte(baseCop){
-  for(const [tope,pct] of TRANSPORTE_TRAMOS){
-    if(baseCop<=tope) return Math.max(baseCop*pct, TRANSPORTE_PISO_COP);
+function costoTransporteBolsa(cantidad){
+  for(const [tope,costo] of BOLSA_TRANSPORTE_TRAMOS){
+    if(cantidad<=tope) return costo;
   }
-  return Math.max(baseCop*TRANSPORTE_TRAMOS[TRANSPORTE_TRAMOS.length-1][1], TRANSPORTE_PISO_COP);
+  return BOLSA_TRANSPORTE_TRAMOS[BOLSA_TRANSPORTE_TRAMOS.length-1][1];
 }
 function costoEmpaqueBolsa(cantidad){
   return Math.ceil(cantidad/BOLSA_EMPAQUE_UNIDADES_POR_CAJA)*EMPAQUE_CAJA_COP;
@@ -438,7 +448,7 @@ function cotizarBolsa(p){
   const costoAgarradera = AGARRADERA_COP[p.tipoAgarradera] * p.cantidad;
   const costoPegue = (p.costoPegue||0) * p.cantidad;
   const costoTroqueladoServicio = Math.ceil(p.cantidad/1000)*BOLSA_TROQUELADO_COP_MILLAR;
-  const costoUsoTroquel = p.costoUsoTroquel||0;
+  const costoUsoTroquel = p.troquelEsNuevo ? (p.costoUsoTroquel||0) : BOLSA_DESGASTE_CUCHILLA_COP;
 
   const costoDirecto = detalleMaterial.costoTotal + detalleImpresion.total + costoBaseCartulina
     + costoAgarradera + costoPegue + costoTroqueladoServicio + costoUsoTroquel;
@@ -450,7 +460,7 @@ function cotizarBolsa(p){
   const empaqueCop = costoEmpaqueBolsa(p.cantidad);
 
   const subtotalPreTransporte = costoDirecto + disenoCop + fondoSeguridadCop + sherpaCop + empaqueCop;
-  const transporteCop = costoTransporte(subtotalPreTransporte);
+  const transporteCop = costoTransporteBolsa(p.cantidad);
   const subtotal = subtotalPreTransporte + transporteCop;
 
   const precioVentaTotal = precioVentaDesdeSubtotal(subtotal, p.utilidadPct, p.comisionPct);
@@ -505,6 +515,11 @@ function onCambioTroquel(){
   const t = TROQUELES_BOLSAS.find(x=>x.id===id);
   document.getElementById("hint-troquel").innerText =
     `Tamaño impreso (montaje real): ${t.anchoImpreso}x${t.altoImpreso}cm${t.nota?' — '+t.nota:''}.`;
+  document.getElementById("in-costoPegue").value = t.por2 ? PEGUE_ARMADO_COP.doble : PEGUE_ARMADO_COP.sencilla;
+}
+function onCambioTroquelNuevo(){
+  const esNuevo = document.getElementById("in-troquelNuevo").value === "nuevo";
+  document.getElementById("fila-troquelManual").style.display = esNuevo ? "flex" : "none";
 }
 
 function calcular(){
@@ -519,6 +534,7 @@ function calcular(){
       fondoPleno: document.getElementById("in-fondoPleno").checked,
       tipoAgarradera: document.getElementById("in-agarradera").value,
       costoPegue: parseFloat(document.getElementById("in-costoPegue").value)||0,
+      troquelEsNuevo: document.getElementById("in-troquelNuevo").value === "nuevo",
       costoUsoTroquel: parseFloat(document.getElementById("in-costoUsoTroquel").value)||0,
       utilidadPct: parseFloat(document.getElementById("in-utilidadPct").value)/100,
       comisionPct: parseFloat(document.getElementById("in-comisionPct").value)/100,
@@ -541,7 +557,7 @@ function calcular(){
     filas += `<tr><td>Agarradera (${r.tipoAgarradera==="corona"?"cordón":"papel entorchado"})</td><td class="num">${cop(r.costoAgarradera)}</td></tr>`;
     filas += `<tr><td>Pegue / armado</td><td class="num">${cop(r.costoPegue)}</td></tr>`;
     filas += `<tr><td>Troquelado (servicio de máquina)</td><td class="num">${cop(r.costoTroqueladoServicio)}</td></tr>`;
-    filas += `<tr><td>Uso del troquel</td><td class="num">${cop(r.costoUsoTroquel)}</td></tr>`;
+    filas += `<tr><td>Uso del troquel (${p.troquelEsNuevo?'nuevo':'desgaste cuchilla'})</td><td class="num">${cop(r.costoUsoTroquel)}</td></tr>`;
     filas += `<tr class="sub"><td>Costo directo total</td><td class="num">${cop(r.costoDirecto)}</td></tr>`;
     filas += `<tr><td>Diseño / Preprensa</td><td class="num">${cop(r.disenoCop)}</td></tr>`;
     filas += `<tr><td>Fondo de Seguridad (${(r.fondoSeguridadPct*100).toFixed(1)}%)</td><td class="num">${cop(r.fondoSeguridadCop)}</td></tr>`;
@@ -564,6 +580,7 @@ function calcular(){
 
 poblarTroqueles();
 poblarSustratos();
+onCambioTroquelNuevo();
 </script>
 </body>
 </html>
