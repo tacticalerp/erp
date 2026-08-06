@@ -2023,10 +2023,9 @@
             localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
           }
           const ot = cotSiguienteOT();
-          const tituloDesc = `${cantidad} ${desc}`;
           const ficha = {
             id: Date.now().toString()+'_kb', ot, idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`,
-            titulo: tituloDesc, columna: 'aprobada', lineas: [{linea, desc:tituloDesc, cantidad}],
+            titulo: desc, cantidad, columna: 'aprobada', lineas: [{linea, desc, cantidad}],
             checklist: generarChecklistParaFicha({linea, lineas:null}), urgente:false, fechaEntrega,
             fechaCreacion: new Date().toISOString(), responsable:'', origen:'manual',
           };
@@ -2040,6 +2039,24 @@
           const hoy = new Date(); hoy.setHours(0,0,0,0);
           const f = new Date(fechaStr+'T00:00:00');
           return Math.round((f-hoy)/(1000*60*60*24));
+        }
+        const KANBAN_DIAS_SEMANA = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+        const KANBAN_MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+        function kanbanFormatearFecha(fechaStr){
+          const f = new Date(fechaStr+'T00:00:00');
+          return `${KANBAN_DIAS_SEMANA[f.getDay()]} ${f.getDate()} de ${KANBAN_MESES[f.getMonth()]}`;
+        }
+        // Conde 2026-08-06: rojo desde que faltan 3 días o menos (no solo cuando ya está vencida).
+        function kanbanBadgeEntrega(fechaStr){
+          const dias = kanbanDiasHasta(fechaStr);
+          const fechaTxt = kanbanFormatearFecha(fechaStr);
+          let cls, txtDias;
+          if(dias<0){ cls='kanban-due-vencido'; txtDias = `Vencida hace ${Math.abs(dias)} día${Math.abs(dias)!==1?'s':''}`; }
+          else if(dias===0){ cls='kanban-due-vencido'; txtDias = 'Entrega HOY'; }
+          else if(dias<=3){ cls='kanban-due-vencido'; txtDias = `Faltan ${dias} día${dias!==1?'s':''}`; }
+          else if(dias<=7){ cls='kanban-due-pronto'; txtDias = `Faltan ${dias} días`; }
+          else { cls='kanban-due-ok'; txtDias = `Faltan ${dias} días`; }
+          return `<span class="kanban-due ${cls}">📅 ${fechaTxt} — ${txtDias}</span>`;
         }
         function toggleChecklistItem(id, idx){
           const f = db_kanban.find(x=>x.id===id); if(!f) return;
@@ -2070,14 +2087,7 @@
         function renderFichaKanbanHtml(f){
           const idx = KANBAN_COLUMNAS.indexOf(f.columna);
           const puedeAtras = idx>0, puedeAdelante = idx<KANBAN_COLUMNAS.length-1;
-          let dueHtml = '';
-          if(f.fechaEntrega){
-            const dias = kanbanDiasHasta(f.fechaEntrega);
-            let cls='kanban-due-ok', txt=f.fechaEntrega;
-            if(dias<0){ cls='kanban-due-vencido'; txt='Vencida ('+f.fechaEntrega+')'; }
-            else if(dias<=3){ cls='kanban-due-pronto'; txt=`${f.fechaEntrega} (${dias}d)`; }
-            dueHtml = `<span class="kanban-due ${cls}">${txt}</span><br>`;
-          }
+          const dueHtml = f.fechaEntrega ? `${kanbanBadgeEntrega(f.fechaEntrega)}<br>` : '<span style="font-size:0.72rem; color:#a0aec0;">Sin fecha de entrega</span><br>';
           const rielAOk = !f.checklist.some(c=>c.riel==='A' && !c.hecho);
           const rielBOk = !f.checklist.some(c=>c.riel==='B' && !c.hecho);
           const hechos = f.checklist.filter(c=>c.hecho).length;
@@ -2090,6 +2100,7 @@
           }).join('');
           return `<div class="kanban-card ${f.urgente?'urgente':''}">
             ${f.urgente?'<div style="font-size:0.72rem; font-weight:bold; color:var(--peligro); margin-bottom:3px;">🚨 URGENTE</div>':''}
+            <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.03em; color:#a0aec0; font-weight:bold;">📝 Descripción</div>
             <div class="kanban-card-title">${f.titulo}</div>
             <div class="kanban-card-meta">👤 ${f.nombreCli}${f.ot?` — ${f.ot}`:''}${f.origen==='manual'?' — Servicio Express':''}</div>
             ${dueHtml}
