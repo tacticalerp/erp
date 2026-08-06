@@ -121,6 +121,24 @@
         .dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
         .kpi-box { background: white; border: 1px solid #e2e8f0; padding: 15px; border-radius: 6px; text-align: center; border-bottom: 3px solid var(--secondary); }
 
+        /* MÓDULO 7: KANBAN DE PRODUCCIÓN */
+        .kanban-board { display:flex; gap:14px; overflow-x:auto; padding:6px 2px 20px; align-items:flex-start; }
+        .kanban-col { flex:0 0 300px; background:var(--light-gray); border-radius:8px; padding:10px; min-height:120px; }
+        .kanban-col-header { font-weight:bold; color:var(--dark); padding:4px 6px 10px; display:flex; justify-content:space-between; align-items:center; font-size:0.92rem; }
+        .kanban-col-count { background:var(--secondary); color:white; border-radius:10px; padding:1px 8px; font-size:0.76rem; }
+        .kanban-card { background:white; border:1px solid #e2e8f0; border-radius:6px; padding:10px 12px; margin-bottom:10px; box-shadow:0 1px 3px rgba(0,0,0,0.06); border-left:4px solid var(--secondary); }
+        .kanban-card.urgente { border-left-color:var(--peligro); }
+        .kanban-card-title { font-weight:bold; font-size:0.9rem; color:var(--dark); margin-bottom:3px; }
+        .kanban-card-meta { font-size:0.76rem; color:#718096; margin-bottom:6px; }
+        .kanban-due { display:inline-block; padding:2px 7px; border-radius:10px; font-size:0.72rem; font-weight:bold; color:white; margin-bottom:6px; }
+        .kanban-due-ok { background:var(--listo); } .kanban-due-pronto { background:var(--proceso); } .kanban-due-vencido { background:var(--peligro); }
+        .kanban-checklist { margin:4px 0; font-size:0.8rem; }
+        .kanban-checklist-item { display:flex; align-items:flex-start; gap:6px; margin-bottom:3px; }
+        .kanban-checklist-item input{ margin-top:2px; }
+        .kanban-riel-label { font-size:0.68rem; text-transform:uppercase; color:#a0aec0; font-weight:bold; margin:6px 0 2px; }
+        .kanban-card-actions { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+        .kanban-card-actions .btn-action { flex:0 0 auto; }
+
         /* MÓVIL */
         @media (max-width: 768px) {
             body { padding: 4px; }
@@ -266,6 +284,18 @@
                             <span class="badge badge-active">Activo</span>
                         </div>
                         <p class="card-desc">Cuenta de Cobro, Comprobantes de Ingreso/Egreso, Cartera CxC/CxP, Gastos Fijos y Tablero Financiero en tiempo real (Punto de Equilibrio, mejor cliente, producto más rentable). Se alimenta automáticamente del CRM y el Cotizador.</p>
+                    </div>
+                    <div class="card-footer">Ingresar al Módulo ➔</div>
+                </div>
+
+                <!-- MÓDULO 7: KANBAN DE PRODUCCIÓN -->
+                <div class="hub-card active-card" onclick="showView('kanban')">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title">🏭 Kanban de Producción</h3>
+                            <span class="badge badge-active">Beta</span>
+                        </div>
+                        <p class="card-desc">6 columnas (Cotización Aprobada → Postventa). La ficha nace sola al marcar "Ganado" en el CRM, con checklist según el producto — o se crea manual para Servicio Express.</p>
                     </div>
                     <div class="card-footer">Ingresar al Módulo ➔</div>
                 </div>
@@ -1046,6 +1076,43 @@
 
             </div>
         </div>
+
+        <!-- VISTA 7: KANBAN DE PRODUCCIÓN -->
+        <div id="view-kanban" class="app-view">
+            <div style="padding:10px;">
+                <div class="card-grid" style="margin-bottom:6px;">
+                    <div class="data-card">
+                        <div class="card-title">➕ Crear ficha manual (Servicio Express / sin cotización previa)</div>
+                        <div class="form-grid" style="margin-top:10px;">
+                            <div class="form-group">
+                                <label>Cliente:</label>
+                                <input type="text" id="kb-cliente" list="kb-cliente-datalist" placeholder="Nombre de la empresa o persona">
+                                <datalist id="kb-cliente-datalist"></datalist>
+                            </div>
+                            <div class="form-group">
+                                <label>Línea:</label>
+                                <select id="kb-linea">
+                                    <option value="cuadernos">Cuadernos/Agendas</option>
+                                    <option value="rompecabezas">Rompecabezas</option>
+                                    <option value="cubo_rubik">Cubo Rubik</option>
+                                    <option value="carpetas">Carpetas</option>
+                                    <option value="volantes">Volantes/Afiches/Plegables</option>
+                                    <option value="bolsas">Bolsas de Papel</option>
+                                    <option value="cajas">Cajas Blandas</option>
+                                    <option value="manual" selected>Otro / Maquila externa</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label>Descripción:</label><input type="text" id="kb-descripcion" placeholder="Ej: Corte láser 50 llaveros MDF"></div>
+                            <div class="form-group"><label>Cantidad:</label><input type="number" id="kb-cantidad" value="1" min="1"></div>
+                            <div class="form-group"><label>Fecha de entrega (opcional):</label><input type="date" id="kb-fechaEntrega"></div>
+                        </div>
+                        <button class="btn-submit" onclick="crearFichaManual()">Crear ficha</button>
+                    </div>
+                </div>
+
+                <div class="kanban-board" id="kanban-board"></div>
+            </div>
+        </div>
     </div>
 
     <!-- CONTENEDOR OCULTO PARA IMPRESIÓN (PDF / ORDEN DE PRODUCCIÓN) -->
@@ -1087,6 +1154,7 @@
             'tactical_docventa_v1', 'tactical_ingresos_v1', 'tactical_cxp_v1', 'tactical_egresos_v1',
             'tactical_gastos_fijos_config_v1', 'tactical_proveedores_v1',
             'tactical_fv_counter', 'tactical_cc_counter', 'tactical_ingreso_counter', 'tactical_cxp_counter', 'tactical_egreso_counter',
+            'tactical_kanban_fichas_v1', 'tactical_pedido_activo',
         ];
 
         function contExportarRespaldo(){
@@ -1173,6 +1241,11 @@
                 mainTitle.innerText = "CONTABILIDAD";
                 subTitle.innerText = "Cartera, Comprobantes y Tablero Financiero en Tiempo Real (2026)";
                 if (typeof renderContabilidad === 'function') renderContabilidad();
+            } else if (viewId === 'kanban') {
+                navContainer.style.display = 'block';
+                mainTitle.innerText = "KANBAN DE PRODUCCIÓN";
+                subTitle.innerText = "Cotización Aprobada → Postventa (2026)";
+                if (typeof renderKanban === 'function') renderKanban();
             }
         }
 
@@ -1844,6 +1917,7 @@
                     localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
                 }
                 if(typeof contCrearDocVentaDesdeOpp === 'function') contCrearDocVentaDesdeOpp(opp, cli);
+                if(typeof crearFichaKanbanDesdeOpp === 'function') crearFichaKanbanDesdeOpp(opp, cli);
             }
 
             db_historial_cierres.push({ ...opp, estado, motivo, fechaCierre: new Date().toISOString() });
@@ -1854,6 +1928,193 @@
 
             document.getElementById('modal-perdida').style.display = 'none';
             renderOportunidades(); renderClientes();
+        }
+
+        // ==========================================
+        // MÓDULO 7: KANBAN DE PRODUCCIÓN
+        // ==========================================
+        // Conde 2026-08-06 (Fase C): 6 columnas confirmadas contra el tablero real de Trello
+        // ("Control Productos Corporativos"). La ficha nace sola al marcar "Ganado" en el CRM
+        // (mismo evento que ya dispara el Documento de Venta en Contabilidad) o se crea manual
+        // para trabajos tipo "Servicio Express" sin cotización previa. Checklist dinámico y corto
+        // por línea (no 48-66 casillas genéricas como en Trello) — pensado como un experto de
+        // litografía simplificaría los pasos reales de cada producto. Sin imágenes todavía
+        // (decisión de Conde: se deja para cuando el ERP pase a la nube, Fase F — localStorage no
+        // aguanta guardar muchas fotos de diseño).
+        let db_kanban = JSON.parse(localStorage.getItem('tactical_kanban_fichas_v1')) || [];
+        const KANBAN_COLUMNAS = ['aprobada','diseno','preparacion','terminados','entregar','postventa'];
+        const KANBAN_COLUMNA_NOMBRE = {
+          aprobada:'Cotización Aprobada', diseno:'Diseño', preparacion:'Preparación Producción',
+          terminados:'Terminados y Revisión', entregar:'Para Entregar', postventa:'Postventa',
+        };
+        // "riel" solo se usa en Cuadernos: 'A' = Taco (arranca de una vez), 'B' = Carátula (espera
+        // aprobación de arte), 'gate' = Anillado/Encuadernación, bloqueado hasta que A y B estén listos.
+        const KANBAN_CHECKLIST_POR_LINEA = {
+          cuadernos: [
+            {texto:'Impresión Taco', riel:'A'},
+            {texto:'Alce / armado interior', riel:'A'},
+            {texto:'Aprobación de arte (carátula)', riel:'B'},
+            {texto:'Impresión Carátula', riel:'B'},
+            {texto:'Plastificado / UV carátula', riel:'B'},
+            {texto:'Anillado / Encuadernación', riel:'gate'},
+            {texto:'Empaque y control de calidad', riel:null},
+          ],
+          rompecabezas: [
+            {texto:'Impresión'}, {texto:'Plastificado / Colaminado'}, {texto:'Troquelado'},
+            {texto:'Armado (si se entrega armado)'}, {texto:'Empaque'},
+          ],
+          cubo_rubik: [
+            {texto:'Impresión de caras'}, {texto:'Brillo UV'}, {texto:'Troquelado / armado de caja (si aplica)'},
+            {texto:'Ensamble del cubo'}, {texto:'Empaque'},
+          ],
+          carpetas: [
+            {texto:'Impresión'}, {texto:'Plastificado (si aplica)'}, {texto:'Troquelado'},
+            {texto:'Pegue / armado'}, {texto:'Empaque'},
+          ],
+          volantes: [
+            {texto:'Diseño / Preprensa'}, {texto:'Impresión'}, {texto:'Corte / Refile (y plegado si aplica)'}, {texto:'Empaque'},
+          ],
+          bolsas: [
+            {texto:'Impresión'}, {texto:'Troquelado'}, {texto:'Armado / Pegue (agarraderas)'}, {texto:'Empaque'},
+          ],
+          cajas: [
+            {texto:'Impresión'}, {texto:'Troquelado'}, {texto:'Pegue / armado'}, {texto:'Empaque'},
+          ],
+          manual: [
+            {texto:'Confirmar con proveedor / diseño'}, {texto:'Producción o entrega del proveedor'}, {texto:'Entrega al cliente'},
+          ],
+        };
+        function generarChecklistParaFicha(opp){
+          const lineasOpp = (opp.lineas && opp.lineas.length) ? opp.lineas : [{linea: opp.linea}];
+          let items = [];
+          const prefijoNecesario = lineasOpp.length > 1;
+          lineasOpp.forEach(l=>{
+            const base = KANBAN_CHECKLIST_POR_LINEA[l.linea] || KANBAN_CHECKLIST_POR_LINEA.manual;
+            base.forEach(i=>{
+              const prefijo = prefijoNecesario ? `${NOMBRES_LINEA_PRODUCTO[l.linea]||l.linea} — ` : '';
+              items.push({texto: prefijo+i.texto, hecho:false, riel: i.riel||null});
+            });
+          });
+          return items;
+        }
+        function crearFichaKanbanDesdeOpp(opp, cli){
+          const ficha = {
+            id: Date.now().toString()+'_kb', ot: opp.ot || null,
+            idCli: opp.idCli, nombreCli: opp.nombreCli, titulo: opp.desc,
+            columna: 'aprobada', lineas: opp.lineas || [{linea:opp.linea, desc:opp.desc, cantidad:opp.cantidad}],
+            checklist: generarChecklistParaFicha(opp), urgente:false, fechaEntrega:'',
+            fechaCreacion: new Date().toISOString(), responsable:'', origen:'automatica',
+          };
+          db_kanban.push(ficha);
+          localStorage.setItem('tactical_kanban_fichas_v1', JSON.stringify(db_kanban));
+        }
+        function crearFichaManual(){
+          const clienteTxt = document.getElementById('kb-cliente').value.trim();
+          const linea = document.getElementById('kb-linea').value;
+          const desc = document.getElementById('kb-descripcion').value.trim();
+          const cantidad = parseFloat(document.getElementById('kb-cantidad').value)||1;
+          const fechaEntrega = document.getElementById('kb-fechaEntrega').value;
+          if(!clienteTxt || !desc){ alert('Ingresa al menos el Cliente y la Descripción.'); return; }
+
+          let cli = db_clientes.find(c => c.empresa.toLowerCase()===clienteTxt.toLowerCase());
+          if(!cli){
+            cli = { id: Date.now().toString(), empresa: clienteTxt, nombre: 'Sin contacto directo', wp:'', correo:'', clase:'nuevo', ltv:0 };
+            db_clientes.push(cli);
+            localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
+          }
+          const ot = cotSiguienteOT();
+          const tituloDesc = `${cantidad} ${desc}`;
+          const ficha = {
+            id: Date.now().toString()+'_kb', ot, idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`,
+            titulo: tituloDesc, columna: 'aprobada', lineas: [{linea, desc:tituloDesc, cantidad}],
+            checklist: generarChecklistParaFicha({linea, lineas:null}), urgente:false, fechaEntrega,
+            fechaCreacion: new Date().toISOString(), responsable:'', origen:'manual',
+          };
+          db_kanban.push(ficha);
+          localStorage.setItem('tactical_kanban_fichas_v1', JSON.stringify(db_kanban));
+          document.getElementById('kb-cliente').value=''; document.getElementById('kb-descripcion').value='';
+          document.getElementById('kb-cantidad').value=1; document.getElementById('kb-fechaEntrega').value='';
+          renderKanban();
+        }
+        function kanbanDiasHasta(fechaStr){
+          const hoy = new Date(); hoy.setHours(0,0,0,0);
+          const f = new Date(fechaStr+'T00:00:00');
+          return Math.round((f-hoy)/(1000*60*60*24));
+        }
+        function toggleChecklistItem(id, idx){
+          const f = db_kanban.find(x=>x.id===id); if(!f) return;
+          f.checklist[idx].hecho = !f.checklist[idx].hecho;
+          localStorage.setItem('tactical_kanban_fichas_v1', JSON.stringify(db_kanban));
+          renderKanban();
+        }
+        function moverFicha(id, delta){
+          const f = db_kanban.find(x=>x.id===id); if(!f) return;
+          const idx = KANBAN_COLUMNAS.indexOf(f.columna);
+          const nuevo = idx+delta;
+          if(nuevo<0 || nuevo>=KANBAN_COLUMNAS.length) return;
+          f.columna = KANBAN_COLUMNAS[nuevo];
+          localStorage.setItem('tactical_kanban_fichas_v1', JSON.stringify(db_kanban));
+          renderKanban();
+        }
+        function toggleUrgente(id){
+          const f = db_kanban.find(x=>x.id===id); if(!f) return;
+          if(!f.urgente){
+            // Plan Maestro: solo 1 tarjeta "urgente" manual a la vez, para no saturar el banner de alertas.
+            const yaHayUrgente = db_kanban.some(x=>x.urgente && x.id!==id);
+            if(yaHayUrgente){ alert('Ya hay una ficha marcada como urgente. Solo puede haber una a la vez — quítale la marca a esa antes de marcar esta.'); return; }
+          }
+          f.urgente = !f.urgente;
+          localStorage.setItem('tactical_kanban_fichas_v1', JSON.stringify(db_kanban));
+          renderKanban();
+        }
+        function renderFichaKanbanHtml(f){
+          const idx = KANBAN_COLUMNAS.indexOf(f.columna);
+          const puedeAtras = idx>0, puedeAdelante = idx<KANBAN_COLUMNAS.length-1;
+          let dueHtml = '';
+          if(f.fechaEntrega){
+            const dias = kanbanDiasHasta(f.fechaEntrega);
+            let cls='kanban-due-ok', txt=f.fechaEntrega;
+            if(dias<0){ cls='kanban-due-vencido'; txt='Vencida ('+f.fechaEntrega+')'; }
+            else if(dias<=3){ cls='kanban-due-pronto'; txt=`${f.fechaEntrega} (${dias}d)`; }
+            dueHtml = `<span class="kanban-due ${cls}">${txt}</span><br>`;
+          }
+          const rielAOk = !f.checklist.some(c=>c.riel==='A' && !c.hecho);
+          const rielBOk = !f.checklist.some(c=>c.riel==='B' && !c.hecho);
+          const hechos = f.checklist.filter(c=>c.hecho).length;
+          const checklistHtml = f.checklist.map((c,i)=>{
+            const bloqueado = c.riel==='gate' && !(rielAOk && rielBOk);
+            return `<div class="kanban-checklist-item">
+              <input type="checkbox" ${c.hecho?'checked':''} ${bloqueado?'disabled':''} onchange="toggleChecklistItem('${f.id}',${i})">
+              <span style="${c.hecho?'text-decoration:line-through; color:#a0aec0;':''}">${c.texto}${bloqueado?' 🔒 (esperando Taco+Carátula)':''}</span>
+            </div>`;
+          }).join('');
+          return `<div class="kanban-card ${f.urgente?'urgente':''}">
+            ${f.urgente?'<div style="font-size:0.72rem; font-weight:bold; color:var(--peligro); margin-bottom:3px;">🚨 URGENTE</div>':''}
+            <div class="kanban-card-title">${f.titulo}</div>
+            <div class="kanban-card-meta">👤 ${f.nombreCli}${f.ot?` — ${f.ot}`:''}${f.origen==='manual'?' — Servicio Express':''}</div>
+            ${dueHtml}
+            <div class="kanban-checklist">${checklistHtml}<div style="font-size:0.7rem; color:#a0aec0; margin-top:2px;">${hechos}/${f.checklist.length} completado</div></div>
+            <div class="kanban-card-actions">
+              ${puedeAtras?`<button class="btn-action" onclick="moverFicha('${f.id}',-1)">◀ Atrás</button>`:''}
+              ${puedeAdelante?`<button class="btn-action" onclick="moverFicha('${f.id}',1)">Avanzar ▶</button>`:''}
+              <button class="btn-action" onclick="toggleUrgente('${f.id}')">${f.urgente?'Quitar urgente':'🚨 Urgente'}</button>
+            </div>
+          </div>`;
+        }
+        function renderKanban(){
+          const dl = document.getElementById('kb-cliente-datalist');
+          if(dl) dl.innerHTML = db_clientes.map(c=>`<option value="${c.empresa}"></option>`).join('');
+
+          const board = document.getElementById('kanban-board');
+          if(!board) return;
+          board.innerHTML = KANBAN_COLUMNAS.map(col=>{
+            const fichas = db_kanban.filter(f=>f.columna===col);
+            const cardsHtml = fichas.length ? fichas.map(renderFichaKanbanHtml).join('') : '<div style="color:#a0aec0; font-size:0.8rem; padding:10px 0;">Sin fichas.</div>';
+            return `<div class="kanban-col">
+              <div class="kanban-col-header"><span>${KANBAN_COLUMNA_NOMBRE[col]}</span><span class="kanban-col-count">${fichas.length}</span></div>
+              ${cardsHtml}
+            </div>`;
+          }).join('');
         }
 
         function abrirModalPerdida(idOpp) {
