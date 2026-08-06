@@ -83,6 +83,15 @@
           <input type="number" id="in-cantidad" value="500" min="1">
         </div>
       </div>
+      <div class="fila" id="fila-caras-bolsa" style="display:none;">
+        <div class="campo">
+          <label>Este troquel es de 2 partes — ¿las 2 caras son iguales o diferentes?</label>
+          <select id="in-carasIguales">
+            <option value="si">Iguales (mismo diseño en ambas caras — 1 juego de planchas)</option>
+            <option value="no">Diferentes (arte distinto por cara — duplica planchas CtP)</option>
+          </select>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -425,19 +434,43 @@ function cotizarBolsa(p){
   const esPolicromia = p.tintasTiro>=4 || p.tintasRetiro>=4;
   const esColor = cantTintas>=2;
 
+  // Una "corrida" de impresión offset para N piezas, con Fondo Pleno opcional incluido.
+  function corridaOffset(piezas){
+    const mermaO = mermaOffsetHojas(piezas, cantTintas);
+    const det = costoImpresionOffset(piezas+mermaO, p.tintasTiro, p.tintasRetiro, esColor, anchoMontaje, altoMontaje);
+    if(p.fondoPleno){
+      const fraccion = fraccionPliegoOffset(anchoMontaje, altoMontaje, esColor);
+      const recargo = OFFSET_RECARGO_FONDO_PLENO_COP[fraccion];
+      const planchaExtra = OFFSET_CTP_COP[fraccion];
+      det.total += recargo + planchaExtra;
+      det.nPlanchas += 1;
+      det.recargoFondoPleno = recargo;
+      det.planchaExtra = planchaExtra;
+    }
+    return {det, piezasConMerma: piezas+mermaO};
+  }
+
+  const carasDiferentes = troquel.por2 && p.carasIguales === "no";
   let detalleImpresion, piezasConMerma;
-  if(p.fondoPleno){
-    const fraccion = fraccionPliegoOffset(anchoMontaje, altoMontaje, esColor);
-    const mermaO = mermaOffsetHojas(piezasBase, cantTintas);
-    detalleImpresion = costoImpresionOffset(piezasBase+mermaO, p.tintasTiro, p.tintasRetiro, esColor, anchoMontaje, altoMontaje);
-    const recargo = OFFSET_RECARGO_FONDO_PLENO_COP[fraccion];
-    const planchaExtra = OFFSET_CTP_COP[fraccion];
-    detalleImpresion.total += recargo + planchaExtra;
-    detalleImpresion.nPlanchas += 1;
-    detalleImpresion.recargoFondoPleno = recargo;
-    detalleImpresion.planchaExtra = planchaExtra;
-    detalleImpresion.via = `offset (fondo pleno ${fraccion})`;
-    piezasConMerma = piezasBase + mermaO;
+  if(carasDiferentes){
+    // "Duplica planchas CtP": 2 corridas independientes, cada una con la cantidad final de bolsas
+    // (no piezasBase) porque cada cara lleva su propio arte y su propio juego de planchas.
+    const caraA = corridaOffset(p.cantidad);
+    const caraB = corridaOffset(p.cantidad);
+    detalleImpresion = {
+      via: `offset (2 caras distintas${p.fondoPleno?', fondo pleno':''})`,
+      total: caraA.det.total + caraB.det.total,
+      nPlanchas: caraA.det.nPlanchas + caraB.det.nPlanchas,
+      nMillares: caraA.det.nMillares + caraB.det.nMillares,
+      fraccion: caraA.det.fraccion,
+      caraA: caraA.det, caraB: caraB.det,
+    };
+    piezasConMerma = caraA.piezasConMerma + caraB.piezasConMerma;
+  } else if(p.fondoPleno){
+    const r1 = corridaOffset(piezasBase);
+    detalleImpresion = r1.det;
+    detalleImpresion.via = `offset (fondo pleno ${detalleImpresion.fraccion})`;
+    piezasConMerma = r1.piezasConMerma;
   } else {
     let impDigital = null;
     if(elegibleDigital(anchoMontaje, altoMontaje, gramaje, p.cantidad)){
@@ -511,7 +544,7 @@ function cop(n){ return "$" + Math.round(n).toLocaleString("es-CO"); }
 function poblarTroqueles(){
   const sel = document.getElementById("in-troquel");
   sel.innerHTML = TROQUELES_BOLSAS.map(t =>
-    `<option value="${t.id}">${t.id} — ${t.ancho}x${t.alto}x${t.profundo}cm — ${t.por2?'Por 2':'Por 1'}</option>`
+    `<option value="${t.id}">${t.id} — anch ${t.ancho}cm, alt ${t.alto}cm, fon ${t.profundo}cm — ${t.por2?'Por 2':'Por 1'}</option>`
   ).join("");
   onCambioTroquel();
 }
@@ -529,6 +562,7 @@ function onCambioTroquel(){
   document.getElementById("hint-troquel").innerText =
     `Tamaño impreso (montaje real): ${t.anchoImpreso}x${t.altoImpreso}cm${t.nota?' — '+t.nota:''}.`;
   document.getElementById("in-costoPegue").value = t.por2 ? PEGUE_ARMADO_COP.doble : PEGUE_ARMADO_COP.sencilla;
+  document.getElementById("fila-caras-bolsa").style.display = t.por2 ? "flex" : "none";
 }
 function onCambioTroquelNuevo(){
   const esNuevo = document.getElementById("in-troquelNuevo").value === "nuevo";
@@ -545,6 +579,7 @@ function calcular(){
       tintasTiro: parseInt(document.getElementById("in-tintasTiro").value)||0,
       tintasRetiro: parseInt(document.getElementById("in-tintasRetiro").value)||0,
       fondoPleno: document.getElementById("in-fondoPleno").checked,
+      carasIguales: document.getElementById("in-carasIguales").value,
       plastificado: document.getElementById("in-plastificado").checked,
       tipoAgarradera: document.getElementById("in-agarradera").value,
       costoPegue: parseFloat(document.getElementById("in-costoPegue").value)||0,
@@ -564,7 +599,9 @@ function calcular(){
     filas += `<tr class="detalle"><td colspan="2">Troquel ${r.troquel.id} — montaje ${r.anchoMontaje}x${r.altoMontaje}cm — ${r.piezasBase} piezas (${r.troquel.por2?'x2':'x1'})</td></tr>`;
     filas += `<tr><td>Material (${r.detalleMaterial.formato}, ${r.detalleMaterial.nPliegos} pliegos)</td><td class="num">${cop(r.detalleMaterial.costoTotal)}</td></tr>`;
     filas += `<tr><td>Impresión — ${viaImpresionTxt}</td><td class="num">${cop(r.detalleImpresion.total)}</td></tr>`;
-    if(r.fondoPleno){
+    if(r.detalleImpresion.caraA){
+      filas += `<tr class="detalle"><td colspan="2">↳ Caras distintas: cara A ${cop(r.detalleImpresion.caraA.total)} + cara B ${cop(r.detalleImpresion.caraB.total)} (cada una con su propio juego de planchas)</td></tr>`;
+    } else if(r.fondoPleno){
       filas += `<tr class="detalle"><td colspan="2">↳ Incluye Fondo Pleno: plancha extra ${cop(r.detalleImpresion.planchaExtra)} + recargo ${cop(r.detalleImpresion.recargoFondoPleno)}</td></tr>`;
     }
     if(r.plastificado){
