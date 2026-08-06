@@ -801,7 +801,17 @@ function guardarCotizacionClick(){
 
   if(!ultimoOT) ultimoOT = siguienteOT();
   const desc = `${ultimoParams.cantidad} Rompecabezas ${ultimoResultado.troquel.id} (${ultimoResultado.troquel.fichas} fichas)`;
-  const opp = { id: Date.now().toString()+'_opp', ot: ultimoOT, idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, desc, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot' };
+  let maquina = 'otro', material = null, nPliegos = null;
+  if(ultimoResultado.detalleImpresion){
+    if(ultimoResultado.detalleImpresion.via === 'digital') maquina = 'digital';
+    else if(ultimoResultado.detalleImpresion.fraccion) maquina = ultimoResultado.detalleImpresion.fraccion;
+  }
+  if(ultimoResultado.detalleMaterial && ultimoParams.sustrato){
+    const [nombreSus, gramajeSus] = ultimoParams.sustrato.split('__');
+    material = `${nombreSus} ${gramajeSus}g`;
+    nPliegos = ultimoResultado.detalleMaterial.nPliegos;
+  }
+  const opp = { id: Date.now().toString()+'_opp', ot: ultimoOT, idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, desc, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'rompecabezas', cantidad: ultimoParams.cantidad, maquina, material, nPliegos };
   db_opps.push(opp);
   localStorage.setItem('tactical_crm_opps_v2', JSON.stringify(db_opps));
 

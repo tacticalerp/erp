@@ -2765,7 +2765,12 @@
 
           const r = cotUltimoResultado, p = cotUltimoParams;
           const desc = cotDescripcionProducto(p);
-          const opp = { id: Date.now().toString()+'_opp', idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, desc, monto: Math.round(r.precioFinalTotal), etapa: 'cot' };
+          // linea/cantidad: para que Reportes pueda contar esta cotización junto con las de las
+          // demás calculadoras (antes Reportes solo veía Cuadernos por depender de tactical_cotizaciones_v1).
+          // material/nPliegos/maquina se dejan sin llenar aquí porque Cuadernos ya tiene su propio
+          // desglose más detallado (varias líneas: carátula/taco/insertos) que Reportes sigue leyendo
+          // de tactical_cotizaciones_v1 para Consumo de Papel y Uso de Máquinas.
+          const opp = { id: Date.now().toString()+'_opp', idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, desc, monto: Math.round(r.precioFinalTotal), etapa: 'cot', linea: 'cuadernos', cantidad: p.cantidad };
           db_opps.push(opp);
           localStorage.setItem('tactical_crm_opps_v2', JSON.stringify(db_opps));
 
@@ -2904,9 +2909,25 @@
         }
 
         /* ---- MÓDULO 5: REPORTES ---- */
+        // Conde 2026-08-06 (Fase A de la hoja de ruta): antes Reportes solo leía tactical_cotizaciones_v1,
+        // que únicamente llena Cuadernos — las otras 6 calculadoras (Rompecabezas, Rubik, Carpetas,
+        // Volantes, Bolsas, Cajas) quedaban invisibles aquí aunque sí cerraban negocio en el CRM.
+        // Ahora los KPIs comerciales y "Unidades por Línea" se calculan sobre TODAS las cotizaciones
+        // guardadas (db_opps + db_historial_cierres, el mismo objeto universal que ya usa el CRM),
+        // usando los campos linea/cantidad que ahora agregan las 7 calculadoras al guardar.
+        // Consumo de Papel y Uso de Máquinas mantienen el detalle rico de Cuadernos (multi-línea:
+        // carátula/taco/insertos) y le suman el resumen simple (material/nPliegos/maquina) que
+        // aportan las otras 6 líneas.
+        const NOMBRES_LINEA_PRODUCTO = {
+          cuadernos:"Cuadernos/Agendas", rompecabezas:"Rompecabezas", cubo_rubik:"Cubo Rubik",
+          carpetas:"Carpetas", volantes:"Volantes/Afiches/Plegables", bolsas:"Bolsas de Papel",
+          cajas:"Cajas Blandas", otro:"Sin clasificar",
+        };
         function renderReportes(){
+          const todasCotizaciones = [...db_opps, ...db_historial_cierres];
+
           // Comercial
-          const totalCot = db_cotizaciones.length;
+          const totalCot = todasCotizaciones.length;
           const ganadas = db_historial_cierres.filter(h=>h.estado==='ganado');
           const perdidas = db_historial_cierres.filter(h=>h.estado==='perdido');
           const totalCerrados = ganadas.length+perdidas.length;
@@ -2923,15 +2944,14 @@
           document.getElementById('rep-top-clientes').innerHTML = topCli.length ? topCli.map(c=>`• ${c.empresa}: <strong>${cotFormatoCop(c.ltv)}</strong>`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin datos todavía.</span>';
 
           const porLinea = {};
-          db_cotizaciones.forEach(c=>{ const l=c.params.lineaProducto; porLinea[l]=(porLinea[l]||0)+c.params.cantidad; });
-          const nombresLinea = {escolar:"Escolar", cuaderno_anillado:"Cuaderno Anillado", agenda_ejecutiva:"Agenda Ejecutiva", libretas:"Libretas"};
-          document.getElementById('rep-lineas').innerHTML = Object.keys(porLinea).length ? Object.keys(porLinea).map(l=>`• ${nombresLinea[l]||l}: <strong>${porLinea[l]} unidades</strong>`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin cotizaciones todavía.</span>';
+          todasCotizaciones.forEach(c=>{ const l=c.linea||'otro'; porLinea[l]=(porLinea[l]||0)+(c.cantidad||0); });
+          document.getElementById('rep-lineas').innerHTML = Object.keys(porLinea).length ? Object.keys(porLinea).map(l=>`• ${NOMBRES_LINEA_PRODUCTO[l]||l}: <strong>${porLinea[l]} unidades</strong>`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin cotizaciones todavía.</span>';
 
           const motivos = {};
           perdidas.forEach(p=>{ motivos[p.motivo]=(motivos[p.motivo]||0)+1; });
           document.getElementById('rep-motivos').innerHTML = Object.keys(motivos).length ? Object.keys(motivos).map(m=>`• ${m}: <strong>${motivos[m]}</strong>`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin negocios perdidos todavía.</span>';
 
-          // Producción: consumo de papel
+          // Producción: consumo de papel — detalle rico de Cuadernos (multi-línea)...
           const consumoPapel = {};
           db_cotizaciones.forEach(c=>{
             Object.values(c.resultado.detalleLineas).forEach(linea=>{
@@ -2939,6 +2959,11 @@
               const key = `${linea.sustrato.nombre} ${linea.sustrato.gramaje}g`;
               consumoPapel[key] = (consumoPapel[key]||0) + linea.detalleMaterial.nPliegos;
             });
+          });
+          // ...más el resumen simple de las otras 6 líneas (no duplica Cuadernos: ya está arriba).
+          todasCotizaciones.forEach(c=>{
+            if(c.linea==='cuadernos' || !c.material || !c.nPliegos) return;
+            consumoPapel[c.material] = (consumoPapel[c.material]||0) + c.nPliegos;
           });
           document.getElementById('rep-consumo-papel').innerHTML = Object.keys(consumoPapel).length ? Object.keys(consumoPapel).sort((a,b)=>consumoPapel[b]-consumoPapel[a]).map(k=>`• ${k}: <strong>${consumoPapel[k]} pliegos</strong>`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin cotizaciones todavía.</span>';
 
@@ -2951,6 +2976,11 @@
               const nombre = COT_NOMBRE_MAQUINA[fraccion] || fraccion;
               usoMaquinas[nombre] = (usoMaquinas[nombre]||0)+1;
             });
+          });
+          todasCotizaciones.forEach(c=>{
+            if(c.linea==='cuadernos' || !c.maquina) return;
+            const nombre = COT_NOMBRE_MAQUINA[c.maquina] || c.maquina;
+            usoMaquinas[nombre] = (usoMaquinas[nombre]||0)+1;
           });
           document.getElementById('rep-maquinas').innerHTML = Object.keys(usoMaquinas).length ? Object.keys(usoMaquinas).sort((a,b)=>usoMaquinas[b]-usoMaquinas[a]).map(k=>`• ${k}: <strong>${usoMaquinas[k]} líneas de impresión</strong>`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin cotizaciones todavía.</span>';
 

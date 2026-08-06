@@ -500,7 +500,10 @@ function guardarCotizacionClick(){
 
   if(!ultimoOT) ultimoOT = siguienteOT();
   const desc = `${ultimoParams.cantidad} Cubo Rubik (${ultimoParams.caras} caras)${ultimoParams.conCaja?' con caja':''}`;
-  const opp = { id: Date.now().toString()+'_opp', ot: ultimoOT, idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, desc, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot' };
+  // Rubik no usa papel/sustrato como las demás líneas (insumo del cubo es fijo) — solo se
+  // clasifica la máquina de impresión (digital vs litográfico en Cuarto de Pliego).
+  const maquina = ultimoResultado.usaDigital ? 'digital' : 'cuarto';
+  const opp = { id: Date.now().toString()+'_opp', ot: ultimoOT, idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, desc, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'cubo_rubik', cantidad: ultimoParams.cantidad, maquina, material: null, nPliegos: null };
   db_opps.push(opp);
   localStorage.setItem('tactical_crm_opps_v2', JSON.stringify(db_opps));
 
