@@ -163,7 +163,7 @@
       <div class="fila">
         <div class="campo chico">
           <label>% Utilidad:</label>
-          <input type="number" id="in-utilidadPct" value="40" step="1">
+          <input type="number" id="in-utilidadPct" value="45" step="1">
         </div>
         <div class="campo chico">
           <label>% Comisión:</label>
@@ -811,8 +811,8 @@ function guardarCotizacionClick(){
   nota.innerText = `📋 Cotización guardada en el CRM como ${ultimoOT} — cliente: ${cli.empresa}.`;
 }
 
-poblarTroqueles();
 poblarSustratos();
+poblarTroqueles();
 onCambioTroquelNuevo();
 refrescarDatalistClientes();
 </script>

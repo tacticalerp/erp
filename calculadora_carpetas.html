@@ -129,7 +129,7 @@
       <h2>3. Plastificado (opcional)</h2>
       <div class="fila">
         <div class="checkbox-row">
-          <input type="checkbox" id="in-plastificado" onchange="onCambioPlastificado()">
+          <input type="checkbox" id="in-plastificado" checked onchange="onCambioPlastificado()">
           <label for="in-plastificado" style="font-weight:normal;">El cliente sí pidió plastificado (si no, queda como "Carpeta Ecológica")</label>
         </div>
       </div>
@@ -517,7 +517,7 @@ function poblarSustratos(){
     const [nombre,gramaje] = key.split("__");
     return `<option value="${key}">${nombre} ${gramaje}g${gramaje==="240"?" (único elegible para digital)":""}</option>`;
   }).join("");
-  sel.value = "Propalcote__240";
+  sel.value = "Propalcote__300";
 }
 function onCambioTroquel(){
   const id = document.getElementById("in-troquel").value;
@@ -664,6 +664,7 @@ poblarTroqueles();
 poblarSustratos();
 refrescarDatalistClientes();
 onCambioTroquelNuevo();
+onCambioPlastificado();
 </script>
 </body>
 </html>

@@ -2515,6 +2515,7 @@
             disenoDefault:(datos&&datos.diseno)||"unico_por_pagina", mostrarQuitar:true,
           });
           document.getElementById("cot-insertosContainer").appendChild(div.firstElementChild);
+          document.getElementById(id+"_sustrato").value = "Propalcote__150";
           if(datos){
             if(datos.sustrato) document.getElementById(id+"_sustrato").value = datos.sustrato.nombre+"__"+datos.sustrato.gramaje;
             if(datos.pliegue) document.getElementById(id+"_pliegue").checked = true;
@@ -2562,6 +2563,7 @@
           document.getElementById("cot-lineaTaco").innerHTML = cotLineaCardHtml("cottaco", {
             titulo:"Taco", mostrarNombre:false, mostrarHojas:false, tintasTiroDefault:1, tintasRetiroDefault:1, disenoDefault:"uniforme",
           });
+          document.getElementById("cottaco_sustrato").value = "Bond__70";
           const tacoCard = document.getElementById("cottaco_card");
           const inputHojasGlobal = document.createElement("input");
           inputHojasGlobal.type="hidden"; inputHojasGlobal.id="cottaco_hojas"; inputHojasGlobal.value = document.getElementById("cot-tacoHojas").value;
