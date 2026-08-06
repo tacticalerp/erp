@@ -2084,10 +2084,31 @@
           localStorage.setItem('tactical_kanban_fichas_v1', JSON.stringify(db_kanban));
           renderKanban();
         }
+        // Colapsadas por defecto (Conde 2026-08-06: a veces hay más de 10 fichas en proceso y la
+        // lista de checklist+botones de todas a la vez es imposible de escanear) — se expande cada
+        // una con un clic. Estado solo en memoria (no se guarda), vuelve a colapsar al recargar.
+        let kanbanExpandidas = new Set();
+        function toggleExpandirFicha(id){
+          if(kanbanExpandidas.has(id)) kanbanExpandidas.delete(id); else kanbanExpandidas.add(id);
+          renderKanban();
+        }
         function renderFichaKanbanHtml(f){
           const idx = KANBAN_COLUMNAS.indexOf(f.columna);
           const puedeAtras = idx>0, puedeAdelante = idx<KANBAN_COLUMNAS.length-1;
           const dueHtml = f.fechaEntrega ? `${kanbanBadgeEntrega(f.fechaEntrega)}<br>` : '<span style="font-size:0.72rem; color:#a0aec0;">Sin fecha de entrega</span><br>';
+          const expandida = kanbanExpandidas.has(f.id);
+          const cabeceraHtml = `
+            ${f.urgente?'<div style="font-size:0.85rem; font-weight:900; color:#fff; background:var(--peligro); padding:4px 8px; border-radius:4px; margin-bottom:5px; display:inline-block;">🚨 URGENTE</div>':''}
+            <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.03em; color:#a0aec0; font-weight:bold;">📝 Descripción</div>
+            <div class="kanban-card-title">${f.titulo}</div>
+            <div class="kanban-card-meta">👤 ${f.nombreCli}${f.ot?` — ${f.ot}`:''}${f.origen==='manual'?' — Servicio Express':''}</div>
+            ${dueHtml}`;
+          if(!expandida){
+            return `<div class="kanban-card ${f.urgente?'urgente':''}" style="cursor:pointer;" onclick="toggleExpandirFicha('${f.id}')" title="Clic para ver checklist y opciones">
+              ${cabeceraHtml}
+              <div style="font-size:0.72rem; color:var(--info); font-weight:bold;">▼ Ver detalle (${f.checklist.filter(c=>c.hecho).length}/${f.checklist.length})</div>
+            </div>`;
+          }
           const rielAOk = !f.checklist.some(c=>c.riel==='A' && !c.hecho);
           const rielBOk = !f.checklist.some(c=>c.riel==='B' && !c.hecho);
           const hechos = f.checklist.filter(c=>c.hecho).length;
@@ -2099,17 +2120,16 @@
             </div>`;
           }).join('');
           return `<div class="kanban-card ${f.urgente?'urgente':''}">
-            ${f.urgente?'<div style="font-size:0.72rem; font-weight:bold; color:var(--peligro); margin-bottom:3px;">🚨 URGENTE</div>':''}
-            <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.03em; color:#a0aec0; font-weight:bold;">📝 Descripción</div>
-            <div class="kanban-card-title">${f.titulo}</div>
-            <div class="kanban-card-meta">👤 ${f.nombreCli}${f.ot?` — ${f.ot}`:''}${f.origen==='manual'?' — Servicio Express':''}</div>
-            ${dueHtml}
-            <div class="kanban-checklist">${checklistHtml}<div style="font-size:0.7rem; color:#a0aec0; margin-top:2px;">${hechos}/${f.checklist.length} completado</div></div>
+            <div style="cursor:pointer;" onclick="toggleExpandirFicha('${f.id}')" title="Clic para colapsar">
+              ${cabeceraHtml}
+              <div style="font-size:0.72rem; color:var(--info); font-weight:bold;">▲ Ocultar detalle</div>
+            </div>
+            <div class="kanban-checklist" style="margin-top:8px;">${checklistHtml}<div style="font-size:0.7rem; color:#a0aec0; margin-top:2px;">${hechos}/${f.checklist.length} completado</div></div>
             <div class="kanban-card-actions">
               ${puedeAtras?`<button class="btn-action" onclick="moverFicha('${f.id}',-1)">◀ Atrás</button>`:''}
               ${puedeAdelante?`<button class="btn-action" onclick="moverFicha('${f.id}',1)">Avanzar ▶</button>`:''}
-              <button class="btn-action" onclick="toggleUrgente('${f.id}')">${f.urgente?'Quitar urgente':'🚨 Urgente'}</button>
             </div>
+            <button style="margin-top:8px; width:100%; background:${f.urgente?'#7a1f14':'var(--peligro)'}; color:#fff; border:none; border-radius:5px; padding:10px; font-weight:900; font-size:0.92rem; cursor:pointer;" onclick="toggleUrgente('${f.id}')">${f.urgente?'✕ QUITAR URGENTE':'🚨 MARCAR URGENTE'}</button>
           </div>`;
         }
         function renderKanban(){
