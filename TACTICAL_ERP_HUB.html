@@ -725,6 +725,16 @@
                     </div>
                     <div class="card-footer">Abrir calculadora ➔</div>
                 </div>
+                <div class="hub-card active-card" onclick="window.open('calculadora_promocionales.html', '_blank')">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title">🎁 Promocionales</h3>
+                            <span class="badge badge-active">Beta</span>
+                        </div>
+                        <p class="card-desc">Merchandising de BotonPromo/Promos/PromoOpción + marcación de logo (tablas de Promos y SIMA). Herramienta BETA aparte, cubre las categorías más cotizadas primero — se abre en una pestaña nueva.</p>
+                    </div>
+                    <div class="card-footer">Abrir calculadora ➔</div>
+                </div>
                 <div class="hub-card active-card" onclick="window.open('calculadora_libre.html', '_blank')">
                     <div>
                         <div class="card-header">
@@ -1147,6 +1157,7 @@
                         <option value="volantes">📰 Volantes/Afiches</option>
                         <option value="bolsas">🛍️ Bolsas de Papel</option>
                         <option value="cajas">📦 Cajas Blandas</option>
+                        <option value="promocionales">🎁 Promocionales</option>
                         <option value="manual">✏️ Otro/Maquila</option>
                     </select>
                     <div style="position:relative;">
@@ -1181,6 +1192,7 @@
                                     <option value="volantes">Volantes/Afiches/Plegables</option>
                                     <option value="bolsas">Bolsas de Papel</option>
                                     <option value="cajas">Cajas Blandas</option>
+                                    <option value="promocionales">Promocionales (Merchandising)</option>
                                     <option value="manual" selected>Otro / Maquila externa</option>
                                 </select>
                             </div>
@@ -2069,7 +2081,7 @@
         // tipo de producto es cada ficha, y como base del filtro que aísla solo una línea.
         const KANBAN_COLOR_LINEA = {
           cuadernos:'#2b6cb0', rompecabezas:'#805ad5', cubo_rubik:'#d69e2e', carpetas:'#38a169',
-          volantes:'#dd6b20', bolsas:'#319795', cajas:'#c53030', manual:'#718096',
+          volantes:'#dd6b20', bolsas:'#319795', cajas:'#c53030', promocionales:'#b83280', manual:'#718096',
         };
         // "riel" solo se usa en Cuadernos: 'A' = Taco (arranca de una vez), 'B' = Carátula (espera
         // aprobación de arte), 'gate' = Anillado/Encuadernación, bloqueado hasta que A y B estén listos.
@@ -2103,6 +2115,10 @@
           ],
           cajas: [
             {texto:'Impresión'}, {texto:'Troquelado'}, {texto:'Pegue / armado'}, {texto:'Empaque'},
+          ],
+          promocionales: [
+            {texto:'Confirmar disponibilidad con el distribuidor'}, {texto:'Enviar a marcación (logo)'},
+            {texto:'Recibir y verificar marcación'}, {texto:'Empaque y control de calidad'},
           ],
           manual: [
             {texto:'Confirmar con proveedor / diseño'}, {texto:'Producción o entrega del proveedor'}, {texto:'Entrega al cliente'},
@@ -3705,7 +3721,8 @@
         const NOMBRES_LINEA_PRODUCTO = {
           cuadernos:"Cuadernos/Agendas", rompecabezas:"Rompecabezas", cubo_rubik:"Cubo Rubik",
           carpetas:"Carpetas", volantes:"Volantes/Afiches/Plegables", bolsas:"Bolsas de Papel",
-          cajas:"Cajas Blandas", manual:"Producto libre (fuera de catálogo)", otro:"Sin clasificar",
+          cajas:"Cajas Blandas", promocionales:"Promocionales (Merchandising)",
+          manual:"Producto libre (fuera de catálogo)", otro:"Sin clasificar",
         };
         function renderReportes(){
           const todasCotizaciones = [...db_opps, ...db_historial_cierres];
