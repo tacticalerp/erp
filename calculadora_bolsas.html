@@ -238,51 +238,39 @@
   </div>
 </div>
 
+<script src="precios_tactical.js"></script>
 <script>
 /* ============ CONSTANTES REUTILIZADAS DEL MOTOR DE CUADERNOS (ya validadas) ============ */
-const SUSTRATOS = {
-  "Bond__60": {p6090:177.30, p70100:229.50},
-  "Bond__70": {p6090:206.10, p70100:267.30},
-  "Bond__75": {p6090:221.40, p70100:287.10},
-  "Bond__90": {p6090:265.50, p70100:343.80},
-  "Bond__115": {p6090:null, p70100:459.00},
-  "Propalcote__80": {p6090:null, p70100:308.70},
-  "Propalcote__90": {p6090:267.30, p70100:348.30},
-  "Propalcote__115": {p6090:343.80, p70100:448.20},
-  "Propalcote__150": {p6090:472.50, p70100:612.90},
-  "Propalcote__200": {p6090:603.90, p70100:810.00},
-  "Propalcote__240": {p6090:807.00, p70100:1050.00},
-};
+const SUSTRATOS = tacticalSeleccionarSustratos([
+  "Bond__60","Bond__70","Bond__75","Bond__90","Bond__115",
+  "Propalcote__80","Propalcote__90","Propalcote__115","Propalcote__150","Propalcote__200","Propalcote__240",
+]);
 const PLIEGOS_CM = {"60x90":[60,90], "70x100":[70,100]};
 
 const DIGITAL_GRAMAJE_MAX = 240;
 const DIGITAL_PINZA_MM = 5;
-const DIGITAL_CLIC_COP = {
-  carta:{color:1000, negro:250},
-  octavo:{color:1400, negro:350},
-  pliego_max:{color:2200, negro:550},
-};
+const DIGITAL_CLIC_COP = PRECIOS_DIGITAL_CLIC_OTRAS_LINEAS;
 const DIGITAL_DESCUENTO_VOLUMEN = [[9,0.0],[50,0.10],[200,0.18],[400,0.26],[Infinity,0.30]];
 const DIGITAL_FORMATOS_CM = {carta:[21.5,28], octavo:[25,35], pliego_max:[33,50]};
 const DIGITAL_MERMA_HOJAS = {policromia:20, negro:10, promedio:18};
 
-const OFFSET_CTP_COP = {medio_pliego:22000, cuarto:11000, octavo:9000};
-const OFFSET_MILLAR_COP = {medio_pliego_color:25000, medio_pliego_policromia_4x0:100000, cuarto:16000, octavo:12000};
+const OFFSET_CTP_COP = PRECIOS_OFFSET_CTP_COP;
+const OFFSET_MILLAR_COP = PRECIOS_OFFSET_MILLAR_COP;
 const OFFSET_FORMATOS_CM = {medio_pliego:[50,70], cuarto:[35,50], octavo:[25,35]};
 const OFFSET_MERMA_HOJAS = [[1000,100],[2000,130],[Infinity,160]];
 const OFFSET_MERMA_FACTOR_2_MAS_TINTAS = 1.30;
 const OFFSET_RECARGO_RETIRO_MEDIO_PLIEGO_POLICROMIA_PCT = 0.30;
 // Fondo Pleno / Plastón: recargo confirmado por Conde (ya usado en Cuadernos) por color sólido de
 // borde a borde — necesita una plancha extra + recargo fijo, según tamaño de máquina.
-const OFFSET_RECARGO_FONDO_PLENO_COP = {medio_pliego:90000, cuarto:50000, octavo:50000};
+const OFFSET_RECARGO_FONDO_PLENO_COP = PRECIOS_OFFSET_RECARGO_FONDO_PLENO_COP;
 
-const PLASTIFICADO_COP_M2 = 950;     // ya validado (Cuadernos/Rompecabezas/Rubik/Carpetas)
-const PLASTIFICADO_PISO_COP = 30000;
+const PLASTIFICADO_COP_M2 = PRECIOS_PLASTIFICADO_COP_M2;     // ya validado (Cuadernos/Rompecabezas/Rubik/Carpetas)
+const PLASTIFICADO_PISO_COP = PRECIOS_PLASTIFICADO_PISO_COP;
 
-const ESCUDO_BAJOS_MONTOS_UMBRAL = 150000;
-const DISENO_COSTO_NORMAL = 40000;
-const DISENO_COSTO_REDUCIDO = 20000;
-const FONDO_SEGURIDAD_TRAMOS = [[500000,0.09],[1000000,0.07],[3000000,0.05],[Infinity,0.03]];
+const ESCUDO_BAJOS_MONTOS_UMBRAL = PRECIOS_ESCUDO_BAJOS_MONTOS_UMBRAL;
+const DISENO_COSTO_NORMAL = PRECIOS_DISENO_COSTO_NORMAL;
+const DISENO_COSTO_REDUCIDO = PRECIOS_DISENO_COSTO_REDUCIDO;
+const FONDO_SEGURIDAD_TRAMOS = PRECIOS_FONDO_SEGURIDAD_TRAMOS;
 const SHERPA_BASE_COP = 20000;
 const EMPAQUE_CAJA_COP = 3000;
 
@@ -407,7 +395,7 @@ function millaresConTolerancia(nPasadas){
   const base=Math.ceil(nPasadas/1000);
   if(base<=1) return 1;
   const resto=nPasadas-(base-1)*1000;
-  return resto<=180 ? base-1 : base;
+  return resto<=PRECIOS_OFFSET_TOLERANCIA_MERMA_MILLAR ? base-1 : base;
 }
 function costoImpresionOffset(nPiezasFinales,tintasTiro,tintasRetiro,esPolicromia,ancho,alto){
   const fraccion=fraccionPliegoOffset(ancho,alto,esPolicromia);

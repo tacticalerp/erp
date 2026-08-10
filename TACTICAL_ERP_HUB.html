@@ -312,6 +312,30 @@
                     </div>
                     <div class="card-footer">Ingresar al Módulo ➔</div>
                 </div>
+
+                <!-- MÓDULO 8: MONTAJES ROMPECABEZAS B2C -->
+                <div class="hub-card active-card" onclick="window.open('modulo_montajes_rompecabezas.html', '_blank')">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title">🖼️ Montajes Rompecabezas (B2C)</h3>
+                            <span class="badge badge-active">Beta</span>
+                        </div>
+                        <p class="card-desc">Venta directa al cliente final: sube la foto, elige Láser o Troquelado, genera el montaje y envía por WhatsApp. Al aprobar el pago crea la ficha en el Kanban — se abre en una pestaña nueva.</p>
+                    </div>
+                    <div class="card-footer">Abrir módulo ➔</div>
+                </div>
+
+                <!-- MÓDULO 9: PANEL DE PRECIOS -->
+                <div class="hub-card active-card" onclick="showView('precios')">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title">⚙️ Panel de Precios</h3>
+                            <span class="badge badge-active">Beta</span>
+                        </div>
+                        <p class="card-desc">Actualiza los precios de papel, impresión offset/digital, acabados y costos generales para las 8 herramientas desde un solo lugar — sin tocar código.</p>
+                    </div>
+                    <div class="card-footer">Ingresar al Módulo ➔</div>
+                </div>
             </div>
         </div>
 
@@ -1174,11 +1198,28 @@
                 <div class="kanban-board" id="kanban-board"></div>
             </div>
         </div>
+
+        <!-- VISTA: PANEL DE PRECIOS -->
+        <div id="view-precios" class="app-view">
+            <div style="padding:10px;">
+                <div class="data-card" style="margin-bottom:16px;">
+                    <div class="card-title">⚙️ Panel de Precios</div>
+                    <p style="color:#64748b; margin:8px 0 0;">Estos precios alimentan las 8 herramientas de cotización (el hub y las 7 calculadoras). Cambia un valor y presiona "Guardar cambios" — se aplica de inmediato en todas, sin tocar código.</p>
+                    <p id="precios-ultima-actualizacion" style="color:#94a3b8; font-size:0.85em; margin:6px 0 0;"></p>
+                </div>
+                <div id="precios-grupos"></div>
+                <div style="display:flex; gap:10px; margin:20px 0; position:sticky; bottom:10px; background:#f1f5f9; padding:14px; border-radius:8px; border:1px solid #e2e8f0; z-index:5;">
+                    <button class="btn-submit" onclick="guardarPanelPrecios()">💾 Guardar cambios (recarga la página)</button>
+                    <button class="btn-action" onclick="restaurarTodoPanelPrecios()">↩️ Restaurar TODO a valores de fábrica</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- CONTENEDOR OCULTO PARA IMPRESIÓN (PDF / ORDEN DE PRODUCCIÓN) -->
     <div id="print-area" style="display:none;"></div>
 
+    <script src="precios_tactical.js"></script>
     <script>
         // NAVEGACIÓN SPA DEL HUB
         let contAutenticado = false;
@@ -1193,7 +1234,7 @@
 
         let modAutenticado = false;
         const MOD_PASSWORD = '1984';
-        const MOD_VISTAS_PROTEGIDAS = ['reportes', 'cotizador', 'crm'];
+        const MOD_VISTAS_PROTEGIDAS = ['reportes', 'cotizador', 'crm', 'precios'];
         function modVerificarAcceso(){
             if(modAutenticado) return true;
             const intento = prompt('🔒 Módulo protegido.\nIngrese la clave de acceso:');
@@ -1216,6 +1257,7 @@
             'tactical_gastos_fijos_config_v1', 'tactical_proveedores_v1',
             'tactical_fv_counter', 'tactical_cc_counter', 'tactical_ingreso_counter', 'tactical_cxp_counter', 'tactical_egreso_counter',
             'tactical_kanban_fichas_v1', 'tactical_pedido_activo',
+            'tactical_precios_override_v1', 'tactical_precios_override_meta_v1',
         ];
 
         function contExportarRespaldo(){
@@ -1317,6 +1359,11 @@
                 mainTitle.innerText = "KANBAN DE PRODUCCIÓN";
                 subTitle.innerText = "Cotización Aprobada → Postventa (2026)";
                 if (typeof renderKanban === 'function') renderKanban();
+            } else if (viewId === 'precios') {
+                navContainer.style.display = 'block';
+                mainTitle.innerText = "PANEL DE PRECIOS";
+                subTitle.innerText = "Fuente única de precios para las 8 herramientas (2026)";
+                if (typeof renderPanelPrecios === 'function') renderPanelPrecios();
             }
         }
 
@@ -2300,6 +2347,131 @@
           }).join('');
         }
 
+        // ==========================================
+        // MÓDULO 9: PANEL DE PRECIOS
+        // Autoservicio para que Conde actualice precios de insumos sin depender de código.
+        // Lee/escribe tactical_precios_override_v1 (definido y consumido en precios_tactical.js).
+        // ==========================================
+        function tacticalNombreSustrato(clave){
+          const partes = clave.split('__');
+          return partes.length===2 ? `${partes[0].replace(/_/g,' ')} ${partes[1]}g` : clave;
+        }
+        function precioEfectivoGrupo(campo){
+          switch(campo.clave){
+            case 'sustratos': return PRECIOS_SUSTRATOS_MAESTRO;
+            case 'offsetCtp': return PRECIOS_OFFSET_CTP_COP;
+            case 'offsetMillar': return PRECIOS_OFFSET_MILLAR_COP;
+            case 'offsetRecargoFondoPleno': return PRECIOS_OFFSET_RECARGO_FONDO_PLENO_COP;
+            case 'digitalClicCuadernos': return PRECIOS_DIGITAL_CLIC_CUADERNOS;
+            case 'digitalClicOtrasLineas': return PRECIOS_DIGITAL_CLIC_OTRAS_LINEAS;
+          }
+          return {};
+        }
+        const PRECIOS_SIMPLE_VALOR_ACTUAL = {
+          plastificadoM2: () => PRECIOS_PLASTIFICADO_COP_M2,
+          plastificadoPiso: () => PRECIOS_PLASTIFICADO_PISO_COP,
+          colaminadoM2: () => PRECIOS_COLAMINADO_COP_M2,
+          disenoNormal: () => PRECIOS_DISENO_COSTO_NORMAL,
+          disenoReducido: () => PRECIOS_DISENO_COSTO_REDUCIDO,
+          escudoUmbral: () => PRECIOS_ESCUDO_BAJOS_MONTOS_UMBRAL,
+          offsetToleranciaMerma: () => PRECIOS_OFFSET_TOLERANCIA_MERMA_MILLAR,
+        };
+
+        function renderPanelPrecios(){
+          const cont = document.getElementById('precios-grupos');
+          if(!cont) return;
+          let meta = null;
+          try { meta = JSON.parse(localStorage.getItem('tactical_precios_override_meta_v1')); } catch(e){}
+          const notaEl = document.getElementById('precios-ultima-actualizacion');
+          if(notaEl) notaEl.innerText = meta && meta.actualizadoEn
+            ? `Última actualización: ${new Date(meta.actualizadoEn).toLocaleString('es-CO')}`
+            : 'Aún no se ha guardado ningún cambio — se están usando los valores base.';
+
+          let html = '';
+          PRECIOS_CAMPOS_PANEL.forEach(campo => {
+            html += `<div class="data-card" style="margin-bottom:14px;"><div class="card-title">${campo.grupo}</div><div style="overflow-x:auto; margin-top:10px;"><table style="width:100%; border-collapse:collapse;">`;
+
+            if(campo.tipo === 'sustratos'){
+              html += `<tr style="text-align:left; border-bottom:2px solid #e2e8f0;"><th style="padding:6px;">Sustrato</th><th style="padding:6px;">$ Pliego 60x90</th><th style="padding:6px;">$ Pliego 70x100</th></tr>`;
+              const actual = PRECIOS_SUSTRATOS_MAESTRO;
+              Object.keys(campo.base).forEach(clave => {
+                const val = actual[clave] || campo.base[clave];
+                html += `<tr style="border-bottom:1px solid #f1f5f9;">
+                  <td style="padding:6px;">${tacticalNombreSustrato(clave)}</td>
+                  <td style="padding:6px;"><input type="number" step="0.01" class="precio-input" data-tipo="sustratos" data-clave="sustratos" data-subclave="${clave}" data-subcampo="p6090" value="${val.p6090 ?? ''}" style="width:110px;" placeholder="N/A"></td>
+                  <td style="padding:6px;"><input type="number" step="0.01" class="precio-input" data-tipo="sustratos" data-clave="sustratos" data-subclave="${clave}" data-subcampo="p70100" value="${val.p70100 ?? ''}" style="width:110px;" placeholder="N/A"></td>
+                </tr>`;
+              });
+            } else if(campo.tipo === 'nivel1'){
+              html += `<tr style="text-align:left; border-bottom:2px solid #e2e8f0;"><th style="padding:6px;">Formato</th><th style="padding:6px;">Precio</th></tr>`;
+              const actual = precioEfectivoGrupo(campo);
+              Object.keys(campo.base).forEach(subclave => {
+                const etiqueta = (campo.etiquetas && campo.etiquetas[subclave]) || subclave;
+                html += `<tr style="border-bottom:1px solid #f1f5f9;">
+                  <td style="padding:6px;">${etiqueta}</td>
+                  <td style="padding:6px;"><input type="number" class="precio-input" data-tipo="nivel1" data-clave="${campo.clave}" data-subclave="${subclave}" value="${actual[subclave]}" style="width:130px;"></td>
+                </tr>`;
+              });
+            } else if(campo.tipo === 'nivel2'){
+              html += `<tr style="text-align:left; border-bottom:2px solid #e2e8f0;"><th style="padding:6px;">Formato</th><th style="padding:6px;">Color</th><th style="padding:6px;">Negro</th></tr>`;
+              const actual = precioEfectivoGrupo(campo);
+              Object.keys(campo.base).forEach(subclave => {
+                const val = actual[subclave];
+                html += `<tr style="border-bottom:1px solid #f1f5f9;">
+                  <td style="padding:6px;">${subclave}</td>
+                  <td style="padding:6px;"><input type="number" class="precio-input" data-tipo="nivel2" data-clave="${campo.clave}" data-subclave="${subclave}" data-subcampo="color" value="${val.color}" style="width:110px;"></td>
+                  <td style="padding:6px;"><input type="number" class="precio-input" data-tipo="nivel2" data-clave="${campo.clave}" data-subclave="${subclave}" data-subcampo="negro" value="${val.negro}" style="width:110px;"></td>
+                </tr>`;
+              });
+            } else if(campo.tipo === 'simple'){
+              html += `<tr style="text-align:left; border-bottom:2px solid #e2e8f0;"><th style="padding:6px;">Concepto</th><th style="padding:6px;">Valor</th></tr>`;
+              campo.campos.forEach(c => {
+                const val = PRECIOS_SIMPLE_VALOR_ACTUAL[c.clave] ? PRECIOS_SIMPLE_VALOR_ACTUAL[c.clave]() : c.base;
+                html += `<tr style="border-bottom:1px solid #f1f5f9;">
+                  <td style="padding:6px;">${c.etiqueta}</td>
+                  <td style="padding:6px;"><input type="number" class="precio-input" data-tipo="simple" data-clave="${c.clave}" value="${val}" style="width:130px;"></td>
+                </tr>`;
+              });
+            }
+
+            html += `</table></div></div>`;
+          });
+          cont.innerHTML = html;
+        }
+
+        function guardarPanelPrecios(){
+          const ov = { sustratos:{}, offsetCtp:{}, offsetMillar:{}, offsetRecargoFondoPleno:{}, digitalClicCuadernos:{}, digitalClicOtrasLineas:{} };
+          document.querySelectorAll('.precio-input').forEach(inp => {
+            const tipo = inp.dataset.tipo, clave = inp.dataset.clave, subclave = inp.dataset.subclave, subcampo = inp.dataset.subcampo;
+            const raw = inp.value.trim();
+            const num = raw === '' ? null : parseFloat(raw);
+            if(tipo === 'sustratos'){
+              if(!ov.sustratos[subclave]) ov.sustratos[subclave] = {};
+              ov.sustratos[subclave][subcampo] = num;
+            } else if(tipo === 'nivel1'){
+              ov[clave][subclave] = num;
+            } else if(tipo === 'nivel2'){
+              if(!ov[clave][subclave]) ov[clave][subclave] = {};
+              ov[clave][subclave][subcampo] = num;
+            } else if(tipo === 'simple'){
+              ov[clave] = num;
+            }
+          });
+          localStorage.setItem('tactical_precios_override_v1', JSON.stringify(ov));
+          localStorage.setItem('tactical_precios_override_meta_v1', JSON.stringify({actualizadoEn: new Date().toISOString()}));
+          alert('Precios guardados. La página se va a recargar para aplicarlos en esta herramienta — las demás calculadoras los toman la próxima vez que se abran.');
+          location.reload();
+        }
+
+        function restaurarTodoPanelPrecios(){
+          const ok = confirm('Esto borra TODOS tus ajustes de precio y vuelve a los valores base de fábrica en las 8 herramientas. ¿Continuar?');
+          if(!ok) return;
+          localStorage.removeItem('tactical_precios_override_v1');
+          localStorage.removeItem('tactical_precios_override_meta_v1');
+          alert('Precios restaurados a valores de fábrica. La página se va a recargar.');
+          location.reload();
+        }
+
         function abrirModalPerdida(idOpp) {
             document.getElementById('opp-id-perdida').value = idOpp;
             document.getElementById('modal-perdida').style.display = 'block';
@@ -2434,18 +2606,8 @@
         // ==========================================
 
         /* ---- DATOS MAESTROS ---- */
-        const SUSTRATOS = {
-          "Bond__60": {p6090:177.30, p70100:229.50}, "Bond__70": {p6090:206.10, p70100:267.30},
-          "Bond__75": {p6090:221.40, p70100:287.10}, "Bond__90": {p6090:265.50, p70100:343.80},
-          "Bond__115": {p6090:null, p70100:459.00}, "Propalcote__80": {p6090:null, p70100:308.70},
-          "Propalcote__90": {p6090:267.30, p70100:348.30}, "Propalcote__115": {p6090:343.80, p70100:448.20},
-          "Propalcote__150": {p6090:472.50, p70100:612.90}, "Propalcote__200": {p6090:603.90, p70100:810.00},
-          "Propalcote__300": {p6090:910.80, p70100:1182.60}, "Propalcote__350": {p6090:null, p70100:1381.50},
-          "Cartulina C11__190": {p6090:null, p70100:684.00}, "Cartulina C12__205": {p6090:580.50, p70100:753.30},
-          "Cartulina C14__225": {p6090:637.20, p70100:826.20}, "Cartulina C16__255": {p6090:722.70, p70100:936.90},
-          "Cartulina C18__275": {p6090:779.40, p70100:1009.80}, "Cartulina C20__305": {p6090:864.00, p70100:1120.50},
-          "Cartulina C22__330": {p6090:null, p70100:1212.30},
-        };
+        /* Precios de papel/offset/digital/acabados/generales vienen de precios_tactical.js (Panel de Precios) */
+        const SUSTRATOS = tacticalSeleccionarSustratos(Object.keys(PRECIOS_SUSTRATOS_MAESTRO));
         const PLIEGOS_CM = {"60x90":[60,90], "70x100":[70,100]};
         const CARTON_1_5MM_COP = 3500, CARTON_2_0MM_COP = 4500, ESPESOR_LOMO_MM_POR_HOJA = 0.13;
         const TAMANOS_CATALOGO_CM = {media_carta:[21,14], agenda:[17,24.5], carta:[28,21.5]};
@@ -2453,7 +2615,7 @@
         const ARMADO_FORRADO_TAPA_DURA_COP = {media_carta:620, agenda:640, carta:750};
         const CARATULA_EMBONE_TAPA_DURA_CM = 1.5;
         const CARATULA_TAMANOS_MAQUINA_CM = [[21.5,28],[25,35],[33,50],[42,28],[50,70]];
-        const COLAMINADO_COP_M2 = 900, PLASTIFICADO_COP_M2 = 950, PLASTIFICADO_PISO_COP = 30000;
+        const COLAMINADO_COP_M2 = PRECIOS_COLAMINADO_COP_M2, PLASTIFICADO_COP_M2 = PRECIOS_PLASTIFICADO_COP_M2, PLASTIFICADO_PISO_COP = PRECIOS_PLASTIFICADO_PISO_COP;
         const UV_PARCIAL_COP_M2 = 1950, UV_PARCIAL_PISO_COP = 80000, TROQUEL_TAPA_COP_POR_MILLAR = 35000;
         const ESTAMPADO_COP_POR_GOLPE = 350, ESTAMPADO_ARRANQUE_COP = 80000, ESTAMPADO_MINIMO_COP = 80000;
         const TAPA_DURA_UMBRAL_TINTA_RETIRO_UNIDADES = 150;
@@ -2478,23 +2640,23 @@
         const HOTMELT_BASE_COP_UNIDAD = 430, HOTMELT_CM_REFERENCIA = 21, HOTMELT_PISO_OT_COP = 90000;
         const COLBON_COP_UNIDAD = 250, COLBON_PISO_OT_COP = 30000, GRAFADO_LIBRETAS_COP_FIJO = 35000, ANILLADO_CORTO_FACTOR = 1.30;
         const DIGITAL_GRAMAJE_MAX = 240, DIGITAL_PINZA_MM = 5;
-        const DIGITAL_CLIC_COP = { carta:{color:750, negro:350}, octavo:{color:900, negro:450}, pliego_max:{color:1000, negro:550} };
+        const DIGITAL_CLIC_COP = PRECIOS_DIGITAL_CLIC_CUADERNOS;
         const DIGITAL_MERMA_HOJAS = {policromia:20, negro:10, promedio:18};
         const DIGITAL_DESCUENTO_VOLUMEN = [[9,0.0],[50,0.10],[200,0.18],[400,0.26],[Infinity,0.30]];
         const DIGITAL_FORMATOS_CM = {carta:[21.5,28], octavo:[25,35], pliego_max:[33,50]};
-        const OFFSET_CTP_COP = {medio_pliego:22000, cuarto:11000, octavo:9000};
-        const OFFSET_MILLAR_COP = {medio_pliego_color:25000, medio_pliego_policromia_4x0:100000, cuarto:16000, octavo:12000};
-        const OFFSET_RECARGO_FONDO_PLENO_COP = {medio_pliego:90000, cuarto:50000, octavo:50000};
+        const OFFSET_CTP_COP = PRECIOS_OFFSET_CTP_COP;
+        const OFFSET_MILLAR_COP = PRECIOS_OFFSET_MILLAR_COP;
+        const OFFSET_RECARGO_FONDO_PLENO_COP = PRECIOS_OFFSET_RECARGO_FONDO_PLENO_COP;
         const OFFSET_RECARGO_RETIRO_MEDIO_PLIEGO_POLICROMIA_PCT = 0.30;
         const OFFSET_MERMA_HOJAS = [[1000,100],[2000,130],[Infinity,160]];
         const OFFSET_MERMA_FACTOR_2_MAS_TINTAS = 1.30;
-        const OFFSET_TOLERANCIA_MERMA_MILLAR = 180;
+        const OFFSET_TOLERANCIA_MERMA_MILLAR = PRECIOS_OFFSET_TOLERANCIA_MERMA_MILLAR;
         const OFFSET_FORMATOS_CM = {octavo:[25,35], cuarto:[35,50], medio_pliego:[50,70]};
         const PINZA_ENTRADA_MM = 12, PINZA_SALIDA_MM = 5;
         const LINEAS_CON_PLIEGUE = new Set(["escolar","agenda_ejecutiva"]);
         const ENCUADERNACIONES_LIBRETAS_CON_PLIEGUE = new Set(["hotmelt","colbon"]);
-        const ESCUDO_BAJOS_MONTOS_UMBRAL = 150000, DISENO_COSTO_NORMAL = 40000, DISENO_COSTO_REDUCIDO = 20000, IVA_PCT = 0.19;
-        const FONDO_SEGURIDAD_TRAMOS = [[500000,0.09],[1000000,0.07],[3000000,0.05],[Infinity,0.03]];
+        const ESCUDO_BAJOS_MONTOS_UMBRAL = PRECIOS_ESCUDO_BAJOS_MONTOS_UMBRAL, DISENO_COSTO_NORMAL = PRECIOS_DISENO_COSTO_NORMAL, DISENO_COSTO_REDUCIDO = PRECIOS_DISENO_COSTO_REDUCIDO, IVA_PCT = 0.19;
+        const FONDO_SEGURIDAD_TRAMOS = PRECIOS_FONDO_SEGURIDAD_TRAMOS;
         const FONDO_SEGURIDAD_TRAMO_SUPERIOR_AGENDA_EJECUTIVA = 0.025;
 
         /* ---- MOTOR DE CALCULO ---- */

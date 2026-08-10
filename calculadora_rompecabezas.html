@@ -211,62 +211,40 @@
   </div>
 </div>
 
+<script src="precios_tactical.js"></script>
 <script>
 /* ============ CONSTANTES REUTILIZADAS DEL MOTOR DE CUADERNOS (ya validadas) ============ */
-const SUSTRATOS = {
-  "Bond__60": {p6090:177.30, p70100:229.50},
-  "Bond__70": {p6090:206.10, p70100:267.30},
-  "Bond__75": {p6090:221.40, p70100:287.10},
-  "Bond__90": {p6090:265.50, p70100:343.80},
-  "Bond__115": {p6090:null, p70100:459.00},
-  "Propalcote__80": {p6090:null, p70100:308.70},
-  "Propalcote__90": {p6090:267.30, p70100:348.30},
-  "Propalcote__115": {p6090:343.80, p70100:448.20},
-  "Propalcote__150": {p6090:472.50, p70100:612.90},
-  "Propalcote__200": {p6090:603.90, p70100:810.00},
-  "Propalcote__300": {p6090:910.80, p70100:1182.60},
-  "Propalcote__350": {p6090:null, p70100:1381.50},
-  "Cartulina C11__190": {p6090:null, p70100:684.00},
-  "Cartulina C12__205": {p6090:580.50, p70100:753.30},
-  "Cartulina C14__225": {p6090:637.20, p70100:826.20},
-  "Cartulina C16__255": {p6090:722.70, p70100:936.90},
-  "Cartulina C18__275": {p6090:779.40, p70100:1009.80},
-  "Cartulina C20__305": {p6090:864.00, p70100:1120.50},
-  "Cartulina C22__330": {p6090:null, p70100:1212.30},
-  // Maule es solo la marca — Conde confirmó 2026-07-24 que Maule C20/C22 es el mismo
-  // producto/especificación que Cartulina C20/C22, mismo precio.
-  "Maule C20__305": {p6090:864.00, p70100:1120.50},
-  "Maule C22__330": {p6090:null, p70100:1212.30},
-  // Cartón Prensado 1.5mm: mismo precio ya validado y en uso en Cuadernos
-  // (CARTON_1_5MM_COP en datos_maestros.py) — $3.500 por UN pliego 70x100 completo. Cuadernos
-  // nunca usa 60x90 para cartón (M.piezas_por_pliego se llama siempre con 70,100 fijo en
-  // cotizador.py), por eso aquí tampoco se ofrece esa opción. Conde 2026-07-24: el $4.000 de
-  // la lista de precios de marzo NO es el valor correcto — usar el mismo que ya tiene Cuadernos.
-  "Cartón 1.5mm__400": {p6090:null, p70100:3500.00},
-};
+const SUSTRATOS = tacticalSeleccionarSustratos([
+  "Bond__60","Bond__70","Bond__75","Bond__90","Bond__115",
+  "Propalcote__80","Propalcote__90","Propalcote__115","Propalcote__150","Propalcote__200","Propalcote__300","Propalcote__350",
+  "Cartulina C11__190","Cartulina C12__205","Cartulina C14__225","Cartulina C16__255","Cartulina C18__275","Cartulina C20__305","Cartulina C22__330",
+]);
+// Maule es solo la marca — Conde confirmó 2026-07-24 que Maule C20/C22 es el mismo producto/especificación
+// que Cartulina C20/C22: se deriva del mismo precio para que un cambio en el Panel de Precios los mueva juntos.
+SUSTRATOS["Maule C20__305"] = SUSTRATOS["Cartulina C20__305"];
+SUSTRATOS["Maule C22__330"] = SUSTRATOS["Cartulina C22__330"];
+// Cartón Prensado 1.5mm: precio propio de Rompecabezas/Cuadernos, no forma parte del listado general
+// de papel ($3.500 por UN pliego 70x100 completo, no se ofrece en 60x90 — igual que en Cuadernos).
+SUSTRATOS["Cartón 1.5mm__400"] = {p6090:null, p70100:3500.00};
 const PLIEGOS_CM = {"60x90":[60,90], "70x100":[70,100]};
 const SUSTRATO_IMPRESO_FICHAS_MENOR = "Propalcote__150";   // "Cote 150gr", <70 fichas (90% de los casos)
 const SUSTRATO_IMPRESO_FICHAS_MAYOR = "Maule C20__305";    // >=70 fichas
 const SUSTRATO_BACKING_FICHAS_MAYOR = "Maule C22__330";    // colaminado, >=70 fichas
 const UMBRAL_FICHAS_LINEA_MACRO = 70;
 
-const COLAMINADO_COP_M2 = 900;       // confirmado por Conde (incluye pegante + mano de obra)
+const COLAMINADO_COP_M2 = PRECIOS_COLAMINADO_COP_M2;       // confirmado por Conde (incluye pegante + mano de obra)
 const COLAMINADO_PISO_COP = 30000;   // Conde 2026-07-24: mínimo de mano de obra/pegante, aparte del cartón
-const PLASTIFICADO_COP_M2 = 950;     // unificado por Conde 2026-07-24
-const PLASTIFICADO_PISO_COP = 30000;
+const PLASTIFICADO_COP_M2 = PRECIOS_PLASTIFICADO_COP_M2;     // unificado por Conde 2026-07-24
+const PLASTIFICADO_PISO_COP = PRECIOS_PLASTIFICADO_PISO_COP;
 
 const DIGITAL_GRAMAJE_MAX = 240;
 const DIGITAL_PINZA_MM = 5;
-const DIGITAL_CLIC_COP = {
-  carta:{color:1000, negro:250},
-  octavo:{color:1400, negro:350},
-  pliego_max:{color:2200, negro:550},
-};
+const DIGITAL_CLIC_COP = PRECIOS_DIGITAL_CLIC_OTRAS_LINEAS;
 const DIGITAL_DESCUENTO_VOLUMEN = [[9,0.0],[50,0.10],[200,0.18],[400,0.26],[Infinity,0.30]];
 const DIGITAL_FORMATOS_CM = {carta:[21.5,28], octavo:[25,35], pliego_max:[33,50]};
 
-const OFFSET_CTP_COP = {medio_pliego:22000, cuarto:11000, octavo:9000};
-const OFFSET_MILLAR_COP = {medio_pliego_color:25000, medio_pliego_policromia_4x0:100000, cuarto:16000, octavo:12000};
+const OFFSET_CTP_COP = PRECIOS_OFFSET_CTP_COP;
+const OFFSET_MILLAR_COP = PRECIOS_OFFSET_MILLAR_COP;
 const OFFSET_FORMATOS_CM = {medio_pliego:[50,70], cuarto:[35,50], octavo:[25,35]};
 
 /* ============ REGLAS PROPIAS DE ROMPECABEZAS (confirmadas por Conde) ============ */
@@ -293,10 +271,10 @@ const MERMA_COLAMINADO_GRANDE_UND = 50;   // backing, >=70 fichas
 const MERMA_COLAMINADO_CHICO_UND = 30;    // backing, <70 fichas
 
 /* ============ OVERHEAD GENERAL DEL MOTOR (reutilizado 1:1 de Cuadernos, a pedido de Conde 2026-07-24) ============ */
-const ESCUDO_BAJOS_MONTOS_UMBRAL = 150000;
-const DISENO_COSTO_NORMAL = 40000;
-const DISENO_COSTO_REDUCIDO = 20000;
-const FONDO_SEGURIDAD_TRAMOS = [[500000,0.09],[1000000,0.07],[3000000,0.05],[Infinity,0.03]];
+const ESCUDO_BAJOS_MONTOS_UMBRAL = PRECIOS_ESCUDO_BAJOS_MONTOS_UMBRAL;
+const DISENO_COSTO_NORMAL = PRECIOS_DISENO_COSTO_NORMAL;
+const DISENO_COSTO_REDUCIDO = PRECIOS_DISENO_COSTO_REDUCIDO;
+const FONDO_SEGURIDAD_TRAMOS = PRECIOS_FONDO_SEGURIDAD_TRAMOS;
 const SHERPA_BASE_COP = 20000;
 const SHERPA_COP_FICHAS_REDUCIDO = 10000;
 const SHERPA_MAXIMO_COP = 40000;
@@ -438,7 +416,7 @@ function millaresConTolerancia(nPasadas){
   const base=Math.ceil(nPasadas/1000);
   if(base<=1) return 1;
   const resto=nPasadas-(base-1)*1000;
-  return resto<=180 ? base-1 : base;
+  return resto<=PRECIOS_OFFSET_TOLERANCIA_MERMA_MILLAR ? base-1 : base;
 }
 function costoImpresionOffset(nPiezasFinales,tintasTiro,tintasRetiro,esPolicromia,ancho,alto){
   const fraccion=fraccionPliegoOffset(ancho,alto,esPolicromia);

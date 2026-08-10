@@ -237,43 +237,35 @@
   </div>
 </div>
 
+<script src="precios_tactical.js"></script>
 <script>
 /* ============ CONSTANTES REUTILIZADAS DEL MOTOR DE CUADERNOS (ya validadas) ============ */
-const SUSTRATOS = {
-  // Restringido a >=240g por regla de Carpetas — solo se ofrecen sustratos que cumplen.
-  "Propalcote__240": {p6090:807.00, p70100:1050.00},   // "Cote 240gr" — único elegible para digital
-  "Propalcote__300": {p6090:910.80, p70100:1182.60},
-  "Cartulina C16__255": {p6090:722.70, p70100:936.90},
-  "Cartulina C18__275": {p6090:779.40, p70100:1009.80},
-  "Cartulina C20__305": {p6090:864.00, p70100:1120.50},
-  "Cartulina C22__330": {p6090:null, p70100:1212.30},
-};
+// Restringido a >=240g por regla de Carpetas — solo se ofrecen sustratos que cumplen.
+const SUSTRATOS = tacticalSeleccionarSustratos([
+  "Propalcote__240","Propalcote__300","Cartulina C16__255","Cartulina C18__275","Cartulina C20__305","Cartulina C22__330",
+]);
 const PLIEGOS_CM = {"60x90":[60,90], "70x100":[70,100]};
 
-const PLASTIFICADO_COP_M2 = 950;     // ya validado (Cuadernos/Rompecabezas/Rubik)
-const PLASTIFICADO_PISO_COP = 30000;
+const PLASTIFICADO_COP_M2 = PRECIOS_PLASTIFICADO_COP_M2;     // ya validado (Cuadernos/Rompecabezas/Rubik)
+const PLASTIFICADO_PISO_COP = PRECIOS_PLASTIFICADO_PISO_COP;
 
 const DIGITAL_GRAMAJE_MAX = 240;
 const DIGITAL_PINZA_MM = 5;
-const DIGITAL_CLIC_COP = {
-  carta:{color:1000, negro:250},
-  octavo:{color:1400, negro:350},
-  pliego_max:{color:2200, negro:550},
-};
+const DIGITAL_CLIC_COP = PRECIOS_DIGITAL_CLIC_OTRAS_LINEAS;
 const DIGITAL_DESCUENTO_VOLUMEN = [[9,0.0],[50,0.10],[200,0.18],[400,0.26],[Infinity,0.30]];
 const DIGITAL_FORMATOS_CM = {carta:[21.5,28], octavo:[25,35], pliego_max:[33,50]};
 const DIGITAL_MERMA_HOJAS = {policromia:20, negro:10, promedio:18};
 
-const OFFSET_CTP_COP = {medio_pliego:22000, cuarto:11000, octavo:9000};
-const OFFSET_MILLAR_COP = {medio_pliego_color:25000, medio_pliego_policromia_4x0:100000, cuarto:16000, octavo:12000};
+const OFFSET_CTP_COP = PRECIOS_OFFSET_CTP_COP;
+const OFFSET_MILLAR_COP = PRECIOS_OFFSET_MILLAR_COP;
 const OFFSET_FORMATOS_CM = {medio_pliego:[50,70], cuarto:[35,50], octavo:[25,35]};
 const OFFSET_MERMA_HOJAS = [[1000,100],[2000,130],[Infinity,160]];
 const OFFSET_MERMA_FACTOR_2_MAS_TINTAS = 1.30;
 
-const ESCUDO_BAJOS_MONTOS_UMBRAL = 150000;
-const DISENO_COSTO_NORMAL = 40000;
-const DISENO_COSTO_REDUCIDO = 20000;
-const FONDO_SEGURIDAD_TRAMOS = [[500000,0.09],[1000000,0.07],[3000000,0.05],[Infinity,0.03]];
+const ESCUDO_BAJOS_MONTOS_UMBRAL = PRECIOS_ESCUDO_BAJOS_MONTOS_UMBRAL;
+const DISENO_COSTO_NORMAL = PRECIOS_DISENO_COSTO_NORMAL;
+const DISENO_COSTO_REDUCIDO = PRECIOS_DISENO_COSTO_REDUCIDO;
+const FONDO_SEGURIDAD_TRAMOS = PRECIOS_FONDO_SEGURIDAD_TRAMOS;
 const SHERPA_BASE_COP = 20000;
 const TRANSPORTE_TRAMOS = [[3000000,0.04],[5000000,0.03],[Infinity,0.02]];
 const TRANSPORTE_PISO_COP = 45000;
@@ -399,7 +391,7 @@ function millaresConTolerancia(nPasadas){
   const base=Math.ceil(nPasadas/1000);
   if(base<=1) return 1;
   const resto=nPasadas-(base-1)*1000;
-  return resto<=180 ? base-1 : base;
+  return resto<=PRECIOS_OFFSET_TOLERANCIA_MERMA_MILLAR ? base-1 : base;
 }
 function costoImpresionOffset(nPiezasFinales,tintasTiro,tintasRetiro,esPolicromia,ancho,alto){
   const fraccion=fraccionPliegoOffset(ancho,alto,esPolicromia);

@@ -175,21 +175,20 @@
   </div>
 </div>
 
+<script src="precios_tactical.js"></script>
 <script>
 /* ============ CONSTANTES REUTILIZADAS DEL MOTOR YA VALIDADO ============ */
-const SUSTRATOS = {
-  "Propalcote__300": {p6090:910.80, p70100:1182.60},
-};
+const SUSTRATOS = tacticalSeleccionarSustratos(["Propalcote__300"]);
 const PLIEGOS_CM = {"60x90":[60,90], "70x100":[70,100]};
 
-const PLASTIFICADO_COP_M2 = 950;     // ya validado (Cuadernos/Rompecabezas)
-const PLASTIFICADO_PISO_COP = 30000;
+const PLASTIFICADO_COP_M2 = PRECIOS_PLASTIFICADO_COP_M2;     // ya validado (Cuadernos/Rompecabezas)
+const PLASTIFICADO_PISO_COP = PRECIOS_PLASTIFICADO_PISO_COP;
 
 const DIGITAL_MERMA_HOJAS = {policromia:20, negro:10, promedio:18}; // reutilizado de Cuadernos, confirmado por Conde 2026-07-24
 const DIGITAL_SEMICORTE_COP = 1500;  // aquí SÍ aplica: sustrato adhesivo (a diferencia de Cuadernos/papel)
 
-const OFFSET_CTP_COP = {medio_pliego:22000, cuarto:11000, octavo:9000};
-const OFFSET_MILLAR_COP = {medio_pliego_color:25000, medio_pliego_policromia_4x0:100000, cuarto:16000, octavo:12000};
+const OFFSET_CTP_COP = PRECIOS_OFFSET_CTP_COP;
+const OFFSET_MILLAR_COP = PRECIOS_OFFSET_MILLAR_COP;
 const OFFSET_FORMATOS_CM = {medio_pliego:[50,70], cuarto:[35,50], octavo:[25,35]};
 
 /* ============ REGLAS PROPIAS DE CUBO RUBIK (confirmadas por Conde 2026-07-24) ============ */
@@ -215,10 +214,10 @@ const CUBO_PEGADO_CAJA_COP_TRAMOS = [[200,260],[400,220],[Infinity,200]]; // Con
 const CUBO_PEGADO_CAJA_MINIMO_COP = 25000;
 
 /* ============ OVERHEAD GENERAL DEL MOTOR (reutilizado 1:1 de Cuadernos/Rompecabezas, a pedido de Conde 2026-07-24) ============ */
-const ESCUDO_BAJOS_MONTOS_UMBRAL = 150000;
-const DISENO_COSTO_NORMAL = 40000;
-const DISENO_COSTO_REDUCIDO = 20000;
-const FONDO_SEGURIDAD_TRAMOS = [[500000,0.09],[1000000,0.07],[3000000,0.05],[Infinity,0.03]];
+const ESCUDO_BAJOS_MONTOS_UMBRAL = PRECIOS_ESCUDO_BAJOS_MONTOS_UMBRAL;
+const DISENO_COSTO_NORMAL = PRECIOS_DISENO_COSTO_NORMAL;
+const DISENO_COSTO_REDUCIDO = PRECIOS_DISENO_COSTO_REDUCIDO;
+const FONDO_SEGURIDAD_TRAMOS = PRECIOS_FONDO_SEGURIDAD_TRAMOS;
 const SHERPA_BASE_COP = 20000;
 const EMPAQUE_CAJA_COP = 3000;
 const EMPAQUE_UNIDADES_POR_CAJA = 50; // Conde 2026-07-24: 50 cubos por caja, fijo (sin clasificación manual)
@@ -283,7 +282,7 @@ function millaresConTolerancia(nPasadas){
   const base=Math.ceil(nPasadas/1000);
   if(base<=1) return 1;
   const resto=nPasadas-(base-1)*1000;
-  return resto<=180 ? base-1 : base;
+  return resto<=PRECIOS_OFFSET_TOLERANCIA_MERMA_MILLAR ? base-1 : base;
 }
 function costoImpresionOffset(nPiezasFinales,tintasTiro,tintasRetiro,esPolicromia,ancho,alto){
   const fraccion=fraccionPliegoOffset(ancho,alto,esPolicromia);
