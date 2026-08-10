@@ -66,7 +66,15 @@
   .doc-table{ width:100%; border-collapse:collapse; margin-bottom:10px; font-size:0.88rem; }
   .doc-table td, .doc-table th{ border:1px solid var(--borde); padding:6px 10px; text-align:left; }
   .doc-table th{ background:var(--fondo); }
-  .doc-total-box{ text-align:right; font-size:1.15rem; font-weight:bold; color:var(--azul); margin:10px 0; }
+  .doc-total-box{ text-align:right; font-size:1.45rem; font-weight:800; color:var(--azul); margin:14px 0; padding:10px 16px; background:var(--fondo); border:1.5px solid var(--azul); border-radius:6px; }
+  .doc-cliente-destacado{ background:var(--fondo); border-left:4px solid var(--azul); padding:10px 14px; margin-bottom:14px; border-radius:0 6px 6px 0; }
+  .doc-cliente-nombre{ font-size:1.05rem; font-weight:700; color:var(--azul); }
+  .doc-cliente-meta{ font-size:0.82rem; color:var(--texto-suave); margin-top:2px; }
+  .doc-cliente-fechas{ font-size:0.78rem; color:var(--texto-suave); margin-top:4px; }
+  .doc-cta{ background:#eafaf0; border:1px solid #b7e4c7; color:#1a7d3f; padding:10px 14px; border-radius:6px; font-size:0.85rem; margin:14px 0; line-height:1.5; }
+  .doc-firma{ margin-top:26px; }
+  .doc-firma-linea{ border-top:1px solid var(--texto); width:260px; margin-top:36px; }
+  .doc-firma-label{ font-size:0.78rem; color:var(--texto-suave); margin-top:4px; }
   .doc-condiciones{ font-size:0.8rem; color:var(--texto-suave); line-height:1.6; }
   .doc-condiciones ul{ margin:4px 0; padding-left:18px; }
   @media print{
@@ -655,7 +663,12 @@ function siguienteOT(){
 const TACTICAL_INFO = {
   nombre: "TACTICAL MARKETING GROUP S.A.S.", nit: "NIT 900.413.145-7",
   web: "www.tacticalmg.co", direccion: "Calle 5B Bis # 53D-56, Piso 1, Bogotá",
+  telefono: "311 222 8871", correo: "contacto@tacticalmg.co",
 };
+function fechaMasDias(fecha, dias){
+  const f = new Date(fecha); f.setDate(f.getDate()+dias);
+  return f.toLocaleDateString('es-CO', {year:'numeric', month:'long', day:'numeric'});
+}
 const CONDICIONES_COMERCIALES_DEFAULT = [
   "El cliente suministra diseño listo para impresión en Illustrator o PDF editable. Correcciones adicionales generan un sobrecosto de mínimo $50.000, al igual que archivos recibidos en Canva.",
   "Costo sujeto a verificación de archivos y/o muestra suministrada por el cliente.",
@@ -680,7 +693,8 @@ function compartirWhatsAppClick(){
 }
 function imprimirPDFCliente(datos){
   const fecha = datos.fecha.toLocaleDateString('es-CO', {year:'numeric', month:'long', day:'numeric'});
-  const filasLineas = datos.lineas.map(l => `<tr><td>${l.desc}</td><td style="text-align:right;">${l.cantidad||'-'}</td><td style="text-align:right;">${cop(l.monto)}</td></tr>`).join('');
+  const validoHasta = fechaMasDias(datos.fecha, 30);
+  const filasLineas = datos.lineas.map(l => `<tr><td>${l.desc}${l.fotoUrl?`<br><img src="${l.fotoUrl}" style="max-width:120px; max-height:120px; margin-top:4px; border:1px solid #d7dee5; border-radius:4px;">`:''}</td><td style="text-align:right;">${l.cantidad||'-'}</td><td style="text-align:right;">${cop(l.monto)}</td></tr>`).join('');
   let desgloseHtml = '';
   if(datos.ivaTotal!=null){
     const subtotal = datos.total - datos.ivaTotal;
@@ -692,13 +706,13 @@ function imprimirPDFCliente(datos){
   const html = `
     <div class="doc-header">
       <div><img src="${TACTICAL_LOGO_B64}" style="height:46px; margin-bottom:8px; display:block;" alt="Tactical Marketing"><div class="doc-tipo">COTIZACIÓN ${datos.ot||''}</div></div>
-      <div class="doc-empresa-datos">${TACTICAL_INFO.nit}<br>${TACTICAL_INFO.direccion}<br>${TACTICAL_INFO.web}</div>
+      <div class="doc-empresa-datos">${TACTICAL_INFO.nit}<br>${TACTICAL_INFO.direccion}<br>${TACTICAL_INFO.web}<br>${TACTICAL_INFO.telefono}</div>
     </div>
-    <table class="doc-table">
-      <tr><td style="width:20%;"><strong>Fecha</strong></td><td>${fecha}</td><td style="width:20%;"><strong>Cliente</strong></td><td>${datos.cliente.empresa||'-'}</td></tr>
-      <tr><td><strong>Encargado</strong></td><td>${datos.cliente.encargado||'-'}</td><td><strong>Teléfono</strong></td><td>${datos.cliente.telefono||'-'}</td></tr>
-      <tr><td><strong>Correo</strong></td><td colspan="3">${datos.cliente.correo||'-'}</td></tr>
-    </table>
+    <div class="doc-cliente-destacado">
+      <div class="doc-cliente-nombre">${datos.cliente.empresa||'Cliente'}</div>
+      <div class="doc-cliente-meta">Atención: ${datos.cliente.encargado||'-'} &nbsp;·&nbsp; ${datos.cliente.telefono||'-'} &nbsp;·&nbsp; ${datos.cliente.correo||'-'}</div>
+      <div class="doc-cliente-fechas">Fecha de emisión: ${fecha} &nbsp;|&nbsp; Válida hasta: ${validoHasta} (30 días calendario)</div>
+    </div>
     <div class="doc-section-title">Productos Cotizados${datos.ivaTotal==null?' (cada valor ya incluye IVA)':''}</div>
     <table class="doc-table">
       <tr><th>Descripción</th><th>Cantidad</th><th>Valor</th></tr>
@@ -706,8 +720,13 @@ function imprimirPDFCliente(datos){
     </table>
     ${desgloseHtml}
     <div class="doc-total-box">TOTAL: ${cop(datos.total)} COP</div>
+    <div class="doc-cta">✅ <strong>Para aprobar esta cotización</strong>, responde confirmando el número <strong>${datos.ot||''}</strong> por WhatsApp al ${TACTICAL_INFO.telefono} o al correo ${TACTICAL_INFO.correo}. Iniciamos producción con orden de compra, anticipo y archivos aprobados.</div>
     <div class="doc-section-title">Condiciones Comerciales</div>
     <div class="doc-condiciones"><ul>${CONDICIONES_COMERCIALES_DEFAULT.map(c=>`<li>${c}</li>`).join('')}</ul></div>
+    <div class="doc-firma">
+      <div class="doc-firma-linea"></div>
+      <div class="doc-firma-label">Aprobado por (firma y nombre) — Fecha</div>
+    </div>
   `;
   document.getElementById('print-area').innerHTML = html;
   document.getElementById('print-area').style.display = 'block';
