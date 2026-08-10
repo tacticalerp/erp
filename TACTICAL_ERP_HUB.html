@@ -836,6 +836,7 @@
                             <button class="btn-submit" style="flex:1; min-width:220px;" onclick="cotGuardarYGenerarPDF()">📄 Guardar y Generar PDF Cliente</button>
                             <button class="btn-submit" style="flex:1; min-width:220px; background:var(--secondary);" onclick="cotGenerarOrdenProduccion()">🏭 Generar Orden de Producción</button>
                             <button class="btn-submit" style="flex:1; min-width:220px; background:var(--primary);" onclick="cotIniciarOAgregarPedido()">📦 Agregar a un pedido (varios productos)</button>
+                            <button class="btn-submit" style="flex:1; min-width:220px; background:#25D366;" onclick="cotCompartirWhatsAppClick()">📲 Enviar por WhatsApp</button>
                         </div>
                         <div id="cot-ot-nota" style="display:none; margin-top:10px; padding:8px 12px; background:#eef2f7; border-left:4px solid var(--primary); border-radius:4px; font-size:0.9rem;"></div>
                         <div id="cot-pedido-banner" style="display:none; margin-top:10px; padding:8px 12px; background:#eafaf0; border-left:4px solid var(--ganado); border-radius:4px; font-size:0.9rem;"></div>
@@ -3184,6 +3185,20 @@
           return `${p.cantidad} ${nombresLinea[p.lineaProducto]} ${p.anchoCm}x${p.altoCm}cm, tapa ${p.tapaTipo}`;
         }
 
+        function compartirWhatsApp(telefono, ot, monto, nombreCli){
+          const mensaje = `Hola${nombreCli?' '+nombreCli:''}! Te comparto la cotización *${ot}* de Tactical Marketing por un valor de ${cotFormatoCop(monto)}. En un momento te envío el PDF con el detalle completo. Cualquier duda me avisas.`;
+          const soloDigitos = (telefono||'').replace(/[^0-9]/g,'');
+          const conIndicativo = soloDigitos.length===10 ? '57'+soloDigitos : soloDigitos;
+          const url = conIndicativo ? `https://wa.me/${conIndicativo}?text=${encodeURIComponent(mensaje)}` : `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+          window.open(url, '_blank');
+        }
+        function cotCompartirWhatsAppClick(){
+          if(!cotUltimoOT){ alert("Primero presiona 'Guardar y Generar PDF Cliente' (o cierra el pedido) para tener un OT."); return; }
+          const telefono = document.getElementById('cot-cli-telefono').value.trim();
+          const empresa = document.getElementById('cot-cli-empresa').value.trim() || 'Cliente Particular';
+          const monto = cotUltimoResultado ? Math.round(cotUltimoResultado.precioFinalTotal) : 0;
+          compartirWhatsApp(telefono, cotUltimoOT, monto, empresa);
+        }
         function cotGuardarYGenerarPDF(){
           if(!cotUltimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
           const empresa = document.getElementById('cot-cli-empresa').value.trim().toUpperCase();
