@@ -606,6 +606,21 @@
                         <div id="lista-motivos" style="background:var(--light-gray); padding:15px; border-radius:6px; border:1px solid #cbd5e0; font-size:0.95rem; line-height:1.6;"></div>
                     </div>
                 </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header" onclick="toggleSection('buscadorCot'); renderBuscadorCotizaciones();" id="head-buscadorCot">
+                        <span>📜 4. Todas las Cotizaciones (Buscador)</span><span class="arrow" id="arrow-buscadorCot">►</span>
+                    </div>
+                    <div id="buscadorCot" class="accordion-content">
+                        <input type="text" id="search-cotizaciones" class="search-input" placeholder="🔍 Buscar por cliente, OT o producto..." style="margin-bottom:12px; width:100%; box-sizing:border-box; padding:10px; border:1px solid #cbd5e0; border-radius:4px; font-size:0.95rem;" oninput="renderBuscadorCotizaciones()">
+                        <div class="table-responsive">
+                            <table>
+                                <thead><tr><th>OT</th><th>Fecha</th><th>Cliente</th><th>Producto(s)</th><th>Valor</th><th>Estado</th><th></th></tr></thead>
+                                <tbody id="tabla-buscador-cotizaciones"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -2330,6 +2345,86 @@
                 `;
             }
             document.getElementById('lista-motivos').innerHTML = listaHTML || '<span style="color:#718096; font-style:italic;">No hay registros de pérdidas para analizar.</span>';
+        }
+
+        // ---- BUSCADOR DE COTIZACIONES (Conde 2026-08-06): todas las cotizaciones de las 8
+        // calculadoras, activas o cerradas, en un solo lugar buscable — antes solo se veían en el
+        // embudo (activas) o dispersas, sin forma de encontrar una cotización cerrada rápido.
+        function fechaDesdeOppId(id){
+          const ts = parseInt(id);
+          return isNaN(ts) ? null : new Date(ts);
+        }
+        function renderBuscadorCotizaciones(){
+          const texto = ((document.getElementById('search-cotizaciones')||{}).value || '').toLowerCase();
+          const activos = db_opps.map(o => ({...o, estadoTxt: (tags_etapa[o.etapa]||{}).lbl || o.etapa}));
+          const cerrados = db_historial_cierres.map(o => ({...o, estadoTxt: o.estado==='ganado' ? '✅ Ganada' : '❌ Perdida'}));
+          let todas = [...activos, ...cerrados].sort((a,b) => parseInt(b.id) - parseInt(a.id));
+          if(texto){
+            todas = todas.filter(o =>
+              (o.nombreCli||'').toLowerCase().includes(texto) ||
+              (o.ot||'').toLowerCase().includes(texto) ||
+              (o.desc||'').toLowerCase().includes(texto)
+            );
+          }
+          const tbody = document.getElementById('tabla-buscador-cotizaciones');
+          if(!tbody) return;
+          tbody.innerHTML = todas.length ? todas.map(o => {
+            const fecha = fechaDesdeOppId(o.id);
+            const fechaTxt = fecha ? fecha.toLocaleDateString('es-CO', {year:'numeric', month:'short', day:'numeric'}) : '-';
+            return `<tr>
+              <td>${o.ot||'-'}</td>
+              <td>${fechaTxt}</td>
+              <td>${o.nombreCli}</td>
+              <td>${o.desc}</td>
+              <td>${cotFormatoCop(o.monto)}</td>
+              <td>${o.estadoTxt||'-'}</td>
+              <td><button class="btn-action" onclick="verPDFCotizacionGuardada('${o.id}')">🖨️ Ver PDF</button></td>
+            </tr>`;
+          }).join('') : '<tr><td colspan="7" style="text-align:center; color:#a0aec0; padding:20px;">Sin cotizaciones que coincidan.</td></tr>';
+        }
+        function verPDFCotizacionGuardada(id){
+          const todas = [...db_opps, ...db_historial_cierres];
+          const opp = todas.find(o => o.id === id);
+          if(!opp) return;
+          const cli = db_clientes.find(c => c.id === opp.idCli) || {empresa: opp.nombreCli, nombre:'', wp:'', correo:''};
+          const lineas = (opp.lineas && opp.lineas.length)
+            ? opp.lineas.map(l => ({desc:l.desc, cantidad:l.cantidad, monto:l.monto}))
+            : [{desc: opp.desc, cantidad: opp.cantidad||1, monto: opp.monto}];
+          verPDFGenerico({
+            ot: opp.ot||'', fecha: fechaDesdeOppId(opp.id) || new Date(),
+            cliente: {empresa: cli.empresa, encargado: cli.nombre, telefono: cli.wp, correo: cli.correo},
+            lineas, ivaTotal: null, total: opp.monto,
+          });
+        }
+        // Reimpresión genérica (a diferencia de cotImprimirPDFCliente, que es específica de
+        // Cuadernos) — usa el mismo TACTICAL_LOGO_B64 ya cargado en el hub. Como el resumen
+        // guardado en el CRM no conserva el desglose de IVA por separado, se reimprime como
+        // "cada valor ya incluye IVA" (mismo criterio que los pedidos multi-producto).
+        function verPDFGenerico(datos){
+          const fecha = datos.fecha.toLocaleDateString('es-CO', {year:'numeric', month:'long', day:'numeric'});
+          const filasLineas = datos.lineas.map(l => `<tr><td>${l.desc}</td><td style="text-align:right;">${l.cantidad||'-'}</td><td style="text-align:right;">${cotFormatoCop(l.monto)}</td></tr>`).join('');
+          const html = `
+            <div class="doc-header">
+              <div><img src="${TACTICAL_LOGO_B64}" style="height:46px; margin-bottom:8px; display:block;" alt="Tactical Marketing"><div class="doc-tipo">COTIZACIÓN ${datos.ot||''}</div></div>
+              <div class="doc-empresa-datos">${TACTICAL_INFO.nit}<br>${TACTICAL_INFO.direccion}<br>${TACTICAL_INFO.web}</div>
+            </div>
+            <table class="doc-table">
+              <tr><td style="width:20%;"><strong>Fecha</strong></td><td>${fecha}</td><td style="width:20%;"><strong>Cliente</strong></td><td>${datos.cliente.empresa||'-'}</td></tr>
+              <tr><td><strong>Encargado</strong></td><td>${datos.cliente.encargado||'-'}</td><td><strong>Teléfono</strong></td><td>${datos.cliente.telefono||'-'}</td></tr>
+              <tr><td><strong>Correo</strong></td><td colspan="3">${datos.cliente.correo||'-'}</td></tr>
+            </table>
+            <div class="doc-section-title">Productos Cotizados (cada valor ya incluye IVA)</div>
+            <table class="doc-table">
+              <tr><th>Descripción</th><th>Cantidad</th><th>Valor</th></tr>
+              ${filasLineas}
+            </table>
+            <div class="doc-total-box">TOTAL: ${cotFormatoCop(datos.total)} COP</div>
+            <div class="doc-section-title">Condiciones Comerciales</div>
+            <div class="doc-condiciones"><ul>${CONDICIONES_COMERCIALES_DEFAULT.map(c=>`<li>${c}</li>`).join('')}</ul></div>
+          `;
+          document.getElementById('print-area').innerHTML = html;
+          document.getElementById('print-area').style.display = 'block';
+          setTimeout(() => { window.print(); document.getElementById('print-area').style.display = 'none'; }, 100);
         }
 
         // ==========================================
