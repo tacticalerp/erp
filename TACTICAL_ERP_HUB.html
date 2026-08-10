@@ -2602,7 +2602,7 @@
           const filasLineas = datos.lineas.map(l => `<tr><td>${l.desc}${l.fotoUrl?`<br><img src="${l.fotoUrl}" style="max-width:120px; max-height:120px; margin-top:4px; border:1px solid #cbd5e0; border-radius:4px;">`:''}</td><td style="text-align:right;">${l.cantidad||'-'}</td><td style="text-align:right;">${cotFormatoCop(l.monto)}</td></tr>`).join('');
           const html = `
             <div class="doc-header">
-              <div><img src="${TACTICAL_LOGO_B64}" style="height:46px; margin-bottom:8px; display:block;" alt="Tactical Marketing"><div class="doc-tipo">COTIZACIÓN ${datos.ot||''}</div></div>
+              <div><img src="${TACTICAL_LOGO_B64}" style="height:68px; margin-bottom:8px; display:block;" alt="Tactical Marketing"><div class="doc-tipo">COTIZACIÓN ${datos.ot||''}</div></div>
               <div class="doc-empresa-datos">${TACTICAL_INFO.nit}<br>${TACTICAL_INFO.direccion}<br>${TACTICAL_INFO.web}<br>${TACTICAL_INFO.telefono}</div>
             </div>
             <div class="doc-cliente-destacado">
@@ -3621,7 +3621,7 @@
           const html = `
             <div class="doc-header">
               <div>
-                <img src="${TACTICAL_LOGO_B64}" style="height:46px; margin-bottom:8px; display:block;" alt="Tactical Marketing">
+                <img src="${TACTICAL_LOGO_B64}" style="height:68px; margin-bottom:8px; display:block;" alt="Tactical Marketing">
                 <div class="doc-tipo">COTIZACIÓN ${cot.ot||''}</div>
               </div>
               <div class="doc-empresa-datos">
@@ -4135,7 +4135,7 @@
             const fecha = new Date(doc.fecha).toLocaleDateString('es-CO', {year:'numeric', month:'long', day:'numeric'});
             const html = `
               <div class="doc-header">
-                <div><img src="${TACTICAL_LOGO_B64}" style="height:46px; margin-bottom:8px; display:block;" alt="Tactical Marketing"><div class="doc-tipo">CUENTA DE COBRO ${doc.numero}</div></div>
+                <div><img src="${TACTICAL_LOGO_B64}" style="height:68px; margin-bottom:8px; display:block;" alt="Tactical Marketing"><div class="doc-tipo">CUENTA DE COBRO ${doc.numero}</div></div>
                 <div class="doc-empresa-datos">${TACTICAL_INFO.nit}<br>${TACTICAL_INFO.direccion}<br>${TACTICAL_INFO.web}<br>Vendedor: <strong>${doc.vendedor||'-'}</strong> — ${vend.telefono} — ${vend.correo}</div>
               </div>
               <table class="doc-table">
