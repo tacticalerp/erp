@@ -140,6 +140,17 @@
         .kanban-riel-label { font-size:0.68rem; text-transform:uppercase; color:#a0aec0; font-weight:bold; margin:6px 0 2px; }
         .kanban-card-actions { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
         .kanban-card-actions .btn-action { flex:0 0 auto; }
+        .kanban-toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
+        .kanban-toolbar select { padding:8px 10px; border:1px solid #cbd5e0; border-radius:4px; }
+        .kb-menu-plantillas { display:none; position:absolute; top:110%; right:0; background:white; border:1px solid #cbd5e0; border-radius:6px; box-shadow:0 6px 16px rgba(0,0,0,0.15); z-index:20; min-width:250px; overflow:hidden; }
+        .kb-menu-plantillas.abierto { display:block; }
+        .kb-plantilla-item { padding:10px 14px; font-size:0.88rem; cursor:pointer; border-bottom:1px solid #edf2f7; }
+        .kb-plantilla-item:last-child { border-bottom:none; }
+        .kb-plantilla-item:hover { background:var(--light-gray); }
+        .kb-linea-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:4px; }
+        #kb-urgente-banner { background:var(--peligro); color:white; padding:12px 16px; border-radius:8px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+        #kb-urgente-banner .kb-urgente-titulo { font-weight:bold; font-size:1.02rem; }
+        #kb-urgente-banner .kb-urgente-meta { font-size:0.85rem; opacity:0.92; }
 
         /* MÓVIL */
         @media (max-width: 768px) {
@@ -1082,9 +1093,38 @@
         <!-- VISTA 7: KANBAN DE PRODUCCIÓN -->
         <div id="view-kanban" class="app-view">
             <div style="padding:10px;">
-                <div class="card-grid" style="margin-bottom:6px;">
+
+                <div id="kb-urgente-banner" style="display:none;"></div>
+
+                <div class="kanban-toolbar">
+                    <input type="text" id="kb-buscador" class="search-input" placeholder="🔍 Buscar por cliente, OT o producto..." style="flex:1 1 260px;" oninput="renderKanban()">
+                    <select id="kb-filtroLinea" onchange="renderKanban()" style="flex:0 1 210px;">
+                        <option value="">Todas las líneas</option>
+                        <option value="cuadernos">📓 Cuadernos/Agendas</option>
+                        <option value="rompecabezas">🧩 Rompecabezas</option>
+                        <option value="cubo_rubik">🎲 Cubo Rubik</option>
+                        <option value="carpetas">📁 Carpetas</option>
+                        <option value="volantes">📰 Volantes/Afiches</option>
+                        <option value="bolsas">🛍️ Bolsas de Papel</option>
+                        <option value="cajas">📦 Cajas Blandas</option>
+                        <option value="manual">✏️ Otro/Maquila</option>
+                    </select>
+                    <div style="position:relative;">
+                        <button class="btn-action" onclick="toggleMenuPlantillas()" id="kb-btn-plantillas">📋 Nueva Ficha ▾</button>
+                        <div id="kb-menu-plantillas" class="kb-menu-plantillas">
+                            <div class="kb-plantilla-item" onclick="abrirFormularioManual('rompecabezas','Corte láser - ')">🧩 Rompecabezas Láser</div>
+                            <div class="kb-plantilla-item" onclick="abrirFormularioManual('cuadernos','')">📓 Editorial y Cuadernos Express</div>
+                            <div class="kb-plantilla-item" onclick="abrirFormularioManual('manual','Maquila láser CO2 - ')">🔦 Maquila Láser CO2</div>
+                            <div class="kb-plantilla-item" onclick="abrirFormularioManual('manual','Marcación merchandising - ')">🖊️ Marcación / Merchandising</div>
+                            <div class="kb-plantilla-item" onclick="abrirFormularioManual('manual','Papelería/Gran formato - ')">🖨️ Papelería y Gran Formato</div>
+                            <div class="kb-plantilla-item" onclick="abrirFormularioManual('manual','')">✏️ Otro (en blanco)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-grid" style="margin-bottom:6px; display:none;" id="kb-form-manual-wrap">
                     <div class="data-card">
-                        <div class="card-title">➕ Crear ficha manual (Servicio Express / sin cotización previa)</div>
+                        <div class="card-title">➕ Nueva ficha — Servicio Express (sin cotización previa)</div>
                         <div class="form-grid" style="margin-top:10px;">
                             <div class="form-group">
                                 <label>Cliente:</label>
@@ -1108,7 +1148,10 @@
                             <div class="form-group"><label>Cantidad:</label><input type="number" id="kb-cantidad" value="1" min="1"></div>
                             <div class="form-group"><label>Fecha de entrega (opcional):</label><input type="date" id="kb-fechaEntrega"></div>
                         </div>
-                        <button class="btn-submit" onclick="crearFichaManual()">Crear ficha</button>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn-submit" onclick="crearFichaManual()">Crear ficha</button>
+                            <button class="btn-action" onclick="document.getElementById('kb-form-manual-wrap').style.display='none';">Cancelar</button>
+                        </div>
                     </div>
                 </div>
 
@@ -1949,6 +1992,12 @@
           aprobada:'Cotización Aprobada', diseno:'Diseño', preparacion:'Preparación Producción',
           terminados:'Terminados y Revisión', entregar:'Para Entregar', postventa:'Postventa',
         };
+        // Color distintivo por línea (Conde 2026-08-06): para poder identificar de un vistazo qué
+        // tipo de producto es cada ficha, y como base del filtro que aísla solo una línea.
+        const KANBAN_COLOR_LINEA = {
+          cuadernos:'#2b6cb0', rompecabezas:'#805ad5', cubo_rubik:'#d69e2e', carpetas:'#38a169',
+          volantes:'#dd6b20', bolsas:'#319795', cajas:'#c53030', manual:'#718096',
+        };
         // "riel" solo se usa en Cuadernos: 'A' = Taco (arranca de una vez), 'B' = Carátula (espera
         // aprobación de arte), 'gate' = Anillado/Encuadernación, bloqueado hasta que A y B estén listos.
         const KANBAN_CHECKLIST_POR_LINEA = {
@@ -2126,9 +2175,11 @@
           const puedeAtras = idx>0, puedeAdelante = idx<KANBAN_COLUMNAS.length-1;
           const dueHtml = f.fechaEntrega ? `${kanbanBadgeEntrega(f.fechaEntrega)}<br>` : '<span style="font-size:0.72rem; color:#a0aec0;">Sin fecha de entrega</span><br>';
           const expandida = kanbanExpandidas.has(f.id);
+          const lineasUnicas = [...new Set((f.lineas||[]).map(l=>l.linea))];
+          const dotsHtml = lineasUnicas.map(ln => `<span class="kb-linea-dot" style="background:${KANBAN_COLOR_LINEA[ln]||'#718096'};" title="${NOMBRES_LINEA_PRODUCTO[ln]||ln}"></span>`).join('');
           const cabeceraHtml = `
             ${f.urgente?'<div style="font-size:0.85rem; font-weight:900; color:#fff; background:var(--peligro); padding:4px 8px; border-radius:4px; margin-bottom:5px; display:inline-block;">🚨 URGENTE</div>':''}
-            <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.03em; color:#a0aec0; font-weight:bold;">📝 Descripción</div>
+            <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.03em; color:#a0aec0; font-weight:bold;">${dotsHtml}📝 Descripción</div>
             <div class="kanban-card-title">${f.titulo}</div>
             <div class="kanban-card-meta">👤 ${f.nombreCli}${f.ot?` — ${f.ot}`:''}${f.origen==='manual'?' — Servicio Express':''}</div>
             ${dueHtml}`;
@@ -2161,14 +2212,60 @@
             <button style="margin-top:8px; width:100%; background:${f.urgente?'#7a1f14':'var(--peligro)'}; color:#fff; border:none; border-radius:5px; padding:10px; font-weight:900; font-size:0.92rem; cursor:pointer;" onclick="toggleUrgente('${f.id}')">${f.urgente?'✕ QUITAR URGENTE':'🚨 MARCAR URGENTE'}</button>
           </div>`;
         }
+        // Plantillas de Servicio Express (Conde 2026-08-06): un botón chico con flechita en vez del
+        // formulario grande siempre visible — cada opción pre-carga la línea y un texto inicial.
+        function toggleMenuPlantillas(){
+          document.getElementById('kb-menu-plantillas').classList.toggle('abierto');
+        }
+        function abrirFormularioManual(linea, descPrefijo){
+          document.getElementById('kb-menu-plantillas').classList.remove('abierto');
+          document.getElementById('kb-form-manual-wrap').style.display = 'block';
+          document.getElementById('kb-linea').value = linea;
+          document.getElementById('kb-descripcion').value = descPrefijo || '';
+          document.getElementById('kb-form-manual-wrap').scrollIntoView({behavior:'smooth', block:'center'});
+          document.getElementById('kb-descripcion').focus();
+        }
+        document.addEventListener('click', function(ev){
+          const menu = document.getElementById('kb-menu-plantillas');
+          const btn = document.getElementById('kb-btn-plantillas');
+          if(menu && menu.classList.contains('abierto') && !menu.contains(ev.target) && ev.target!==btn){
+            menu.classList.remove('abierto');
+          }
+        });
+        function kanbanFichaCoincide(f, texto){
+          if(!texto) return true;
+          const t = texto.toLowerCase();
+          if((f.nombreCli||'').toLowerCase().includes(t)) return true;
+          if((f.ot||'').toLowerCase().includes(t)) return true;
+          if((f.titulo||'').toLowerCase().includes(t)) return true;
+          return (f.lineas||[]).some(l => (l.desc||'').toLowerCase().includes(t));
+        }
         function renderKanban(){
           const dl = document.getElementById('kb-cliente-datalist');
           if(dl) dl.innerHTML = db_clientes.map(c=>`<option value="${c.empresa}"></option>`).join('');
 
+          // Banner fijo de la ficha urgente (Conde 2026-08-06: ubicarla en un punto visible del tablero).
+          const urgenteEl = document.getElementById('kb-urgente-banner');
+          const fichaUrgente = db_kanban.find(f=>f.urgente);
+          if(fichaUrgente){
+            urgenteEl.style.display = 'flex';
+            urgenteEl.innerHTML = `
+              <div><div class="kb-urgente-titulo">🚨 URGENTE — ${fichaUrgente.titulo}</div>
+              <div class="kb-urgente-meta">👤 ${fichaUrgente.nombreCli}${fichaUrgente.ot?` — ${fichaUrgente.ot}`:''} — columna: ${KANBAN_COLUMNA_NOMBRE[fichaUrgente.columna]}</div></div>
+              <button class="btn-action" onclick="kanbanExpandidas.add('${fichaUrgente.id}'); renderKanban(); document.getElementById('kanban-board').scrollIntoView({behavior:'smooth'});">Ver ficha</button>`;
+          } else {
+            urgenteEl.style.display = 'none';
+          }
+
+          const textoBusqueda = (document.getElementById('kb-buscador')||{}).value || '';
+          const filtroLinea = (document.getElementById('kb-filtroLinea')||{}).value || '';
+
           const board = document.getElementById('kanban-board');
           if(!board) return;
           board.innerHTML = KANBAN_COLUMNAS.map(col=>{
-            const fichas = db_kanban.filter(f=>f.columna===col);
+            let fichas = db_kanban.filter(f=>f.columna===col);
+            fichas = fichas.filter(f => kanbanFichaCoincide(f, textoBusqueda));
+            if(filtroLinea) fichas = fichas.filter(f => (f.lineas||[]).some(l=>l.linea===filtroLinea));
             const cardsHtml = fichas.length ? fichas.map(renderFichaKanbanHtml).join('') : '<div style="color:#a0aec0; font-size:0.8rem; padding:10px 0;">Sin fichas.</div>';
             return `<div class="kanban-col" ondragover="kanbanDragOver(event)" ondragleave="kanbanDragLeave(event)" ondrop="kanbanDrop(event,'${col}')">
               <div class="kanban-col-header"><span>${KANBAN_COLUMNA_NOMBRE[col]}</span><span class="kanban-col-count">${fichas.length}</span></div>
