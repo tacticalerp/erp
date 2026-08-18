@@ -8,6 +8,13 @@
 // la clave tactical_precios_override_v1 y tienen prioridad sobre los valores base.
 // ==========================================
 
+// Vendedores de la empresa -- compartido entre el hub y las 8 calculadoras, para poder filtrar
+// Reportes por vendedor sin importar desde qué herramienta se hizo la cotización (Conde 2026-08-13).
+const VENDEDORES = {
+  "Norely Sarmiento": { correo: "contacto@tacticalmg.co", telefono: "311 222 8871" },
+  "Helver Conde": { correo: "gerencia@tacticalmg.co", telefono: "320 840 1643" },
+};
+
 function tacticalLeerOverridesPrecios(){
   try{ return JSON.parse(localStorage.getItem('tactical_precios_override_v1')) || {}; }
   catch(e){ return {}; }
@@ -43,6 +50,23 @@ const PRECIOS_BASE_SUSTRATOS = {
   "Cartulina C18__275": {p6090:779.40, p70100:1009.80},
   "Cartulina C20__305": {p6090:864.00, p70100:1120.50},
   "Cartulina C22__330": {p6090:null, p70100:1212.30},
+  "Eart Pact__70": {p6090:218.49, p70100:277.31},
+  "Bristol Color__150": {p6090:null, p70100:613.45},
+  "Bristol Blanca__140": {p6090:null, p70100:554.62},
+  "Kraft Cartón__335": {p6090:null, p70100:924.37},
+  "Kraft__98": {p6090:null, p70100:352.94},
+  "Kraft__120": {p6090:null, p70100:369.75},
+  "Book Cream__56.2": {p6090:184.87, p70100:218.49},
+  "Adhesivo Ritrama - Corriente__160": {p6090:null, p70100:1596.64},
+  "Adhesivo Ritrama - Seguridad__160": {p6090:null, p70100:1915.97},
+  "Adhesivo Ritrama - Vinilo Blanco__220": {p6090:null, p70100:5007.56},
+  "Adhesivo Ritrama - Transparente__160": {p6090:null, p70100:5007.56},
+  "Adhesivo Ritrama - Polipropileno__220": {p6090:null, p70100:4484.03},
+  "Adhesivo Ritrama - Bond__160": {p6090:null, p70100:2147.06},
+  "Adhesivo Arclad - PXH K80__160": {p6090:null, p70100:1478.99},
+  "Adhesivo Arclad - Corriente P3__160": {p6090:null, p70100:1672.27},
+  "Adhesivo Arclad - Hotmelt__160": {p6090:null, p70100:2012.61},
+  "Adhesivo Arclad - P4__160": {p6090:null, p70100:2268.91},
 };
 const PRECIOS_SUSTRATOS_MAESTRO = tacticalMergeNivel2(PRECIOS_BASE_SUSTRATOS, TACTICAL_PRECIOS_OVERRIDE.sustratos);
 function tacticalSeleccionarSustratos(claves){
@@ -66,6 +90,12 @@ const PRECIOS_PLASTIFICADO_COP_M2 = (TACTICAL_PRECIOS_OVERRIDE.plastificadoM2 !=
 const PRECIOS_PLASTIFICADO_PISO_COP = (TACTICAL_PRECIOS_OVERRIDE.plastificadoPiso != null) ? TACTICAL_PRECIOS_OVERRIDE.plastificadoPiso : 30000;
 const PRECIOS_COLAMINADO_COP_M2 = (TACTICAL_PRECIOS_OVERRIDE.colaminadoM2 != null) ? TACTICAL_PRECIOS_OVERRIDE.colaminadoM2 : 900;
 
+/* ---- IMANES (Volantes) -- lámina Imán C5 100x60cm de la que se cortan las piezas,
+   y corte por láser (Conde 2026-08-14, precio de corte láser aún sin definir por Conde
+   -- placeholder editable en el Panel de Precios hasta que él lo ajuste). ---- */
+const PRECIOS_IMAN_C5_LAMINA_COP = (TACTICAL_PRECIOS_OVERRIDE.imanC5Lamina != null) ? TACTICAL_PRECIOS_OVERRIDE.imanC5Lamina : 12000;
+const PRECIOS_CORTE_LASER_IMAN_COP = (TACTICAL_PRECIOS_OVERRIDE.corteLaserIman != null) ? TACTICAL_PRECIOS_OVERRIDE.corteLaserIman : 500;
+
 /* ---- COSTOS GENERALES (aplican a toda cotización) ---- */
 const PRECIOS_DISENO_COSTO_NORMAL = (TACTICAL_PRECIOS_OVERRIDE.disenoNormal != null) ? TACTICAL_PRECIOS_OVERRIDE.disenoNormal : 40000;
 const PRECIOS_DISENO_COSTO_REDUCIDO = (TACTICAL_PRECIOS_OVERRIDE.disenoReducido != null) ? TACTICAL_PRECIOS_OVERRIDE.disenoReducido : 20000;
@@ -85,6 +115,10 @@ const PRECIOS_CAMPOS_PANEL = [
     {clave:"plastificadoPiso", etiqueta:"Plastificado (piso mínimo OT)", base:30000},
     {clave:"colaminadoM2", etiqueta:"Colaminado ($/m²)", base:900},
   ]},
+  {grupo:"Imanes (Volantes)", tipo:"simple", campos:[
+    {clave:"imanC5Lamina", etiqueta:"Lámina Imán C5 100x60cm ($/lámina)", base:12000},
+    {clave:"corteLaserIman", etiqueta:"Corte láser imán ($/pieza -- AJUSTAR con proveedor real)", base:500},
+  ]},
   {grupo:"Costos generales", tipo:"simple", campos:[
     {clave:"disenoNormal", etiqueta:"Diseño (costo normal)", base:40000},
     {clave:"disenoReducido", etiqueta:"Diseño (costo reducido)", base:20000},
@@ -92,3 +126,285 @@ const PRECIOS_CAMPOS_PANEL = [
     {clave:"offsetToleranciaMerma", etiqueta:"Tolerancia de merma por millar (unidades)", base:180},
   ]},
 ];
+
+/* ---- NUMERACIÓN DE COTIZACIONES / ÓRDENES DE PRODUCCIÓN (OT) ----
+   Formato: OT-AAMM-CC (año 2 dígitos + mes 2 dígitos + consecutivo, mínimo 2 dígitos, sin tope).
+   El consecutivo NO se reinicia cada mes -- sigue sumando durante todo el año y solo vuelve a 01
+   el 1 de enero (cada año usa su propia clave de localStorage, así el reinicio es automático).
+   Ej: primera cotización de agosto 2026 -> OT-2608-01; si en septiembre ya van 15 -> OT-2609-16;
+   primera cotización de 2027 -> OT-2701-01. Compartido por las 8 calculadoras + el hub para que
+   el número de OT/cotización sea el mismo consecutivo único en todo el ERP (Conde 2026-08-12). */
+function tacticalSiguienteOT(fecha){
+  fecha = fecha || new Date();
+  const anio = fecha.getFullYear();
+  const yy = String(anio).slice(-2);
+  const mm = String(fecha.getMonth()+1).padStart(2,'0');
+  const counterKey = 'tactical_ot_counter_' + anio;
+  const n = (parseInt(localStorage.getItem(counterKey)||'0', 10) || 0) + 1;
+  localStorage.setItem(counterKey, String(n));
+  const cc = String(n).padStart(2,'0');
+  return `OT-${yy}${mm}-${cc}`;
+}
+
+// Título corto para CRM/Kanban: siempre arranca con el formato corto automático (cantidad +
+// producto + referencia) para que las fichas de producción sean escaneables de un vistazo; si el
+// usuario escribió una descripción propia en el campo editable, se agrega después del guion, visible
+// solo al expandir la tarjeta (Conde 2026-08-13).
+function tacticalTituloCorto(auto, textoLargo){
+  const largo = (textoLargo||'').trim();
+  return (largo && largo !== auto) ? `${auto} — ${largo}` : auto;
+}
+
+// Fototeca de Productos: foto fija de referencia por línea (o variante), subida una sola vez
+// desde el hub (vista "Fototeca") y reutilizada automáticamente en el PDF de cada cotización
+// de esa línea, sin que el usuario tenga que hacer nada por cotización (Conde 2026-08-12).
+function tacticalObtenerFotoProducto(clave){
+  try{
+    const fototeca = JSON.parse(localStorage.getItem('tactical_fototeca_v1')) || {};
+    return fototeca[clave] || null;
+  }catch(e){ return null; }
+}
+// Link de video (YouTube) opcional por ficha de la Fototeca -- cada foto puede o no tener video,
+// independiente de la foto misma (Conde 2026-08-13).
+function tacticalObtenerVideoProducto(clave){
+  try{
+    const videos = JSON.parse(localStorage.getItem('tactical_fototeca_videos_v1')) || {};
+    return videos[clave] || null;
+  }catch(e){ return null; }
+}
+
+// Líneas base para etiquetar fichas nuevas de la Fototeca (variantes: "Cuaderno con inserto",
+// "Cuaderno con caucho", etc.) -- así cada calculadora puede listar solo las variantes que le
+// corresponden, sin mezclar las de otras líneas (Conde 2026-08-13).
+const TACTICAL_LINEAS_BASE = [
+  {clave:'cuadernos', label:'Cuadernos'},
+  {clave:'carpetas', label:'Carpetas'},
+  {clave:'cajas', label:'Cajas'},
+  {clave:'bolsas', label:'Bolsas'},
+  {clave:'volantes', label:'Volantes / Afiches / Plegables'},
+  {clave:'rompecabezas', label:'Rompecabezas (B2B)'},
+  {clave:'cubo_rubik', label:'Cubo Rubik'},
+];
+function tacticalListarVariantesFoto(lineaBase){
+  try{
+    const custom = JSON.parse(localStorage.getItem('tactical_fototeca_custom_v1')) || [];
+    return custom.filter(c => c.lineaBase === lineaBase);
+  }catch(e){ return []; }
+}
+
+// Compresión adaptativa de imágenes subidas/pegadas (Fototeca, galería del Kanban, etc.): recorta
+// resolución y baja calidad JPEG hasta que el resultado pese menos de maxBytes, para que una foto
+// en alta resolución no infle localStorage (límite típico del navegador: 5-10MB por sitio, y hay
+// muchas imágenes acumulándose entre Fototeca + galerías de fichas). 400KB es un tope razonable
+// por imagen -- deja margen para decenas de fotos sin acercarse al límite (Conde 2026-08-13).
+const TACTICAL_IMG_MAX_BYTES = 200 * 1024;
+function tacticalComprimirImagen(img, maxBytes){
+  maxBytes = maxBytes || TACTICAL_IMG_MAX_BYTES;
+  let dim = 900;
+  let calidad = 0.82;
+  let dataUrl;
+  for(let intento=0; intento<9; intento++){
+    const scale = Math.min(1, dim/Math.max(img.width, img.height));
+    const cw = Math.max(1, Math.round(img.width*scale)), ch = Math.max(1, Math.round(img.height*scale));
+    const c = document.createElement('canvas');
+    c.width = cw; c.height = ch;
+    c.getContext('2d').drawImage(img, 0, 0, cw, ch);
+    dataUrl = c.toDataURL('image/jpeg', calidad);
+    const bytesAprox = dataUrl.length * 0.75;
+    if(bytesAprox <= maxBytes) break;
+    if(calidad > 0.4) calidad -= 0.12;
+    else dim = Math.round(dim*0.82);
+  }
+  return dataUrl;
+}
+
+/* ==========================================
+   ASISTENTE DE AYUDA (chat de preguntas frecuentes, sin IA)
+   Base de conocimiento + buscador por palabras clave, compartido entre el hub
+   y las 8 calculadoras (Conde 2026-08-14). No usa ningún servicio externo ni API key:
+   compara las palabras de la pregunta contra las keywords de cada respuesta.
+   ========================================== */
+const TACTICAL_AYUDA_KB = [
+  { id:'cuadernos_tapa_troquelada', titulo:'Carátula troquelada (Cuadernos)',
+    keywords:['caratula','tapa','troquelada','troquelado','troquel','ventana','calado','cuaderno'],
+    respuesta:'En el Cotizador de Cuadernos, en la sección de datos de la tapa, marca la casilla <b>"Troquelado"</b> dentro de "Acabados de tapa" (junto a Plastificado, UV Parcial, Estampado, Colaminado, Fondo Pleno). El sistema suma automáticamente el costo de troquel por millar al total. Puedes combinar el troquelado con otros acabados marcando varias casillas a la vez.' },
+  { id:'cuadernos_tapa_dura_blanda', titulo:'Tapa dura vs tapa blanda (Cuadernos)',
+    keywords:['tapa','dura','blanda','semidura','cuaderno','portada'],
+    respuesta:'Al elegir la línea del cuaderno puedes seleccionar el tipo de tapa (dura, blanda o semidura). Si eliges línea "Escolar" la opción de tapa dura se oculta automáticamente (esa línea solo maneja semidura/blanda). Para cuadernos con tapa dura y más de 100 unidades, el sistema activa solo automáticamente la impresión de respaldo si aplica.' },
+  { id:'cuadernos_insertos', titulo:'Insertos (con caucho / intercalados)',
+    keywords:['insertos','caucho','intercalados','seguidos','cuaderno'],
+    respuesta:'En el Cotizador de Cuadernos hay una opción para agregar insertos "intercalados" o "seguidos". Si eliges intercalados, el sistema suma automáticamente +50% de alce al costo porque implica más operaciones de armado.' },
+  { id:'pedido_vs_comparacion', titulo:'¿Pedido o Comparación? ¿Cuál uso?',
+    keywords:['pedido','comparacion','comparar','diferencia','varios','productos','opciones','sumar','elegir'],
+    respuesta:'Usa <b>"📦 Agregar a un pedido"</b> cuando el cliente va a comprar VARIOS productos distintos y quieres UN SOLO total que los sume todos (ej: cuadernos + carpetas para el mismo cliente).<br>Usa <b>"🆚 Agregar como opción a comparar"</b> cuando el cliente todavía no decide y quiere ver 2 o más opciones del MISMO pedido con precios SEPARADOS para elegir una (ej: cuaderno con insertos vs sin insertos). No se suman entre sí.' },
+  { id:'como_comparar', titulo:'Cómo armar una cotización comparativa (2+ opciones)',
+    keywords:['comparar','comparativa','opciones','cliente','elige','varias'],
+    respuesta:'1. Calcula la primera opción y presiona <b>"🆚 Agregar como opción a comparar"</b>.<br>2. Cambia los datos (ej: quita los insertos, cambia cantidad) y vuelve a presionar el mismo botón para agregar la segunda opción.<br>3. Cuando tengas todas las opciones, presiona <b>"✅ Generar PDF comparativo"</b> en el panel morado que aparece arriba. El PDF muestra cada opción con su precio por separado para que el cliente elija.' },
+  { id:'aprobar_opcion_ganadora', titulo:'Aprobar solo 1 opción de una comparativa (producción)',
+    keywords:['aprobar','ganado','ganador','elegir','opcion','produccion','kanban','orden'],
+    respuesta:'Cuando el cliente ya eligió, busca el negocio en el CRM (Embudo de Ventas) y presiona el botón <b>"Ganado"</b>. Si la cotización tenía varias opciones comparativas, se abre un panel para que elijas cuál ganó. Al confirmar, el sistema crea la ficha de Kanban y la Orden de Producción SOLO con los datos de esa opción elegida (no de las demás).' },
+  { id:'generar_ot_produccion', titulo:'Cómo generar la Orden de Producción',
+    keywords:['orden','produccion','ot','generar'],
+    respuesta:'La Orden de Producción se genera al presionar <b>"💾 Guardar y Generar PDF Cliente"</b> (crea el número de OT) o al <b>"Cerrar pedido"</b>/marcar <b>"Ganado"</b> un negocio del CRM. Desde ahí puedes reimprimir la Orden de Producción desde el Kanban o desde el buscador de cotizaciones.' },
+  { id:'condiciones_comerciales', titulo:'Cambiar las condiciones comerciales de una cotización',
+    keywords:['condiciones','comerciales','pago','plazo','editar','terminos'],
+    respuesta:'En la sección "7. Condiciones Comerciales" del cotizador hay un cuadro de texto editable con las condiciones por defecto ya escritas. Puedes borrar, agregar o cambiar cualquier línea (ej: forma de pago) ANTES de guardar la cotización — cada cotización guarda sus propias condiciones, no afecta a las demás.' },
+  { id:'eliminar_cotizacion', titulo:'Eliminar una cotización guardada',
+    keywords:['eliminar','borrar','quitar','cotizacion','registro','error'],
+    respuesta:'En el buscador de "Todas las Cotizaciones" (dentro del CRM), cada fila tiene un botón 🗑️ junto al de "Ver PDF". Al presionarlo se elimina esa cotización del registro y de la ficha del CRM.' },
+  { id:'kanban_mover_reordenar', titulo:'Mover o reordenar fichas del Kanban',
+    keywords:['kanban','mover','arrastrar','ordenar','reordenar','columna','ficha'],
+    respuesta:'Puedes arrastrar cualquier ficha del Kanban con el cursor: si la sueltas sobre otra columna, cambia de estado; si la sueltas sobre otra ficha de la MISMA columna, se reordena (sube o baja) en esa posición.' },
+  { id:'kanban_foto_video', titulo:'Foto y video en una ficha del Kanban',
+    keywords:['foto','imagen','video','kanban','ficha','miniatura'],
+    respuesta:'Cada ficha del Kanban puede tener varias fotos: pégalas con Ctrl+V o súbelas como archivo dentro de la ficha expandida. La primera foto cargada se usa automáticamente como miniatura de la tarjeta. Si el producto tiene un video (YouTube) cargado en la Fototeca, el botón "▶ Ver video" aparece solo en el PDF.' },
+  { id:'fototeca_video', titulo:'Agregar un video (YouTube) a un producto',
+    keywords:['video','youtube','link','fototeca','producto'],
+    respuesta:'En el Hub, entra a "Fototeca de Productos". Cada ficha de línea tiene un campo para pegar el link de YouTube del video, independiente de la foto. Ese video aparece automáticamente como botón "▶ Ver video del producto" en los PDF de esa línea.' },
+  { id:'fototeca_variante', titulo:'Variante de foto por línea (ej: 4 tipos de cuaderno)',
+    keywords:['variante','tipo de foto','fototeca','linea','insertos','caucho'],
+    respuesta:'En la Fototeca puedes crear fichas nuevas con "Crear nueva ficha", ponerles un nombre (ej: "Cuaderno con caucho") y asignarlas a la línea que corresponda. Luego, en el cotizador de esa línea, aparece un selector "Variante de foto" donde eliges cuál variante usar para esa cotización específica.' },
+  { id:'foto_personalizada', titulo:'Foto personalizada solo para una cotización',
+    keywords:['foto','personalizada','muestra','especial','unica','puntual','cotizacion'],
+    respuesta:'Debajo de la descripción para el cliente hay una zona "Foto personalizada para esta cotización": puedes pegar (Ctrl+V) o subir una imagen que se usará SOLO en esa cotización puntual (no se guarda en la Fototeca ni afecta otras cotizaciones). Tiene prioridad sobre la variante de foto y sobre la foto automática de la línea.' },
+  { id:'buscar_cliente', titulo:'Buscar o autocompletar un cliente existente',
+    keywords:['cliente','buscar','autocompletar','existente','identificacion'],
+    respuesta:'Al escribir el nombre o la identificación del cliente en el formulario, aparece una lista de sugerencias (datalist) con los clientes ya guardados. Al seleccionarlo se autocompletan sus datos de contacto.' },
+  { id:'vendedor_asignar', titulo:'Asignar el vendedor a cargo de una cotización',
+    keywords:['vendedor','asignar','comercial','encargado'],
+    respuesta:'En el formulario de cada cotizador hay un campo "Vendedor a cargo" con la lista de vendedores de la empresa. Ese dato queda guardado en la cotización y permite filtrar el Dashboard y los Reportes por vendedor.' },
+  { id:'dashboard_periodo', titulo:'Ver el Dashboard por mes, trimestre o año',
+    keywords:['dashboard','periodo','mensual','trimestral','semestral','anual','historico','inteligencia','ventas'],
+    respuesta:'En "Inteligencia de Ventas (Dashboard)" hay un selector de periodo (Mensual/Trimestral/Semestral/Anual) con flechas ◀ ▶ para navegar meses o periodos anteriores sin perder el histórico. Los KPIs (pipeline, ganadas, tasa de cierre) se recalculan según el periodo elegido.' },
+  { id:'pedido_multiproducto', titulo:'Un pedido con varios productos distintos',
+    keywords:['pedido','multiproducto','varios','productos','combinar','junto'],
+    respuesta:'Calcula el primer producto y presiona "📦 Agregar a un pedido". Ve a otra calculadora (o la misma) y calcula el siguiente producto para el MISMO cliente, y vuelve a presionar "Agregar a un pedido". Cuando tengas todos, presiona "✅ Cerrar pedido y guardar en CRM" para generar UN solo total, UNA OT y una ficha de Kanban con todas las líneas.' },
+  { id:'panel_precios', titulo:'Cambiar precios de insumos sin tocar código',
+    keywords:['precio','precios','panel','actualizar','insumo','papel','material'],
+    respuesta:'En el Hub entra a "Panel de Precios". Ahí puedes editar el valor de papeles, materiales y otros insumos base — el cambio aplica automáticamente a las 8 calculadoras porque todas leen del mismo archivo de precios compartido.' },
+  { id:'rompecabezas_multitamano', titulo:'Un pedido de rompecabezas con varios tamaños',
+    keywords:['rompecabezas','tamano','tamanos','varios','carrito','pedido'],
+    respuesta:'En el módulo de Rompecabezas, configura el primer rompecabezas y presiona "➕ Agregar otro rompecabezas a este pedido" para sumar otro tamaño o forma distinta (ej: 2 de 50x33 y 1 de 66x50) al mismo carrito. Al guardar el pedido, todos quedan en una sola orden con una línea de Kanban por cada tamaño.' },
+  { id:'cubo_rubik_caja_tintas', titulo:'Cubo Rubik: caja y tintas',
+    keywords:['cubo','rubik','caja','tintas','con caja','sin caja'],
+    respuesta:'En la calculadora de Cubo Rubik puedes marcar si el pedido lleva caja o no ("con caja"/"sin caja") y seleccionar las tintas de impresión de la caja. El precio y la foto de referencia se ajustan automáticamente según esa elección.' },
+  { id:'bolsas_caras', titulo:'Bolsas: caras iguales o diferentes',
+    keywords:['bolsas','caras','iguales','diferentes','frente','atras'],
+    respuesta:'En la calculadora de Bolsas puedes indicar si el diseño de ambas caras es igual o diferente. Si son diferentes, el sistema calcula el material y los pliegos necesarios para cada cara por separado.' },
+  { id:'whatsapp_cliente', titulo:'Enviar la cotización por WhatsApp',
+    keywords:['whatsapp','enviar','mensaje','cliente'],
+    respuesta:'Después de generar el PDF hay un botón de WhatsApp que abre la app instalada (o WhatsApp Business) con un mensaje ya redactado para el cliente, listo para adjuntar el PDF y enviar.' },
+  { id:'acceso_rapido', titulo:'Moverme entre herramientas sin perder lo que estoy haciendo',
+    keywords:['navegar','moverme','otra','herramienta','acceso','rapido','menu'],
+    respuesta:'Usa el botón redondo ☰ flotante en la esquina inferior derecha: abre un menú para ir al Hub Principal, Calculadora de Costos, Kanban, CRM, Reportes o Contabilidad sin cerrar lo que tengas abierto.' },
+];
+
+function tacticalNormalizarTexto(s){
+  return (s||'').toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+}
+
+function tacticalBuscarAyuda(pregunta){
+  const q = tacticalNormalizarTexto(pregunta);
+  const palabras = q.split(/[^a-z0-9]+/).filter(w=>w.length>2);
+  if(!palabras.length) return [];
+  const resultados = TACTICAL_AYUDA_KB.map(entry=>{
+    let score = 0;
+    const kwNorm = entry.keywords.map(k=>tacticalNormalizarTexto(k));
+    for(const p of palabras){
+      for(const k of kwNorm){
+        if(k===p) score += 3;
+        else if(k.length>3 && (k.includes(p) || p.includes(k))) score += 1;
+      }
+    }
+    if(tacticalNormalizarTexto(entry.titulo).includes(q)) score += 2;
+    return {entry, score};
+  }).filter(r=>r.score>0).sort((a,b)=>b.score-a.score);
+  return resultados.slice(0,3).map(r=>r.entry);
+}
+
+/* ==========================================
+   PLANO DE CORTE (diagrama de cuadrícula para la Orden de Producción)
+   Toma el objeto planoCorte que ya devuelve costoMaterialPliegos() en cada motor
+   ({piezaAncho, piezaAlto, pliegoAncho, pliegoAlto, columnas, filas, rotado, piezasPorPliego})
+   y lo dibuja como SVG proporcional -- compartido para no repetir el dibujo en cada
+   herramienta (Conde 2026-08-14, pidió letra chica y máxima densidad de información). ---- */
+function tacticalDibujarPlanoCorteSVG(pc, maxAnchoPx){
+  if(!pc || !pc.pliegoAncho || !pc.pliegoAlto || !pc.columnas || !pc.filas) return '';
+  maxAnchoPx = maxAnchoPx || 170;
+  const escala = maxAnchoPx / Math.max(pc.pliegoAncho, pc.pliegoAlto);
+  const w = pc.pliegoAncho*escala, h = pc.pliegoAlto*escala;
+  const piezaW = (pc.rotado ? pc.piezaAlto : pc.piezaAncho)*escala;
+  const piezaH = (pc.rotado ? pc.piezaAncho : pc.piezaAlto)*escala;
+  let rects = '';
+  for(let fila=0; fila<pc.filas; fila++){
+    for(let col=0; col<pc.columnas; col++){
+      const x = col*piezaW, y = fila*piezaH;
+      rects += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(piezaW-1.2,0.5).toFixed(1)}" height="${Math.max(piezaH-1.2,0.5).toFixed(1)}" fill="#eef2f7" stroke="#1e3a5f" stroke-width="0.6"/>`;
+    }
+  }
+  return `<svg width="${w.toFixed(0)}" height="${h.toFixed(0)}" viewBox="0 0 ${w.toFixed(1)} ${h.toFixed(1)}" style="border:1px solid #1a202c; background:#fff; display:block;">${rects}</svg>`;
+}
+function tacticalPlanoCorteTexto(pc){
+  if(!pc) return '';
+  return `Pliego ${pc.pliegoAncho}x${pc.pliegoAlto}cm → ${pc.piezasPorPliego} pieza(s) de ${pc.piezaAncho}x${pc.piezaAlto}cm (${pc.columnas}x${pc.filas}${pc.rotado?', rotado':''})`;
+}
+
+/* ==========================================
+   NOMBRE DE MÁQUINA (fracción de pliego offset, o digital)
+   Mismo mapeo usado en el Hub (COT_NOMBRE_MAQUINA) -- compartido para que las demás
+   calculadoras muestren el mismo texto en su Orden de Producción (Conde 2026-08-18). ---- */
+const TACTICAL_NOMBRE_MAQUINA = { octavo:"Octavo", cuarto:"Cuarto", medio_pliego:"Medio Pliego", digital:"Digital (Konica)" };
+
+/* ==========================================
+   ORDEN DE PRODUCCIÓN -- documento interno reutilizable (compartido entre las calculadoras
+   de línea única: Bolsas, Cajas, Carpetas, Volantes, Rompecabezas, Cubo Rubik, Producto Libre).
+   Mismo layout de 2 columnas (texto + plano de corte) y Recomendaciones al final que ya se usa
+   en el Hub (Cuadernos) y en la Orden de Producción del Kanban, para que Conde vea siempre el
+   mismo formato sin importar de qué línea venga (Conde 2026-08-18: "faltan los demás productos").
+   cfg = {
+     logoB64, ot, tipoDocTexto (default "ORDEN DE PRODUCCIÓN"), cliente, fechaEntrega,
+     filasTabla: [[label, value], [label, value], ...] -- 2 por fila, se agrupan de a 2 automáticamente,
+     bloques: [{ titulo, lineasTexto: ['Máquina: <strong>..</strong> — ...', ...], planoCorte }, ...],
+     piePagina (opcional, string HTML libre -- ej. armado/encuadernación),
+     recomendaciones: [texto, ...] (opcional),
+   } ---- */
+function tacticalOPDocumentoHtml(cfg){
+  const filas = cfg.filasTabla || [];
+  let filasHtml = '';
+  for(let i=0; i<filas.length; i+=2){
+    const [l1,v1] = filas[i];
+    const par2 = filas[i+1];
+    filasHtml += `<tr><th style="padding:2px 5px;">${l1}</th><td style="padding:2px 5px;"${!par2?' colspan="3"':''}><strong>${v1}</strong></td>${par2?`<th style="padding:2px 5px;">${par2[0]}</th><td style="padding:2px 5px;"><strong>${par2[1]}</strong></td>`:''}</tr>`;
+  }
+  const bloquesHtml = (cfg.bloques||[]).map(b => {
+    const pc = b.planoCorte;
+    return `
+      <div style="border:1px solid #d7dee5; border-radius:3px; padding:3px 7px; margin-bottom:8px; break-inside:avoid; display:flex; gap:8px; align-items:center;">
+        <div style="flex:1; min-width:0;">
+          <div style="font-size:0.82rem; font-weight:bold; line-height:1.2;">${b.titulo||''}</div>
+          ${(b.lineasTexto||[]).map(txt=>`<div style="font-size:0.76rem; color:#4a5568; line-height:1.3;">${txt}</div>`).join('')}
+        </div>
+        ${pc ? `<div style="flex-shrink:0; display:flex; gap:6px; align-items:center;">${tacticalDibujarPlanoCorteSVG(pc,60)}<div style="font-size:0.72rem; color:#4a5568; max-width:100px; line-height:1.25;">${tacticalPlanoCorteTexto(pc)}</div></div>` : ''}
+      </div>`;
+  }).join('');
+  const recomendaciones = cfg.recomendaciones || [];
+  const recsHtml = recomendaciones.length ? `
+    <div class="doc-section-title" style="font-size:0.82rem; padding:3px 7px; margin:8px 0 4px;">⚠️ Recomendaciones de Producción</div>
+    ${recomendaciones.map(txt=>`<div style="background:#fff3cd; color:#7a5b00; border:1px solid #f0d98c; border-radius:4px; padding:5px 9px; font-size:0.74rem; margin-bottom:5px;">${txt}</div>`).join('')}
+  ` : '';
+  return `
+    <div class="doc-header" style="padding-bottom:4px; margin-bottom:4px;">
+      <div><img src="${cfg.logoB64}" style="height:32px; margin-bottom:2px; display:block;" alt="Tactical Marketing"><div class="doc-tipo" style="background:var(--secondary,#4a5568); font-size:0.78rem; padding:2px 8px;">${cfg.tipoDocTexto||'ORDEN DE PRODUCCIÓN'} ${cfg.ot||''} — USO INTERNO</div></div>
+      <div class="doc-empresa-datos" style="font-size:0.74rem;">${new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'})}</div>
+    </div>
+    <table class="doc-table" style="font-size:0.78rem; margin-bottom:4px;">
+      <tr><th style="padding:2px 5px;">N° de OT</th><td style="font-weight:bold; padding:2px 5px;">${cfg.ot||'-'}</td><th style="padding:2px 5px;">Cliente</th><td style="padding:2px 5px;"><strong>${cfg.cliente||'-'}</strong></td></tr>
+      ${filasHtml}
+      <tr><th style="padding:2px 5px;">Entrega</th><td colspan="3" style="padding:2px 5px;"><strong>${cfg.fechaEntrega||'Por definir'}</strong></td></tr>
+    </table>
+    <div class="doc-section-title" style="font-size:0.82rem; padding:3px 7px; margin:4px 0 4px;">Insumos, montajes y plano de corte</div>
+    ${bloquesHtml}
+    ${cfg.piePagina ? `<div class="doc-section-title" style="font-size:0.82rem; padding:3px 7px; margin:4px 0 4px;">Armado / Terminado</div><p style="font-size:0.76rem; margin:2px 0;">${cfg.piePagina}</p>` : ''}
+    ${recsHtml}
+  `;
+}

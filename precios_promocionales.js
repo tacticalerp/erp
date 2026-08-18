@@ -38,7 +38,7 @@ function promoCalcularMarca(tabla, tintas, cantidad){
   return null;
 }
 
-const PROMO_MARCACION = {
+const PROMO_MARCACION_BASE = {
   promos: {
     nombre: "Promos (marcación propia — catalogospromocionales.com)",
     tecnicas: {
@@ -278,3 +278,52 @@ const PROMO_MARCACION = {
     recargos: { servicioExpress: 0.35, danoReservado: 0.01 },
   },
 };
+
+// ==========================================
+// Overrides desde el Panel de Precios del hub (mismo patrón que precios_tactical.js:
+// TACTICAL_PRECIOS_OVERRIDE / tactical_precios_override_v1). Como este árbol es mucho más
+// profundo y heterogéneo (proveedor -> técnica -> categoría -> tinta -> tramo) que las tablas
+// planas de precios_tactical.js, el override no se guarda por "grupo" fijo sino como un mapa
+// plano { "ruta.con.puntos": valorNuevo }, y se aplica recorriendo el árbol genéricamente en
+// vez de tener un merge a mano por cada forma distinta de tabla.
+// ==========================================
+function promoLeerOverrides(){
+  try{ return JSON.parse(localStorage.getItem('tactical_precios_promo_override_v1')) || {}; }
+  catch(e){ return {}; }
+}
+function promoAplicarOverrides(base, overrides){
+  const clone = JSON.parse(JSON.stringify(base));
+  Object.keys(overrides||{}).forEach(path => {
+    const partes = path.split('.');
+    let nodo = clone;
+    for(let i=0;i<partes.length-1;i++){
+      if(nodo == null) return;
+      nodo = nodo[partes[i]];
+    }
+    const ultima = partes[partes.length-1];
+    if(nodo && typeof nodo[ultima] === 'number') nodo[ultima] = overrides[path];
+  });
+  return clone;
+}
+const PROMO_MARCACION = promoAplicarOverrides(PROMO_MARCACION_BASE, promoLeerOverrides());
+
+// Recorre PROMO_MARCACION_BASE y devuelve cada precio editable (todo leaf numérico salvo
+// "hasta", que es el límite estructural del tramo, no un precio) — lo usa el Panel de Precios
+// del hub para construir el editor sin tener que conocer de antemano la forma de cada tabla.
+function promoListarCamposEditables(){
+  const filas = [];
+  (function walk(nodo, ruta, miga){
+    if(nodo === null || typeof nodo !== 'object') return;
+    Object.keys(nodo).forEach(key => {
+      if(key === 'hasta') return;
+      const val = nodo[key];
+      const nuevaMiga = miga.concat(key);
+      if(typeof val === 'number'){
+        filas.push({ path: ruta.concat(key).join('.'), miga: nuevaMiga, valor: val, contexto: nodo });
+      } else if(val && typeof val === 'object'){
+        walk(val, ruta.concat(key), nuevaMiga);
+      }
+    });
+  })(PROMO_MARCACION_BASE, [], []);
+  return filas;
+}

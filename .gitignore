@@ -1,3 +1,38 @@
 .claude/settings.local.json
 __pycache__/
 *.pyc
+
+# ---- Material de referencia (PDFs, catálogos, fotos, video) -----------------
+# Todo lo que subas para darme contexto (listas de precios, catálogos de
+# proveedores, capturas, videos) NUNCA debe terminar en git ni en el hosting.
+# Confirmado 2026-08-18: nada de esto lo lee el código en tiempo real -- son
+# insumos de trabajo, no partes de la app. Si en el futuro alguna imagen SÍ
+# necesita quedar embebida en una calculadora (como el logo), se agrega a mano
+# como excepción con "!ruta/archivo.png" debajo de esta sección.
+Insumos Promocionales/
+insumos rompecabezas/
+*.mp4
+*.mov
+*.docx
+*.xls
+*.xlsx
+LISTA DE PRECIO*.pdf
+ERPMIS Litográfico*.pdf
+Programa de Registro de Reprocesos*.pdf
+Logo Tactical*.pdf
+
+# ---- Plantillas SVG fuente (ya empaquetadas dentro de template_svg_data.js) --
+# Confirmado 2026-08-18 por grep: ningún archivo del ERP las lee sueltas en
+# tiempo de ejecución -- solo sirvieron para generar el bundle. Se dejan en el
+# disco local como fuente por si hay que regenerar el bundle, pero no van a git.
+# Los 5 que ya estaban commiteados (portarretrato_100_unlabeled.svg,
+# hembra_macho_100.svg, plain_100.svg, portarretrato_30.svg, plain_30.svg) se
+# sacaron del repo el 2026-08-18 con "git rm --cached" -- confirmado a Conde
+# que quedan solo en disco local, decisión suya de quitarlos.
+troquel_templates/
+laser_rect_templates/
+rompecabezas_templates/
+
+# ---- Código legado, ya portado/reemplazado -----------------------------------
+motor_cotizacion/
+borrador_rompecabezas_preview.html

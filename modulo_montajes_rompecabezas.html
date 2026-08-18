@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tactical — Módulo de Montajes de Rompecabezas (B2C)</title>
+<style>
+  :root{
+    --bg:#f4f6f8; --panel:#ffffff; --border:#d7dee5; --text:#1a202c; --muted:#5a6472;
+    --accent:#e8792c; --warn:#7a5b00; --ok:#1a7d3f; --danger:#b91c1c; --azul:#1e3a5f;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
+  header{padding:16px 22px;background:var(--azul);display:flex;align-items:center;gap:14px;}
+  header img{height:38px;}
+  header h1{margin:0;font-size:16px;color:#fff;}
+  header p{margin:2px 0 0;font-size:12.5px;color:#cbd8e8;}
+  .nav-btn-hub { background:#cc0000; color:#fff; border:none; padding:8px 16px; border-radius:4px; font-weight:bold; cursor:pointer; transition:0.2s; font-size:0.9rem; text-decoration:none; display:inline-block; }
+  .nav-btn-hub:hover { background:#b30000; }
+  nav.tabs{display:flex;gap:8px;padding:12px 22px;background:var(--panel);border-bottom:1px solid var(--border);flex-wrap:wrap;}
+  nav.tabs button{flex:0 0 auto;padding:10px 18px;background:#fff;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13.5px;font-weight:600;cursor:pointer;}
+  nav.tabs button:hover{border-color:var(--accent);}
+  nav.tabs button.active{color:#fff;background:var(--accent);border-color:var(--accent);}
+  .view{display:none;padding:20px;}
+  .view.active{display:block;}
+  .layout{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+  .controls{width:340px;flex:0 0 340px;display:flex;flex-direction:column;gap:16px;}
+  .controls h2{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 8px;}
+  label{display:block;font-size:13px;margin-bottom:4px;color:var(--muted);}
+  select, input[type=text], input[type=tel], input[type=email], input[type=number], input[type=range], textarea{
+    width:100%;background:#fff;color:var(--text);border:1px solid var(--border);border-radius:6px;padding:7px 8px;font-size:13px;font-family:inherit;
+  }
+  .radio-row{display:flex;gap:8px;flex-wrap:wrap;}
+  .radio-row button{flex:1 1 auto;padding:8px 6px;border-radius:6px;border:1px solid var(--border);background:#fff;color:var(--text);cursor:pointer;font-size:12px;min-width:70px;}
+  .radio-row button.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .radio-row button:disabled{opacity:.4;cursor:not-allowed;}
+  .note{font-size:11.5px;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;line-height:1.4;}
+  .note.warn{border-color:#f0d9a6;background:#fff3cd;color:var(--warn);}
+  .note.ok{border-color:#b7e4c7;background:#eafaf0;color:var(--ok);}
+  .stage-wrap{flex:1;min-width:340px;display:flex;flex-direction:column;align-items:center;gap:12px;}
+  #stage{position:relative;overflow:hidden;background:#000;border-radius:4px;box-shadow:0 0 0 1px var(--border);touch-action:none;cursor:grab;}
+  #stage.dragging{cursor:grabbing;}
+  #photoImg{position:absolute;top:0;left:0;transform-origin:0 0;user-select:none;-webkit-user-drag:none;}
+  #overlayImg{position:absolute;pointer-events:none;user-select:none;}
+  #marcoMaderaBox{position:absolute;inset:0;pointer-events:none;box-sizing:border-box;}
+  #placeholder{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#9aa4b2;font-size:13px;text-align:center;padding:20px;}
+  .zoomrow{display:flex;align-items:center;gap:8px;width:100%;max-width:520px;}
+  .zoomrow span{font-size:12px;color:var(--muted);white-space:nowrap;}
+  .price-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12.5px;}
+  .price-box .line{display:flex;justify-content:space-between;padding:2px 0;color:var(--muted);}
+  .price-box .line.total{color:var(--text);font-weight:bold;font-size:15px;border-top:1px solid var(--border);margin-top:6px;padding-top:6px;}
+  .btn{padding:10px;border-radius:6px;border:1px solid var(--border);background:#fff;color:var(--text);cursor:pointer;font-size:13px;width:100%;}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .btn.whatsapp{background:#25d366;border-color:#25d366;color:#06210f;font-weight:bold;}
+  .btn.ok{background:var(--ok);border-color:var(--ok);color:#fff;font-weight:bold;}
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap;}
+  .btn-row .btn{flex:1 1 140px;}
+  table.searchtbl{width:100%;border-collapse:collapse;font-size:12.5px;}
+  table.searchtbl th, table.searchtbl td{border-bottom:1px solid var(--border);padding:8px 6px;text-align:left;}
+  table.searchtbl th{color:var(--muted);font-weight:normal;font-size:11px;text-transform:uppercase;}
+  .status-pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;}
+  .status-pendiente{background:#fff3cd;color:var(--warn);}
+  .status-aprobado{background:#eafaf0;color:var(--ok);}
+  footer{padding:12px 20px;font-size:12px;color:var(--muted);border-top:1px solid var(--border);}
+</style>
+</head>
+<body>
+<!-- Recortes reales (silueta exacta del corazón, una entrada por talla del catálogo) usados como
+     clip-path del stage para que la foto quede recortada igual que las líneas de corte -- no es una
+     forma de corazón aproximada, es la misma silueta que ya trae cada SVG real. -->
+<svg width="0" height="0" style="position:absolute;overflow:hidden;"><defs>
+<clipPath id="corazonClip0" clipPathUnits="objectBoundingBox"><path d="M 0.52394 0.14102 C 0.52259 0.14234 0.39402 0.00000 0.19984 0.02804 C 0.16095 0.03365 0.12566 0.04918 0.09452 0.07681 C 0.02955 0.13444 0.00381 0.22671 0.00149 0.30163 C 0.00000 0.34961 0.00712 0.39656 0.01938 0.44231 C 0.05068 0.55921 0.10641 0.65859 0.17878 0.74568 C 0.21553 0.78991 0.25574 0.82953 0.29856 0.86558 C 0.35952 0.91686 0.43085 0.96348 0.49981 0.99812 C 0.50357 1.00000 0.56072 0.96569 0.58711 0.94886 C 0.68429 0.88690 0.77170 0.81001 0.84551 0.71269 C 0.89627 0.64575 0.93693 0.57133 0.96508 0.48800 C 0.98699 0.42313 1.00001 0.35629 0.99567 0.28558 C 0.99107 0.21075 0.96865 0.14606 0.92157 0.09422 C 0.88486 0.05379 0.84095 0.03065 0.79123 0.02671 C 0.62858 0.01384 0.58060 0.08505 0.52394 0.14102 Z"/></clipPath>
+<clipPath id="corazonClip1" clipPathUnits="objectBoundingBox"><path d="M 0.52215 0.13924 C 0.52086 0.14053 0.39760 0.00183 0.21145 0.02915 C 0.17416 0.03462 0.14032 0.04975 0.11047 0.07667 C 0.04818 0.13283 0.02351 0.22274 0.02129 0.29574 C 0.01986 0.34250 0.02668 0.38825 0.03843 0.43283 C 0.06844 0.54674 0.12187 0.64358 0.19125 0.72844 C 0.22649 0.77154 0.26504 0.81015 0.30609 0.84527 C 0.36144 0.89261 0.43053 0.93945 0.49902 0.97443 C 0.50262 0.97626 0.55741 0.94283 0.58271 0.92642 C 0.67587 0.86606 0.75967 0.79113 0.83044 0.69629 C 0.87909 0.63107 0.91807 0.55855 0.94506 0.47735 C 0.96607 0.41414 0.97855 0.34901 0.97439 0.28011 C 0.96998 0.20719 0.94849 0.14415 0.90335 0.09363 C 0.86816 0.05424 0.82606 0.03169 0.77839 0.02785 C 0.62247 0.01532 0.57647 0.08471 0.52215 0.13924 Z"/></clipPath>
+<clipPath id="corazonClip2" clipPathUnits="objectBoundingBox"><path d="M 0.52393 0.14102 C 0.52258 0.14235 0.39401 0.00000 0.19983 0.02805 C 0.16094 0.03366 0.12564 0.04918 0.09451 0.07682 C 0.02954 0.13444 0.00380 0.22670 0.00148 0.30163 C 0.00000 0.34961 0.00711 0.39656 0.01936 0.44232 C 0.05068 0.55922 0.10640 0.65860 0.17878 0.74568 C 0.21553 0.78991 0.25573 0.82953 0.29855 0.86557 C 0.35630 0.91416 0.42836 0.96222 0.49980 0.99812 C 0.50355 1.00000 0.56070 0.96569 0.58710 0.94885 C 0.68468 0.88664 0.77228 0.80924 0.84550 0.71267 C 0.89625 0.64576 0.93691 0.57134 0.96507 0.48799 C 0.98698 0.42313 1.00000 0.35629 0.99566 0.28558 C 0.99106 0.21075 0.96864 0.14606 0.92157 0.09423 C 0.88484 0.05380 0.84094 0.03064 0.79121 0.02671 C 0.62858 0.01384 0.58058 0.08506 0.52393 0.14102 Z"/></clipPath>
+<clipPath id="corazonClip3" clipPathUnits="objectBoundingBox"><path d="M 0.52809 0.14103 C 0.52676 0.14235 0.39930 0.00000 0.20683 0.02805 C 0.16827 0.03367 0.13328 0.04919 0.10242 0.07682 C 0.03801 0.13445 0.01250 0.22671 0.01020 0.30164 C 0.00873 0.34961 0.01579 0.39656 0.02793 0.44232 C 0.05897 0.55922 0.11421 0.65861 0.18595 0.74569 C 0.22238 0.78991 0.26223 0.82954 0.30468 0.86557 C 0.36193 0.91416 0.43335 0.96223 0.50418 0.99813 C 0.50789 1.00000 0.56454 0.96569 0.59071 0.94886 C 0.68704 0.88690 0.77369 0.81001 0.84685 0.71269 C 0.89716 0.64576 0.93747 0.57135 0.96537 0.48799 C 0.98710 0.42314 1.00000 0.35630 0.99570 0.28558 C 0.99115 0.21076 0.96892 0.14607 0.92225 0.09422 C 0.88586 0.05380 0.84233 0.03065 0.79304 0.02671 C 0.63183 0.01385 0.58425 0.08506 0.52809 0.14103 Z"/></clipPath>
+<clipPath id="corazonClip4" clipPathUnits="objectBoundingBox"><path d="M 0.52066 0.17684 C 0.51943 0.17804 0.40176 0.04924 0.22405 0.07462 C 0.18846 0.07970 0.15615 0.09374 0.12765 0.11875 C 0.06819 0.17088 0.04463 0.25438 0.04250 0.32215 C 0.04115 0.36557 0.04766 0.40804 0.05888 0.44945 C 0.08753 0.55522 0.13854 0.64514 0.20477 0.72392 C 0.23841 0.76393 0.27521 0.79979 0.31440 0.83240 C 0.36725 0.87635 0.43320 0.91986 0.49858 0.95232 C 0.50202 0.95402 0.55433 0.92298 0.57848 0.90776 C 0.66742 0.85169 0.74743 0.78212 0.81498 0.69406 C 0.86142 0.63352 0.89864 0.56618 0.92441 0.49077 C 0.94445 0.43209 0.95638 0.37161 0.95240 0.30764 C 0.94819 0.23993 0.92768 0.18140 0.88459 0.13450 C 0.85099 0.09792 0.81080 0.07698 0.76529 0.07342 C 0.61645 0.06177 0.57252 0.12621 0.52066 0.17684 Z"/></clipPath>
+</defs></svg>
+
+<header style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+  <h1>🧩 Módulo de Montajes de Rompecabezas — B2C</h1>
+  <a href="TACTICAL_ERP_HUB.html" class="nav-btn-hub">🏠 Volver al Hub Principal</a>
+</header>
+<div style="padding:4px 22px 0;">
+  <p style="margin:0 0 8px;font-size:12.5px;color:var(--muted);">Línea Láser (venta directa al cliente final) y Troquelados (mayorista, mínimo 50 unidades). Genera la previsualización, envía por WhatsApp, y al aprobar el pago crea la ficha de producción en el Kanban.</p>
+</div>
+
+<nav class="tabs">
+  <button class="active" data-tab="montaje">1 · Nuevo Montaje</button>
+  <button data-tab="buscar">2 · Buscar / Aprobar Pedidos</button>
+  <button data-tab="reportes">3 · Reporte de Ventas B2C</button>
+</nav>
+
+<!-- ================= VISTA 1: NUEVO MONTAJE ================= -->
+<div class="view active" id="view-montaje">
+  <div class="layout">
+    <div class="panel controls">
+
+      <div>
+        <h2>1 · Línea de producción</h2>
+        <div class="radio-row">
+          <button data-linea="laser" class="active">Láser</button>
+          <button data-linea="troquel">Troquelados</button>
+        </div>
+      </div>
+
+      <div id="grupoForma">
+        <h2>2 · Forma</h2>
+        <div class="radio-row" id="formaButtons"></div>
+        <div class="note" id="notaForma" style="margin-top:8px;"></div>
+      </div>
+
+      <div>
+        <h2 id="lblCatalogo">3 · Medida y cantidad de fichas</h2>
+        <select id="selCatalogo"></select>
+      </div>
+
+      <div id="grupoOrientacion">
+        <h2>Orientación</h2>
+        <div class="radio-row">
+          <button data-or="horizontal" class="active">Horizontal</button>
+          <button data-or="vertical">Vertical</button>
+        </div>
+      </div>
+
+      <div>
+        <h2>4 · Cantidad de rompecabezas del pedido</h2>
+        <input type="number" id="cantidadPedido" min="1" value="1" step="1">
+        <div class="price-box" id="priceBox" style="margin-top:8px;"></div>
+        <div class="note" style="margin-top:6px;">Descuento automático: 20% en cada unidad <strong>par</strong> del pedido (2ª, 4ª, 6ª...). La 1ª, 3ª, 5ª... van a precio normal.</div>
+      </div>
+
+      <div>
+        <h2>5 · Foto</h2>
+        <input type="file" id="fileInput" accept="image/*">
+        <div class="note" style="margin-top:8px;">Arrastra la foto para reposicionarla. Usa el zoom para ajustarla al corte.</div>
+      </div>
+
+      <div>
+        <h2>6 · Datos del cliente</h2>
+        <label>Nombre</label>
+        <input type="text" id="cliNombre" placeholder="Nombre completo">
+        <label style="margin-top:6px;">Celular / WhatsApp</label>
+        <input type="tel" id="cliCel" placeholder="30xxxxxxxx">
+        <label style="margin-top:6px;">Correo (opcional)</label>
+        <input type="email" id="cliCorreo" placeholder="correo@ejemplo.com">
+        <label style="margin-top:6px;">Entrega (ciudad y especificaciones)</label>
+        <input type="text" id="cliEntrega" placeholder="Ej: Bogotá — entregar en portería, de 2pm a 5pm">
+      </div>
+
+      <div id="carritoBanner" style="display:none; margin-bottom:10px; padding:10px; background:#eafaf0; border-left:4px solid var(--ok); border-radius:6px; font-size:13px;"></div>
+      <div class="btn-row">
+        <button class="btn" id="btnAgregarOtro" style="background:var(--accent); color:#fff;">➕ Agregar otro rompecabezas a este pedido</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" id="btnGuardarPedido">💾 Guardar pedido (Pendiente)</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn whatsapp" id="btnWhatsapp">📲 Enviar por WhatsApp</button>
+        <button class="btn" id="btnEmail">✉️ Enviar por correo</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="btnDescargar">⬇ Descargar imagen</button>
+      </div>
+      <div class="note" id="notaGuardado"></div>
+    </div>
+
+    <div class="stage-wrap">
+      <div id="stage">
+        <div id="placeholder">Sube una foto para ver la previsualización del corte</div>
+        <img id="photoImg" style="display:none;">
+        <img id="overlayImg" style="display:none;">
+        <div id="marcoMaderaBox" style="display:none;"></div>
+      </div>
+      <div class="zoomrow">
+        <span>Zoom</span>
+        <input type="range" id="zoomSlider" min="100" max="400" value="100">
+        <span id="zoomVal">100%</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= VISTA 2: BUSCAR / APROBAR ================= -->
+<div class="view" id="view-buscar">
+  <div class="panel" style="max-width:1000px;">
+    <h2 style="margin-top:0;">Buscar pedidos guardados</h2>
+    <input type="text" id="buscarInput" placeholder="Buscar por nombre, celular o correo...">
+    <div style="overflow-x:auto;margin-top:12px;">
+      <table class="searchtbl" id="tablaBusqueda">
+        <thead><tr><th>Fecha</th><th>Cliente</th><th>Producto</th><th>Cant.</th><th>Total</th><th>Estado</th><th>Acción</th></tr></thead>
+        <tbody id="tablaBusquedaBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ================= VISTA 3: REPORTES ================= -->
+<div class="view" id="view-reportes">
+  <div class="panel" style="max-width:700px;">
+    <h2 style="margin-top:0;">Base de ventas B2C aprobadas</h2>
+    <div class="price-box" id="reportKpis" style="margin-bottom:12px;"></div>
+    <button class="btn primary" id="btnDescargarCSV">⬇ Descargar base de datos (CSV)</button>
+    <div class="note" style="margin-top:10px;">Incluye producto, fichas, cantidad, precio total con descuento aplicado, y datos del cliente de cada pedido aprobado — para análisis de marketing.</div>
+  </div>
+</div>
+
+<footer>Tactical Marketing Group · Módulo B2C · datos guardados en este equipo (localStorage compartido con el Hub).</footer>
+
+<style>
+  #tactical-quicknav{ position:fixed; bottom:16px; right:16px; z-index:99999; display:flex; flex-direction:column; align-items:flex-end; gap:8px; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
+  #tactical-quicknav-menu{ display:none; background:#fff; border:1px solid #d7dee5; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.18); padding:8px; flex-direction:column; gap:2px; min-width:210px; }
+  #tactical-quicknav-menu.abierto{ display:flex; }
+  .tactical-qn-item{ display:block; padding:9px 12px; border-radius:5px; font-size:13.5px; color:#1a202c; text-decoration:none; cursor:pointer; }
+  .tactical-qn-item:hover{ background:#f4f6f8; }
+  #tactical-quicknav-btn{ width:50px; height:50px; border-radius:50%; background:#1e3a5f; color:#fff; border:none; box-shadow:0 4px 12px rgba(0,0,0,0.28); font-size:21px; cursor:pointer; }
+</style>
+<div id="tactical-quicknav">
+  <div id="tactical-quicknav-menu">
+    <a class="tactical-qn-item" onclick="tacticalIrHub('hub')">Hub Principal</a>
+    <a class="tactical-qn-item" onclick="tacticalIrHub('calculadoras')">Calculadora de Costos</a>
+    <a class="tactical-qn-item" onclick="tacticalIrHub('kanban')">Kanban de Producción</a>
+    <a class="tactical-qn-item" onclick="tacticalIrHub('crm')">CRM y Clientes</a>
+    <a class="tactical-qn-item" onclick="tacticalIrHub('reportes')">Reportes</a>
+    <a class="tactical-qn-item" onclick="tacticalIrHub('contabilidad')">Contabilidad</a>
+  </div>
+  <button id="tactical-quicknav-btn" onclick="tacticalToggleQuickNav()" title="Acceso rápido a otras herramientas">☰</button>
+</div>
+<script>
+function tacticalToggleQuickNav(){
+  document.getElementById('tactical-quicknav-menu').classList.toggle('abierto');
+}
+function tacticalIrHub(vista){
+  document.getElementById('tactical-quicknav-menu').classList.remove('abierto');
+  window.open('TACTICAL_ERP_HUB.html#'+vista, 'tactical_hub');
+}
+document.addEventListener('click', function(ev){
+  const menu = document.getElementById('tactical-quicknav-menu');
+  const btn = document.getElementById('tactical-quicknav-btn');
+  if(menu && menu.classList.contains('abierto') && !menu.contains(ev.target) && ev.target!==btn){
+    menu.classList.remove('abierto');
+  }
+});
+</script>
+
+<script src="template_svg_data.js?v=7"></script>
+<script>
+/* =====================  CATÁLOGOS  ===================== */
+
+// --- Troquelados: 15 referencias reales extraídas del PDF "Corte rompecabezas TROQUELES.pdf".
+// rotate:true = el arte fue dibujado en el PDF girado 90° respecto a la medida oficial de la tabla;
+// se corrige rotando en pantalla (igual que la opción "vertical" del borrador anterior).
+// Faltan 4 referencias de la tabla oficial (Conde las enviará luego): 12f/20.5x16.5, 24f/19x13(marco), 416f/59x43, 504f/68x48.3.
+const TROQUEL_CATALOGO = [
+  {fichas:6,   w:10,   h:10,   file:'troquel_templates/troquel_6f_10x10.svg',        rotate:false},
+  {fichas:6,   w:18.3, h:11.7, file:'troquel_templates/troquel_6f_18p3x11p7.svg',    rotate:true},
+  {fichas:12,  w:18,   h:14,   file:'troquel_templates/troquel_12f_18x14.svg',       rotate:true},
+  {fichas:12,  w:27,   h:23,   file:'troquel_templates/troquel_12f_27x23.svg',       rotate:true},
+  {fichas:21,  w:20,   h:10,   file:'troquel_templates/troquel_21f_20x10.svg',       rotate:true},
+  {fichas:24,  w:17,   h:11,   file:'troquel_templates/troquel_24f_17x11.svg',       rotate:true},
+  {fichas:30,  w:21.5, h:17,   file:'troquel_templates/troquel_30f_21p5x17.svg',     rotate:true},
+  {fichas:30,  w:28,   h:20,   file:'troquel_templates/troquel_30f_28x20.svg',       rotate:true},
+  {fichas:30,  w:30,   h:22,   file:'troquel_templates/troquel_30f_30x22.svg',       rotate:true},
+  {fichas:48,  w:21.5, h:28,   file:'troquel_templates/troquel_48f_21p5x28.svg',     rotate:false},
+  {fichas:70,  w:49,   h:33.5, file:'troquel_templates/troquel_70f_49x33p5.svg',     rotate:true},
+  {fichas:208, w:43,   h:29.5, file:'troquel_templates/troquel_208f_43x29p5.svg',    rotate:true},
+  {fichas:252, w:48,   h:33.5, file:'troquel_templates/troquel_252f_48x33p5.svg',    rotate:true},
+  {fichas:500, w:48,   h:34,   file:'troquel_templates/troquel_500f_48x34.svg',      rotate:true},
+  {fichas:1000,w:68,   h:48,   file:'troquel_templates/troquel_1000f_68x48.svg',     rotate:true},
+];
+
+// --- Láser: catálogo oficial de "Tabla Precios Rompecabezas.png". 4 formas, orden de lanzamiento
+// confirmado por Conde: Rectangular -> Portarretrato -> Corazón -> Círculo.
+// El patrón de corte de las 4 formas se GENERA matemáticamente (cuadrícula tipo rompecabezas con
+// bordes tipo diente, igual estilo "grabado" ya aprobado) con filas x columnas calculadas según la
+// cantidad real de fichas de cada talla -- así cada medida se ve realmente distinta (antes se
+// reusaba un solo patrón fijo para todas). La silueta de Corazón/Círculo SÍ es exacta (geometría
+// conocida, no inventada); lo referencial es solo el detalle interior de las fichas, hasta que
+// Conde envíe el arte de corte real por talla.
+const LASER_FORMAS = {
+  rectangular: {
+    // Conde envió "rectangular laser.pdf": 19 páginas, arte de corte REAL para cada una de estas
+    // 19 medidas exactas (no un patrón reutilizado). rotate:true = igual que en Troquelados, el
+    // PDF dibuja esa página girada 90° respecto a la medida oficial de la tabla.
+    label: 'Rectangular', enabled: true, shape:'rect',
+    catalogo: [
+      {fichas:20, w:24, h:16, precio:49000, file:'laser_rect_templates/laser_rect_20f_24x16.svg', rotate:true},
+      {fichas:30, w:32, h:24, precio:55000, file:'laser_rect_templates/laser_rect_30f_32x24.svg', rotate:true},
+      {fichas:80, w:32, h:24, precio:65000, file:'laser_rect_templates/laser_rect_80f_32x24.svg', rotate:true},
+      {fichas:100, w:32, h:32, precio:73000, file:'laser_rect_templates/laser_rect_100f_32x32.svg', rotate:false},
+      {fichas:150, w:32, h:32, precio:83000, file:'laser_rect_templates/laser_rect_150f_32x32.svg', rotate:false},
+      {fichas:100, w:50, h:33, precio:85000, file:'laser_rect_templates/laser_rect_100f_50x33.svg', rotate:true},
+      {fichas:200, w:50, h:33, precio:99000, file:'laser_rect_templates/laser_rect_200f_50x33.svg', rotate:true},
+      {fichas:300, w:50, h:33, precio:125000, file:'laser_rect_templates/laser_rect_300f_50x33.svg', rotate:true},
+      {fichas:500, w:50, h:33, precio:142000, file:'laser_rect_templates/laser_rect_500f_50x33.svg', rotate:true},
+      {fichas:200, w:66, h:50, precio:139000, file:'laser_rect_templates/laser_rect_200f_66x50.svg', rotate:true},
+      {fichas:300, w:66, h:50, precio:149000, file:'laser_rect_templates/laser_rect_300f_66x50.svg', rotate:true},
+      {fichas:500, w:66, h:50, precio:159000, file:'laser_rect_templates/laser_rect_500f_66x50.svg', rotate:true},
+      {fichas:1000, w:66, h:50, precio:189000, file:'laser_rect_templates/laser_rect_1000f_66x50.svg', rotate:true},
+      {fichas:1000, w:100, h:66, precio:219000, file:'laser_rect_templates/laser_rect_1000f_100x66.svg', rotate:true},
+      {fichas:1500, w:100, h:66, precio:240000, file:'laser_rect_templates/laser_rect_1500f_100x66.svg', rotate:true},
+      {fichas:2000, w:100, h:66, precio:259000, file:'laser_rect_templates/laser_rect_2000f_100x66.svg', rotate:true},
+      {fichas:3000, w:100, h:66, precio:329000, file:'laser_rect_templates/laser_rect_3000f_100x66.svg', rotate:true},
+      {fichas:4000, w:90, h:130, precio:380000, file:'laser_rect_templates/laser_rect_4000f_90x130.svg', rotate:false},
+      {fichas:5000, w:90, h:130, precio:490000, file:'laser_rect_templates/laser_rect_5000f_90x130.svg', rotate:false},
+    ]
+  },
+  portarretrato: {
+    // "insumos rompecabezas/PORTA RETRATO laser.pdf": 4 páginas, arte de corte real por talla
+    // (marco ya incluido en el SVG). rotate:true en 200f = plantilla real quedó horizontal
+    // (50x33), la tabla oficial la lista vertical (33x50).
+    label: 'Portarretrato', enabled: true, shape:'frame',
+    catalogo: [
+      {fichas:30,  w:25, h:16, precio:65000, file:'rompecabezas_templates/portarretrato_thin_30f.svg'},
+      {fichas:50,  w:28, h:22, precio:79000, file:'rompecabezas_templates/portarretrato_thin_50f.svg'},
+      {fichas:80,  w:28, h:22, precio:95000, file:'rompecabezas_templates/portarretrato_thin_80f.svg'},
+      {fichas:90,  w:12, h:17, precio:65000, marcoMadera:true, nota:'Marco físico de madera real — foto de referencia pendiente de Conde.'},
+      {fichas:200, w:33, h:50, precio:129000, file:'rompecabezas_templates/portarretrato_thin_200f.svg', rotate:true},
+    ]
+  },
+  corazon: {
+    // "insumos rompecabezas/CORAZON laser.pdf": 5 páginas, arte de corte real por talla (silueta
+    // real vía clip-path, no inventada). El corazón SOLO existe acostado (horizontal) -- medido
+    // directo del SVG real (ratio ancho:alto ~1.3, hasta ~1.5 en el de 160f), por eso w/h van
+    // en ese orden aquí (al revés de como los rotuló el PDF) y no se ofrece variante vertical.
+    label: 'Corazón', enabled: true, shape:'heart',
+    catalogo: [
+      {fichas:30,  w:32, h:24, precio:75000,  file:'rompecabezas_templates/corazon_thin_idx0_30f.svg'},
+      {fichas:60,  w:32, h:24, precio:85000,  file:'rompecabezas_templates/corazon_thin_idx1_60f.svg'},
+      {fichas:90,  w:32, h:24, precio:95000,  file:'rompecabezas_templates/corazon_thin_idx2_90f.svg'},
+      {fichas:160, w:50, h:33, precio:110000, file:'rompecabezas_templates/corazon_thin_idx3_160f.svg'},
+      {fichas:90,  w:32, h:24, precio:125000, file:'rompecabezas_templates/corazon_thin_idx4_90f_portarretrato.svg', nota:'Corazón + Portarretrato'},
+    ]
+  },
+  circular: {
+    // "insumos rompecabezas/CIRCULAR laser.pdf": 3 páginas, arte de corte real por talla.
+    label: 'Círculo', enabled: true, shape:'circle',
+    catalogo: [
+      {fichas:50,  w:32, h:32, precio:73000,  file:'rompecabezas_templates/circular_thin_idx0_50f.svg', nota:'Diámetro 32cm'},
+      {fichas:110, w:32, h:32, precio:83000,  file:'rompecabezas_templates/circular_thin_idx1_110f.svg'},
+      {fichas:700, w:60, h:60, precio:219000, file:'rompecabezas_templates/circular_thin_idx2_700f.svg'},
+    ]
+  },
+};
+
+/*TEMPLATE_SVG_DATA_EXTERNAL*/
+
+
+/* =====================  ESTADO  ===================== */
+let linea = 'laser';       // 'laser' | 'troquel'
+let forma = 'rectangular';  // solo aplica a laser
+let manualOrientation = 'horizontal'; // 'horizontal' | 'vertical' -- elegido por el usuario
+let catalogoActivo = [];
+let itemActivo = null;      // fila elegida del catálogo (o del catálogo de troquel)
+let templateActivo = null;  // {shape, w, h, rotate, marcoMadera, fichas, file?}
+let stageW = 520, stageH = 390;
+let img = { natW:0, natH:0, scale:1, x:0, y:0 };
+let dragging = false, dragStart = {x:0,y:0}, imgStart = {x:0,y:0};
+
+const stage = document.getElementById('stage');
+const photoImg = document.getElementById('photoImg');
+const overlayImg = document.getElementById('overlayImg');
+const marcoMaderaBox = document.getElementById('marcoMaderaBox');
+const placeholder = document.getElementById('placeholder');
+const zoomSlider = document.getElementById('zoomSlider');
+const zoomVal = document.getElementById('zoomVal');
+const selCatalogo = document.getElementById('selCatalogo');
+const formaButtons = document.getElementById('formaButtons');
+const grupoForma = document.getElementById('grupoForma');
+const notaForma = document.getElementById('notaForma');
+const lblCatalogo = document.getElementById('lblCatalogo');
+const cantidadPedido = document.getElementById('cantidadPedido');
+const priceBox = document.getElementById('priceBox');
+const grupoOrientacion = document.getElementById('grupoOrientacion');
+
+function cop(n){ return '$' + Math.round(n).toLocaleString('es-CO'); }
+
+document.querySelectorAll('#grupoOrientacion [data-or]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#grupoOrientacion [data-or]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    manualOrientation = btn.dataset.or;
+    layoutStage();
+  });
+});
+
+/* =====================  ARTE DE CORTE LÁSER: SIEMPRE curvas reales del PDF, nunca inventadas ===================== */
+// Conde marcó como error grave que las fichas cambiaran de forma -- se elimina el generador
+// matemático de fichas. Se usa exclusivamente TEMPLATE_SVG (curvas reales extraídas del PDF).
+// Con las 4 formas ya cubiertas por plantillas reales por talla (ver "file:" en cada fila del
+// catálogo, arriba), esta función queda solo como respaldo por si algún día se agrega una talla
+// nueva sin arte real todavía.
+const LASER_FILE_NORMAL = { rect: 'rompecabezas_templates/portarretrato_100_unlabeled.svg' };
+const LASER_FILE_THIN    = { rect: 'rompecabezas_templates/irregular_thin.svg' };
+function laserPatternFile(fichas, family){
+  const useThin = fichas > 70;
+  return useThin ? LASER_FILE_THIN[family] : LASER_FILE_NORMAL[family];
+}
+function heartPathD(w,h){
+  return `M ${w*0.5} ${h*0.94} C ${w*0.5} ${h*0.94} ${w*0.05} ${h*0.55} ${w*0.05} ${h*0.30} C ${w*0.05} ${h*0.10} ${w*0.23} ${h*0.02} ${w*0.5} ${h*0.20} C ${w*0.77} ${h*0.02} ${w*0.95} ${h*0.10} ${w*0.95} ${h*0.30} C ${w*0.95} ${h*0.55} ${w*0.5} ${h*0.94} ${w*0.5} ${h*0.94} Z`;
+}
+// Misma silueta real del corazón usada en los <clipPath id="corazonClipN"> del inicio del <body>
+// (coordenadas normalizadas 0..1), reescalada aquí a píxeles de canvas -- así el PNG exportado
+// recorta la foto exactamente igual que la previsualización en pantalla, no con la forma aproximada.
+const CORAZON_CLIP_NORM = [
+  "M 0.52394 0.14102 C 0.52259 0.14234 0.39402 0.00000 0.19984 0.02804 C 0.16095 0.03365 0.12566 0.04918 0.09452 0.07681 C 0.02955 0.13444 0.00381 0.22671 0.00149 0.30163 C 0.00000 0.34961 0.00712 0.39656 0.01938 0.44231 C 0.05068 0.55921 0.10641 0.65859 0.17878 0.74568 C 0.21553 0.78991 0.25574 0.82953 0.29856 0.86558 C 0.35952 0.91686 0.43085 0.96348 0.49981 0.99812 C 0.50357 1.00000 0.56072 0.96569 0.58711 0.94886 C 0.68429 0.88690 0.77170 0.81001 0.84551 0.71269 C 0.89627 0.64575 0.93693 0.57133 0.96508 0.48800 C 0.98699 0.42313 1.00001 0.35629 0.99567 0.28558 C 0.99107 0.21075 0.96865 0.14606 0.92157 0.09422 C 0.88486 0.05379 0.84095 0.03065 0.79123 0.02671 C 0.62858 0.01384 0.58060 0.08505 0.52394 0.14102 Z",
+  "M 0.52215 0.13924 C 0.52086 0.14053 0.39760 0.00183 0.21145 0.02915 C 0.17416 0.03462 0.14032 0.04975 0.11047 0.07667 C 0.04818 0.13283 0.02351 0.22274 0.02129 0.29574 C 0.01986 0.34250 0.02668 0.38825 0.03843 0.43283 C 0.06844 0.54674 0.12187 0.64358 0.19125 0.72844 C 0.22649 0.77154 0.26504 0.81015 0.30609 0.84527 C 0.36144 0.89261 0.43053 0.93945 0.49902 0.97443 C 0.50262 0.97626 0.55741 0.94283 0.58271 0.92642 C 0.67587 0.86606 0.75967 0.79113 0.83044 0.69629 C 0.87909 0.63107 0.91807 0.55855 0.94506 0.47735 C 0.96607 0.41414 0.97855 0.34901 0.97439 0.28011 C 0.96998 0.20719 0.94849 0.14415 0.90335 0.09363 C 0.86816 0.05424 0.82606 0.03169 0.77839 0.02785 C 0.62247 0.01532 0.57647 0.08471 0.52215 0.13924 Z",
+  "M 0.52393 0.14102 C 0.52258 0.14235 0.39401 0.00000 0.19983 0.02805 C 0.16094 0.03366 0.12564 0.04918 0.09451 0.07682 C 0.02954 0.13444 0.00380 0.22670 0.00148 0.30163 C 0.00000 0.34961 0.00711 0.39656 0.01936 0.44232 C 0.05068 0.55922 0.10640 0.65860 0.17878 0.74568 C 0.21553 0.78991 0.25573 0.82953 0.29855 0.86557 C 0.35630 0.91416 0.42836 0.96222 0.49980 0.99812 C 0.50355 1.00000 0.56070 0.96569 0.58710 0.94885 C 0.68468 0.88664 0.77228 0.80924 0.84550 0.71267 C 0.89625 0.64576 0.93691 0.57134 0.96507 0.48799 C 0.98698 0.42313 1.00000 0.35629 0.99566 0.28558 C 0.99106 0.21075 0.96864 0.14606 0.92157 0.09423 C 0.88484 0.05380 0.84094 0.03064 0.79121 0.02671 C 0.62858 0.01384 0.58058 0.08506 0.52393 0.14102 Z",
+  "M 0.52809 0.14103 C 0.52676 0.14235 0.39930 0.00000 0.20683 0.02805 C 0.16827 0.03367 0.13328 0.04919 0.10242 0.07682 C 0.03801 0.13445 0.01250 0.22671 0.01020 0.30164 C 0.00873 0.34961 0.01579 0.39656 0.02793 0.44232 C 0.05897 0.55922 0.11421 0.65861 0.18595 0.74569 C 0.22238 0.78991 0.26223 0.82954 0.30468 0.86557 C 0.36193 0.91416 0.43335 0.96223 0.50418 0.99813 C 0.50789 1.00000 0.56454 0.96569 0.59071 0.94886 C 0.68704 0.88690 0.77369 0.81001 0.84685 0.71269 C 0.89716 0.64576 0.93747 0.57135 0.96537 0.48799 C 0.98710 0.42314 1.00000 0.35630 0.99570 0.28558 C 0.99115 0.21076 0.96892 0.14607 0.92225 0.09422 C 0.88586 0.05380 0.84233 0.03065 0.79304 0.02671 C 0.63183 0.01385 0.58425 0.08506 0.52809 0.14103 Z",
+  "M 0.52066 0.17684 C 0.51943 0.17804 0.40176 0.04924 0.22405 0.07462 C 0.18846 0.07970 0.15615 0.09374 0.12765 0.11875 C 0.06819 0.17088 0.04463 0.25438 0.04250 0.32215 C 0.04115 0.36557 0.04766 0.40804 0.05888 0.44945 C 0.08753 0.55522 0.13854 0.64514 0.20477 0.72392 C 0.23841 0.76393 0.27521 0.79979 0.31440 0.83240 C 0.36725 0.87635 0.43320 0.91986 0.49858 0.95232 C 0.50202 0.95402 0.55433 0.92298 0.57848 0.90776 C 0.66742 0.85169 0.74743 0.78212 0.81498 0.69406 C 0.86142 0.63352 0.89864 0.56618 0.92441 0.49077 C 0.94445 0.43209 0.95638 0.37161 0.95240 0.30764 C 0.94819 0.23993 0.92768 0.18140 0.88459 0.13450 C 0.85099 0.09792 0.81080 0.07698 0.76529 0.07342 C 0.61645 0.06177 0.57252 0.12621 0.52066 0.17684 Z",
+];
+function corazonPathScaled(idx, w, h){
+  const norm = CORAZON_CLIP_NORM[idx] || CORAZON_CLIP_NORM[0];
+  const tokens = norm.match(/[MLCZ]|-?\d*\.?\d+/g) || [];
+  let toggle = 0;
+  const out = [];
+  tokens.forEach(tok => {
+    if(tok === 'M' || tok === 'L' || tok === 'C' || tok === 'Z'){
+      out.push(tok);
+      toggle = 0;
+      return;
+    }
+    const num = parseFloat(tok);
+    out.push((toggle === 0 ? num*w : num*h).toFixed(2));
+    toggle = 1 - toggle;
+  });
+  return out.join(' ');
+}
+
+/* =====================  UI: LÍNEA / FORMA / CATÁLOGO  ===================== */
+document.querySelectorAll('[data-linea]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('[data-linea]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    linea = btn.dataset.linea;
+    grupoForma.style.display = linea==='laser' ? 'block' : 'none';
+    lblCatalogo.textContent = linea==='laser' ? '3 · Medida y cantidad de fichas' : '3 · Medida y cantidad de fichas (Troquel)';
+    if(linea==='laser') buildFormaButtons();
+    else grupoOrientacion.style.display = 'block';
+    rebuildCatalogoSelect();
+  });
+});
+
+function buildFormaButtons(){
+  formaButtons.innerHTML = '';
+  Object.keys(LASER_FORMAS).forEach(key=>{
+    const f = LASER_FORMAS[key];
+    const b = document.createElement('button');
+    b.textContent = f.label + (f.enabled ? '' : ' (pronto)');
+    b.disabled = !f.enabled;
+    if(key===forma) b.classList.add('active');
+    b.addEventListener('click', ()=>{
+      formaButtons.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      forma = key;
+      rebuildCatalogoSelect();
+    });
+    formaButtons.appendChild(b);
+  });
+  notaForma.textContent = 'Arte de corte real por talla, igual que Rectangular y Troquel.';
+  grupoOrientacion.style.display = (forma==='corazon'||forma==='circular') ? 'none' : 'block';
+}
+
+function rebuildCatalogoSelect(){
+  if(linea==='troquel'){
+    catalogoActivo = TROQUEL_CATALOGO;
+  } else {
+    catalogoActivo = LASER_FORMAS[forma].catalogo;
+  }
+  selCatalogo.innerHTML = catalogoActivo.map((it,idx)=>{
+    const precioTxt = it.precio!=null ? cop(it.precio) : 'Cotizar';
+    return `<option value="${idx}">${it.fichas} fichas — ${it.w}x${it.h}cm — ${precioTxt}${it.marcoMadera?' (marco madera)':''}</option>`;
+  }).join('');
+  onCatalogoChange();
+}
+selCatalogo.addEventListener('change', onCatalogoChange);
+
+function onCatalogoChange(){
+  const idx = parseInt(selCatalogo.value)||0;
+  itemActivo = catalogoActivo[idx];
+  if(!itemActivo) return;
+
+  if(linea==='troquel'){
+    templateActivo = { shape:'troquel', file: itemActivo.file, w: itemActivo.w, h: itemActivo.h, rotate: itemActivo.rotate, marcoMadera:false, fichas: itemActivo.fichas };
+  } else {
+    const f = LASER_FORMAS[forma];
+    // Si el propio catálogo trae "file" (arte real por talla, ej. Rectangular), se usa esa
+    // referencia exacta -- si no, se cae al patrón compartido normal/delgado (frame/corazón/círculo).
+    templateActivo = {
+      shape: itemActivo.marcoMadera ? 'marco' : f.shape,
+      w: itemActivo.w, h: itemActivo.h,
+      rotate: itemActivo.rotate || false,
+      file: itemActivo.file || null,
+      marcoMadera: !!itemActivo.marcoMadera, fichas: itemActivo.fichas,
+    };
+  }
+  layoutStage();
+  updatePriceBox();
+}
+cantidadPedido.addEventListener('input', updatePriceBox);
+
+function calcularPrecioTotal(){
+  const precioUnit = itemActivo && itemActivo.precio!=null ? itemActivo.precio : null;
+  const cant = Math.max(1, parseInt(cantidadPedido.value)||1);
+  const detalle = [];
+  let total = 0;
+  for(let i=1;i<=cant;i++){
+    const esPar = i%2===0;
+    const valorUnidad = precioUnit==null ? null : (esPar ? precioUnit*0.8 : precioUnit);
+    if(valorUnidad!=null) total += valorUnidad;
+    detalle.push({unidad:i, esPar, valor:valorUnidad});
+  }
+  return {precioUnit, cant, detalle, total};
+}
+
+function updatePriceBox(){
+  const r = calcularPrecioTotal();
+  if(r.precioUnit==null){
+    priceBox.innerHTML = `<div class="line">Línea Troquelados: sin precio de lista (mayorista, mínimo 50u).</div><div class="line total">Total: A cotizar con asesor</div>`;
+    return;
+  }
+  let html = r.detalle.map(d=>`<div class="line"><span>Unidad ${d.unidad}${d.esPar?' (20% desc.)':''}</span><span>${cop(d.valor)}</span></div>`).join('');
+  html += `<div class="line total"><span>Total (${r.cant} und.)</span><span>${cop(r.total)}</span></div>`;
+  priceBox.innerHTML = html;
+}
+
+/* =====================  STAGE: FOTO + OVERLAY  ===================== */
+// Orientación: el catálogo define lado largo/corto; el usuario elige si el lado largo va
+// horizontal o vertical. effectiveRotate combina eso con la corrección de línea base que ya
+// traía cada arte real de troquel (item.rotate), sin duplicar ni cancelar por error.
+function computeOrientedBox(w, h){
+  const longSide = Math.max(w,h), shortSide = Math.min(w,h);
+  const wantLandscape = (manualOrientation === 'horizontal');
+  return wantLandscape ? {dispW:longSide, dispH:shortSide, wantLandscape} : {dispW:shortSide, dispH:longSide, wantLandscape};
+}
+
+function layoutStage(){
+  if(!templateActivo) return;
+  const shape = templateActivo.shape;
+  const showOrientToggle = (shape==='rect' || shape==='frame' || shape==='troquel') && !templateActivo.marcoMadera;
+  const {dispW, dispH, wantLandscape} = showOrientToggle
+    ? computeOrientedBox(templateActivo.w, templateActivo.h)
+    : {dispW: templateActivo.w, dispH: templateActivo.h, wantLandscape: templateActivo.w>=templateActivo.h};
+
+  const maxBox = 520;
+  const ratio = dispW/dispH;
+  if(ratio >= 1){ stageW = maxBox; stageH = maxBox/ratio; }
+  else { stageH = maxBox; stageW = maxBox*ratio; }
+  stage.style.width = stageW+'px';
+  stage.style.height = stageH+'px';
+  stage.style.clipPath = 'none';
+  stage.style.borderRadius = '4px';
+
+  if(templateActivo.marcoMadera){
+    overlayImg.style.display = 'none';
+    marcoMaderaBox.style.display = 'block';
+    const borderPx = Math.round(Math.min(stageW,stageH)*0.09);
+    marcoMaderaBox.style.border = borderPx+'px solid #8a5a2b';
+    marcoMaderaBox.style.background = 'linear-gradient(135deg, rgba(138,90,43,0.15), rgba(90,58,22,0.15))';
+    marcoMaderaBox.style.boxShadow = 'inset 0 0 0 2px rgba(0,0,0,0.35)';
+  } else {
+    marcoMaderaBox.style.display = 'none';
+    overlayImg.style.display = 'block';
+    overlayImg.style.objectFit = 'cover';
+
+    if(templateActivo.file){
+      // Arte real por talla exacta para las 4 formas: Troquel (15 referencias), Láser Rectangular
+      // (19 de "rectangular laser.pdf"), Portarretrato (4 de "PORTA RETRATO laser.pdf") y Corazón
+      // (5 de "CORAZON laser.pdf", silueta real vía clip-path) y Círculo (3 de "CIRCULAR laser.pdf").
+      // El marco/silueta ya viene incluido en cada SVG -- por eso ya NO se dibuja un marco/recorte
+      // genérico aparte en JS: ese cálculo aproximado no coincidía con la forma real de cada
+      // plantilla, sobre todo cuando la orientación (horizontal/vertical) no era la nativa del archivo.
+      const catalogLandscape = templateActivo.w >= templateActivo.h;
+      const extraFlip = catalogLandscape !== wantLandscape;
+      const effectiveRotate = (!!templateActivo.rotate) !== extraFlip;
+      overlayImg.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(TEMPLATE_SVG[templateActivo.file]);
+      if(effectiveRotate){
+        overlayImg.style.width = stageH+'px'; overlayImg.style.height = stageW+'px';
+        overlayImg.style.left = '50%'; overlayImg.style.top = '50%';
+        overlayImg.style.transform = 'translate(-50%,-50%) rotate(90deg)';
+      } else {
+        overlayImg.style.width = '100%'; overlayImg.style.height = '100%';
+        overlayImg.style.left = '0'; overlayImg.style.top = '0'; overlayImg.style.transform = 'none';
+      }
+      // Recortar la FOTO a la silueta real (no solo mostrar las líneas encima) -- para círculo la
+      // silueta real ya es un círculo geométrico, para corazón se usa el clip-path real embebido al
+      // inicio del <body> (uno por talla, misma silueta exacta que trae cada SVG de corte).
+      if(shape==='heart'){
+        const idx = parseInt(selCatalogo.value)||0;
+        stage.style.clipPath = `url(#corazonClip${idx})`;
+      } else if(shape==='circle'){
+        stage.style.clipPath = 'circle(50% at 50% 50%)';
+      }
+    } else {
+      // Respaldo si algún día se agrega una talla sin arte real todavía: patrón compartido
+      // recortado con clip-path aproximado (nunca fichas inventadas, solo el patrón genérico ya
+      // usado en Rectangular/Troquel de bajo detalle).
+      const file = laserPatternFile(templateActivo.fichas||1, 'rect');
+      overlayImg.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(TEMPLATE_SVG[file]);
+      overlayImg.style.width = '100%'; overlayImg.style.height = '100%';
+      overlayImg.style.left = '0'; overlayImg.style.top = '0'; overlayImg.style.transform = 'none';
+
+      if(shape==='heart'){
+        stage.style.clipPath = `path("${heartPathD(stageW, stageH)}")`;
+      } else if(shape==='circle'){
+        stage.style.clipPath = 'circle(50% at 50% 50%)';
+      } else if(shape==='frame'){
+        stage.style.border = '2px solid #999';
+      }
+    }
+  }
+  if(img.natW) fitPhotoCover();
+}
+
+function fitPhotoCover(){
+  const scaleCover = Math.max(stageW/img.natW, stageH/img.natH);
+  img.scale = scaleCover * (zoomSlider.value/100);
+  img.x = (stageW - img.natW*img.scale)/2;
+  img.y = (stageH - img.natH*img.scale)/2;
+  applyPhotoTransform();
+}
+function applyPhotoTransform(){
+  photoImg.style.transform = `translate(${img.x}px, ${img.y}px) scale(${img.scale})`;
+}
+
+document.getElementById('fileInput').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    const image = new Image();
+    image.onload = ()=>{
+      img.natW = image.naturalWidth; img.natH = image.naturalHeight;
+      photoImg.src = ev.target.result;
+      photoImg.style.width = img.natW+'px'; photoImg.style.height = img.natH+'px';
+      photoImg.style.display = 'block'; placeholder.style.display = 'none';
+      zoomSlider.value = 100; zoomVal.textContent = '100%';
+      fitPhotoCover();
+    };
+    image.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+zoomSlider.addEventListener('input', ()=>{ zoomVal.textContent = zoomSlider.value+'%'; fitPhotoCover(); });
+
+stage.addEventListener('pointerdown', (e)=>{
+  if(!img.natW) return;
+  dragging = true; stage.classList.add('dragging');
+  dragStart = {x:e.clientX, y:e.clientY}; imgStart = {x:img.x, y:img.y};
+  stage.setPointerCapture(e.pointerId);
+});
+stage.addEventListener('pointermove', (e)=>{
+  if(!dragging) return;
+  img.x = imgStart.x + (e.clientX - dragStart.x);
+  img.y = imgStart.y + (e.clientY - dragStart.y);
+  applyPhotoTransform();
+});
+stage.addEventListener('pointerup', ()=>{ dragging=false; stage.classList.remove('dragging'); });
+stage.addEventListener('pointerleave', ()=>{ dragging=false; stage.classList.remove('dragging'); });
+
+/* =====================  EXPORT PNG  ===================== */
+function renderCanvas(){
+  const dpr = 2;
+  const cW = Math.round(stageW*dpr), cH = Math.round(stageH*dpr);
+  const canvas = document.createElement('canvas');
+  canvas.width = cW; canvas.height = cH;
+  const ctx = canvas.getContext('2d');
+  const shape = templateActivo ? templateActivo.shape : null;
+
+  // Foto: se recorta a la silueta REAL (corazón: misma silueta exacta que CORAZON_CLIP_NORM /
+  // los <clipPath> del <body>, una por talla; círculo: geométricamente exacto) -- así la foto
+  // exportada queda igual de recortada que la previsualización en pantalla, no una forma aproximada.
+  ctx.save();
+  if(shape==='heart'){
+    const idx = parseInt(selCatalogo.value)||0;
+    const p = new Path2D(corazonPathScaled(idx, cW, cH));
+    ctx.clip(p);
+  } else if(shape==='circle'){
+    ctx.beginPath(); ctx.arc(cW/2, cH/2, Math.min(cW,cH)/2, 0, Math.PI*2); ctx.clip();
+  }
+  ctx.translate(img.x*dpr, img.y*dpr);
+  ctx.scale(img.scale*dpr, img.scale*dpr);
+  ctx.drawImage(photoImg, 0, 0, img.natW, img.natH);
+  ctx.restore();
+
+  ctx.save();
+  if(templateActivo && templateActivo.marcoMadera){
+    const borderPx = Math.round(Math.min(stageW,stageH)*0.09)*dpr;
+    ctx.strokeStyle = '#8a5a2b';
+    ctx.lineWidth = borderPx;
+    ctx.strokeRect(borderPx/2, borderPx/2, cW-borderPx, cH-borderPx);
+  } else if(templateActivo && templateActivo.file){
+    // Troquel / Rectangular / Portarretrato / Corazón / Círculo: arte real por talla, con su
+    // marco o silueta (si aplica) ya incluido en el SVG -- misma lógica de rotación que en layoutStage().
+    // ow/oh deben reflejar la proporción REAL del archivo (no la de la tabla) para que el
+    // "cover" quede del tamaño correcto -- si rotate:true, el archivo quedó dibujado con w/h
+    // invertidos respecto a la tabla oficial, por eso se invierten aquí también.
+    const ow = templateActivo.rotate ? templateActivo.h : templateActivo.w;
+    const oh = templateActivo.rotate ? templateActivo.w : templateActivo.h;
+    const catalogLandscape = templateActivo.w >= templateActivo.h;
+    const wantLandscape = stageW>=stageH;
+    const extraFlip = catalogLandscape !== wantLandscape;
+    const effectiveRotate = (!!templateActivo.rotate) !== extraFlip;
+    if(effectiveRotate){
+      const boxW = stageH, boxH = stageW;
+      const s = Math.max(boxW/ow, boxH/oh);
+      const dw = ow*s*dpr, dh = oh*s*dpr;
+      ctx.save(); ctx.translate(cW/2, cH/2); ctx.rotate(Math.PI/2);
+      ctx.drawImage(overlayImg, -dw/2, -dh/2, dw, dh);
+      ctx.restore();
+    } else {
+      const s = Math.max(stageW/ow, stageH/oh);
+      const dw = ow*s*dpr, dh = oh*s*dpr;
+      const dx = (stageW*dpr-dw)/2, dy = (stageH*dpr-dh)/2;
+      ctx.drawImage(overlayImg, dx, dy, dw, dh);
+    }
+  } else if(templateActivo){
+    // Respaldo (sin arte real todavía): patrón compartido, cover sobre todo el lienzo.
+    ctx.drawImage(overlayImg, 0, 0, cW, cH);
+  }
+  ctx.restore();
+  return canvas;
+}
+
+function nombreArchivoMontaje(){
+  const nombre = (document.getElementById('cliNombre').value.trim() || 'Cliente').replace(/[\\/:*?"<>|]/g,'').trim().replace(/\s+/g,'_');
+  const medida = itemActivo ? `${itemActivo.w}x${itemActivo.h}cm` : '';
+  const fichas = itemActivo ? `${itemActivo.fichas}fichas` : '';
+  return [nombre, medida, fichas].filter(Boolean).join('_') + '.png';
+}
+
+document.getElementById('btnDescargar').addEventListener('click', ()=>{
+  if(!img.natW){ alert('Sube una foto primero.'); return; }
+  const canvas = renderCanvas();
+  const link = document.createElement('a');
+  link.download = nombreArchivoMontaje();
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+});
+
+/* =====================  ENVÍO WHATSAPP / CORREO  ===================== */
+function textoResumenPedido(){
+  const r = calcularPrecioTotal();
+  const nombre = document.getElementById('cliNombre').value.trim() || 'Cliente';
+  const car = carritoActivo();
+  const otrosItems = (car && car.items.length) ? car.items : [];
+
+  if(otrosItems.length){
+    const itemsTodos = [...otrosItems];
+    if(itemActivo) itemsTodos.push(itemActualComoLinea());
+    const totalTodos = itemsTodos.reduce((s,it)=>s+(it.total||0),0);
+    const cantidadTotal = itemsTodos.reduce((s,it)=>s+(it.cantidad||0),0);
+    const detalle = itemsTodos.map(it => `- ${it.cantidad}x Rompecabezas de ${it.fichas} fichas de ${it.medida.replace('x',' × ')} cm`).join('\n');
+    return `Hola ${nombre}, te compartimos la previsualización de tu pedido:
+
+${detalle}
+
+Cantidad total: ${cantidadTotal} unidades
+Valor total: ${cop(totalTodos)}
+
+Por favor, revisa el diseño y, si todo está de acuerdo con lo que deseas, confírmanos tu aprobación. Una vez aprobado y confirmado el pago, procederemos con la producción.
+
+¡Quedamos atentos!
+Tactical Personalizados`;
+  }
+
+  const totalTxt = r.precioUnit==null ? 'a cotizar' : cop(r.total);
+  const fichas = itemActivo ? itemActivo.fichas : '';
+  const medida = itemActivo ? `${itemActivo.w} × ${itemActivo.h}` : '';
+  const unidadTxt = r.cant===1 ? 'unidad' : 'unidades';
+  return `Hola ${nombre}, te compartimos la previsualización de tu Rompecabezas, de ${fichas} fichas de ${medida} cm.
+
+Cantidad: ${r.cant} ${unidadTxt}
+Valor total: ${totalTxt}
+
+Por favor, revisa el diseño y, si todo está de acuerdo con lo que deseas, confírmanos tu aprobación. Una vez aprobado y confirmado el pago, procederemos con la producción.
+
+¡Quedamos atentos!
+Tactical Personalizados`;
+}
+
+document.getElementById('btnWhatsapp').addEventListener('click', async ()=>{
+  const cel = document.getElementById('cliCel').value.replace(/\D/g,'');
+  const texto = encodeURIComponent(textoResumenPedido());
+  if(img.natW && navigator.canShare){
+    try{
+      const canvas = renderCanvas();
+      const blob = await new Promise(res=>canvas.toBlob(res,'image/png'));
+      const filePng = new File([blob], nombreArchivoMontaje(), {type:'image/png'});
+      if(navigator.canShare({files:[filePng]})){
+        await navigator.share({files:[filePng], text: textoResumenPedido()});
+        return;
+      }
+    }catch(e){ /* si falla el share nativo, cae al enlace wa.me de abajo */ }
+  }
+  const url = cel ? `whatsapp://send?phone=57${cel}&text=${texto}` : `whatsapp://send?text=${texto}`;
+  window.location.href = url;
+  if(img.natW) alert('Se abrió WhatsApp con el mensaje listo. Si no se adjuntó la imagen automáticamente, descárgala con el botón "Descargar imagen" y adjúntala manualmente.');
+});
+
+document.getElementById('btnEmail').addEventListener('click', ()=>{
+  const correo = document.getElementById('cliCorreo').value.trim();
+  const asunto = encodeURIComponent('Tu previsualización de rompecabezas — Tactical');
+  const cuerpo = encodeURIComponent(textoResumenPedido() + '\n\n(Adjunta la imagen descargada con el botón "Descargar imagen" antes de enviar este correo.)');
+  window.location.href = `mailto:${correo}?subject=${asunto}&body=${cuerpo}`;
+});
+
+/* =====================  GUARDAR PEDIDO (localStorage compartido con el Hub)  ===================== */
+const LS_KEY_VENTAS = 'tactical_ventas_b2c_rompecabezas_v1';
+function dbVentas(){ return JSON.parse(localStorage.getItem(LS_KEY_VENTAS)) || []; }
+function guardarDbVentas(db){ localStorage.setItem(LS_KEY_VENTAS, JSON.stringify(db)); }
+// Normaliza pedidos viejos (guardados antes de soportar varios rompecabezas por pedido) al mismo
+// formato items[] que usan los nuevos, para que toda la pantalla de Buscar/Aprobar/Reportes lea
+// siempre de un solo lugar (Conde 2026-08-13).
+function pedidoItems(pedido){
+  if(pedido.items && pedido.items.length) return pedido.items;
+  return [{ linea: pedido.linea, forma: pedido.forma, fichas: pedido.fichas, medida: pedido.medida, cantidad: pedido.cantidad, precioUnitario: pedido.precioUnitario, total: pedido.total, marcoMadera: pedido.marcoMadera, fotoThumb: pedido.fotoThumb }];
+}
+
+// Miniatura de la foto (no la foto completa: en producción sirve más ver exactamente el
+// recorte/zoom que el cliente aprobó, y una miniatura chica no infla el localStorage con
+// muchos pedidos pendientes acumulados). Se genera aquí, al guardar el pedido -- no al aprobar,
+// porque para cuando se aprueba (desde la pestaña "Buscar/Aprobar") la foto ya no está cargada
+// en pantalla, puede ser otro día u otra persona aprobando.
+function generarMiniaturaFoto(){
+  if(!img.natW || !photoImg.complete || !photoImg.naturalWidth) return null;
+  const THUMB = 220;
+  const c = document.createElement('canvas');
+  c.width = THUMB; c.height = THUMB;
+  const cx = c.getContext('2d');
+  cx.fillStyle = '#fff'; cx.fillRect(0,0,THUMB,THUMB);
+  const escalaThumb = THUMB / Math.max(stageW, stageH);
+  cx.save();
+  cx.translate((THUMB-stageW*escalaThumb)/2, (THUMB-stageH*escalaThumb)/2);
+  cx.translate(img.x*escalaThumb, img.y*escalaThumb);
+  cx.scale(img.scale*escalaThumb, img.scale*escalaThumb);
+  cx.drawImage(photoImg, 0, 0, img.natW, img.natH);
+  cx.restore();
+  return c.toDataURL('image/jpeg', 0.6);
+}
+
+// Carrito del pedido en curso (Conde 2026-08-13): permite juntar varios rompecabezas de tamaños/
+// formas distintas para el MISMO cliente en un solo pedido -- ej. 2 de 50x33 rectangular + 1 de
+// 66x50 -- en vez de que cada tamaño se guarde como un pedido/OT separado.
+function carritoActivo(){ return JSON.parse(localStorage.getItem('tactical_carrito_rompecabezas')) || null; }
+function itemActualComoLinea(){
+  const r = calcularPrecioTotal();
+  return {
+    linea, forma: linea==='laser' ? forma : null,
+    fichas: itemActivo.fichas, medida: `${itemActivo.w}x${itemActivo.h}`,
+    cantidad: r.cant, precioUnitario: r.precioUnit, total: r.total,
+    marcoMadera: !!(itemActivo && itemActivo.marcoMadera),
+    fotoThumb: generarMiniaturaFoto(),
+  };
+}
+function refrescarBannerCarrito(){
+  const car = carritoActivo();
+  const el = document.getElementById('carritoBanner');
+  if(!el) return;
+  if(!car || car.items.length===0){ el.style.display='none'; return; }
+  const total = car.items.reduce((s,it)=>s+(it.total||0),0);
+  el.style.display = 'block';
+  el.innerHTML = `🧩 Pedido en curso — <strong>${car.items.length} rompecabezas</strong>, ${cop(total)}<br>
+    <span style="color:var(--muted); font-size:12px;">Configura el siguiente tamaño/forma arriba y agrégalo, o guarda el pedido completo cuando termines.</span><br>
+    <button type="button" class="btn" style="width:auto; margin-top:6px; background:var(--danger); color:#fff;" onclick="cancelarCarrito()">✕ Cancelar y empezar de nuevo</button>`;
+}
+document.getElementById('btnAgregarOtro').addEventListener('click', ()=>{
+  if(!itemActivo){ alert('Selecciona una medida del catálogo primero.'); return; }
+  let car = carritoActivo();
+  if(!car) car = { items: [] };
+  car.items.push(itemActualComoLinea());
+  localStorage.setItem('tactical_carrito_rompecabezas', JSON.stringify(car));
+  refrescarBannerCarrito();
+  alert(`Agregado. Este pedido ya tiene ${car.items.length} rompecabezas. Ahora configura el siguiente tamaño/forma/foto y agrégalo también, o guarda el pedido completo con "Guardar pedido" cuando termines.`);
+});
+function cancelarCarrito(){
+  if(!confirm('¿Cancelar los rompecabezas agregados a este pedido?')) return;
+  localStorage.removeItem('tactical_carrito_rompecabezas');
+  refrescarBannerCarrito();
+}
+
+document.getElementById('btnGuardarPedido').addEventListener('click', ()=>{
+  const nombre = document.getElementById('cliNombre').value.trim();
+  const cel = document.getElementById('cliCel').value.trim();
+  const correo = document.getElementById('cliCorreo').value.trim();
+  const entrega = document.getElementById('cliEntrega').value.trim();
+  if(!nombre || !cel){ alert('Ingresa al menos el nombre y el celular del cliente.'); return; }
+
+  const car = carritoActivo();
+  const items = (car && car.items.length) ? [...car.items] : [];
+  if(itemActivo) items.push(itemActualComoLinea());
+  if(items.length===0){ alert('Selecciona una medida del catálogo, o agrega al menos un rompecabezas al pedido.'); return; }
+
+  const total = items.reduce((s,it)=>s+(it.total||0),0);
+  const cantidad = items.reduce((s,it)=>s+(it.cantidad||0),0);
+  const pedido = {
+    id: Date.now().toString(),
+    fecha: new Date().toISOString(),
+    estado: 'pendiente',
+    nombre, cel, correo, entrega,
+    items, total, cantidad,
+    idKanban: null,
+  };
+  const db = dbVentas();
+  db.push(pedido);
+  guardarDbVentas(db);
+  localStorage.removeItem('tactical_carrito_rompecabezas');
+  refrescarBannerCarrito();
+  document.getElementById('notaGuardado').innerHTML = `<div class="note ok">Pedido guardado como <strong>Pendiente</strong> (${items.length} rompecabezas). Búscalo en la pestaña "Buscar / Aprobar Pedidos" cuando el cliente confirme el pago.</div>`;
+  renderBusqueda();
+});
+
+/* =====================  BUSCAR / APROBAR  ===================== */
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById('view-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab==='buscar') renderBusqueda();
+    if(btn.dataset.tab==='reportes') renderReporte();
+  });
+});
+
+document.getElementById('buscarInput').addEventListener('input', renderBusqueda);
+
+function renderBusqueda(){
+  const q = document.getElementById('buscarInput').value.toLowerCase();
+  const db = dbVentas();
+  const filtrados = db.filter(p =>
+    p.nombre.toLowerCase().includes(q) || p.cel.toLowerCase().includes(q) || (p.correo||'').toLowerCase().includes(q)
+  ).sort((a,b)=> new Date(b.fecha) - new Date(a.fecha));
+
+  const body = document.getElementById('tablaBusquedaBody');
+  body.innerHTML = filtrados.map(p=>{
+    const fechaTxt = new Date(p.fecha).toLocaleDateString('es-CO');
+    const totalTxt = p.total!=null ? cop(p.total) : 'A cotizar';
+    const items = pedidoItems(p);
+    const prodTxt = items.map(it => `${it.cantidad}x ${it.linea==='laser'?'Láser':'Troquel'}${it.forma?' - '+it.forma:''} ${it.medida}cm (${it.fichas}f)`).join('<br>');
+    const pillCls = p.estado==='aprobado' ? 'status-aprobado' : 'status-pendiente';
+    const accion = p.estado==='pendiente'
+      ? `<button class="btn ok" style="padding:5px 10px;width:auto;" onclick="aprobarPedido('${p.id}')">✅ Aprobar (pagó)</button>`
+      : '—';
+    return `<tr><td>${fechaTxt}</td><td>${p.nombre}<br><span style="color:var(--muted);">${p.cel}</span></td><td>${prodTxt}</td><td>${p.cantidad}</td><td>${totalTxt}</td><td><span class="status-pill ${pillCls}">${p.estado}</span></td><td>${accion}</td></tr>`;
+  }).join('');
+  if(filtrados.length===0) body.innerHTML = '<tr><td colspan="7" style="color:var(--muted);">Sin resultados.</td></tr>';
+}
+
+/* =====================  FESTIVOS COLOMBIA / DÍAS HÁBILES  =====================
+   Ley Emiliani: varios festivos se trasladan al lunes siguiente si no cayeron ya en lunes.
+   Los de Semana Santa (Jueves/Viernes Santo) sí se calculan sobre la fecha real de Pascua,
+   pero NO se trasladan (siempre son jueves/viernes). Se usa para calcular automáticamente
+   la fecha de entrega de Rompecabezas al aprobar un pedido (Conde 2026-08-12). */
+function tacticalPascua(anio){
+  // Algoritmo de Meeus/Jones/Butcher (calendario gregoriano) para el Domingo de Pascua.
+  const a = anio % 19, b = Math.floor(anio/100), c = anio % 100;
+  const d = Math.floor(b/4), e = b % 4, f = Math.floor((b+8)/25), g = Math.floor((b-f+1)/3);
+  const h = (19*a + b - d - g + 15) % 30, i = Math.floor(c/4), k = c % 4;
+  const l = (32 + 2*e + 2*i - h - k) % 7, m = Math.floor((a + 11*h + 22*l)/451);
+  const mes = Math.floor((h + l - 7*m + 114)/31);
+  const dia = ((h + l - 7*m + 114) % 31) + 1;
+  return new Date(anio, mes-1, dia);
+}
+function tacticalSiguienteLunes(fecha){
+  const d = new Date(fecha);
+  const dow = d.getDay();
+  if(dow !== 1) d.setDate(d.getDate() + ((8 - dow) % 7 || 7));
+  return d;
+}
+function tacticalMasDias(fecha, n){ const d = new Date(fecha); d.setDate(d.getDate()+n); return d; }
+function tacticalFestivosColombia(anio){
+  const pascua = tacticalPascua(anio);
+  const fechas = [
+    new Date(anio,0,1), tacticalSiguienteLunes(new Date(anio,0,6)), tacticalSiguienteLunes(new Date(anio,2,19)),
+    tacticalMasDias(pascua,-3), tacticalMasDias(pascua,-2), new Date(anio,4,1),
+    tacticalSiguienteLunes(tacticalMasDias(pascua,39)), tacticalSiguienteLunes(tacticalMasDias(pascua,60)), tacticalSiguienteLunes(tacticalMasDias(pascua,68)),
+    tacticalSiguienteLunes(new Date(anio,5,29)), new Date(anio,6,20), new Date(anio,7,7),
+    tacticalSiguienteLunes(new Date(anio,7,15)), tacticalSiguienteLunes(new Date(anio,9,12)), tacticalSiguienteLunes(new Date(anio,10,1)),
+    tacticalSiguienteLunes(new Date(anio,10,11)), new Date(anio,11,8), new Date(anio,11,25),
+  ];
+  return new Set(fechas.map(f => `${f.getFullYear()}-${String(f.getMonth()+1).padStart(2,'0')}-${String(f.getDate()).padStart(2,'0')}`));
+}
+const _festivosCacheColombia = {};
+function tacticalEsHabilColombia(fecha){
+  const dow = fecha.getDay();
+  if(dow===0 || dow===6) return false;
+  const anio = fecha.getFullYear();
+  if(!_festivosCacheColombia[anio]) _festivosCacheColombia[anio] = tacticalFestivosColombia(anio);
+  const key = `${anio}-${String(fecha.getMonth()+1).padStart(2,'0')}-${String(fecha.getDate()).padStart(2,'0')}`;
+  return !_festivosCacheColombia[anio].has(key);
+}
+function tacticalSumarDiasHabilesColombia(fechaInicio, n){
+  let d = new Date(fechaInicio);
+  let contados = 0;
+  while(contados < n){
+    d.setDate(d.getDate()+1);
+    if(tacticalEsHabilColombia(d)) contados++;
+  }
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function aprobarPedido(id){
+  const db = dbVentas();
+  const pedido = db.find(p=>p.id===id);
+  if(!pedido) return;
+  pedido.estado = 'aprobado';
+  pedido.fechaAprobado = new Date().toISOString();
+
+  // Cliente en el CRM compartido del Hub (mismo esquema que tactical_crm_clientes_v2). soloB2C:true
+  // -- Conde 2026-08-12: los clientes de rompecabezas suelen comprar una sola vez y son muchos, así
+  // que se marcan para que las demás calculadoras los oculten de su buscador de clientes (siguen
+  // guardados aquí para historial/LTV, solo no aparecen en el autocompletar al cotizar otras líneas).
+  let db_clientes = JSON.parse(localStorage.getItem('tactical_crm_clientes_v2')) || [];
+  let cli = db_clientes.find(c => c.wp === pedido.cel);
+  if(!cli){
+    cli = { id: Date.now().toString()+'_cli', empresa: pedido.nombre, nombre: pedido.nombre, wp: pedido.cel, correo: pedido.correo||'', clase:'nuevo', ltv:0, tipo:'personalizado', identificacion:'', soloB2C:true };
+    db_clientes.push(cli);
+  }
+  cli.ltv += (pedido.total||0);
+  localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
+
+  // Ficha de producción en el Kanban compartido del Hub (mismo esquema que tactical_kanban_fichas_v1).
+  // Entra directo a Diseño (no a Cotización Aprobada, ya está aprobada) y con fecha de entrega
+  // automática: 4 días hábiles en Colombia para 500 fichas o menos, 5 para más de 500.
+  let db_kanban = JSON.parse(localStorage.getItem('tactical_kanban_fichas_v1')) || [];
+  const items = pedidoItems(pedido);
+  const hayLaser = items.some(it=>it.linea==='laser');
+  const hayTroquel = items.some(it=>it.linea!=='laser');
+  const checklistBase = [
+    {texto:'Impresión', hecho:false, riel:null},
+    ...(hayLaser ? [{texto:'Corte láser', hecho:false, riel:null}] : []),
+    ...(hayTroquel ? [{texto:'Troquelado', hecho:false, riel:null}] : []),
+    {texto:'Armado / empaque', hecho:false, riel:null},
+  ];
+  const maxFichas = Math.max(...items.map(it=>it.fichas||0));
+  const diasHabiles = maxFichas > 500 ? 5 : 4;
+  const fechaEntrega = tacticalSumarDiasHabilesColombia(new Date(), diasHabiles);
+  const titulo = items.length > 1
+    ? `${pedido.nombre} — ${items.length} rompecabezas (${pedido.cantidad} unidades)`
+    : `${pedido.nombre} — ${items[0].fichas} fichas — ${items[0].medida}cm`;
+  const lineasFicha = items.map(it => ({
+    linea:'rompecabezas',
+    desc: `${it.cantidad}x ${it.linea==='laser'?'Láser':'Troquel'}${it.forma?' - '+it.forma:''} ${it.medida}cm (${it.fichas}f)`,
+    cantidad: it.cantidad, fotoUrl: it.fotoThumb||null,
+  }));
+  const ficha = {
+    id: Date.now().toString()+'_kb', ot: null,
+    idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, titulo,
+    columna: 'diseno', lineas: lineasFicha,
+    checklist: checklistBase, urgente:false, fechaEntrega, entrega: pedido.entrega||'',
+    fechaCreacion: new Date().toISOString(), responsable:'', origen:'b2c',
+  };
+  db_kanban.push(ficha);
+  localStorage.setItem('tactical_kanban_fichas_v1', JSON.stringify(db_kanban));
+
+  pedido.idKanban = ficha.id;
+  guardarDbVentas(db);
+  renderBusqueda();
+  alert(`Pedido aprobado. Se creó la ficha de producción en el Kanban del Hub (columna Diseño, entrega estimada ${fechaEntrega}) y se registró la venta.`);
+}
+
+/* =====================  REPORTES / DESCARGA CSV  ===================== */
+function renderReporte(){
+  const db = dbVentas().filter(p=>p.estado==='aprobado');
+  const totalVentas = db.reduce((s,p)=>s+(p.total||0),0);
+  const totalUnidades = db.reduce((s,p)=>s+(p.cantidad||0),0);
+  document.getElementById('reportKpis').innerHTML = `
+    <div class="line"><span>Pedidos aprobados</span><span>${db.length}</span></div>
+    <div class="line"><span>Unidades vendidas</span><span>${totalUnidades}</span></div>
+    <div class="line total"><span>Ingresos totales</span><span>${cop(totalVentas)}</span></div>
+  `;
+}
+
+document.getElementById('btnDescargarCSV').addEventListener('click', ()=>{
+  const db = dbVentas().filter(p=>p.estado==='aprobado');
+  const headers = ['fecha','fechaAprobado','nombre','cel','correo','linea','forma','fichas','medida','cantidad','precioUnitario','total'];
+  const rows = db.map(p => {
+    const items = pedidoItems(p);
+    const resumen = { ...p, ...items[0], cantidad: p.cantidad, total: p.total,
+      forma: items.length>1 ? `${items.length} tamaños distintos` : items[0].forma,
+      fichas: items.length>1 ? items.map(it=>it.fichas).join('+') : items[0].fichas,
+      medida: items.length>1 ? items.map(it=>it.medida).join(' / ') : items[0].medida };
+    return headers.map(h => `"${(resumen[h]??'').toString().replace(/"/g,'""')}"`).join(',');
+  });
+  const csv = headers.join(',') + '\n' + rows.join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'ventas_b2c_rompecabezas.csv';
+  link.click();
+});
+
+/* =====================  INIT  ===================== */
+buildFormaButtons();
+rebuildCatalogoSelect();
+renderBusqueda();
+renderReporte();
+refrescarBannerCarrito();
+</script>
+</body>
+</html>

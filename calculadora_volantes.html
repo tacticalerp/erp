@@ -77,19 +77,20 @@
   .doc-firma-label{ font-size:0.78rem; color:var(--texto-suave); margin-top:4px; }
   .doc-condiciones{ font-size:0.8rem; color:var(--texto-suave); line-height:1.6; }
   .doc-condiciones ul{ margin:4px 0; padding-left:18px; }
+  @page { margin: 0; }
   @media print{
     body *{ visibility:hidden; }
     #print-area, #print-area *{ visibility:visible; }
-    #print-area{ display:block !important; position:absolute; left:0; top:0; width:100%; padding:20px; }
+    #print-area{ display:block !important; position:absolute; left:0; top:0; width:100%; padding:20px; box-sizing:border-box; }
   }
 </style>
 </head>
 <body>
 
-<header>
+<header style="display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;"><div>
   <h1>Calculadora de Cotización — Volantes, Afiches y Plegables (BETA)</h1>
   <p>Papelería Comercial — Tactical Marketing Group SAS. Reutiliza el motor de impresión de Cuadernos.</p>
-</header>
+</div><button type="button" onclick="tacticalIrHub('calculadoras')" style="flex:0 0 auto; background:#c0392b; color:#fff; border:none; border-radius:6px; padding:10px 16px; font-size:13.5px; font-weight:700; cursor:pointer; white-space:nowrap;">&#8592; Otras Calculadoras</button></header>
 <div class="beta-banner">
   ⚠️ Versión BETA sin validar contra cotizaciones reales todavía.
 </div>
@@ -114,6 +115,30 @@
           <datalist id="cli-correo-datalist"></datalist>
         </div>
       </div>
+      <div class="fila">
+        <div class="campo">
+          <label>Tipo de Cliente (Contabilidad):</label>
+          <select id="in-cli-tipo">
+            <option value="">-- Sin definir --</option>
+            <option value="corporativo">Corporativo (Factura electrónica)</option>
+            <option value="personalizado">Personalizado (Cuenta de Cobro)</option>
+          </select>
+        </div>
+        <div class="campo"><label>Identificación (NIT / CC):</label><input type="text" id="in-cli-identificacion" placeholder="Ej: 900.123.456-7"></div>
+        <div class="campo"><label>Vendedor a cargo:</label><select id="in-vendedor"></select></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Tipo de producto</h2>
+      <div class="fila">
+        <div class="campo">
+          <select id="in-tipoProducto" onchange="onCambioTipoProducto()">
+            <option value="volante">Volante / Afiche / Plegable</option>
+            <option value="iman">Imanes (adhesivo + lámina de imán + corte)</option>
+          </select>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -135,61 +160,95 @@
       <div class="hint" id="hint-tamano"></div>
     </div>
 
-    <div class="card">
-      <h2>2. Sustrato e impresión</h2>
+    <div id="seccion-volante-normal">
+      <div class="card">
+        <h2>2. Sustrato e impresión</h2>
+        <div class="fila">
+          <div class="campo">
+            <label>Papel/Sustrato:</label>
+            <select id="in-sustrato"></select>
+            <div class="hint">Digital solo elegible hasta 240gr — con sustratos más pesados va siempre litográfico. Se elige la ruta más barata.</div>
+          </div>
+        </div>
+        <div class="fila">
+          <div class="campo chico">
+            <label>Tintas tiro:</label>
+            <input type="number" id="in-tintasTiro" value="4" min="0" max="4">
+          </div>
+          <div class="campo chico">
+            <label>Tintas retiro:</label>
+            <input type="number" id="in-tintasRetiro" value="4" min="0" max="4">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>3. Plastificado (opcional)</h2>
+        <div class="fila">
+          <div class="checkbox-row">
+            <input type="checkbox" id="in-plastificado" onchange="onCambioPlastificado()">
+            <label for="in-plastificado" style="font-weight:normal;">El cliente sí pidió plastificado</label>
+          </div>
+        </div>
+        <div class="fila" id="fila-caras-plastificado" style="display:none;">
+          <div class="campo chico">
+            <label>Caras a plastificar:</label>
+            <select id="in-carasPlastificado">
+              <option value="1">1 cara</option>
+              <option value="2">2 caras</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>4. ¿Es plegable?</h2>
+        <div class="fila">
+          <div class="checkbox-row">
+            <input type="checkbox" id="in-esPlegable" onchange="onCambioPlegable()">
+            <label for="in-esPlegable" style="font-weight:normal;">Sí, lleva plegado mecánico (díptico o tríptico)</label>
+          </div>
+        </div>
+        <div class="fila" id="fila-secciones" style="display:none;">
+          <div class="campo chico">
+            <label>Secciones:</label>
+            <select id="in-secciones">
+              <option value="2">Díptico (2 secciones)</option>
+              <option value="3">Tríptico (3 secciones)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="seccion-iman" style="display:none;">
+      <h2>2. Imán: adhesivo, lámina y corte</h2>
       <div class="fila">
         <div class="campo">
-          <label>Papel/Sustrato:</label>
-          <select id="in-sustrato"></select>
-          <div class="hint">Digital solo elegible hasta 240gr — con sustratos más pesados va siempre litográfico. Se elige la ruta más barata.</div>
+          <label>Adhesivo (se imprime aquí):</label>
+          <select id="in-sustratoIman"></select>
         </div>
       </div>
       <div class="fila">
         <div class="campo chico">
-          <label>Tintas tiro:</label>
-          <input type="number" id="in-tintasTiro" value="4" min="0" max="4">
-        </div>
-        <div class="campo chico">
-          <label>Tintas retiro:</label>
-          <input type="number" id="in-tintasRetiro" value="4" min="0" max="4">
+          <label>Tintas (impresión a 1 cara):</label>
+          <input type="number" id="in-tintasTiroIman" value="4" min="0" max="4">
         </div>
       </div>
-    </div>
-
-    <div class="card">
-      <h2>3. Plastificado (opcional)</h2>
-      <div class="fila">
-        <div class="checkbox-row">
-          <input type="checkbox" id="in-plastificado" onchange="onCambioPlastificado()">
-          <label for="in-plastificado" style="font-weight:normal;">El cliente sí pidió plastificado</label>
-        </div>
-      </div>
-      <div class="fila" id="fila-caras-plastificado" style="display:none;">
-        <div class="campo chico">
-          <label>Caras a plastificar:</label>
-          <select id="in-carasPlastificado">
-            <option value="1">1 cara</option>
-            <option value="2">2 caras</option>
+      <div class="hint" style="margin-top:2px;">Lámina de imán: Imán C5 100x60cm — <span id="hint-precioLaminaIman"></span>/lámina. El adhesivo impreso se pega sobre esta lámina.</div>
+      <div class="fila" style="margin-top:10px;">
+        <div class="campo">
+          <label>Corte:</label>
+          <select id="in-corteIman" onchange="onCambioCorteIman()">
+            <option value="laser">Corte láser</option>
+            <option value="troquel">Troquelado (se fabrica desde cero)</option>
           </select>
         </div>
       </div>
-    </div>
-
-    <div class="card">
-      <h2>4. ¿Es plegable?</h2>
-      <div class="fila">
-        <div class="checkbox-row">
-          <input type="checkbox" id="in-esPlegable" onchange="onCambioPlegable()">
-          <label for="in-esPlegable" style="font-weight:normal;">Sí, lleva plegado mecánico (díptico o tríptico)</label>
-        </div>
-      </div>
-      <div class="fila" id="fila-secciones" style="display:none;">
-        <div class="campo chico">
-          <label>Secciones:</label>
-          <select id="in-secciones">
-            <option value="2">Díptico (2 secciones)</option>
-            <option value="3">Tríptico (3 secciones)</option>
-          </select>
+      <div class="fila" id="fila-troquelIman" style="display:none;">
+        <div class="campo">
+          <label>Costo troquel nuevo (COP, manual):</label>
+          <input type="number" id="in-costoTroquelIman" value="0" min="0">
         </div>
       </div>
     </div>
@@ -202,8 +261,16 @@
           <input type="number" id="in-utilidadPct" value="40" step="1">
         </div>
         <div class="campo chico">
-          <label>% Comisión:</label>
+          <label>% Ventas:</label>
           <input type="number" id="in-comisionPct" value="3" step="0.5">
+        </div>
+      </div>
+      <div style="margin-top:10px; border-top:1px solid var(--borde); padding-top:8px;">
+        <div onclick="toggleCondicionesComerciales()" style="cursor:pointer; font-size:0.8rem; color:var(--azul); font-weight:600; user-select:none;">
+          <span id="condicionesComerciales-flecha">▸</span> Ajustar condiciones comerciales de esta cotización
+        </div>
+        <div id="condicionesComerciales-panel" style="display:none; margin-top:6px;">
+          <textarea id="in-condicionesComerciales" rows="5" style="width:100%; box-sizing:border-box;"></textarea>
         </div>
       </div>
     </div>
@@ -215,11 +282,24 @@
     <div class="card">
       <h2>Resultado</h2>
       <div id="resultado-contenido"><div class="placeholder">Completa el formulario y presiona Calcular.</div></div>
+      <div class="campo" style="margin-top:10px;"><label>Descripción para el cliente (editable):</label><input type="text" id="in-descCliente" style="width:100%; box-sizing:border-box;"></div>
+      <div class="campo" style="margin-top:10px;">
+        <label>Variante de foto (opcional -- solo si creaste variantes en la Fototeca para esta línea):</label>
+        <select id="in-varianteFoto" style="width:100%; box-sizing:border-box;"><option value="">(Automática de la línea)</option></select>
+      </div>
+      <div class="campo" style="margin-top:10px;">
+        <label>Foto personalizada para esta cotización (opcional -- reemplaza la de la Fototeca, solo para este pedido):</label>
+        <div id="fotoPersonal-zona" tabindex="0" style="min-height:60px; border:2px dashed #cbd5e0; border-radius:6px; display:flex; align-items:center; justify-content:center; text-align:center; padding:8px; cursor:pointer; background:#f8fafc; color:#94a3b8; font-size:0.78rem;" onpaste="fotoPersonalPegar(event)" onclick="document.getElementById('fotoPersonal-input').click()">📎 Clic aquí y pega (Ctrl+V) o sube un archivo</div>
+        <input type="file" accept="image/*" id="fotoPersonal-input" style="display:none;" onchange="fotoPersonalArchivo(this)">
+      </div>
       <button class="btn-primario" style="margin-top:10px; background:var(--verde);" onclick="guardarCotizacionClick()">💾 Guardar y Generar PDF Cliente</button>
+      <button class="btn-primario" style="margin-top:8px; background:#4a5568;" onclick="generarOrdenProduccion()">🏭 Generar Orden de Producción</button>
       <button class="btn-primario" style="margin-top:8px; background:#25D366;" onclick="compartirWhatsAppClick()">📲 Enviar por WhatsApp</button>
       <button class="btn-primario" style="margin-top:8px; background:var(--azul);" onclick="iniciarOAgregarPedido()">📦 Agregar a un pedido (varios productos, mismo cliente)</button>
+      <button class="btn-primario" style="margin-top:8px; background:#805ad5;" onclick="agregarOpcionComparacion()">🆚 Agregar como opción a comparar (el cliente elige una)</button>
       <div id="cot-ot-nota" style="display:none; margin-top:10px; padding:8px 12px; background:#eef2f7; border-left:4px solid var(--azul); border-radius:4px; font-size:0.9rem;"></div>
       <div id="pedido-banner" style="display:none; margin-top:10px; padding:8px 12px; background:#eafaf0; border-left:4px solid var(--verde); border-radius:4px; font-size:0.85rem;"></div>
+      <div id="comparacion-banner" style="display:none; margin-top:10px; padding:8px 12px; background:#f3ecfb; border-left:4px solid #805ad5; border-radius:4px; font-size:0.85rem;"></div>
     </div>
     <div class="card" id="card-recomendaciones">
       <h2>⚠️ Recomendaciones de Producción</h2>
@@ -281,6 +361,16 @@ const VOLANTE_TRANSPORTE_CANTIDAD_MOTO_CARTA = 2000;   // clase "carta": moto si
 const VOLANTE_TRANSPORTE_CANTIDAD_MOTO_MEDIO = 1500;   // clases "25x35"/"50x35": moto si cantidad < este umbral
 const VOLANTE_GRAFADO_GRAMAJE_MINIMO = 150; // plegables con gramaje >150g necesitan grafado
 
+/* ============ IMANES (adhesivo impreso + lámina Imán C5 + corte, Conde 2026-08-14) ============ */
+const SUSTRATOS_ADHESIVOS = tacticalSeleccionarSustratos([
+  "Adhesivo Ritrama - Corriente__160","Adhesivo Ritrama - Seguridad__160","Adhesivo Ritrama - Vinilo Blanco__220",
+  "Adhesivo Ritrama - Transparente__160","Adhesivo Ritrama - Polipropileno__220","Adhesivo Ritrama - Bond__160",
+  "Adhesivo Arclad - PXH K80__160","Adhesivo Arclad - Corriente P3__160","Adhesivo Arclad - Hotmelt__160","Adhesivo Arclad - P4__160",
+]);
+const IMAN_LAMINA_CM = {ancho:100, alto:60};
+const IMAN_LAMINA_PRECIO_COP = PRECIOS_IMAN_C5_LAMINA_COP;
+const IMAN_CORTE_LASER_COP_PIEZA = PRECIOS_CORTE_LASER_IMAN_COP;
+
 /* ============ FUNCIONES DE MOTOR (copiadas 1:1 de motor_cotizacion/calculadora.html — Cuadernos) ============ */
 function piezasPorPliego(pa,pal,pw,ph){
   const sinRotar = Math.floor(pw/pa)*Math.floor(ph/pal);
@@ -289,9 +379,9 @@ function piezasPorPliego(pa,pal,pw,ph){
 }
 function ordenar2(a,b){ return a<=b ? [a,b] : [b,a]; }
 
-function costoMaterialPliegos(pa,pal,sustratoNombre,gramaje,piezasNecesarias,mermaHojas=0){
+function costoMaterialPliegos(pa,pal,sustratoNombre,gramaje,piezasNecesarias,mermaHojas=0,tablaSustratos=SUSTRATOS){
   const key = sustratoNombre+"__"+gramaje;
-  const precios = SUSTRATOS[key];
+  const precios = tablaSustratos[key];
   if(!precios) throw new Error("Sustrato no encontrado: "+sustratoNombre+" "+gramaje+"g");
   const piezasTotales = piezasNecesarias + mermaHojas;
   let mejores=[];
@@ -300,16 +390,24 @@ function costoMaterialPliegos(pa,pal,sustratoNombre,gramaje,piezasNecesarias,mer
     const [pw,ph]=PLIEGOS_CM[formato];
     const precioPliego = precioMap[formato];
     if(precioPliego==null) continue;
-    const nPorPliego = piezasPorPliego(pa,pal,pw,ph);
+    const colsSinRotar = Math.floor(pw/pa), filasSinRotar = Math.floor(ph/pal);
+    const nSinRotar = colsSinRotar*filasSinRotar;
+    const colsRotada = Math.floor(pw/pal), filasRotada = Math.floor(ph/pa);
+    const nRotada = colsRotada*filasRotada;
+    const rotado = nRotada > nSinRotar;
+    const nPorPliego = rotado ? nRotada : nSinRotar;
+    const columnas = rotado ? colsRotada : colsSinRotar;
+    const filas = rotado ? filasRotada : filasSinRotar;
     if(nPorPliego===0) continue;
     const nPliegos = Math.ceil(piezasTotales/nPorPliego);
     const costoTotal = nPliegos*precioPliego;
-    mejores.push([costoTotal, formato, nPorPliego, nPliegos, precioPliego]);
+    mejores.push([costoTotal, formato, nPorPliego, nPliegos, precioPliego, columnas, filas, rotado, pw, ph]);
   }
   if(mejores.length===0) throw new Error(`La pieza ${pa}x${pal}cm no cabe en ningún pliego disponible para ${sustratoNombre} ${gramaje}g`);
   mejores.sort((x,y)=>x[0]-y[0]);
-  const [costoTotal, formato, nPorPliego, nPliegos, precioPliego] = mejores[0];
-  return {formato, piezasPorPliego:nPorPliego, nPliegos, precioPliego, costoTotal};
+  const [costoTotal, formato, nPorPliego, nPliegos, precioPliego, columnas, filas, rotado, pliegoAncho, pliegoAlto] = mejores[0];
+  const planoCorte = {piezaAncho:pa, piezaAlto:pal, pliegoAncho, pliegoAlto, columnas, filas, rotado, piezasPorPliego:nPorPliego};
+  return {formato, piezasPorPliego:nPorPliego, nPliegos, precioPliego, costoTotal, planoCorte};
 }
 
 function claseFormatoDigital(ancho,alto){
@@ -334,17 +432,28 @@ function mermaDigitalHojas(cantTintas){
   return cantTintas>=2 ? DIGITAL_MERMA_HOJAS.policromia : DIGITAL_MERMA_HOJAS.negro;
 }
 function costoImpresionDigital(nPaginas,caras,esColor,ancho,alto,cantidadUnidades=1){
-  const clase=claseFormatoDigital(ancho,alto);
-  if(clase===null) return null;
-  const [sheetW,sheetH]=DIGITAL_FORMATOS_CM[clase];
+  const claseMin=claseFormatoDigital(ancho,alto);
+  if(claseMin===null) return null;
+  // Probar el pliego mínimo que cabe Y todos los más grandes -- a veces sale más barato
+  // usar un pliego mayor porque caben más piezas por clic y se necesitan menos clics en total
+  // (mismo criterio que ya se usaba en offset con mejores.sort()) (Conde 2026-08-14).
+  const ordenClasesDigital=['carta','octavo','pliego_max'];
+  const clasesViables=ordenClasesDigital.slice(ordenClasesDigital.indexOf(claseMin));
   const margenCm=DIGITAL_PINZA_MM/10;
-  let piezasPorClic=piezasPorPliego(ancho,alto,sheetW,sheetH-margenCm);
-  if(piezasPorClic===0) piezasPorClic=1;
-  const nClics=Math.ceil(nPaginas/piezasPorClic)*caras;
-  const precioClic=DIGITAL_CLIC_COP[clase][esColor?"color":"negro"];
   const descuento=descuentoVolumenDigital(cantidadUnidades);
-  const total=nClics*precioClic*(1-descuento);
-  return {total, via:"digital", nClics, precioClic, descuentoPct:descuento, clase};
+  let opciones=[];
+  for(const clase of clasesViables){
+    const [sheetW,sheetH]=DIGITAL_FORMATOS_CM[clase];
+    let piezasPorClic=piezasPorPliego(ancho,alto,sheetW,sheetH-margenCm);
+    if(piezasPorClic===0) piezasPorClic=1;
+    const nClics=Math.ceil(nPaginas/piezasPorClic)*caras;
+    const precioClic=DIGITAL_CLIC_COP[clase][esColor?"color":"negro"];
+    const total=nClics*precioClic*(1-descuento);
+    opciones.push({total, nClics, precioClic, clase, piezasPorClic});
+  }
+  opciones.sort((x,y)=>x.total-y.total);
+  const mejor=opciones[0];
+  return {total:mejor.total, via:"digital", nClics:mejor.nClics, precioClic:mejor.precioClic, descuentoPct:descuento, clase:mejor.clase, piezasPorClic:mejor.piezasPorClic};
 }
 
 function fraccionPliegoOffset(ancho,alto,esPolicromia=false){
@@ -523,6 +632,72 @@ function cotizarVolante(p){
   };
 }
 
+/* ============ CÁLCULO — IMANES (adhesivo impreso + lámina Imán C5 + corte) ============
+   El adhesivo se cotiza igual que un volante normal (mismo motor de material+impresión
+   ya validado). Encima se suma: cuántas láminas de Imán C5 100x60cm hacen falta para
+   cortar todas las piezas, y el corte (láser a $/pieza, o troquel con costo manual porque
+   casi siempre se fabrica desde cero -- no hay banco de troqueles de imanes). No aplican
+   refile/empaque/plegado comercial (eso es solo para papelería suelta). */
+function cotizarIman(p){
+  const [sustratoNombre, gramajeStr] = p.sustrato.split("__");
+  const gramaje = parseFloat(gramajeStr);
+  const cantTintas = Math.max(p.tintasTiro, 1);
+  const esPolicromia = p.tintasTiro>=4;
+  const esColor = cantTintas>=2;
+
+  let impDigital = null;
+  if(elegibleDigital(p.ancho, p.alto, gramaje, p.cantidad)){
+    const merma = mermaDigitalHojas(cantTintas);
+    impDigital = costoImpresionDigital(p.cantidad+merma, 1, esColor, p.ancho, p.alto, p.cantidad);
+  }
+  const mermaOffset = mermaOffsetHojas(p.cantidad, cantTintas);
+  const impOffset = costoImpresionOffset(p.cantidad+mermaOffset, p.tintasTiro, 0, esPolicromia, p.ancho, p.alto);
+  const usaDigital = !!(impDigital && impDigital.total < impOffset.total);
+  const detalleImpresion = usaDigital ? impDigital : impOffset;
+
+  const piezasConMerma = p.cantidad + (usaDigital ? mermaDigitalHojas(cantTintas) : mermaOffset);
+  const detalleMaterial = costoMaterialPliegos(p.ancho, p.alto, sustratoNombre, gramaje, piezasConMerma, 0, SUSTRATOS_ADHESIVOS);
+
+  let piezasPorLamina = piezasPorPliego(p.ancho, p.alto, IMAN_LAMINA_CM.ancho, IMAN_LAMINA_CM.alto);
+  if(piezasPorLamina===0) piezasPorLamina = 1;
+  const nLaminas = Math.ceil(p.cantidad/piezasPorLamina);
+  const costoLaminaIman = nLaminas*IMAN_LAMINA_PRECIO_COP;
+
+  let costoCorte, detalleCorte;
+  if(p.corteTipo==='laser'){
+    costoCorte = p.cantidad*IMAN_CORTE_LASER_COP_PIEZA;
+    detalleCorte = {via:'laser', total:costoCorte};
+  } else {
+    costoCorte = p.costoTroquelManual||0;
+    detalleCorte = {via:'troquel', total:costoCorte};
+  }
+
+  const costoDirecto = detalleMaterial.costoTotal + detalleImpresion.total + costoLaminaIman + costoCorte;
+
+  const disenoCop = disenoYPreprensa(costoDirecto);
+  const fondoSeguridadPct = tramoFondoSeguridad(costoDirecto);
+  const fondoSeguridadCop = costoDirecto*fondoSeguridadPct;
+  const sherpaCop = SHERPA_BASE_COP;
+  const transporte = {via:"moto", total:VOLANTE_TRANSPORTE_MOTO_COP};
+
+  const subtotal = costoDirecto + disenoCop + fondoSeguridadCop + sherpaCop + transporte.total;
+
+  const precioVentaTotal = precioVentaDesdeSubtotal(subtotal, p.utilidadPct, p.comisionPct);
+  const precioVentaUnitario = precioVentaTotal/p.cantidad;
+  const ivaTotal = precioVentaTotal*0.19;
+  const precioFinalTotal = precioVentaTotal+ivaTotal;
+  const gananciaTotal = precioVentaTotal - subtotal;
+  const gananciaUnitaria = gananciaTotal/p.cantidad;
+
+  return {
+    esIman:true, usaDigital, detalleImpresion, detalleMaterial, gramaje, tintasTiro:p.tintasTiro,
+    piezasPorLamina, nLaminas, costoLaminaIman, detalleCorte, costoCorte,
+    costoDirecto, disenoCop, fondoSeguridadPct, fondoSeguridadCop, sherpaCop, transporte,
+    subtotal, precioVentaTotal, precioVentaUnitario, ivaTotal, precioFinalTotal,
+    gananciaTotal, gananciaUnitaria,
+  };
+}
+
 /* ============ RECOMENDACIONES DE PRODUCCIÓN ============ */
 const RECOMENDACIONES_PRODUCCION = [
   { aplica:(r)=>r.tintasTiro>=4 && r.tintasRetiro>=4, texto:"Impresión 4x4 con fondo: verificar que no se repise el material (que no se transparente la tinta del otro lado)." },
@@ -545,7 +720,29 @@ function poblarSustratos(){
   }).join("");
   sel.value = "Propalcote__150";
 }
+function poblarSustratosIman(){
+  const sel = document.getElementById("in-sustratoIman");
+  if(!sel) return;
+  sel.innerHTML = Object.keys(SUSTRATOS_ADHESIVOS).map(key => {
+    const [nombre,gramaje] = key.split("__");
+    return `<option value="${key}">${nombre} ${gramaje}g</option>`;
+  }).join("");
+}
+function esModoIman(){
+  const sel = document.getElementById('in-tipoProducto');
+  return sel && sel.value === 'iman';
+}
+function onCambioTipoProducto(){
+  const iman = esModoIman();
+  document.getElementById('seccion-volante-normal').style.display = iman ? 'none' : 'block';
+  document.getElementById('seccion-iman').style.display = iman ? 'block' : 'none';
+  document.getElementById('hint-tamano').style.display = iman ? 'none' : 'block';
+}
+function onCambioCorteIman(){
+  document.getElementById('fila-troquelIman').style.display = document.getElementById('in-corteIman').value==='troquel' ? 'flex' : 'none';
+}
 function onCambioTamano(){
+  if(esModoIman()) return;
   const ancho = parseFloat(document.getElementById("in-ancho").value)||0;
   const alto = parseFloat(document.getElementById("in-alto").value)||0;
   const tamano = claseTamanoComercial(ancho, alto);
@@ -561,6 +758,7 @@ function onCambioPlastificado(){
 }
 
 function calcular(){
+  if(esModoIman()) return calcularIman();
   const cont = document.getElementById("resultado-contenido");
   try{
     const p = {
@@ -608,14 +806,68 @@ function calcular(){
     filas += `<tr><td>Transporte (${r.transporte.via})</td><td class="num">${cop(r.transporte.total)}</td></tr>`;
     filas += `<tr class="sub"><td>Subtotal</td><td class="num">${cop(r.subtotal)}</td></tr>`;
     filas += `<tr><td>Precio de venta (total pedido)</td><td class="num">${cop(r.precioVentaTotal)}</td></tr>`;
-    filas += `<tr class="sub"><td>Precio de venta UNITARIO</td><td class="num">${cop(r.precioVentaUnitario)}</td></tr>`;
+    filas += `<tr style="font-weight:bold; color:var(--rojo); font-size:1.05rem; border-top:2px solid var(--rojo);"><td>Precio de venta UNITARIO</td><td class="num">${cop(r.precioVentaUnitario)}</td></tr>`;
     filas += `<tr><td>IVA (19%)</td><td class="num">${cop(r.ivaTotal)}</td></tr>`;
-    filas += `<tr class="total"><td>Precio final total (con IVA)</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
-    filas += `<tr class="total" style="color:var(--verde);"><td>Ganancia total del pedido (utilidad+comisión, sin IVA)</td><td class="num">${cop(r.gananciaTotal)}</td></tr>`;
+    filas += `<tr style="font-weight:bold;"><td>Precio final total (con IVA)</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
+    filas += `<tr style="font-weight:bold; color:var(--verde); border-top:2px solid var(--verde);"><td>Ganancia total del pedido (utilidad+comisión, sin IVA)</td><td class="num">${cop(r.gananciaTotal)}</td></tr>`;
     filas += `<tr class="detalle"><td colspan="2">↳ Ganancia por unidad: ${cop(r.gananciaUnitaria)}</td></tr>`;
     filas += `</table>`;
     cont.innerHTML = filas;
     ultimoResultado = r; ultimoParams = p;
+    document.getElementById("in-descCliente").value = `${p.cantidad} ${p.esPlegable?'Plegable':'Volante/Afiche'} ${p.ancho}x${p.alto}cm`;
+    document.getElementById("cot-ot-nota").style.display = "none";
+  } catch(err){
+    cont.innerHTML = `<div class="error-box">Error en el cálculo: ${err.message}</div>`;
+    ultimoResultado = null; ultimoParams = null;
+  }
+}
+
+function calcularIman(){
+  const cont = document.getElementById("resultado-contenido");
+  try{
+    const p = {
+      ancho: parseFloat(document.getElementById("in-ancho").value),
+      alto: parseFloat(document.getElementById("in-alto").value),
+      cantidad: parseFloat(document.getElementById("in-cantidad").value),
+      sustrato: document.getElementById("in-sustratoIman").value,
+      tintasTiro: parseInt(document.getElementById("in-tintasTiroIman").value)||0,
+      corteTipo: document.getElementById("in-corteIman").value,
+      costoTroquelManual: parseFloat(document.getElementById("in-costoTroquelIman").value)||0,
+      utilidadPct: parseFloat(document.getElementById("in-utilidadPct").value)/100,
+      comisionPct: parseFloat(document.getElementById("in-comisionPct").value)/100,
+    };
+    const r = cotizarIman(p);
+    document.getElementById("recomendaciones-contenido").innerHTML = '';
+
+    const viaImpresionTxt = r.detalleImpresion.via==="digital"
+      ? `Digital (${r.detalleImpresion.clase}) — ${r.detalleImpresion.nClics} clics, descuento ${(r.detalleImpresion.descuentoPct*100).toFixed(0)}%`
+      : `Offset (${r.detalleImpresion.fraccion}) — ${r.detalleImpresion.nPlanchas} plancha(s), ${r.detalleImpresion.nMillares} millar(es)`;
+    const viaCorteTxt = r.detalleCorte.via==='laser'
+      ? `Corte láser (${p.cantidad} pieza(s) x ${cop(IMAN_CORTE_LASER_COP_PIEZA)})`
+      : `Troquelado (costo manual)`;
+
+    let filas = `<table class="resultado-tabla">`;
+    filas += `<tr class="detalle"><td colspan="2">Imán ${p.ancho}x${p.alto}cm</td></tr>`;
+    filas += `<tr><td>Adhesivo (${r.detalleMaterial.formato}, ${r.detalleMaterial.nPliegos} pliegos)</td><td class="num">${cop(r.detalleMaterial.costoTotal)}</td></tr>`;
+    filas += `<tr><td>Impresión — ${viaImpresionTxt}</td><td class="num">${cop(r.detalleImpresion.total)}</td></tr>`;
+    filas += `<tr><td>Lámina Imán C5 (${r.piezasPorLamina} pieza(s)/lámina, ${r.nLaminas} lámina(s))</td><td class="num">${cop(r.costoLaminaIman)}</td></tr>`;
+    filas += `<tr><td>${viaCorteTxt}</td><td class="num">${cop(r.costoCorte)}</td></tr>`;
+    filas += `<tr class="sub"><td>Costo directo total</td><td class="num">${cop(r.costoDirecto)}</td></tr>`;
+    filas += `<tr><td>Diseño / Preprensa</td><td class="num">${cop(r.disenoCop)}</td></tr>`;
+    filas += `<tr><td>Fondo de Seguridad (${(r.fondoSeguridadPct*100).toFixed(1)}%)</td><td class="num">${cop(r.fondoSeguridadCop)}</td></tr>`;
+    filas += `<tr><td>Sherpa (muestra de color)</td><td class="num">${cop(r.sherpaCop)}</td></tr>`;
+    filas += `<tr><td>Transporte (${r.transporte.via})</td><td class="num">${cop(r.transporte.total)}</td></tr>`;
+    filas += `<tr class="sub"><td>Subtotal</td><td class="num">${cop(r.subtotal)}</td></tr>`;
+    filas += `<tr><td>Precio de venta (total pedido)</td><td class="num">${cop(r.precioVentaTotal)}</td></tr>`;
+    filas += `<tr style="font-weight:bold; color:var(--rojo); font-size:1.05rem; border-top:2px solid var(--rojo);"><td>Precio de venta UNITARIO</td><td class="num">${cop(r.precioVentaUnitario)}</td></tr>`;
+    filas += `<tr><td>IVA (19%)</td><td class="num">${cop(r.ivaTotal)}</td></tr>`;
+    filas += `<tr style="font-weight:bold;"><td>Precio final total (con IVA)</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
+    filas += `<tr style="font-weight:bold; color:var(--verde); border-top:2px solid var(--verde);"><td>Ganancia total del pedido (utilidad+comisión, sin IVA)</td><td class="num">${cop(r.gananciaTotal)}</td></tr>`;
+    filas += `<tr class="detalle"><td colspan="2">↳ Ganancia por unidad: ${cop(r.gananciaUnitaria)}</td></tr>`;
+    filas += `</table>`;
+    cont.innerHTML = filas;
+    ultimoResultado = r; ultimoParams = p;
+    document.getElementById("in-descCliente").value = `${p.cantidad} Imán ${p.ancho}x${p.alto}cm`;
     document.getElementById("cot-ot-nota").style.display = "none";
   } catch(err){
     cont.innerHTML = `<div class="error-box">Error en el cálculo: ${err.message}</div>`;
@@ -632,31 +884,55 @@ function refrescarDatalistClientes(){
   const dlEmpresa = document.getElementById('cli-datalist');
   const dlCorreo = document.getElementById('cli-correo-datalist');
   if(!dlEmpresa || !dlCorreo) return;
-  dlEmpresa.innerHTML = db_clientes.map(c => `<option value="${c.empresa}">${c.nombre||''}</option>`).join('');
-  dlCorreo.innerHTML = db_clientes.filter(c=>c.correo).map(c => `<option value="${c.correo}"></option>`).join('');
+  dlEmpresa.innerHTML = db_clientes.filter(c=>!c.soloB2C).map(c => `<option value="${c.empresa}${c.nombre?' -- '+c.nombre:''}">${c.nombre||''}</option>`).join('');
+  dlCorreo.innerHTML = db_clientes.filter(c=>c.correo && !c.soloB2C).map(c => `<option value="${c.correo}"></option>`).join('');
 }
 function autocompletarCliente(){
-  const empresaVal = document.getElementById('in-cli-empresa').value.trim();
+  let empresaVal = document.getElementById('in-cli-empresa').value.trim();
   const correoVal = document.getElementById('in-cli-correo').value.trim();
   const nota = document.getElementById('cli-existente-nota');
+  // Si el valor viene del datalist con sufijo " -- Contacto", separarlo para distinguir
+  // varios contactos de la misma empresa (ej. IP7 -- Elizabeth vs IP7 -- Yanira) --
+  // el <datalist> nativo no permite value duplicado y devolver el option elegido.
+  let nombreVal = '';
+  const sepIdx = empresaVal.indexOf(' -- ');
+  if(sepIdx > -1){
+    nombreVal = empresaVal.slice(sepIdx+4).trim();
+    empresaVal = empresaVal.slice(0, sepIdx).trim();
+  }
   const cli = db_clientes.find(c =>
     (correoVal && c.correo && c.correo.toLowerCase() === correoVal.toLowerCase()) ||
-    (empresaVal && c.empresa.toLowerCase() === empresaVal.toLowerCase())
+    (nombreVal && c.empresa.toLowerCase() === empresaVal.toLowerCase() && (c.nombre||'').toLowerCase() === nombreVal.toLowerCase()) ||
+    (!nombreVal && empresaVal && c.empresa.toLowerCase() === empresaVal.toLowerCase())
   );
   if(cli){
     document.getElementById('in-cli-empresa').value = cli.empresa;
     document.getElementById('in-cli-encargado').value = cli.nombre || '';
     document.getElementById('in-cli-telefono').value = cli.wp || '';
     document.getElementById('in-cli-correo').value = cli.correo || '';
+    document.getElementById('in-cli-tipo').value = cli.tipo || '';
+    document.getElementById('in-cli-identificacion').value = cli.identificacion || '';
     nota.style.display = 'block';
   } else {
     nota.style.display = 'none';
   }
 }
 function siguienteOT(){
-  let n = parseInt(localStorage.getItem('tactical_ot_counter')||'0') + 1;
-  localStorage.setItem('tactical_ot_counter', String(n));
-  return 'OT-' + String(n).padStart(4,'0');
+  return tacticalSiguienteOT();
+}
+function toggleCondicionesComerciales(){
+  const panel = document.getElementById('condicionesComerciales-panel');
+  const flecha = document.getElementById('condicionesComerciales-flecha');
+  if(!panel) return;
+  const abierto = panel.style.display !== 'none';
+  panel.style.display = abierto ? 'none' : 'block';
+  if(flecha) flecha.textContent = abierto ? '▸' : '▾';
+}
+function leerCondicionesComerciales(){
+  const ta = document.getElementById('in-condicionesComerciales');
+  if(!ta) return CONDICIONES_COMERCIALES_DEFAULT;
+  const lista = ta.value.split(String.fromCharCode(10)).map(l=>l.trim()).filter(Boolean);
+  return lista.length ? lista : CONDICIONES_COMERCIALES_DEFAULT;
 }
 
 /* ============ PDF CLIENTE (comparte estilo con TACTICAL_ERP_HUB.html) ============ */
@@ -681,8 +957,8 @@ function compartirWhatsApp(telefono, ot, monto, nombreCli){
   const mensaje = `Hola${nombreCli?' '+nombreCli:''}! Te comparto la cotizacion *${ot}* de Tactical Marketing por un valor de ${cop(monto)}. En un momento te envio el PDF con el detalle completo. Cualquier duda me avisas.`;
   const soloDigitos = (telefono||'').replace(/[^0-9]/g,'');
   const conIndicativo = soloDigitos.length===10 ? '57'+soloDigitos : soloDigitos;
-  const url = conIndicativo ? `https://wa.me/${conIndicativo}?text=${encodeURIComponent(mensaje)}` : `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
-  window.open(url, '_blank');
+  const url = conIndicativo ? `whatsapp://send?phone=${conIndicativo}&text=${encodeURIComponent(mensaje)}` : `whatsapp://send?text=${encodeURIComponent(mensaje)}`;
+  window.location.href = url;
 }
 function compartirWhatsAppClick(){
   if(!ultimoOT){ alert("Primero presiona 'Guardar y Generar PDF Cliente' (o cierra el pedido) para tener un OT."); return; }
@@ -691,10 +967,23 @@ function compartirWhatsAppClick(){
   const monto = ultimoResultado ? Math.round(ultimoResultado.precioFinalTotal) : 0;
   compartirWhatsApp(telefono, ultimoOT, monto, empresa);
 }
+// El diálogo de impresión/guardar-como-PDF del navegador usa el <title> de la página como
+// nombre de archivo sugerido -- por eso se cambia justo antes de imprimir (cliente + N° de
+// OT/cotización) y se restaura después (Conde 2026-08-12).
+function tacticalImprimirConTitulo(nombreArchivo){
+  const tituloOriginal = document.title;
+  const limpio = (nombreArchivo||'').replace(/[\\/:*?"<>|]/g,'').trim();
+  document.title = limpio || tituloOriginal;
+  setTimeout(() => {
+    window.print();
+    document.getElementById('print-area').style.display = 'none';
+    document.title = tituloOriginal;
+  }, 100);
+}
 function imprimirPDFCliente(datos){
   const fecha = datos.fecha.toLocaleDateString('es-CO', {year:'numeric', month:'long', day:'numeric'});
   const validoHasta = fechaMasDias(datos.fecha, 30);
-  const filasLineas = datos.lineas.map(l => `<tr><td>${l.desc}${l.fotoUrl?`<br><img src="${l.fotoUrl}" style="max-width:120px; max-height:120px; margin-top:4px; border:1px solid #d7dee5; border-radius:4px;">`:''}</td><td style="text-align:right;">${l.cantidad||'-'}</td><td style="text-align:right;">${cop(l.monto)}</td></tr>`).join('');
+  const filasLineas = datos.lineas.map(l => `<tr><td><div style="display:flex; align-items:center; gap:6px;">${l.fotoUrl?`<img src="${l.fotoUrl}" style="width:90px; height:90px; object-fit:contain; background:#f8fafc; border:1px solid #d7dee5; border-radius:4px; flex-shrink:0;">`:''}<div>${l.desc}${l.videoUrl?`<br><a href="${l.videoUrl}" style="color:#cc0000; text-decoration:none; font-size:0.65rem; font-weight:bold;">▶ Ver video del producto</a>`:''}</div></div></td><td style="text-align:right;">${l.cantidad||'-'}</td><td style="text-align:right;">${cop(l.monto)}</td></tr>`).join('');
   let desgloseHtml = '';
   if(datos.ivaTotal!=null){
     const subtotal = datos.total - datos.ivaTotal;
@@ -722,15 +1011,55 @@ function imprimirPDFCliente(datos){
     <div class="doc-total-box">TOTAL: ${cop(datos.total)} COP</div>
     <div class="doc-cta">✅ <strong>Para aprobar esta cotización</strong>, responde confirmando el número <strong>${datos.ot||''}</strong> por WhatsApp al ${TACTICAL_INFO.telefono} o al correo ${TACTICAL_INFO.correo}. Iniciamos producción con orden de compra, anticipo y archivos aprobados.</div>
     <div class="doc-section-title">Condiciones Comerciales</div>
-    <div class="doc-condiciones"><ul>${CONDICIONES_COMERCIALES_DEFAULT.map(c=>`<li>${c}</li>`).join('')}</ul></div>
-    <div class="doc-firma">
-      <div class="doc-firma-linea"></div>
-      <div class="doc-firma-label">Aprobado por (firma y nombre) — Fecha</div>
-    </div>
+    <div class="doc-condiciones"><ul>${leerCondicionesComerciales().map(c=>`<li>${c}</li>`).join('')}</ul></div>
+    <div class="doc-section-title" style="margin-top:10px;">Observaciones</div>
+    <div style="border:1px dashed #a0aec0; border-radius:4px; min-height:60px; margin-top:4px;"></div>
+    ${datos.vendedor ? `<div style="font-size:0.74rem; color:#718096; margin-top:10px;">Cotización elaborada por: <strong>${datos.vendedor}</strong>${(typeof VENDEDORES!=='undefined' && VENDEDORES[datos.vendedor] && VENDEDORES[datos.vendedor].telefono) ? ' — Cel: '+VENDEDORES[datos.vendedor].telefono : ''}</div>` : ''}
   `;
   document.getElementById('print-area').innerHTML = html;
   document.getElementById('print-area').style.display = 'block';
-  setTimeout(() => { window.print(); document.getElementById('print-area').style.display = 'none'; }, 100);
+  tacticalImprimirConTitulo(`${datos.cliente.empresa||'Cliente'} - ${datos.ot||''}`);
+}
+function generarOrdenProduccion(){
+  if(!ultimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
+  const r = ultimoResultado, p = ultimoParams;
+  if(!ultimoOT) ultimoOT = siguienteOT();
+  let maquina = 'N/A (sin impresión)';
+  if(r.detalleImpresion){
+    const esDigital = r.detalleImpresion.via === 'digital' || r.usaDigital;
+    const fraccion = esDigital ? 'digital' : (r.detalleImpresion.fraccion || 'medio_pliego');
+    maquina = TACTICAL_NOMBRE_MAQUINA[fraccion] || fraccion;
+  }
+  const [nombreSus, gramajeSus] = (p.sustrato||'__').split('__');
+  const caras = (r.tintasRetiro||0)>0 ? `${p.tintasTiro}x${r.tintasRetiro||0}` : `${p.tintasTiro}x0`;
+  const nombreClienteOP = (document.getElementById('in-cli-empresa')||{}).value?.trim() || 'Cliente';
+  const fechaEntregaOP = prompt('Fecha de entrega para esta Orden de Producción:', '');
+  const recomendaciones = RECOMENDACIONES_PRODUCCION.filter(reg=>reg.aplica(r)).map(reg=>typeof reg.texto==='function'?reg.texto(r):reg.texto);
+  const tituloProducto = r.esIman ? 'Imán' : (p.esPlegable?'Plegable':'Volante/Afiche');
+  const filasTabla = r.esIman
+    ? [['Tamaño', `${p.ancho} x ${p.alto} cm`], ['Cantidad', `${p.cantidad} unidades`], ['Corte', r.detalleCorte.via==='laser'?'Láser':'Troquel'], ['Lámina Imán C5', `${r.nLaminas} lámina(s), ${r.piezasPorLamina} pieza(s)/lámina`]]
+    : [['Tamaño', `${p.ancho} x ${p.alto} cm`], ['Cantidad', `${p.cantidad} unidades`], ['Formato', r.tamano.clase], ['Plegado', r.esPlegable?(r.secciones===3?'Tríptico':'Díptico'):'No']];
+  const bloqueLineas = r.esIman
+    ? [
+        `Máquina: <strong>${maquina}</strong> — Adhesivo: <strong>${nombreSus} ${gramajeSus}g</strong> — Pliegos: <strong>${r.detalleMaterial.nPliegos}</strong>`,
+        `Impresión: <strong>${p.tintasTiro}x0</strong>`,
+        `Corte: <strong>${r.detalleCorte.via==='laser'?'Láser':'Troquel'}</strong> — Lámina Imán C5: <strong>${r.nLaminas} lámina(s)</strong>`,
+      ]
+    : [
+        `Máquina: <strong>${maquina}</strong> — Papel: <strong>${nombreSus} ${gramajeSus}g</strong> — Pliegos: <strong>${r.detalleMaterial.nPliegos}</strong>`,
+        `Impresión: <strong>${caras}</strong>`,
+        `Acabados: <strong>${r.plastificado?`Plastificado (${r.carasPlastificado} cara${r.carasPlastificado>1?'s':''})`:'Sin plastificar'}${r.esPlegable?` — Plegado ${r.secciones===3?'Tríptico':'Díptico'}`:''}</strong>`,
+      ];
+  const html = tacticalOPDocumentoHtml({
+    logoB64: TACTICAL_LOGO_B64, ot: ultimoOT, cliente: nombreClienteOP,
+    fechaEntrega: (fechaEntregaOP && fechaEntregaOP.trim()) ? fechaEntregaOP.trim() : 'Por definir',
+    filasTabla,
+    bloques: [{ titulo: tituloProducto, lineasTexto: bloqueLineas, planoCorte: r.detalleMaterial.planoCorte }],
+    recomendaciones,
+  });
+  document.getElementById('print-area').innerHTML = html;
+  document.getElementById('print-area').style.display = 'block';
+  tacticalImprimirConTitulo(`${nombreClienteOP} - ${ultimoOT} - OP`);
 }
 function guardarCotizacionClick(){
   if(!ultimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
@@ -738,21 +1067,26 @@ function guardarCotizacionClick(){
   const encargado = document.getElementById('in-cli-encargado').value.trim();
   const telefono = document.getElementById('in-cli-telefono').value.trim();
   const correo = document.getElementById('in-cli-correo').value.trim();
+  const tipo = document.getElementById('in-cli-tipo').value;
+  const identificacion = document.getElementById('in-cli-identificacion').value.trim();
+  const vendedor = document.getElementById('in-vendedor').value;
   if(!empresa && !encargado){ alert("Ingresa al menos el Cliente o el Encargado antes de guardar."); return; }
 
   let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
   if(!cli){
-    cli = { id: Date.now().toString(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0 };
+    cli = { id: Date.now().toString(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo, identificacion };
     db_clientes.push(cli);
   } else {
     if(telefono) cli.wp = telefono;
     if(correo) cli.correo = correo;
+    if(tipo) cli.tipo = tipo;
+    if(identificacion) cli.identificacion = identificacion;
   }
   localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
 
   if(!ultimoOT) ultimoOT = siguienteOT();
-  const desc = `${ultimoParams.cantidad} ${ultimoParams.esPlegable?'Plegable':'Volante/Afiche'} ${ultimoParams.ancho}x${ultimoParams.alto}cm`;
-  let maquina = 'otro', material = null, nPliegos = null;
+  const desc = tacticalTituloCorto(`${ultimoParams.cantidad} ${ultimoResultado.esIman?'Imán':(ultimoParams.esPlegable?'Plegable':'Volante/Afiche')} ${ultimoParams.ancho}x${ultimoParams.alto}cm`, document.getElementById("in-descCliente").value);
+  let maquina = 'otro', material = null, nPliegos = null, planoCorte = null;
   if(ultimoResultado.detalleImpresion){
     if(ultimoResultado.detalleImpresion.via === 'digital') maquina = 'digital';
     else if(ultimoResultado.detalleImpresion.fraccion) maquina = ultimoResultado.detalleImpresion.fraccion;
@@ -761,8 +1095,10 @@ function guardarCotizacionClick(){
     const [nombreSus, gramajeSus] = ultimoParams.sustrato.split('__');
     material = `${nombreSus} ${gramajeSus}g`;
     nPliegos = ultimoResultado.detalleMaterial.nPliegos;
+    planoCorte = ultimoResultado.detalleMaterial.planoCorte || null;
   }
-  const opp = { id: Date.now().toString()+'_opp', ot: ultimoOT, idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, desc, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'volantes', cantidad: ultimoParams.cantidad, maquina, material, nPliegos };
+  const recomendaciones = RECOMENDACIONES_PRODUCCION.filter(reg=>reg.aplica(ultimoResultado)).map(reg=>typeof reg.texto==='function'?reg.texto(ultimoResultado):reg.texto);
+  const opp = { id: Date.now().toString()+'_opp', ot: ultimoOT, idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, desc, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'volantes', cantidad: ultimoParams.cantidad, maquina, material, nPliegos, planoCorte, recomendaciones };
   db_opps.push(opp);
   localStorage.setItem('tactical_crm_opps_v2', JSON.stringify(db_opps));
 
@@ -772,8 +1108,8 @@ function guardarCotizacionClick(){
   nota.innerText = `📋 Cotización guardada en el CRM como ${ultimoOT} — cliente: ${cli.empresa}.`;
 
   imprimirPDFCliente({
-    ot: ultimoOT, fecha: new Date(), cliente: {empresa: cli.empresa, encargado: cli.nombre, telefono: cli.wp, correo: cli.correo},
-    lineas: [{desc, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal)}],
+    ot: ultimoOT, fecha: new Date(), vendedor, cliente: {empresa: cli.empresa, encargado: cli.nombre, telefono: cli.wp, correo: cli.correo},
+    lineas: [{desc, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), fotoUrl: fotoParaCotizacion('volantes'), videoUrl: videoParaCotizacion('volantes')}],
     ivaTotal: ultimoResultado.ivaTotal, total: Math.round(ultimoResultado.precioFinalTotal),
   });
 }
@@ -797,15 +1133,20 @@ function iniciarOAgregarPedido(){
   const encargado = document.getElementById('in-cli-encargado').value.trim();
   const telefono = document.getElementById('in-cli-telefono').value.trim();
   const correo = document.getElementById('in-cli-correo').value.trim();
+  const tipo = document.getElementById('in-cli-tipo').value;
+  const identificacion = document.getElementById('in-cli-identificacion').value.trim();
+  const vendedor = document.getElementById('in-vendedor').value;
   if(!empresa && !encargado){ alert("Ingresa al menos el Cliente o el Encargado antes de agregar al pedido."); return; }
 
   let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
   if(!cli){
-    cli = { id: Date.now().toString(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0 };
+    cli = { id: Date.now().toString(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo, identificacion };
     db_clientes.push(cli);
   } else {
     if(telefono) cli.wp = telefono;
     if(correo) cli.correo = correo;
+    if(tipo) cli.tipo = tipo;
+    if(identificacion) cli.identificacion = identificacion;
   }
   localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
   refrescarDatalistClientes();
@@ -817,11 +1158,11 @@ function iniciarOAgregarPedido(){
     pd = null;
   }
   if(!pd){
-    pd = { ot: siguienteOT(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, lineas: [], creado: new Date().toISOString() };
+    pd = { ot: siguienteOT(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, vendedor, lineas: [], creado: new Date().toISOString() };
   }
 
-  const desc = `${ultimoParams.cantidad} ${ultimoParams.esPlegable?'Plegable':'Volante/Afiche'} ${ultimoParams.ancho}x${ultimoParams.alto}cm`;
-  let maquina = 'otro', material = null, nPliegos = null;
+  const desc = tacticalTituloCorto(`${ultimoParams.cantidad} ${ultimoResultado.esIman?'Imán':(ultimoParams.esPlegable?'Plegable':'Volante/Afiche')} ${ultimoParams.ancho}x${ultimoParams.alto}cm`, document.getElementById("in-descCliente").value);
+  let maquina = 'otro', material = null, nPliegos = null, planoCorte = null;
   if(ultimoResultado.detalleImpresion){
     if(ultimoResultado.detalleImpresion.via === 'digital') maquina = 'digital';
     else if(ultimoResultado.detalleImpresion.fraccion) maquina = ultimoResultado.detalleImpresion.fraccion;
@@ -830,8 +1171,11 @@ function iniciarOAgregarPedido(){
     const [nombreSus, gramajeSus] = ultimoParams.sustrato.split('__');
     material = `${nombreSus} ${gramajeSus}g`;
     nPliegos = ultimoResultado.detalleMaterial.nPliegos;
+    planoCorte = ultimoResultado.detalleMaterial.planoCorte || null;
   }
-  pd.lineas.push({ linea:'volantes', desc, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), maquina, material, nPliegos });
+  const recomendaciones = RECOMENDACIONES_PRODUCCION.filter(reg=>reg.aplica(ultimoResultado)).map(reg=>typeof reg.texto==='function'?reg.texto(ultimoResultado):reg.texto);
+  pd.lineas.push({ linea:'volantes', desc, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), maquina, material, nPliegos, planoCorte, recomendaciones, fotoUrl: fotoParaCotizacion('volantes'), videoUrl: videoParaCotizacion('volantes') });
+  fotoPersonalReiniciar();
   localStorage.setItem('tactical_pedido_activo', JSON.stringify(pd));
   refrescarBannerPedido();
   alert(`Agregado al pedido ${pd.ot}. Ahora tiene ${pd.lineas.length} producto(s).`);
@@ -842,7 +1186,7 @@ function cerrarPedido(){
   const montoTotal = pd.lineas.reduce((s,l)=>s+l.monto,0);
   const cantidadTotal = pd.lineas.reduce((s,l)=>s+(l.cantidad||0),0);
   const descConsolidada = pd.lineas.map(l=>l.desc).join(' + ');
-  const opp = { id: Date.now().toString()+'_opp', ot: pd.ot, idCli: pd.idCli, nombreCli: pd.nombreCli, desc: descConsolidada, monto: montoTotal, etapa: 'cot', linea: 'multi', cantidad: cantidadTotal, lineas: pd.lineas };
+  const opp = { id: Date.now().toString()+'_opp', ot: pd.ot, idCli: pd.idCli, nombreCli: pd.nombreCli, desc: descConsolidada, monto: montoTotal, etapa: 'cot', linea: 'multi', cantidad: cantidadTotal, vendedor: pd.vendedor, lineas: pd.lineas };
   db_opps.push(opp);
   localStorage.setItem('tactical_crm_opps_v2', JSON.stringify(db_opps));
   localStorage.removeItem('tactical_pedido_activo');
@@ -851,10 +1195,180 @@ function cerrarPedido(){
 
   const cliPd = db_clientes.find(c=>c.id===pd.idCli) || {empresa:pd.nombreCli, nombre:'', wp:'', correo:''};
   imprimirPDFCliente({
-    ot: pd.ot, fecha: new Date(), cliente: {empresa: cliPd.empresa, encargado: cliPd.nombre, telefono: cliPd.wp, correo: cliPd.correo},
+    ot: pd.ot, fecha: new Date(), vendedor: pd.vendedor, cliente: {empresa: cliPd.empresa, encargado: cliPd.nombre, telefono: cliPd.wp, correo: cliPd.correo},
     lineas: pd.lineas.map(l=>({desc:l.desc, cantidad:l.cantidad, monto:l.monto})),
     ivaTotal: null, total: montoTotal,
   });
+}
+/* ============ COMPARACIÓN DE OPCIONES (varias variantes, precios SEPARADOS, el cliente
+   elige una — a diferencia del "pedido" de arriba, que suma todo en un solo total) ============ */
+/* ============ FOTO PERSONALIZADA POR COTIZACIÓN Y VARIANTES DE FOTOTECA (Conde 2026-08-13) ============ */
+let fotoPersonalizadaActual = null;
+function fotoPersonalProcesar(file){
+  if(!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const img = new Image();
+    img.onload = function(){
+      fotoPersonalizadaActual = tacticalComprimirImagen(img);
+      const zona = document.getElementById('fotoPersonal-zona');
+      if(zona) zona.innerHTML = `<img src="${fotoPersonalizadaActual}" style="max-width:100%; max-height:90px;"><br><span style="font-size:0.72rem; color:var(--rojo); cursor:pointer;" onclick="event.stopPropagation(); fotoPersonalQuitar();">🗑️ Quitar foto personalizada</span>`;
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function fotoPersonalPegar(event){
+  const items = (event.clipboardData || window.clipboardData).items;
+  for(const item of items){
+    if(item.kind === 'file' && item.type.startsWith('image/')){
+      event.preventDefault();
+      fotoPersonalProcesar(item.getAsFile());
+      return;
+    }
+  }
+}
+function fotoPersonalArchivo(inputEl){
+  const file = inputEl.files && inputEl.files[0];
+  if(file) fotoPersonalProcesar(file);
+}
+function fotoPersonalQuitar(){
+  fotoPersonalizadaActual = null;
+  const zona = document.getElementById('fotoPersonal-zona');
+  if(zona) zona.innerHTML = '📎 Clic aquí y pega (Ctrl+V) o sube un archivo';
+  const inputEl = document.getElementById('fotoPersonal-input');
+  if(inputEl) inputEl.value = '';
+}
+function poblarVarianteFoto(){
+  const sel = document.getElementById('in-varianteFoto');
+  if(!sel) return;
+  const variantes = tacticalListarVariantesFoto('volantes');
+  sel.innerHTML = '<option value="">(Automática de la línea)</option>' + variantes.map(v=>`<option value="${v.clave}">${v.label}</option>`).join('');
+}
+function fotoParaCotizacion(lineaClaveDefault){
+  if(fotoPersonalizadaActual) return fotoPersonalizadaActual;
+  const sel = document.getElementById('in-varianteFoto');
+  const variante = sel ? sel.value : '';
+  return tacticalObtenerFotoProducto(variante || lineaClaveDefault);
+}
+function videoParaCotizacion(lineaClaveDefault){
+  const sel = document.getElementById('in-varianteFoto');
+  const variante = sel ? sel.value : '';
+  return tacticalObtenerVideoProducto(variante || lineaClaveDefault);
+}
+function fotoPersonalReiniciar(){
+  fotoPersonalizadaActual = null;
+  const zona = document.getElementById('fotoPersonal-zona');
+  if(zona) zona.innerHTML = '📎 Clic aquí y pega (Ctrl+V) o sube un archivo';
+  const sel = document.getElementById('in-varianteFoto');
+  if(sel) sel.value = '';
+}
+
+function comparacionActiva(){ return JSON.parse(localStorage.getItem('tactical_comparacion_activa')) || null; }
+function refrescarBannerComparacion(){
+  const comp = comparacionActiva();
+  const el = document.getElementById('comparacion-banner');
+  if(!el) return;
+  if(!comp){ el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = `🆚 Comparación en curso <b>${comp.ot}</b> — ${comp.nombreCli} — ${comp.opciones.length} opción(es)<br>
+    <button type="button" style="margin-top:6px; background:var(--verde); color:#fff;" onclick="generarPDFComparativo()">✅ Generar PDF comparativo</button>
+    <button type="button" style="margin-top:6px; background:var(--rojo); color:#fff;" onclick="cancelarComparacion()">✕ Cancelar comparación</button>`;
+}
+function agregarOpcionComparacion(){
+  if(!ultimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
+  const empresa = document.getElementById('in-cli-empresa').value.trim();
+  const encargado = document.getElementById('in-cli-encargado').value.trim();
+  const telefono = document.getElementById('in-cli-telefono').value.trim();
+  const correo = document.getElementById('in-cli-correo').value.trim();
+  const tipo = document.getElementById('in-cli-tipo').value;
+  const identificacion = document.getElementById('in-cli-identificacion').value.trim();
+  const vendedor = document.getElementById('in-vendedor').value;
+  if(!empresa && !encargado){ alert("Ingresa al menos el Cliente o el Encargado antes de agregar la opción."); return; }
+
+  let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
+  if(!cli){
+    cli = { id: Date.now().toString(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo, identificacion };
+    db_clientes.push(cli);
+  } else {
+    if(telefono) cli.wp = telefono;
+    if(correo) cli.correo = correo;
+    if(tipo) cli.tipo = tipo;
+    if(identificacion) cli.identificacion = identificacion;
+  }
+  localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
+  refrescarDatalistClientes();
+
+  let comp = comparacionActiva();
+  if(comp && comp.idCli !== cli.id){
+    if(!confirm(`Ya hay una comparación en curso para "${comp.nombreCli}". ¿Cancelarla y empezar una nueva para "${cli.empresa}"?`)) return;
+    comp = null;
+  }
+  if(!comp){
+    comp = { ot: siguienteOT(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, vendedor, opciones: [], creado: new Date().toISOString() };
+  }
+
+  const titulo = tacticalTituloCorto(`${ultimoParams.cantidad} ${ultimoResultado.esIman?'Imán':(ultimoParams.esPlegable?'Plegable':'Volante/Afiche')} ${ultimoParams.ancho}x${ultimoParams.alto}cm`, document.getElementById("in-descCliente").value);
+  comp.opciones.push({ titulo, params: {cantidad: ultimoParams.cantidad}, resultado: {precioVentaUnitario: ultimoResultado.precioVentaUnitario, precioVentaTotal: ultimoResultado.precioVentaTotal, ivaTotal: ultimoResultado.ivaTotal, precioFinalTotal: ultimoResultado.precioFinalTotal}, fotoUrl: fotoParaCotizacion('volantes'), videoUrl: videoParaCotizacion('volantes') });
+  fotoPersonalReiniciar();
+  localStorage.setItem('tactical_comparacion_activa', JSON.stringify(comp));
+  refrescarBannerComparacion();
+  alert(`Agregada como opción ${comp.opciones.length} de la comparación ${comp.ot}.`);
+}
+function cancelarComparacion(){
+  const comp = comparacionActiva();
+  if(!comp) return;
+  if(!confirm(`¿Cancelar la comparación ${comp.ot} en curso? Se perderán las ${comp.opciones.length} opción(es) agregadas.`)) return;
+  localStorage.removeItem('tactical_comparacion_activa');
+  refrescarBannerComparacion();
+}
+function generarPDFComparativo(){
+  const comp = comparacionActiva();
+  if(!comp || comp.opciones.length===0) return;
+  const cli = db_clientes.find(c=>c.id===comp.idCli) || {empresa:comp.nombreCli, nombre:'', wp:'', correo:''};
+  const fecha = new Date().toLocaleDateString('es-CO', {year:'numeric', month:'long', day:'numeric'});
+  const validoHasta = fechaMasDias(new Date(), 30);
+
+  const bloquesOpciones = comp.opciones.map((op,i) => `
+    <div class="doc-section-title">Opción ${i+1}: ${op.titulo}</div>
+    <table class="doc-table">
+      <tr><td>Cantidad</td><td style="text-align:right;">${op.params.cantidad}</td></tr>
+      <tr><td>Precio unitario</td><td style="text-align:right;">${cop(op.resultado.precioVentaUnitario)}</td></tr>
+      <tr><td>Subtotal</td><td style="text-align:right;">${cop(op.resultado.precioVentaTotal)}</td></tr>
+      <tr><td>IVA (19%)</td><td style="text-align:right;">${cop(op.resultado.ivaTotal)}</td></tr>
+    </table>
+    ${op.fotoUrl ? `<img src="${op.fotoUrl}" style="max-width:140px; max-height:140px; margin-bottom:4px; border:1px solid #d7dee5; border-radius:4px;">` : ''}
+    ${op.videoUrl ? `<div style="margin-bottom:4px;"><a href="${op.videoUrl}" style="display:inline-block; background:#cc0000; color:#fff; text-decoration:none; padding:4px 10px; border-radius:4px; font-size:0.72rem; font-weight:bold;">▶ Ver video del producto</a></div>` : ''}
+    <div class="doc-total-box">TOTAL Opción ${i+1}: ${cop(op.resultado.precioFinalTotal)} COP</div>`).join('');
+
+  const html = `
+    <div class="doc-header">
+      <div><img src="${TACTICAL_LOGO_B64}" style="height:68px; margin-bottom:8px; display:block;" alt="Tactical Marketing"><div class="doc-tipo">COTIZACIÓN COMPARATIVA ${comp.ot}</div></div>
+      <div class="doc-empresa-datos">${TACTICAL_INFO.nit}<br>${TACTICAL_INFO.direccion}<br>${TACTICAL_INFO.web}<br>${TACTICAL_INFO.telefono}</div>
+    </div>
+    <div class="doc-cliente-destacado">
+      <div class="doc-cliente-nombre">${cli.empresa||'Cliente'}</div>
+      <div class="doc-cliente-meta">Atención: ${cli.nombre||'-'} &nbsp;·&nbsp; ${cli.wp||'-'} &nbsp;·&nbsp; ${cli.correo||'-'}</div>
+      <div class="doc-cliente-fechas">Fecha de emisión: ${fecha} &nbsp;|&nbsp; Válida hasta: ${validoHasta} (30 días calendario)</div>
+    </div>
+    <div class="doc-cta">✅ <strong>Estas son tus opciones para elegir.</strong> Para aprobar, responde confirmando el número <strong>${comp.ot}</strong> y cuál opción prefieres, por WhatsApp al ${TACTICAL_INFO.telefono} o al correo ${TACTICAL_INFO.correo}.</div>
+    ${bloquesOpciones}
+    <div class="doc-section-title">Condiciones Comerciales</div>
+    <div class="doc-condiciones"><ul>${leerCondicionesComerciales().map(c=>`<li>${c}</li>`).join('')}</ul></div>
+    <div class="doc-section-title" style="margin-top:10px;">Observaciones</div>
+    <div style="border:1px dashed #a0aec0; border-radius:4px; min-height:60px; margin-top:4px;"></div>
+    ${comp.vendedor ? `<div style="font-size:0.74rem; color:#718096; margin-top:10px;">Cotización elaborada por: <strong>${comp.vendedor}</strong>${(typeof VENDEDORES!=='undefined' && VENDEDORES[comp.vendedor] && VENDEDORES[comp.vendedor].telefono) ? ' — Cel: '+VENDEDORES[comp.vendedor].telefono : ''}</div>` : ''}
+  `;
+  document.getElementById('print-area').innerHTML = html;
+  document.getElementById('print-area').style.display = 'block';
+  tacticalImprimirConTitulo(`${cli.empresa||'Cliente'} - ${comp.ot} - Comparativa`);
+
+  const montoRef = Math.min(...comp.opciones.map(o=>o.resultado.precioFinalTotal));
+  const opp = { id: Date.now().toString()+'_opp', ot: comp.ot, idCli: comp.idCli, nombreCli: comp.nombreCli, desc: `Comparativa: ${comp.opciones.map(o=>o.titulo).join(' vs ')}`, monto: Math.round(montoRef), etapa: 'cot', linea: 'volantes', cantidad: comp.opciones[0].params.cantidad, vendedor: comp.vendedor, opcionesComparativa: comp.opciones };
+  db_opps.push(opp);
+  localStorage.setItem('tactical_crm_opps_v2', JSON.stringify(db_opps));
+  localStorage.removeItem('tactical_comparacion_activa');
+  refrescarBannerComparacion();
 }
 function cancelarPedido(){
   const pd = pedidoActivo();
@@ -867,9 +1381,15 @@ function cancelarPedido(){
 document.getElementById("in-ancho").addEventListener("input", onCambioTamano);
 document.getElementById("in-alto").addEventListener("input", onCambioTamano);
 poblarSustratos();
+poblarSustratosIman();
+document.getElementById('hint-precioLaminaIman').textContent = cop(IMAN_LAMINA_PRECIO_COP);
 onCambioTamano();
 refrescarDatalistClientes();
+Object.keys(VENDEDORES).forEach(v => { const opt=document.createElement('option'); opt.value=v; opt.textContent=v; document.getElementById('in-vendedor').appendChild(opt); });
 refrescarBannerPedido();
+refrescarBannerComparacion();
+document.getElementById('in-condicionesComerciales').value = CONDICIONES_COMERCIALES_DEFAULT.join(String.fromCharCode(10));
+poblarVarianteFoto();
 onCambioPlegable();
 </script>
 <div id="print-area" style="display:none;"></div>
@@ -912,6 +1432,70 @@ document.addEventListener('click', function(ev){
     menu.classList.remove('abierto');
   }
 });
+</script>
+<style>
+  #tactical-ayuda-btn{ position:fixed; bottom:76px; right:16px; z-index:99999; width:50px; height:50px; border-radius:50%; background:#0d9488; color:#fff; border:none; box-shadow:0 4px 12px rgba(0,0,0,0.28); font-size:22px; cursor:pointer; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
+  #tactical-ayuda-panel{ display:none; position:fixed; bottom:134px; right:16px; z-index:99999; width:320px; max-width:calc(100vw - 32px); height:420px; max-height:calc(100vh - 160px); background:#fff; border:1px solid #d7dee5; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.25); flex-direction:column; overflow:hidden; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
+  #tactical-ayuda-panel.abierto{ display:flex; }
+  #tactical-ayuda-header{ background:#0d9488; color:#fff; padding:10px 14px; font-size:14px; font-weight:600; display:flex; justify-content:space-between; align-items:center; }
+  #tactical-ayuda-header span.cerrar{ cursor:pointer; font-size:16px; }
+  #tactical-ayuda-log{ flex:1; overflow-y:auto; padding:10px; background:#f8fafc; }
+  .tactical-ayuda-msg{ margin-bottom:8px; padding:8px 10px; border-radius:8px; font-size:12.5px; line-height:1.4; max-width:88%; word-wrap:break-word; }
+  .tactical-ayuda-msg-bot{ background:#e6f4f1; color:#0f172a; margin-right:auto; }
+  .tactical-ayuda-msg-user{ background:#1e3a5f; color:#fff; margin-left:auto; text-align:right; }
+  #tactical-ayuda-inputrow{ display:flex; border-top:1px solid #e2e8f0; padding:8px; gap:6px; }
+  #tactical-ayuda-input{ flex:1; border:1px solid #cbd5e0; border-radius:6px; padding:7px 9px; font-size:12.5px; }
+  #tactical-ayuda-enviar{ background:#0d9488; color:#fff; border:none; border-radius:6px; padding:0 12px; font-size:13px; cursor:pointer; }
+</style>
+<button id="tactical-ayuda-btn" onclick="tacticalToggleAyuda()" title="Asistente de Ayuda">?</button>
+<div id="tactical-ayuda-panel">
+  <div id="tactical-ayuda-header">
+    <span>Asistente de Ayuda</span>
+    <span class="cerrar" onclick="tacticalToggleAyuda()">X</span>
+  </div>
+  <div id="tactical-ayuda-log"></div>
+  <div id="tactical-ayuda-inputrow">
+    <input type="text" id="tactical-ayuda-input" placeholder="Escribe tu pregunta..." onkeydown="if(event.key==='Enter') tacticalAyudaEnviar();">
+    <button id="tactical-ayuda-enviar" onclick="tacticalAyudaEnviar()">Enviar</button>
+  </div>
+</div>
+<script>
+function tacticalToggleAyuda(){
+  const panel = document.getElementById('tactical-ayuda-panel');
+  panel.classList.toggle('abierto');
+  if(panel.classList.contains('abierto')){
+    const log = document.getElementById('tactical-ayuda-log');
+    if(!log.dataset.iniciado){
+      tacticalAyudaAgregarMensaje('bot', 'Hola, soy el asistente de ayuda de la herramienta. Preguntame como hacer algo, por ejemplo: "como pido la caratula troquelada?" o "como comparo 2 opciones?".');
+      log.dataset.iniciado = '1';
+    }
+    document.getElementById('tactical-ayuda-input').focus();
+  }
+}
+function tacticalAyudaAgregarMensaje(tipo, textoHtml){
+  const log = document.getElementById('tactical-ayuda-log');
+  const div = document.createElement('div');
+  div.className = 'tactical-ayuda-msg tactical-ayuda-msg-' + tipo;
+  if(tipo === 'user'){ div.textContent = textoHtml; }
+  else { div.innerHTML = textoHtml; }
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+function tacticalAyudaEnviar(){
+  const input = document.getElementById('tactical-ayuda-input');
+  const pregunta = input.value.trim();
+  if(!pregunta) return;
+  tacticalAyudaAgregarMensaje('user', pregunta);
+  input.value = '';
+  const resultados = tacticalBuscarAyuda(pregunta);
+  if(!resultados.length){
+    tacticalAyudaAgregarMensaje('bot', 'No encontre una respuesta exacta para eso. Prueba con otras palabras clave (ej: "pedido", "comparacion", "Kanban", "foto", "condiciones", "vendedor", "OT"), o preguntale directamente a Helver.');
+  } else {
+    resultados.forEach(function(r){
+      tacticalAyudaAgregarMensaje('bot', '<b>' + r.titulo + '</b><br>' + r.respuesta);
+    });
+  }
+}
 </script>
 </body>
 </html>

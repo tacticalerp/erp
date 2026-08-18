@@ -1,0 +1,23 @@
+{
+  "name": "tactical-whatsapp-bot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Backend del asistente de WhatsApp de Tactical Marketing Group (Fase 1: bot Rompecabezas B2C).",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "simulate": "node scripts/simulate.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "form-data": "^4.0.0",
+    "puppeteer": "^23.6.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
