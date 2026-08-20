@@ -1481,6 +1481,15 @@
             alert('Solo el administrador puede hacer esto.');
             return false;
         }
+        // Conde 2026-08-20: borrar fichas del Kanban es un permiso un poco más amplio que el resto
+        // (administrador Y comercial pueden, no solo administrador) -- comercial es quien más
+        // conoce si una ficha quedó duplicada o mal creada desde el CRM.
+        function tacticalRequiereComercialOAdmin(){
+            const rolActual = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol;
+            if(rolActual === 'administrador' || rolActual === 'comercial') return true;
+            alert('Solo administrador o comercial pueden hacer esto.');
+            return false;
+        }
 
         /* ---- COPIA DE SEGURIDAD (export de TODA la información real del ERP) ----
            Conde 2026-08-20: reescrito de raíz -- la versión vieja exportaba un puñado de claves
@@ -1790,6 +1799,7 @@
         }
 
         function taskEliminarFila(btn){
+            if(!tacticalRequiereAdministrador()) return;
             const tr = btn.closest('tr');
             const desc = tr.querySelector('.task-desc').value.trim();
             if(!confirm(`¿Eliminar esta tarea${desc ? ' ("'+desc+'")' : ''}?\n\nEsta acción no se puede deshacer.`)) return;
@@ -2261,6 +2271,7 @@
         }
 
         function eliminarIncidenteReproceso(id) {
+            if(!tacticalRequiereAdministrador()) return;
             if(!confirm('¿Eliminar este incidente de reproceso?\n\nEsta acción no se puede deshacer.')) return;
             tacticalEliminarReprocesoRemoto(id);
             db_reprocesos = db_reprocesos.filter(inc => inc.id !== id);
@@ -2412,6 +2423,7 @@
         }
 
         function eliminarCliente(id){
+            if(!tacticalRequiereAdministrador()) return;
             const c = db_clientes.find(x=>x.id===id); if(!c) return;
             const asociados = db_opps.filter(o=>o.idCli===id).length + db_historial_cierres.filter(h=>h.idCli===id).length;
             let msg = `¿ELIMINAR al cliente "${c.empresa}"?\n\nEsta acción no se puede deshacer.`;
@@ -2652,6 +2664,25 @@
           });
           return items;
         }
+        // Conde 2026-08-20: tareas que el propio Kanban crea solas (sin que nadie las escriba a
+        // mano) cuando pasa algo importante -- diseño aprobado, o una ficha lista para facturar.
+        // Mismo patrón que reabrirTarea() (addTask() arma la fila visible + tacticalSyncTarea()
+        // la guarda de verdad) -- las tareas viven solo en el DOM de la vista Tareas, no en un
+        // array separado, así que hay que construir la fila igual que si la hubiera escrito alguien.
+        function crearTareaAutomatica(area, desc){
+          const id = crypto.randomUUID();
+          const fechaOrigen = new Date().toISOString();
+          const orden = Date.now();
+          addTask(area, desc, '', [], 'pendiente', id, fechaOrigen, orden, '');
+          tacticalSyncTarea({ id, area, desc, espec:'', emp:[], status:'pendiente', aclaracion:'', fechaOrigen, orden });
+        }
+        function marcarDisenoAprobado(id){
+          const f = db_kanban.find(x=>x.id===id); if(!f || f.disenoAprobado) return;
+          crearTareaAutomatica('diseno', `Diseño del cliente "${f.nombreCli}" fue aprobado`);
+          f.disenoAprobado = true;
+          tacticalSyncFichaKanban(f);
+          renderKanban();
+        }
         function crearFichaKanbanDesdeOpp(opp, cli, fechaEntrega){
           const ficha = {
             id: crypto.randomUUID(), ot: opp.ot || null,
@@ -2724,7 +2755,9 @@
           const idx = KANBAN_COLUMNAS.indexOf(f.columna);
           const nuevo = idx+delta;
           if(nuevo<0 || nuevo>=KANBAN_COLUMNAS.length) return;
+          const columnaAnterior = f.columna;
           f.columna = KANBAN_COLUMNAS[nuevo];
+          avisarSiPasaAEntregar(f, columnaAnterior, f.columna);
           tacticalSyncFichaKanban(f);
           renderKanban();
         }
@@ -2835,6 +2868,7 @@
           tacticalImprimirConTitulo(`${cli.empresa} - ${f.ot||'OP'} - OP`);
         }
         function eliminarFichaKanban(id){
+            if(!tacticalRequiereComercialOAdmin()) return;
             const f = db_kanban.find(x=>x.id===id); if(!f) return;
             if(!confirm(`¿ELIMINAR la ficha "${f.titulo}"?\n\nEsta acción no se puede deshacer y no borra la cotización/negocio original en el CRM, solo esta tarjeta de producción.`)) return;
             tacticalEliminarFichaKanbanRemoto(id);
@@ -3158,9 +3192,10 @@
         function toggleUrgente(id){
           const f = db_kanban.find(x=>x.id===id); if(!f) return;
           if(!f.urgente){
-            // Plan Maestro: solo 1 tarjeta "urgente" manual a la vez, para no saturar el banner de alertas.
-            const yaHayUrgente = db_kanban.some(x=>x.urgente && x.id!==id);
-            if(yaHayUrgente){ alert('Ya hay una ficha marcada como urgente. Solo puede haber una a la vez — quítale la marca a esa antes de marcar esta.'); return; }
+            // Plan Maestro: máximo 2 tarjetas "urgente" manuales a la vez, para no saturar el banner
+            // de alertas (Conde 2026-08-20: subió de 1 a 2).
+            const cantidadUrgentes = db_kanban.filter(x=>x.urgente && x.id!==id).length;
+            if(cantidadUrgentes>=2){ alert('Ya hay 2 fichas marcadas como urgente. Solo puede haber 2 a la vez — quítale la marca a alguna antes de marcar esta.'); return; }
           }
           f.urgente = !f.urgente;
           tacticalSyncFichaKanban(f);
@@ -3238,13 +3273,22 @@
           tacticalSyncFichaKanban(ficha);
           renderKanban();
         }
+        // Conde 2026-08-20: al pasar una ficha de "Terminados y Revisión" a "Para Entregar", se crea
+        // sola una tarea de Comercial para facturar -- así no depende de que alguien se acuerde.
+        function avisarSiPasaAEntregar(f, columnaAnterior, columnaNueva){
+          if(columnaAnterior==='terminados' && columnaNueva==='entregar'){
+            crearTareaAutomatica('comercial', `Facturar a "${f.nombreCli}" "${f.titulo}"`);
+          }
+        }
         function kanbanDrop(ev, columnaDestino){
           ev.preventDefault();
           ev.currentTarget.classList.remove('drag-over');
           const id = ev.dataTransfer.getData('text/plain');
           const f = db_kanban.find(x=>x.id===id);
           if(!f) return;
+          const columnaAnterior = f.columna;
           f.columna = columnaDestino;
+          avisarSiPasaAEntregar(f, columnaAnterior, columnaDestino);
           tacticalSyncFichaKanban(f);
           renderKanban();
         }
@@ -3252,6 +3296,10 @@
           const idx = KANBAN_COLUMNAS.indexOf(f.columna);
           const puedeAtras = idx>0, puedeAdelante = idx<KANBAN_COLUMNAS.length-1;
           const dueHtml = f.fechaEntrega ? `${kanbanBadgeEntrega(f.fechaEntrega)}<br>` : '<span style="font-size:0.72rem; color:#a0aec0;">Sin fecha de entrega</span><br>';
+          // Conde 2026-08-20: fecha de aprobación (cuándo se creó la ficha, que es justo el momento
+          // en que se marcó Ganado o se aprobó el pedido) junto a la de entrega.
+          const fechaAprobacionTxt = f.fechaCreacion ? new Date(f.fechaCreacion).toLocaleDateString('es-CO', {day:'numeric', month:'short', year:'numeric'}) : null;
+          const aprobacionHtml = fechaAprobacionTxt ? `<span style="font-size:0.72rem; color:#718096;">✅ Aprobado: ${fechaAprobacionTxt}</span><br>` : '';
           const expandida = kanbanExpandidas.has(f.id);
           const lineasUnicas = [...new Set((f.lineas||[]).map(l=>l.linea))];
           const dotsHtml = lineasUnicas.map(ln => `<span class="kb-linea-dot" style="background:${KANBAN_COLOR_LINEA[ln]||'#718096'};" title="${NOMBRES_LINEA_PRODUCTO[ln]||ln}"></span>`).join('');
@@ -3275,6 +3323,8 @@
             <div class="kanban-card-title" ${tituloEsLargo?'onclick="event.stopPropagation(); this.classList.toggle(\'expandido\')"':''}>${tituloHtml}</div>
             <div class="kanban-card-meta">👤 ${f.nombreCli}${f.ot?` — ${f.ot}`:''}${f.origen==='manual'?' — Servicio Express':''}</div>
             ${f.entrega?`<div class="kanban-card-meta">🚚 Entrega: ${f.entrega}</div>`:''}
+            ${f.responsable?`<div class="kanban-card-meta">📝 Notas: ${f.responsable}</div>`:''}
+            ${aprobacionHtml}
             ${dueHtml}
             <div style="clear:both;"></div>`;
           if(!expandida){
@@ -3323,8 +3373,8 @@
                 <input type="date" id="kb-edit-fecha-${f.id}" value="${f.fechaEntrega||''}" style="width:100%; box-sizing:border-box; font-size:0.85rem; padding:6px; border:1px solid #cbd5e0; border-radius:4px;"></div>
               <div style="margin-bottom:6px;"><label style="font-size:0.72rem; color:#4a5568; display:block; margin-bottom:2px;">Entrega (ciudad / especificaciones)</label>
                 <input type="text" id="kb-edit-entrega-${f.id}" value="${(f.entrega||'').replace(/"/g,'&quot;')}" style="width:100%; box-sizing:border-box; font-size:0.85rem; padding:6px; border:1px solid #cbd5e0; border-radius:4px;"></div>
-              <div style="margin-bottom:8px;"><label style="font-size:0.72rem; color:#4a5568; display:block; margin-bottom:2px;">Responsable</label>
-                <input type="text" id="kb-edit-responsable-${f.id}" value="${(f.responsable||'').replace(/"/g,'&quot;')}" style="width:100%; box-sizing:border-box; font-size:0.85rem; padding:6px; border:1px solid #cbd5e0; border-radius:4px;"></div>
+              <div style="margin-bottom:8px;"><label style="font-size:0.72rem; color:#4a5568; display:block; margin-bottom:2px;">Notas (aclaraciones del producto)</label>
+                <input type="text" id="kb-edit-responsable-${f.id}" value="${(f.responsable||'').replace(/"/g,'&quot;')}" placeholder="Ej: cliente pidió cambiar el color del anillado" style="width:100%; box-sizing:border-box; font-size:0.85rem; padding:6px; border:1px solid #cbd5e0; border-radius:4px;"></div>
               <div style="display:flex; gap:6px;">
                 <button class="btn-action" style="flex:1; background:var(--ganado); color:#fff;" onclick="guardarEdicionFicha('${f.id}')">💾 Guardar cambios</button>
                 <button class="btn-action" style="flex:1;" onclick="toggleEditarFicha('${f.id}')">Cancelar</button>
@@ -3337,6 +3387,7 @@
             </div>
             <div class="kanban-checklist" style="margin-top:8px;">${checklistHtml}<div style="font-size:0.7rem; color:#a0aec0; margin-top:2px;">${hechos}/${f.checklist.length} completado</div></div>
             <button style="margin-top:8px; width:100%; background:var(--secondary); color:#fff; border:none; border-radius:5px; padding:8px; font-weight:700; font-size:0.85rem; cursor:pointer;" onclick="verOrdenProduccionFicha('${f.id}')">🏭 Ver Orden de Producción</button>
+            ${f.columna==='diseno' ? `<button ${f.disenoAprobado?'disabled':''} style="margin-top:8px; width:100%; background:${f.disenoAprobado?'#cbd5e0':'var(--ganado)'}; color:${f.disenoAprobado?'#718096':'#fff'}; border:none; border-radius:5px; padding:8px; font-weight:700; font-size:0.85rem; cursor:${f.disenoAprobado?'default':'pointer'};" onclick="marcarDisenoAprobado('${f.id}')">${f.disenoAprobado?'✓ Diseño Aprobado':'🎨 Diseño Aprobado'}</button>` : ''}
             ${fotosSectionHtml}
             <button style="margin-top:8px; width:100%; background:none; color:var(--primary); border:1px solid var(--primary); border-radius:5px; padding:8px; font-weight:700; font-size:0.85rem; cursor:pointer;" onclick="toggleEditarFicha('${f.id}')">${editando?'✕ Cerrar edición':'✏️ Editar datos / fecha de entrega'}</button>
             ${editSectionHtml}

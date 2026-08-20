@@ -221,6 +221,7 @@ create table public.kanban_fichas (
   entrega text,
   responsable text,
   origen text check (origen in ('automatica','manual','bot_whatsapp','b2c')),
+  diseno_aprobado boolean not null default false, -- Conde 2026-08-20: botón "Diseño Aprobado"
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

@@ -240,14 +240,14 @@ function tacticalFichaKanbanADb(f){
     id: f.id, ot: f.ot||null, id_cliente: f.idCli||null, nombre_cli: f.nombreCli||'',
     titulo: f.titulo||'', columna: f.columna||'aprobada', urgente: !!f.urgente,
     fecha_entrega: f.fechaEntrega||null, entrega: f.entrega||null,
-    responsable: f.responsable||null, origen: f.origen||null,
+    responsable: f.responsable||null, origen: f.origen||null, diseno_aprobado: !!f.disenoAprobado,
   };
 }
 function tacticalFichaKanbanDeDb(r, lineas, checklist, fotos){
   return {
     id: r.id, ot: r.ot, idCli: r.id_cliente, nombreCli: r.nombre_cli, titulo: r.titulo,
     columna: r.columna, urgente: r.urgente, fechaEntrega: r.fecha_entrega, entrega: r.entrega,
-    responsable: r.responsable, origen: r.origen, fechaCreacion: r.created_at,
+    responsable: r.responsable, origen: r.origen, disenoAprobado: !!r.diseno_aprobado, fechaCreacion: r.created_at,
     lineas: lineas||[], checklist: checklist||[], fotos: fotos||[],
   };
 }

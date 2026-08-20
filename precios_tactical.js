@@ -459,43 +459,47 @@ const TACTICAL_NOMBRE_MAQUINA = { octavo:"Octavo", cuarto:"Cuarto", medio_pliego
      piePagina (opcional, string HTML libre -- ej. armado/encuadernación),
      recomendaciones: [texto, ...] (opcional),
    } ---- */
+// Conde 2026-08-20: "que la orden de producción sea más grande tanto el texto como las imágenes,
+// quizá un 60% más grande" -- todos los tamaños de fuente/imagen de esta plantilla se escalan
+// x1.6 respecto a los originales (documentado el valor base al lado de cada uno, por si hay que
+// volver a ajustar la proporción más adelante).
 function tacticalOPDocumentoHtml(cfg){
   const filas = cfg.filasTabla || [];
   let filasHtml = '';
   for(let i=0; i<filas.length; i+=2){
     const [l1,v1] = filas[i];
     const par2 = filas[i+1];
-    filasHtml += `<tr><th style="padding:2px 5px;">${l1}</th><td style="padding:2px 5px;"${!par2?' colspan="3"':''}><strong>${v1}</strong></td>${par2?`<th style="padding:2px 5px;">${par2[0]}</th><td style="padding:2px 5px;"><strong>${par2[1]}</strong></td>`:''}</tr>`;
+    filasHtml += `<tr><th style="padding:3px 8px;">${l1}</th><td style="padding:3px 8px;"${!par2?' colspan="3"':''}><strong>${v1}</strong></td>${par2?`<th style="padding:3px 8px;">${par2[0]}</th><td style="padding:3px 8px;"><strong>${par2[1]}</strong></td>`:''}</tr>`;
   }
   const bloquesHtml = (cfg.bloques||[]).map(b => {
     const pc = b.planoCorte;
     return `
-      <div style="border:1px solid #d7dee5; border-radius:3px; padding:3px 7px; margin-bottom:8px; break-inside:avoid; display:flex; gap:8px; align-items:center;">
+      <div style="border:1px solid #d7dee5; border-radius:3px; padding:5px 11px; margin-bottom:13px; break-inside:avoid; display:flex; gap:13px; align-items:center;">
         <div style="flex:1; min-width:0;">
-          <div style="font-size:0.82rem; font-weight:bold; line-height:1.2;">${b.titulo||''}</div>
-          ${(b.lineasTexto||[]).map(txt=>`<div style="font-size:0.76rem; color:#4a5568; line-height:1.3;">${txt}</div>`).join('')}
+          <div style="font-size:1.31rem; font-weight:bold; line-height:1.2;">${b.titulo||''}</div>
+          ${(b.lineasTexto||[]).map(txt=>`<div style="font-size:1.22rem; color:#4a5568; line-height:1.3;">${txt}</div>`).join('')}
         </div>
-        ${pc ? `<div style="flex-shrink:0; display:flex; gap:6px; align-items:center;">${tacticalDibujarPlanoCorteSVG(pc,60)}<div style="font-size:0.72rem; color:#4a5568; max-width:100px; line-height:1.25;">${tacticalPlanoCorteTexto(pc)}</div></div>` : ''}
+        ${pc ? `<div style="flex-shrink:0; display:flex; gap:10px; align-items:center;">${tacticalDibujarPlanoCorteSVG(pc,96)}<div style="font-size:1.15rem; color:#4a5568; max-width:160px; line-height:1.25;">${tacticalPlanoCorteTexto(pc)}</div></div>` : ''}
       </div>`;
   }).join('');
   const recomendaciones = cfg.recomendaciones || [];
   const recsHtml = recomendaciones.length ? `
-    <div class="doc-section-title" style="font-size:0.82rem; padding:3px 7px; margin:8px 0 4px;">⚠️ Recomendaciones de Producción</div>
-    ${recomendaciones.map(txt=>`<div style="background:#fff3cd; color:#7a5b00; border:1px solid #f0d98c; border-radius:4px; padding:5px 9px; font-size:0.74rem; margin-bottom:5px;">${txt}</div>`).join('')}
+    <div class="doc-section-title" style="font-size:1.31rem; padding:5px 11px; margin:13px 0 6px;">⚠️ Recomendaciones de Producción</div>
+    ${recomendaciones.map(txt=>`<div style="background:#fff3cd; color:#7a5b00; border:1px solid #f0d98c; border-radius:4px; padding:8px 14px; font-size:1.18rem; margin-bottom:8px;">${txt}</div>`).join('')}
   ` : '';
   return `
-    <div class="doc-header" style="padding-bottom:4px; margin-bottom:4px;">
-      <div><img src="${cfg.logoB64}" style="height:32px; margin-bottom:2px; display:block;" alt="Tactical Marketing"><div class="doc-tipo" style="background:var(--secondary,#4a5568); font-size:0.78rem; padding:2px 8px;">${cfg.tipoDocTexto||'ORDEN DE PRODUCCIÓN'} ${cfg.ot||''} — USO INTERNO</div></div>
-      <div class="doc-empresa-datos" style="font-size:0.74rem;">${new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'})}</div>
+    <div class="doc-header" style="padding-bottom:6px; margin-bottom:6px;">
+      <div><img src="${cfg.logoB64}" style="height:51px; margin-bottom:3px; display:block;" alt="Tactical Marketing"><div class="doc-tipo" style="background:var(--secondary,#4a5568); font-size:1.25rem; padding:3px 13px;">${cfg.tipoDocTexto||'ORDEN DE PRODUCCIÓN'} ${cfg.ot||''} — USO INTERNO</div></div>
+      <div class="doc-empresa-datos" style="font-size:1.18rem;">${new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'})}</div>
     </div>
-    <table class="doc-table" style="font-size:0.78rem; margin-bottom:4px;">
-      <tr><th style="padding:2px 5px;">N° de OT</th><td style="font-weight:bold; padding:2px 5px;">${cfg.ot||'-'}</td><th style="padding:2px 5px;">Cliente</th><td style="padding:2px 5px;"><strong>${cfg.cliente||'-'}</strong></td></tr>
+    <table class="doc-table" style="font-size:1.25rem; margin-bottom:6px;">
+      <tr><th style="padding:3px 8px;">N° de OT</th><td style="font-weight:bold; padding:3px 8px;">${cfg.ot||'-'}</td><th style="padding:3px 8px;">Cliente</th><td style="padding:3px 8px;"><strong>${cfg.cliente||'-'}</strong></td></tr>
       ${filasHtml}
-      <tr><th style="padding:2px 5px;">Entrega</th><td colspan="3" style="padding:2px 5px;"><strong>${cfg.fechaEntrega||'Por definir'}</strong></td></tr>
+      <tr><th style="padding:3px 8px;">Entrega</th><td colspan="3" style="padding:3px 8px;"><strong>${cfg.fechaEntrega||'Por definir'}</strong></td></tr>
     </table>
-    <div class="doc-section-title" style="font-size:0.82rem; padding:3px 7px; margin:4px 0 4px;">Insumos, montajes y plano de corte</div>
+    <div class="doc-section-title" style="font-size:1.31rem; padding:5px 11px; margin:6px 0 6px;">Insumos, montajes y plano de corte</div>
     ${bloquesHtml}
-    ${cfg.piePagina ? `<div class="doc-section-title" style="font-size:0.82rem; padding:3px 7px; margin:4px 0 4px;">Armado / Terminado</div><p style="font-size:0.76rem; margin:2px 0;">${cfg.piePagina}</p>` : ''}
+    ${cfg.piePagina ? `<div class="doc-section-title" style="font-size:1.31rem; padding:5px 11px; margin:6px 0 6px;">Armado / Terminado</div><p style="font-size:1.22rem; margin:3px 0;">${cfg.piePagina}</p>` : ''}
     ${recsHtml}
   `;
 }
