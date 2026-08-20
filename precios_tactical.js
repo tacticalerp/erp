@@ -419,6 +419,12 @@ function tacticalBuscarAyuda(pregunta){
    ({piezaAncho, piezaAlto, pliegoAncho, pliegoAlto, columnas, filas, rotado, piezasPorPliego})
    y lo dibuja como SVG proporcional -- compartido para no repetir el dibujo en cada
    herramienta (Conde 2026-08-14, pidió letra chica y máxima densidad de información). ---- */
+// Conde 2026-08-20: "un color marcará el corte a 50x70 y otro color las 8 páginas en tamaño
+// 50x70" -- dos colores separados: ROJO para el corte del pliego a su tamaño final (el
+// contorno exterior), AZUL para el montaje de impresión (la cuadrícula de piezas dentro de
+// ese mismo pliego). Antes ambos usaban el mismo color oscuro y no se distinguían.
+const TACTICAL_COLOR_CORTE_PLIEGO = '#c0392b';
+const TACTICAL_COLOR_MONTAJE_PIEZAS = '#1e5fa8';
 function tacticalDibujarPlanoCorteSVG(pc, maxAnchoPx){
   if(!pc || !pc.pliegoAncho || !pc.pliegoAlto || !pc.columnas || !pc.filas) return '';
   maxAnchoPx = maxAnchoPx || 170;
@@ -430,14 +436,17 @@ function tacticalDibujarPlanoCorteSVG(pc, maxAnchoPx){
   for(let fila=0; fila<pc.filas; fila++){
     for(let col=0; col<pc.columnas; col++){
       const x = col*piezaW, y = fila*piezaH;
-      rects += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(piezaW-1.2,0.5).toFixed(1)}" height="${Math.max(piezaH-1.2,0.5).toFixed(1)}" fill="#eef2f7" stroke="#1e3a5f" stroke-width="0.6"/>`;
+      rects += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(piezaW-1.2,0.5).toFixed(1)}" height="${Math.max(piezaH-1.2,0.5).toFixed(1)}" fill="#eef2f7" stroke="${TACTICAL_COLOR_MONTAJE_PIEZAS}" stroke-width="1"/>`;
     }
   }
-  return `<svg width="${w.toFixed(0)}" height="${h.toFixed(0)}" viewBox="0 0 ${w.toFixed(1)} ${h.toFixed(1)}" style="border:1px solid #1a202c; background:#fff; display:block;">${rects}</svg>`;
+  // El contorno del pliego (corte) se dibuja al final, encima de la cuadrícula, para que se vea
+  // claro incluso donde coincide con el borde de las piezas de las orillas.
+  const contornoCorte = `<rect x="0.9" y="0.9" width="${Math.max(w-1.8,0.5).toFixed(1)}" height="${Math.max(h-1.8,0.5).toFixed(1)}" fill="none" stroke="${TACTICAL_COLOR_CORTE_PLIEGO}" stroke-width="1.8"/>`;
+  return `<svg width="${w.toFixed(0)}" height="${h.toFixed(0)}" viewBox="0 0 ${w.toFixed(1)} ${h.toFixed(1)}" style="background:#fff; display:block;">${rects}${contornoCorte}</svg>`;
 }
 function tacticalPlanoCorteTexto(pc){
   if(!pc) return '';
-  return `Pliego ${pc.pliegoAncho}x${pc.pliegoAlto}cm → ${pc.piezasPorPliego} pieza(s) de ${pc.piezaAncho}x${pc.piezaAlto}cm (${pc.columnas}x${pc.filas}${pc.rotado?', rotado':''})`;
+  return `<span style="color:${TACTICAL_COLOR_CORTE_PLIEGO}; font-weight:bold;">■</span> Corte del pliego: ${pc.pliegoAncho}x${pc.pliegoAlto}cm<br><span style="color:${TACTICAL_COLOR_MONTAJE_PIEZAS}; font-weight:bold;">■</span> Montaje: ${pc.piezasPorPliego} pieza(s) de ${pc.piezaAncho}x${pc.piezaAlto}cm (${pc.columnas}x${pc.filas}${pc.rotado?', rotado':''})`;
 }
 
 /* ==========================================
