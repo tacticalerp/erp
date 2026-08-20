@@ -1053,17 +1053,24 @@
                                 <option value="trimestral">Trimestral</option>
                                 <option value="semestral">Semestral</option>
                                 <option value="anual">Anual</option>
+                                <option value="personalizado">Rango de fechas personalizado</option>
                             </select>
-                            <button class="btn-action" onclick="repNavegar(-1)">◀</button>
-                            <span id="rep-periodo-etiqueta" style="font-weight:bold; min-width:160px; text-align:center;"></span>
-                            <button class="btn-action" onclick="repNavegar(1)">▶</button>
+                            <span id="rep-periodo-fijo-nav">
+                                <button class="btn-action" onclick="repNavegar(-1)">◀</button>
+                                <span id="rep-periodo-etiqueta" style="font-weight:bold; min-width:160px; text-align:center; display:inline-block;"></span>
+                                <button class="btn-action" onclick="repNavegar(1)">▶</button>
+                            </span>
+                            <span id="rep-periodo-personalizado" style="display:none; align-items:center; gap:6px;">
+                                Desde <input type="date" id="rep-fecha-inicio" onchange="renderReportes()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;">
+                                Hasta <input type="date" id="rep-fecha-fin" onchange="renderReportes()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;">
+                            </span>
                             <select id="rep-periodo-vendedor" onchange="renderReportes()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;"><option value="">Todos los vendedores</option></select>
                             <select id="rep-periodo-linea" onchange="renderReportes()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;"><option value="">Todas las líneas</option></select>
                         </div>
                         <div class="dash-grid" id="rep-comercial-kpis"></div>
                         <div class="card-grid" style="margin-top:15px;">
                             <div class="data-card">
-                                <div class="card-title">🏆 Top Clientes (LTV)</div>
+                                <div class="card-title">🏆 Top Clientes (LTV histórico total)</div>
                                 <div id="rep-top-clientes" style="font-size:0.9rem; line-height:1.6; margin-top:8px;"></div>
                             </div>
                             <div class="data-card">
@@ -1073,6 +1080,14 @@
                             <div class="data-card">
                                 <div class="card-title">❌ Motivos de Pérdida</div>
                                 <div id="rep-motivos" style="font-size:0.9rem; line-height:1.6; margin-top:8px;"></div>
+                            </div>
+                            <div class="data-card">
+                                <div class="card-title">💰 Ventas por Cliente (en el período elegido)</div>
+                                <div id="rep-ventas-cliente" style="font-size:0.9rem; line-height:1.6; margin-top:8px; max-height:260px; overflow-y:auto;"></div>
+                            </div>
+                            <div class="data-card">
+                                <div class="card-title">💵 Ventas por Producto (en el período elegido)</div>
+                                <div id="rep-ventas-producto" style="font-size:0.9rem; line-height:1.6; margin-top:8px;"></div>
                             </div>
                         </div>
                     </div>
@@ -3879,7 +3894,17 @@
         function periodoRango(tipo, offset){
           const hoy = new Date();
           let inicio, fin, etiqueta;
-          if(tipo==='trimestral'){
+          if(tipo==='personalizado'){
+            const iStr = (document.getElementById('rep-fecha-inicio')||{}).value;
+            const fStr = (document.getElementById('rep-fecha-fin')||{}).value;
+            inicio = iStr ? new Date(iStr+'T00:00:00') : new Date(hoy.getFullYear(),0,1);
+            // "fin" es exclusivo en fechaEnRango (ver más abajo) -- se suma 1 día para que el día
+            // elegido como "Hasta" quede incluido completo, no solo hasta la medianoche anterior.
+            fin = fStr ? new Date(new Date(fStr+'T00:00:00').getTime()+86400000) : new Date(hoy.getTime()+86400000);
+            etiqueta = iStr && fStr
+              ? `${inicio.toLocaleDateString('es-CO',{day:'numeric',month:'short',year:'numeric'})} — ${new Date(fStr+'T00:00:00').toLocaleDateString('es-CO',{day:'numeric',month:'short',year:'numeric'})}`
+              : 'Elige las 2 fechas';
+          } else if(tipo==='trimestral'){
             const base = Math.floor(hoy.getMonth()/3) + offset;
             inicio = new Date(hoy.getFullYear(), base*3, 1);
             fin = new Date(hoy.getFullYear(), base*3+3, 1);
@@ -5469,6 +5494,13 @@
         };
         let repPeriodoTipo = 'mensual', repPeriodoOffset = 0;
         function repCambiarTipo(v){ repPeriodoTipo = v; repPeriodoOffset = 0; renderReportes(); }
+        function repActualizarControlesPeriodo(){
+          const esPersonalizado = repPeriodoTipo === 'personalizado';
+          const navFijo = document.getElementById('rep-periodo-fijo-nav');
+          const navPersonalizado = document.getElementById('rep-periodo-personalizado');
+          if(navFijo) navFijo.style.display = esPersonalizado ? 'none' : 'inline';
+          if(navPersonalizado) navPersonalizado.style.display = esPersonalizado ? 'inline-flex' : 'none';
+        }
         function repNavegar(dir){ repPeriodoOffset += dir; renderReportes(); }
         function ocurreEnLinea(c, linea){
           if(!linea) return true;
@@ -5476,6 +5508,7 @@
           return c.linea === linea;
         }
         function renderReportes(){
+          repActualizarControlesPeriodo();
           const {inicio, fin, etiqueta} = periodoRango(repPeriodoTipo, repPeriodoOffset);
           const elEtq = document.getElementById('rep-periodo-etiqueta');
           if(elEtq) elEtq.textContent = etiqueta;
@@ -5534,6 +5567,34 @@
           const motivos = {};
           perdidas.forEach(p=>{ motivos[p.motivo]=(motivos[p.motivo]||0)+1; });
           document.getElementById('rep-motivos').innerHTML = Object.keys(motivos).length ? Object.keys(motivos).map(m=>`• ${m}: <strong>${motivos[m]}</strong>`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin negocios perdidos en este período.</span>';
+
+          // Conde 2026-08-20: "consolidado de ventas por cliente y por producto" -- a diferencia del
+          // Top Clientes de arriba (que es LTV histórico, sin importar el período elegido), esto usa
+          // SOLO lo realmente vendido (ganadas) DENTRO del rango de fechas elegido.
+          const ventasPorCliente = {};
+          ganadas.forEach(g=>{ if(!g.idCli) return; ventasPorCliente[g.idCli] = (ventasPorCliente[g.idCli]||0) + (g.monto||0); });
+          const filasVentasCliente = Object.keys(ventasPorCliente)
+            .map(idCli => ({ nombre: (db_clientes.find(c=>c.id===idCli)||{}).empresa || 'Cliente eliminado', total: ventasPorCliente[idCli] }))
+            .sort((a,b)=>b.total-a.total);
+          document.getElementById('rep-ventas-cliente').innerHTML = filasVentasCliente.length
+            ? filasVentasCliente.map(f=>`• ${f.nombre}: <strong>${cotFormatoCop(f.total)}</strong>`).join('<br>')
+            : '<span style="color:#a0aec0; font-style:italic;">Sin ventas ganadas en este período.</span>';
+
+          // Ventas en $ por producto: un pedido multi-producto (lineas:[...]) solo trae UN monto total
+          // para todo el pedido, no desglosado por cada línea que lo compone -- por eso se agrupa
+          // aparte como "Multi-producto", en vez de inventar un reparto proporcional engañoso.
+          const ventasPorProducto = {};
+          let ventasMultiProducto = 0;
+          ganadas.forEach(g=>{
+            if(g.lineas && g.lineas.length){ ventasMultiProducto += (g.monto||0); return; }
+            const l = g.linea || 'otro';
+            ventasPorProducto[l] = (ventasPorProducto[l]||0) + (g.monto||0);
+          });
+          let htmlVentasProducto = Object.keys(ventasPorProducto)
+            .sort((a,b)=>ventasPorProducto[b]-ventasPorProducto[a])
+            .map(l=>`• ${NOMBRES_LINEA_PRODUCTO[l]||l}: <strong>${cotFormatoCop(ventasPorProducto[l])}</strong>`).join('<br>');
+          if(ventasMultiProducto>0) htmlVentasProducto += `${htmlVentasProducto?'<br>':''}• Multi-producto (varias líneas en un pedido): <strong>${cotFormatoCop(ventasMultiProducto)}</strong>`;
+          document.getElementById('rep-ventas-producto').innerHTML = htmlVentasProducto || '<span style="color:#a0aec0; font-style:italic;">Sin ventas ganadas en este período.</span>';
 
           // Producción: consumo de papel — detalle rico de Cuadernos (multi-línea)...
           const consumoPapel = {};
