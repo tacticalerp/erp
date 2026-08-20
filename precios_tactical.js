@@ -468,11 +468,11 @@ const TACTICAL_NOMBRE_MAQUINA = { octavo:"Octavo", cuarto:"Cuarto", medio_pliego
      piePagina (opcional, string HTML libre -- ej. armado/encuadernación),
      recomendaciones: [texto, ...] (opcional),
    } ---- */
-// Conde 2026-08-20: después de 2 rondas de "más grande" el texto quedó desproporcionado (cada
-// bloque con un tamaño de fuente distinto) -- pidió UN solo tamaño fijo para todo: 15px. Se deja
-// TACTICAL_OP_FONT_SIZE como única constante para que si en el futuro hay que ajustarlo, sea un
-// solo cambio en vez de perseguir cada rem suelto otra vez.
-const TACTICAL_OP_FONT_SIZE = '15px';
+// Conde 2026-08-20: 15px seguía viéndose desproporcionado impreso en hoja completa, y el
+// documento se estaba yendo a 4 páginas para un producto de una sola línea -- pidió 12.5px fijo
+// Y una plantilla más compacta (paddings/márgenes/imágenes más chicos) para que cualquier
+// producto, aunque tenga varias partes (Cuadernos: Carátula+Taco+Guardas), quepa en 1 hoja.
+const TACTICAL_OP_FONT_SIZE = '12.5px';
 function tacticalOPDocumentoHtml(cfg){
   const F = TACTICAL_OP_FONT_SIZE;
   const filas = cfg.filasTabla || [];
@@ -480,37 +480,37 @@ function tacticalOPDocumentoHtml(cfg){
   for(let i=0; i<filas.length; i+=2){
     const [l1,v1] = filas[i];
     const par2 = filas[i+1];
-    filasHtml += `<tr><th style="padding:4px 10px;">${l1}</th><td style="padding:4px 10px;"${!par2?' colspan="3"':''}><strong>${v1}</strong></td>${par2?`<th style="padding:4px 10px;">${par2[0]}</th><td style="padding:4px 10px;"><strong>${par2[1]}</strong></td>`:''}</tr>`;
+    filasHtml += `<tr><th style="padding:3px 8px;">${l1}</th><td style="padding:3px 8px;"${!par2?' colspan="3"':''}><strong>${v1}</strong></td>${par2?`<th style="padding:3px 8px;">${par2[0]}</th><td style="padding:3px 8px;"><strong>${par2[1]}</strong></td>`:''}</tr>`;
   }
   const bloquesHtml = (cfg.bloques||[]).map(b => {
     const pc = b.planoCorte;
     return `
-      <div style="border:1px solid #d7dee5; border-radius:3px; padding:7px 14px; margin-bottom:14px; break-inside:avoid; display:flex; gap:14px; align-items:center; font-size:${F};">
+      <div style="border:1px solid #d7dee5; border-radius:3px; padding:4px 9px; margin-bottom:6px; break-inside:avoid; display:flex; gap:9px; align-items:center; font-size:${F};">
         <div style="flex:1; min-width:0;">
-          <div style="font-weight:bold; line-height:1.3;">${b.titulo||''}</div>
-          ${(b.lineasTexto||[]).map(txt=>`<div style="color:#4a5568; line-height:1.4;">${txt}</div>`).join('')}
+          <div style="font-weight:bold; line-height:1.2;">${b.titulo||''}</div>
+          ${(b.lineasTexto||[]).map(txt=>`<div style="color:#4a5568; line-height:1.25;">${txt}</div>`).join('')}
         </div>
-        ${pc ? `<div style="flex-shrink:0; display:flex; gap:12px; align-items:center;">${tacticalDibujarPlanoCorteSVG(pc,140)}<div style="color:#4a5568; max-width:220px; line-height:1.35;">${tacticalPlanoCorteTexto(pc)}</div></div>` : ''}
+        ${pc ? `<div style="flex-shrink:0; display:flex; gap:8px; align-items:center;">${tacticalDibujarPlanoCorteSVG(pc,85)}<div style="color:#4a5568; max-width:150px; line-height:1.2;">${tacticalPlanoCorteTexto(pc)}</div></div>` : ''}
       </div>`;
   }).join('');
   const recomendaciones = cfg.recomendaciones || [];
   const recsHtml = recomendaciones.length ? `
-    <div class="doc-section-title" style="font-size:${F}; padding:6px 14px; margin:14px 0 7px;">⚠️ Recomendaciones de Producción</div>
-    ${recomendaciones.map(txt=>`<div style="background:#fff3cd; color:#7a5b00; border:1px solid #f0d98c; border-radius:4px; padding:8px 16px; font-size:${F}; margin-bottom:8px;">${txt}</div>`).join('')}
+    <div class="doc-section-title" style="font-size:${F}; padding:3px 9px; margin:6px 0 4px;">⚠️ Recomendaciones de Producción</div>
+    ${recomendaciones.map(txt=>`<div style="background:#fff3cd; color:#7a5b00; border:1px solid #f0d98c; border-radius:4px; padding:4px 9px; font-size:${F}; margin-bottom:4px;">${txt}</div>`).join('')}
   ` : '';
   return `
-    <div class="doc-header" style="padding-bottom:7px; margin-bottom:7px; font-size:${F};">
-      <div><img src="${cfg.logoB64}" style="height:60px; margin-bottom:4px; display:block;" alt="Tactical Marketing"><div class="doc-tipo" style="background:var(--secondary,#4a5568); font-size:${F}; padding:4px 14px;">${cfg.tipoDocTexto||'ORDEN DE PRODUCCIÓN'} ${cfg.ot||''} — USO INTERNO</div></div>
+    <div class="doc-header" style="padding-bottom:4px; margin-bottom:4px; font-size:${F};">
+      <div><img src="${cfg.logoB64}" style="height:36px; margin-bottom:2px; display:block;" alt="Tactical Marketing"><div class="doc-tipo" style="background:var(--secondary,#4a5568); font-size:${F}; padding:2px 9px;">${cfg.tipoDocTexto||'ORDEN DE PRODUCCIÓN'} ${cfg.ot||''} — USO INTERNO</div></div>
       <div class="doc-empresa-datos" style="font-size:${F};">${new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'})}</div>
     </div>
-    <table class="doc-table" style="font-size:${F}; margin-bottom:7px;">
-      <tr><th style="padding:4px 10px;">N° de OT</th><td style="font-weight:bold; padding:4px 10px;">${cfg.ot||'-'}</td><th style="padding:4px 10px;">Cliente</th><td style="padding:4px 10px;"><strong>${cfg.cliente||'-'}</strong></td></tr>
+    <table class="doc-table" style="font-size:${F}; margin-bottom:4px;">
+      <tr><th style="padding:3px 8px;">N° de OT</th><td style="font-weight:bold; padding:3px 8px;">${cfg.ot||'-'}</td><th style="padding:3px 8px;">Cliente</th><td style="padding:3px 8px;"><strong>${cfg.cliente||'-'}</strong></td></tr>
       ${filasHtml}
-      <tr><th style="padding:4px 10px;">Entrega</th><td colspan="3" style="padding:4px 10px;"><strong>${cfg.fechaEntrega||'Por definir'}</strong></td></tr>
+      <tr><th style="padding:3px 8px;">Entrega</th><td colspan="3" style="padding:3px 8px;"><strong>${cfg.fechaEntrega||'Por definir'}</strong></td></tr>
     </table>
-    <div class="doc-section-title" style="font-size:${F}; padding:6px 14px; margin:7px 0 7px;">Insumos, montajes y plano de corte</div>
+    <div class="doc-section-title" style="font-size:${F}; padding:3px 9px; margin:4px 0 4px;">Insumos, montajes y plano de corte</div>
     ${bloquesHtml}
-    ${cfg.piePagina ? `<div class="doc-section-title" style="font-size:${F}; padding:6px 14px; margin:7px 0 7px;">Armado / Terminado</div><p style="font-size:${F}; margin:4px 0;">${cfg.piePagina}</p>` : ''}
+    ${cfg.piePagina ? `<div class="doc-section-title" style="font-size:${F}; padding:3px 9px; margin:4px 0 4px;">Armado / Terminado</div><p style="font-size:${F}; margin:2px 0;">${cfg.piePagina}</p>` : ''}
     ${recsHtml}
   `;
 }
