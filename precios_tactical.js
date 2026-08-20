@@ -525,3 +525,27 @@ function tacticalLeerNumeroFormateado(id){
   if(!el) return 0;
   return parseFloat(String(el.value).replace(/\./g,'')) || 0;
 }
+
+/* ==========================================
+   RECOMENDACIONES DE PRODUCCIÓN -- editables desde el Panel de Precios (Conde 2026-08-20).
+   Cada calculadora sigue definiendo su propio RECOMENDACIONES_PRODUCCION (array de
+   {id, aplica, texto}) tal como ya existía -- esta función solo se intercala justo antes del
+   .filter(reg=>reg.aplica(r)) de cada una, para (a) reemplazar el texto de una recomendación
+   existente si Conde le puso un override por su id, y (b) agregar las recomendaciones nuevas que
+   Conde haya creado para esa línea (siempre se muestran, sin condición -- más simple que dejarlo
+   crear condiciones propias). Las entradas cuyo "texto" es una función (ej. el aviso dinámico de
+   Cajas que depende de r.troquel.nota) no se pueden sobreescribir con un texto fijo -- se dejan
+   igual, el override solo aplica a texto=string. */
+function tacticalAplicarRecomendacionesOverride(lista, calculadoraId){
+  const cache = (typeof tacticalRecomendacionesCache !== 'undefined') ? tacticalRecomendacionesCache : {overrides:{}, custom:[]};
+  const overrides = cache.overrides || {};
+  const conOverride = lista.map(reg => {
+    if(!reg.id || typeof reg.texto !== 'string') return reg;
+    const textoNuevo = overrides[reg.id];
+    return textoNuevo ? {...reg, texto: textoNuevo} : reg;
+  });
+  const customDeEstaCalculadora = (cache.custom||[])
+    .filter(c => c.calculadora === calculadoraId)
+    .map(c => ({ id: c.id, aplica: () => true, texto: c.texto }));
+  return [...conOverride, ...customDeEstaCalculadora];
+}

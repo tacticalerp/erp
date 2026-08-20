@@ -679,13 +679,14 @@ function cotizarCaja(p){
 
 /* ============ RECOMENDACIONES DE PRODUCCIÓN ============ */
 const RECOMENDACIONES_PRODUCCION = [
-  { aplica: (r) => r.troquel.cavidades>1, texto: "Este troquel produce varias cajas por golpe — verificar en el montaje que todas las cavidades queden alineadas antes de correr producción completa." },
-  { aplica: (r) => r.troquel.requiereMaquinaExterna, texto: "Este tamaño excede medio pliego y requiere máquina de pliego completo — cotizar manual con el proveedor externo antes de confirmar precio al cliente." },
+  { id: "cajas_1", aplica: (r) => r.troquel.cavidades>1, texto: "Este troquel produce varias cajas por golpe — verificar en el montaje que todas las cavidades queden alineadas antes de correr producción completa." },
+  { id: "cajas_2", aplica: (r) => r.troquel.requiereMaquinaExterna, texto: "Este tamaño excede medio pliego y requiere máquina de pliego completo — cotizar manual con el proveedor externo antes de confirmar precio al cliente." },
   { aplica: (r) => !!r.troquel.nota, texto: (r) => r.troquel.nota },
 ];
 function renderRecomendaciones(r){
   const cont = document.getElementById("recomendaciones-contenido");
-  const aplicables = RECOMENDACIONES_PRODUCCION.filter(reg => reg.aplica(r)).map(reg => typeof reg.texto==="function" ? reg.texto(r) : reg.texto);
+  const lista = tacticalAplicarRecomendacionesOverride(RECOMENDACIONES_PRODUCCION, "cajas");
+  const aplicables = lista.filter(reg => reg.aplica(r)).map(reg => typeof reg.texto==="function" ? reg.texto(r) : reg.texto);
   cont.innerHTML = aplicables.map(txt => `<div class="warn-box">${txt}</div>`).join("");
 }
 
@@ -807,6 +808,7 @@ window.tacticalOnLogin = async function(){
   db_opps = await tacticalOppsCargar();
   refrescarDatalistClientes();
   tacticalFototecaCargar();
+  tacticalRecomendacionesCargar();
   await tacticalPedidoBorradorCargar(); refrescarBannerPedido();
   await tacticalComparacionBorradorCargar(); refrescarBannerComparacion();
 };

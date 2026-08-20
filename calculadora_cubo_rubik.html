@@ -656,13 +656,14 @@ function cotizarCuboRubik(p){
 
 /* ============ RECOMENDACIONES DE PRODUCCIÓN ============ */
 const RECOMENDACIONES_PRODUCCION = [
-  { aplica: () => true, texto: "Siempre usar Adhesivo P4 para el cubo (sustrato confirmado, no cambiar sin autorización)." },
-  { aplica: () => true, texto: "El Brillo UV siempre debe hacerse por técnica de Screen (serigrafía) total — no usar otra técnica de UV." },
-  { aplica: () => true, texto: "Siempre preguntar al cliente si el pedido va con caja de empaque antes de cerrar la cotización." },
+  { id: "cubo_rubik_1", aplica: () => true, texto: "Siempre usar Adhesivo P4 para el cubo (sustrato confirmado, no cambiar sin autorización)." },
+  { id: "cubo_rubik_2", aplica: () => true, texto: "El Brillo UV siempre debe hacerse por técnica de Screen (serigrafía) total — no usar otra técnica de UV." },
+  { id: "cubo_rubik_3", aplica: () => true, texto: "Siempre preguntar al cliente si el pedido va con caja de empaque antes de cerrar la cotización." },
 ];
 function renderRecomendaciones(r){
   const cont = document.getElementById("recomendaciones-contenido");
-  const aplicables = RECOMENDACIONES_PRODUCCION.filter(reg => reg.aplica(r)).map(reg => reg.texto);
+  const lista = tacticalAplicarRecomendacionesOverride(RECOMENDACIONES_PRODUCCION, "cubo_rubik");
+  const aplicables = lista.filter(reg => reg.aplica(r)).map(reg => reg.texto);
   cont.innerHTML = aplicables.map(txt => `<div class="warn-box">${txt}</div>`).join("");
 }
 
@@ -735,6 +736,7 @@ window.tacticalOnLogin = async function(){
   db_opps = await tacticalOppsCargar();
   refrescarDatalistClientes();
   tacticalFototecaCargar();
+  tacticalRecomendacionesCargar();
   await tacticalPedidoBorradorCargar(); refrescarBannerPedido();
   await tacticalComparacionBorradorCargar(); refrescarBannerComparacion();
 };

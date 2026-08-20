@@ -690,12 +690,13 @@ function cotizarCarpeta(p){
 
 /* ============ RECOMENDACIONES DE PRODUCCIÓN ============ */
 const RECOMENDACIONES_PRODUCCION = [
-  { aplica: () => true, texto: "Confirmar el tamaño de pinza con diseño antes de producir, para evitar que quede una línea blanca en el arte." },
-  { aplica: (r) => r.plastificado, texto: "El pegue del plastificado es con silicona — no usar otro tipo de pegante." },
+  { id: "carpetas_1", aplica: () => true, texto: "Confirmar el tamaño de pinza con diseño antes de producir, para evitar que quede una línea blanca en el arte." },
+  { id: "carpetas_2", aplica: (r) => r.plastificado, texto: "El pegue del plastificado es con silicona — no usar otro tipo de pegante." },
 ];
 function renderRecomendaciones(r){
   const cont = document.getElementById("recomendaciones-contenido");
-  const aplicables = RECOMENDACIONES_PRODUCCION.filter(reg => reg.aplica(r)).map(reg => reg.texto);
+  const lista = tacticalAplicarRecomendacionesOverride(RECOMENDACIONES_PRODUCCION, "carpetas");
+  const aplicables = lista.filter(reg => reg.aplica(r)).map(reg => reg.texto);
   cont.innerHTML = aplicables.map(txt => `<div class="warn-box">${txt}</div>`).join("");
 }
 
@@ -813,6 +814,7 @@ window.tacticalOnLogin = async function(){
   db_opps = await tacticalOppsCargar();
   refrescarDatalistClientes();
   tacticalFototecaCargar();
+  tacticalRecomendacionesCargar();
   await tacticalPedidoBorradorCargar(); refrescarBannerPedido();
   await tacticalComparacionBorradorCargar(); refrescarBannerComparacion();
 };

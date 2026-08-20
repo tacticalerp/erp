@@ -759,6 +759,24 @@ async function tacticalGuardarAcabadosCustom(lista){
   if(error) console.error('Error guardando acabados custom en Supabase:', error);
 }
 
+// ============ RECOMENDACIONES DE PRODUCCIÓN (editables desde el Panel de Precios) ============
+// A diferencia de precios/sustratos/acabados custom, esto NO se necesita de forma síncrona al
+// cargar la página -- las Recomendaciones solo se muestran después de calcular una cotización (ya
+// con sesión iniciada hace rato), así que un cache simple en memoria (precargado en
+// window.tacticalOnLogin de cada calculadora) alcanza, sin necesitar el patrón de localStorage
+// (Conde 2026-08-20).
+let tacticalRecomendacionesCache = { overrides: {}, custom: [] };
+async function tacticalRecomendacionesCargar(){
+  const { data, error } = await tacticalSupabase.from('recomendaciones_override').select('*').eq('id', true).maybeSingle();
+  if(error){ console.error('Error cargando recomendaciones override de Supabase:', error); return; }
+  tacticalRecomendacionesCache = data ? { overrides: data.overrides||{}, custom: data.custom||[] } : { overrides:{}, custom:[] };
+}
+async function tacticalGuardarRecomendacionesOverride(overrides, custom){
+  const { error } = await tacticalSupabase.from('recomendaciones_override').upsert({ id: true, overrides, custom, actualizado_en: new Date().toISOString() });
+  if(error){ console.error('Error guardando recomendaciones override en Supabase:', error); return; }
+  tacticalRecomendacionesCache = { overrides, custom };
+}
+
 // ============ BORRADORES POR USUARIO (Pedido Activo / Comparación Activa) ============
 // Antes eran UN SOLO borrador global en localStorage, compartido sin querer por cualquiera que
 // abriera el navegador -- Conde pidió que sean por usuario (2 vendedores armando pedidos

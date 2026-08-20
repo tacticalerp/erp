@@ -577,6 +577,20 @@ alter table public.acabados_custom enable row level security;
 create policy "autenticados_todo_acabados_custom" on public.acabados_custom for all
   using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 
+-- Recomendaciones de Producción editables desde el Panel de Precios (Conde 2026-08-20) -- "overrides"
+-- reemplaza el texto de una recomendación existente por su id, "custom" agrega recomendaciones nuevas
+-- (siempre se muestran para la línea que se les asigne).
+create table public.recomendaciones_override (
+  id boolean primary key default true check (id),
+  overrides jsonb not null default '{}'::jsonb,
+  custom jsonb not null default '[]'::jsonb,
+  actualizado_en timestamptz not null default now()
+);
+insert into public.recomendaciones_override (id, overrides, custom) values (true, '{}'::jsonb, '[]'::jsonb);
+alter table public.recomendaciones_override enable row level security;
+create policy "autenticados_todo_recomendaciones_override" on public.recomendaciones_override for all
+  using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+
 -- --------------------------------------------------------------------------
 -- 11. FOTOTECA (unifica las 3 claves sueltas de hoy en una sola tabla)
 -- --------------------------------------------------------------------------

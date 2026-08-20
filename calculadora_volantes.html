@@ -926,12 +926,13 @@ function cotizarIman(p){
 
 /* ============ RECOMENDACIONES DE PRODUCCIÓN ============ */
 const RECOMENDACIONES_PRODUCCION = [
-  { aplica:(r)=>r.tintasTiro>=4 && r.tintasRetiro>=4, texto:"Impresión 4x4 con fondo: verificar que no se repise el material (que no se transparente la tinta del otro lado)." },
-  { aplica:(r)=>r.esPlegable && r.gramaje>VOLANTE_GRAFADO_GRAMAJE_MINIMO, texto:"Plegables en gramajes superiores a 150gr: se debe grafar (marcar el pliegue) antes de doblar." },
+  { id:"volantes_1", aplica:(r)=>r.tintasTiro>=4 && r.tintasRetiro>=4, texto:"Impresión 4x4 con fondo: verificar que no se repise el material (que no se transparente la tinta del otro lado)." },
+  { id:"volantes_2", aplica:(r)=>r.esPlegable && r.gramaje>VOLANTE_GRAFADO_GRAMAJE_MINIMO, texto:"Plegables en gramajes superiores a 150gr: se debe grafar (marcar el pliegue) antes de doblar." },
 ];
 function renderRecomendaciones(r){
   const cont = document.getElementById("recomendaciones-contenido");
-  const aplicables = RECOMENDACIONES_PRODUCCION.filter(reg => reg.aplica(r)).map(reg => reg.texto);
+  const lista = tacticalAplicarRecomendacionesOverride(RECOMENDACIONES_PRODUCCION, "volantes");
+  const aplicables = lista.filter(reg => reg.aplica(r)).map(reg => reg.texto);
   cont.innerHTML = aplicables.map(txt => `<div class="warn-box">${txt}</div>`).join("");
 }
 
@@ -1328,6 +1329,7 @@ window.tacticalOnLogin = async function(){
   db_opps = await tacticalOppsCargar();
   refrescarDatalistClientes();
   tacticalFototecaCargar();
+  tacticalRecomendacionesCargar();
   await tacticalPedidoBorradorCargar(); refrescarBannerPedido();
   await tacticalComparacionBorradorCargar(); refrescarBannerComparacion();
 };

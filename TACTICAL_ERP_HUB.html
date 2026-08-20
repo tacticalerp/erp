@@ -1406,6 +1406,21 @@
                 </div>
                 <div id="precios-grupos"></div>
                 <div class="data-card" style="margin-bottom:14px;">
+                    <div class="card-title">⚠️ Recomendaciones de Producción</div>
+                    <p style="color:#94a3b8; font-size:0.85rem; margin:6px 0 12px;">Edita el texto de una recomendación existente (queda en su recuadro amarillo original, solo cambia la redacción), o agrega una nueva para avisar de una falla que detectaste. Las nuevas se muestran SIEMPRE en esa línea de producto, sin condición.</p>
+                    <div id="precios-recomendaciones-lista"></div>
+                    <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+                        <button class="btn-submit" onclick="guardarRecomendacionesOverride()">💾 Guardar cambios de texto</button>
+                    </div>
+                    <div style="font-weight:bold; color:var(--primary); margin:16px 0 6px;">Recomendaciones nuevas agregadas por ti</div>
+                    <div id="precios-recomendaciones-custom-lista"></div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; background:#f8fafc; padding:10px; border-radius:6px; margin-top:8px;">
+                        <div class="form-group" style="margin:0;"><label style="font-size:0.75rem;">Línea de producto</label><select id="rec-nueva-calculadora" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;"></select></div>
+                        <div class="form-group" style="margin:0; flex:1; min-width:220px;"><label style="font-size:0.75rem;">Texto de la recomendación</label><input id="rec-nueva-texto" type="text" placeholder="Ej: Revisar que el troquel no tenga rebaba antes de correr producción" style="width:100%; box-sizing:border-box; padding:7px; border:1px solid #cbd5e0; border-radius:4px;"></div>
+                        <button class="btn-add" onclick="agregarRecomendacionCustom()">+ Agregar</button>
+                    </div>
+                </div>
+                <div class="data-card" style="margin-bottom:14px;">
                     <div class="card-title">🖨️ Promocionales — Tarifario de Marcación (Promos / SIMA)</div>
                     <p style="color:#94a3b8; font-size:0.85rem; margin:6px 0 0;">Cada técnica está colapsada por defecto — ábrela para editar. "Mínima" es el mínimo cobrado por el proveedor sin importar cantidad; el resto son precios por unidad, por tramo de cantidad.</p>
                     <div id="precios-promo-grupos" style="margin-top:10px;"></div>
@@ -1627,6 +1642,7 @@
                 mainTitle.innerText = "PANEL DE PRECIOS";
                 subTitle.innerText = "Fuente única de precios para las 8 herramientas (2026)";
                 if (typeof renderPanelPrecios === 'function') renderPanelPrecios();
+                if (typeof renderPanelRecomendaciones === 'function') renderPanelRecomendaciones();
             } else if (viewId === 'fototeca') {
                 navContainer.style.display = 'block';
                 mainTitle.innerText = "FOTOTECA DE PRODUCTOS";
@@ -2330,6 +2346,7 @@
             renderAllReprocesos();
           }
           db_fototeca = await tacticalFototecaCargar();
+          tacticalRecomendacionesCargar();
           if(document.getElementById('view-fototeca') && document.getElementById('view-fototeca').classList.contains('active-view')){
             renderFototeca();
           }
@@ -3669,6 +3686,105 @@
           db_acabados_custom = db_acabados_custom.filter(x => x.id !== id);
           tacticalPersistirAcabadosCustom();
           renderPanelPrecios();
+        }
+
+        // ============ RECOMENDACIONES DE PRODUCCIÓN (editables desde este panel) ============
+        // Conde 2026-08-20: catálogo estático de las 18 recomendaciones que hoy existen escritas en
+        // código, repartidas en 6 calculadoras (RECOMENDACIONES_PRODUCCION de cada archivo) -- solo
+        // sirve para ARMAR esta pantalla (mostrar la condición en español + el texto original de
+        // referencia). El id de cada una tiene que coincidir EXACTO con el id puesto en el array de
+        // la calculadora correspondiente, si no el override no hace match. Si algún día se agrega o
+        // quita una recomendación en el código de una calculadora, hay que reflejarlo aquí también
+        // a mano -- no se generan solas.
+        const RECOMENDACIONES_CATALOGO = [
+          {id:'cajas_1', calculadora:'cajas', label:'Cajas Blandas', condicion:'Solo si el troquel tiene varias cavidades (produce varias cajas por golpe)', original:'Este troquel produce varias cajas por golpe — verificar en el montaje que todas las cavidades queden alineadas antes de correr producción completa.'},
+          {id:'cajas_2', calculadora:'cajas', label:'Cajas Blandas', condicion:'Solo si el tamaño excede medio pliego (requiere máquina externa)', original:'Este tamaño excede medio pliego y requiere máquina de pliego completo — cotizar manual con el proveedor externo antes de confirmar precio al cliente.'},
+          {id:'carpetas_1', calculadora:'carpetas', label:'Carpetas', condicion:'Siempre se muestra', original:'Confirmar el tamaño de pinza con diseño antes de producir, para evitar que quede una línea blanca en el arte.'},
+          {id:'carpetas_2', calculadora:'carpetas', label:'Carpetas', condicion:'Solo si lleva plastificado', original:'El pegue del plastificado es con silicona — no usar otro tipo de pegante.'},
+          {id:'volantes_1', calculadora:'volantes', label:'Volantes/Afiches/Plegables', condicion:'Solo si es impresión 4x4 con retiro (fondo completo)', original:'Impresión 4x4 con fondo: verificar que no se repise el material (que no se transparente la tinta del otro lado).'},
+          {id:'volantes_2', calculadora:'volantes', label:'Volantes/Afiches/Plegables', condicion:'Solo si es plegable con gramaje alto (necesita grafado)', original:'Plegables en gramajes superiores a 150gr: se debe grafar (marcar el pliegue) antes de doblar.'},
+          {id:'rompecabezas_1', calculadora:'rompecabezas', label:'Rompecabezas', condicion:'Solo si el backing es Cartón 1.5mm', original:'Este rompecabezas se colamina con Cartón 1.5mm para troquelar. Tener en cuenta: el cartón nacional se hojaldra (se abren las capas) al troquelar, el importado no — verificar con el proveedor cuál se está usando antes de trabajar la orden.'},
+          {id:'rompecabezas_2', calculadora:'rompecabezas', label:'Rompecabezas', condicion:'Solo si lleva marco', original:'Rompecabezas con marco: si se entrega armado, se debe indicar al troquelador que NO troquele con toda la presión, para evitar que las fichas se desarmen.'},
+          {id:'rompecabezas_3', calculadora:'rompecabezas', label:'Rompecabezas', condicion:'Solo si son muchas fichas (línea Macro)', original:'Rompecabezas grandes: colaminar con bastante sobrante, para tener margen de ajuste en el troquelado.'},
+          {id:'rompecabezas_4', calculadora:'rompecabezas', label:'Rompecabezas', condicion:'Solo si son muchas fichas (línea Macro)', original:'Llevar un rompecabezas ya pegado como guía para el bote del papel en la segunda troquelada.'},
+          {id:'rompecabezas_5', calculadora:'rompecabezas', label:'Rompecabezas', condicion:'Siempre se muestra', original:'Revisar la ubicación de la pinza antes de imprimir, según el tamaño del troquel.'},
+          {id:'rompecabezas_6', calculadora:'rompecabezas', label:'Rompecabezas', condicion:'Siempre se muestra', original:'No plastificar el rompecabezas por las 2 caras — molesta una de las caras en el troquelado.'},
+          {id:'bolsas_1', calculadora:'bolsas', label:'Bolsas de Papel', condicion:'Siempre se muestra', original:'Las bolsas no se pueden hacer en cartulinas o papeles gruesos — se rompen en el plegado.'},
+          {id:'bolsas_2', calculadora:'bolsas', label:'Bolsas de Papel', condicion:'Solo si la agarradera es tipo corona', original:'El cordón que se usa es cordón sin alma.'},
+          {id:'bolsas_3', calculadora:'bolsas', label:'Bolsas de Papel', condicion:'Siempre se muestra', original:'Hay que perforar los refuerzos de las agarraderas.'},
+          {id:'cubo_rubik_1', calculadora:'cubo_rubik', label:'Cubo Rubik', condicion:'Siempre se muestra', original:'Siempre usar Adhesivo P4 para el cubo (sustrato confirmado, no cambiar sin autorización).'},
+          {id:'cubo_rubik_2', calculadora:'cubo_rubik', label:'Cubo Rubik', condicion:'Siempre se muestra', original:'El Brillo UV siempre debe hacerse por técnica de Screen (serigrafía) total — no usar otra técnica de UV.'},
+          {id:'cubo_rubik_3', calculadora:'cubo_rubik', label:'Cubo Rubik', condicion:'Siempre se muestra', original:'Siempre preguntar al cliente si el pedido va con caja de empaque antes de cerrar la cotización.'},
+        ];
+        const RECOMENDACIONES_CALCULADORAS_SELECT = [
+          {clave:'cajas', label:'Cajas Blandas'}, {clave:'carpetas', label:'Carpetas'}, {clave:'volantes', label:'Volantes/Afiches/Plegables'},
+          {clave:'rompecabezas', label:'Rompecabezas'}, {clave:'bolsas', label:'Bolsas de Papel'}, {clave:'cubo_rubik', label:'Cubo Rubik'},
+        ];
+        function renderPanelRecomendaciones(){
+          const cont = document.getElementById('precios-recomendaciones-lista');
+          if(!cont) return;
+          const cache = (typeof tacticalRecomendacionesCache !== 'undefined') ? tacticalRecomendacionesCache : {overrides:{}, custom:[]};
+          const overrides = cache.overrides || {};
+          let html = '', calculadoraActual = null;
+          RECOMENDACIONES_CATALOGO.forEach(rec => {
+            if(rec.calculadora !== calculadoraActual){
+              calculadoraActual = rec.calculadora;
+              html += `<div style="font-weight:bold; color:var(--primary); margin:14px 0 6px;">${rec.label}</div>`;
+            }
+            const valorActual = overrides[rec.id] || rec.original;
+            html += `<div style="margin-bottom:8px; padding:8px; background:#f8fafc; border-radius:6px; border:1px solid #e2e8f0;">
+              <div style="font-size:0.75rem; color:#718096; margin-bottom:3px;">${rec.condicion}</div>
+              <textarea class="recomendacion-input" data-id="${rec.id}" rows="2" style="width:100%; box-sizing:border-box; font-size:0.85rem; padding:6px; border:1px solid #cbd5e0; border-radius:4px; font-family:inherit;">${valorActual}</textarea>
+            </div>`;
+          });
+          cont.innerHTML = html;
+
+          const custom = cache.custom || [];
+          let htmlCustom = custom.map(c => {
+            const label = (RECOMENDACIONES_CALCULADORAS_SELECT.find(x=>x.clave===c.calculadora)||{}).label || c.calculadora;
+            return `<div style="margin-bottom:8px; padding:8px; background:#f8fafc; border-radius:6px; border:1px solid #e2e8f0; display:flex; justify-content:space-between; gap:8px; align-items:flex-start;">
+              <div><div style="font-size:0.75rem; color:#718096;">${label} — siempre se muestra</div><div style="font-size:0.85rem;">${c.texto}</div></div>
+              <button class="btn-action btn-del-row" onclick="eliminarRecomendacionCustom('${c.id}')">✕</button>
+            </div>`;
+          }).join('');
+          document.getElementById('precios-recomendaciones-custom-lista').innerHTML = htmlCustom || '<span style="color:#a0aec0; font-style:italic;">Todavía no has agregado ninguna.</span>';
+
+          const selCalc = document.getElementById('rec-nueva-calculadora');
+          if(selCalc && !selCalc.dataset.poblado){
+            RECOMENDACIONES_CALCULADORAS_SELECT.forEach(c=>{ const opt=document.createElement('option'); opt.value=c.clave; opt.textContent=c.label; selCalc.appendChild(opt); });
+            selCalc.dataset.poblado = '1';
+          }
+        }
+        async function guardarRecomendacionesOverride(){
+          if(!tacticalRequiereAdministrador()) return;
+          const overrides = {};
+          document.querySelectorAll('.recomendacion-input').forEach(el => {
+            const rec = RECOMENDACIONES_CATALOGO.find(r=>r.id===el.dataset.id);
+            const valor = el.value.trim();
+            if(rec && valor && valor !== rec.original) overrides[el.dataset.id] = valor;
+          });
+          const cache = (typeof tacticalRecomendacionesCache !== 'undefined') ? tacticalRecomendacionesCache : {overrides:{}, custom:[]};
+          await tacticalGuardarRecomendacionesOverride(overrides, cache.custom||[]);
+          alert('Recomendaciones guardadas — ya aplican en las calculadoras.');
+        }
+        async function agregarRecomendacionCustom(){
+          if(!tacticalRequiereAdministrador()) return;
+          const calculadora = document.getElementById('rec-nueva-calculadora').value;
+          const texto = document.getElementById('rec-nueva-texto').value.trim();
+          if(!texto){ alert('Escribe el texto de la recomendación.'); return; }
+          const cache = (typeof tacticalRecomendacionesCache !== 'undefined') ? tacticalRecomendacionesCache : {overrides:{}, custom:[]};
+          const custom = [...(cache.custom||[]), {id: crypto.randomUUID(), calculadora, texto}];
+          await tacticalGuardarRecomendacionesOverride(cache.overrides||{}, custom);
+          document.getElementById('rec-nueva-texto').value = '';
+          renderPanelRecomendaciones();
+        }
+        async function eliminarRecomendacionCustom(id){
+          if(!tacticalRequiereAdministrador()) return;
+          if(!confirm('¿Eliminar esta recomendación?')) return;
+          const cache = (typeof tacticalRecomendacionesCache !== 'undefined') ? tacticalRecomendacionesCache : {overrides:{}, custom:[]};
+          const custom = (cache.custom||[]).filter(c=>c.id!==id);
+          await tacticalGuardarRecomendacionesOverride(cache.overrides||{}, custom);
+          renderPanelRecomendaciones();
         }
 
         function renderPanelPrecios(){

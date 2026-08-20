@@ -808,26 +808,32 @@ function onCambioTroquelNuevo(){
 // que Conde las confirme — no inventar reglas nuevas sin que él las dé.
 const RECOMENDACIONES_PRODUCCION = [
   {
+    id: "rompecabezas_1",
     aplica: (r) => r.backingEtiqueta === "Cartón 1.5mm",
     texto: "Este rompecabezas se colamina con Cartón 1.5mm para troquelar. Tener en cuenta: el cartón nacional se hojaldra (se abren las capas) al troquelar, el importado no — verificar con el proveedor cuál se está usando antes de trabajar la orden.",
   },
   {
+    id: "rompecabezas_2",
     aplica: (r) => r.conMarco,
     texto: "Rompecabezas con marco: si se entrega armado, se debe indicar al troquelador que NO troquele con toda la presión, para evitar que las fichas se desarmen.",
   },
   {
+    id: "rompecabezas_3",
     aplica: (r) => r.troquel.fichas>=UMBRAL_FICHAS_LINEA_MACRO,
     texto: "Rompecabezas grandes: colaminar con bastante sobrante, para tener margen de ajuste en el troquelado.",
   },
   {
+    id: "rompecabezas_4",
     aplica: (r) => r.troquel.fichas>=UMBRAL_FICHAS_LINEA_MACRO,
     texto: "Llevar un rompecabezas ya pegado como guía para el bote del papel en la segunda troquelada.",
   },
   {
+    id: "rompecabezas_5",
     aplica: () => true,
     texto: "Revisar la ubicación de la pinza antes de imprimir, según el tamaño del troquel.",
   },
   {
+    id: "rompecabezas_6",
     aplica: () => true,
     texto: "No plastificar el rompecabezas por las 2 caras — molesta una de las caras en el troquelado.",
   },
@@ -836,7 +842,8 @@ const RECOMENDACIONES_PRODUCCION = [
 function renderRecomendaciones(r){
   const card = document.getElementById("card-recomendaciones");
   const cont = document.getElementById("recomendaciones-contenido");
-  const aplicables = RECOMENDACIONES_PRODUCCION.filter(reg => reg.aplica(r)).map(reg => reg.texto);
+  const lista = tacticalAplicarRecomendacionesOverride(RECOMENDACIONES_PRODUCCION, "rompecabezas");
+  const aplicables = lista.filter(reg => reg.aplica(r)).map(reg => reg.texto);
   if(aplicables.length === 0){ card.style.display = "none"; cont.innerHTML = ""; return; }
   card.style.display = "block";
   cont.innerHTML = aplicables.map(txt => `<div class="warn-box">${txt}</div>`).join("");
@@ -922,6 +929,7 @@ window.tacticalOnLogin = async function(){
   db_opps = await tacticalOppsCargar();
   refrescarDatalistClientes();
   tacticalFototecaCargar();
+  tacticalRecomendacionesCargar();
   await tacticalPedidoBorradorCargar(); refrescarBannerPedido();
   await tacticalComparacionBorradorCargar(); refrescarBannerComparacion();
 };

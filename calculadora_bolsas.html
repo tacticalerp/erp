@@ -809,13 +809,14 @@ function cotizarBolsa(p){
 
 /* ============ RECOMENDACIONES DE PRODUCCIÓN ============ */
 const RECOMENDACIONES_PRODUCCION = [
-  { aplica: () => true, texto: "Las bolsas no se pueden hacer en cartulinas o papeles gruesos — se rompen en el plegado." },
-  { aplica: (r) => r.tipoAgarradera==="corona", texto: "El cordón que se usa es cordón sin alma." },
-  { aplica: () => true, texto: "Hay que perforar los refuerzos de las agarraderas." },
+  { id: "bolsas_1", aplica: () => true, texto: "Las bolsas no se pueden hacer en cartulinas o papeles gruesos — se rompen en el plegado." },
+  { id: "bolsas_2", aplica: (r) => r.tipoAgarradera==="corona", texto: "El cordón que se usa es cordón sin alma." },
+  { id: "bolsas_3", aplica: () => true, texto: "Hay que perforar los refuerzos de las agarraderas." },
 ];
 function renderRecomendaciones(r){
   const cont = document.getElementById("recomendaciones-contenido");
-  const aplicables = RECOMENDACIONES_PRODUCCION.filter(reg => reg.aplica(r)).map(reg => reg.texto);
+  const lista = tacticalAplicarRecomendacionesOverride(RECOMENDACIONES_PRODUCCION, "bolsas");
+  const aplicables = lista.filter(reg => reg.aplica(r)).map(reg => reg.texto);
   cont.innerHTML = aplicables.map(txt => `<div class="warn-box">${txt}</div>`).join("");
 }
 
@@ -954,6 +955,7 @@ window.tacticalOnLogin = async function(){
   db_opps = await tacticalOppsCargar();
   refrescarDatalistClientes();
   tacticalFototecaCargar();
+  tacticalRecomendacionesCargar();
   await tacticalPedidoBorradorCargar(); refrescarBannerPedido();
   await tacticalComparacionBorradorCargar(); refrescarBannerComparacion();
 };
