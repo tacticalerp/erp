@@ -3325,7 +3325,9 @@
           const [ficha] = db_kanban.splice(iOrigen,1);
           const iDestino = db_kanban.findIndex(x=>x.id===idDestino);
           const destino = db_kanban[iDestino];
+          const columnaAnterior = ficha.columna;
           ficha.columna = destino ? destino.columna : ficha.columna;
+          avisarSiPasaAEntregar(ficha, columnaAnterior, ficha.columna);
           db_kanban.splice(iDestino===-1 ? db_kanban.length : iDestino, 0, ficha);
           tacticalSyncFichaKanban(ficha);
           renderKanban();
