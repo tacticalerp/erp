@@ -546,14 +546,14 @@ async function tacticalSyncIngreso(i){
 function tacticalCxpADb(c){
   return {
     id: c.id, numero: c.numero, fecha: c.fecha, proveedor: c.proveedor||'', numero_factura_proveedor: c.numeroFacturaProveedor||null,
-    categoria: c.categoria||null, subcategoria: c.subcategoria||null, monto: c.monto||0, saldo_pendiente: c.saldoPendiente||0,
+    categoria: c.categoria||null, subcategoria: c.subcategoria||null, iva: c.iva||0, monto: c.monto||0, saldo_pendiente: c.saldoPendiente||0,
     fecha_vencimiento: c.fechaVencimiento||null, estado: c.estado||'pendiente', id_egreso: c.idEgreso||null,
   };
 }
 function tacticalCxpDeDb(r, items){
   return {
     id: r.id, numero: r.numero, fecha: r.fecha, proveedor: r.proveedor, numeroFacturaProveedor: r.numero_factura_proveedor,
-    categoria: r.categoria, subcategoria: r.subcategoria, items: items||[], monto: Number(r.monto)||0, saldoPendiente: Number(r.saldo_pendiente)||0,
+    categoria: r.categoria, subcategoria: r.subcategoria, iva: Number(r.iva)||0, items: items||[], monto: Number(r.monto)||0, saldoPendiente: Number(r.saldo_pendiente)||0,
     fechaVencimiento: r.fecha_vencimiento, estado: r.estado, idEgreso: r.id_egreso,
   };
 }

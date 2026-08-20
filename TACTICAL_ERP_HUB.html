@@ -1172,7 +1172,7 @@
                             <div class="form-group"><label>Cliente:</label><select id="doc-cliente" onchange="contAutocompletarTipoDoc()"></select></div>
                             <div class="form-group">
                                 <label>Tipo de Documento:</label>
-                                <select id="doc-tipoDoc" onchange="contSugerirNumeroDoc()">
+                                <select id="doc-tipoDoc" onchange="contSugerirNumeroDoc(); contActualizarTotalDoc();"
                                     <option value="cuenta_cobro">Cuenta de Cobro (se imprime desde el ERP)</option>
                                     <option value="factura">Factura (ya facturada por fuera — DIAN)</option>
                                 </select>
@@ -1199,6 +1199,7 @@
                         </table></div>
                         <button class="btn-add-item" type="button" onclick="contAgregarItemDoc()">+ Agregar ítem</button>
                         <div class="metric-total" id="doc-valorBruto-total" style="margin-top:10px;">Valor Bruto Total: $0</div>
+                        <div class="metric-total" id="doc-iva-total" style="margin-top:4px; color:#718096; font-weight:normal;">IVA: $0</div>
                         <button class="btn-submit" style="margin-top:12px;" onclick="contGuardarDocVenta()">+ Registrar Documento de Venta</button>
                         <div class="card-grid" id="lista-docventa"></div>
                     </div>
@@ -1245,6 +1246,7 @@
                             </div>
                             <div class="form-group"><label>Subcategoría:</label><select id="cxp-subcategoria"></select></div>
                             <div class="form-group"><label>Fecha de Vencimiento:</label><input type="text" id="cxp-fechaVenc" placeholder="AAAA-MM-DD"></div>
+                            <div class="form-group"><label>IVA incluido (informativo, no cambia el Monto Total):</label><input type="text" inputmode="numeric" id="cxp-iva" value="0" oninput="contFormatearMiles(this)"></div>
                         </div>
                         <label style="display:block; font-weight:bold; margin-bottom:5px; font-size:0.88rem; color:var(--secondary);">Ítems de la factura de compra (hasta 10):</label>
                         <div class="table-responsive"><table>
@@ -5572,7 +5574,7 @@
 
         const CONT_SUBCATEGORIAS = {
             fijo: ['Arriendo','Nómina y prestaciones sociales','Servicios públicos (celular/internet)','Seguros/pólizas','Honorarios','Impuestos y licencias','Hosting y web','Amortizaciones y depreciación'],
-            variable: ['Insumos (proveedores)','Servicios (proveedores)','Importados','Servicios públicos de producción (luz)','Mantenimiento correctivo','IVA/Retefuente','Comisiones pasarela de pago','Publicidad digital','Producción y operación (mano de obra temporal)','Logística y distribución'],
+            variable: ['Insumos (proveedores)','Servicios (proveedores)','Importados','Servicios públicos de producción (luz)','Mantenimiento correctivo','IVA/Retefuente','Comisiones pasarela de pago','Publicidad digital','Producción y operación (mano de obra temporal)','Logística y distribución','Donaciones','Mantenimiento y reparaciones','Gastos legales','Transportes y fletes','Diversos'],
         };
 
         // Conde 2026-08-19: la numeración (FV/CC/IN/CP/EG) ahora se saca de Supabase
@@ -5637,9 +5639,15 @@
             if(el) el.remove();
             contActualizarTotalDoc();
         }
+        // Conde 2026-08-20: solo informativo -- muestra el IVA que se va a guardar con el documento
+        // (misma regla de siempre: 19% solo si es Factura, $0 si es Cuenta de Cobro), para que se
+        // vea en pantalla antes de guardar y no solo después, en el documento impreso.
         function contActualizarTotalDoc(){
             const total = contObtenerItemsDoc().reduce((s,i)=>s+i.valorTotal,0);
             document.getElementById('doc-valorBruto-total').innerText = 'Valor Bruto Total: ' + cotFormatoCop(total);
+            const tipoDoc = document.getElementById('doc-tipoDoc').value;
+            const iva = tipoDoc === 'factura' ? Math.round(total*0.19) : 0;
+            document.getElementById('doc-iva-total').innerText = `IVA${tipoDoc==='factura'?' (19%)':' (no aplica -- Cuenta de Cobro)'}: ${cotFormatoCop(iva)}`;
             return total;
         }
         function contObtenerItemsDoc(){
@@ -5751,6 +5759,7 @@
             const cli = db_clientes.find(c => c.id === document.getElementById('doc-cliente').value);
             if(cli && cli.tipo) document.getElementById('doc-tipoDoc').value = cli.tipo === 'corporativo' ? 'factura' : 'cuenta_cobro';
             contSugerirNumeroDoc();
+            contActualizarTotalDoc();
         }
         // Sugiere el próximo N° según el tipo de documento actual. Si el campo está vacío o todavía
         // tiene una sugerencia sin editar (dataset.auto), la reemplaza; si el usuario ya escribió su
@@ -5951,6 +5960,7 @@
             const items = contObtenerItemsCxp();
             const monto = items.reduce((s,i)=>s+i.valorTotal,0);
             const fechaVencimiento = document.getElementById('cxp-fechaVenc').value.trim();
+            const iva = contNumeroDesdeInput(document.getElementById('cxp-iva'));
 
             if(!proveedor || items.length===0 || monto<=0){ alert("Debe ingresar el proveedor y agregar al menos un ítem con valor mayor a 0."); return; }
 
@@ -5962,12 +5972,12 @@
             await contObtenerOCrearProveedor(proveedor); // registra el proveedor si es nuevo, o simplemente reutiliza el ya existente por nombre exacto
             const cxp = {
                 id: crypto.randomUUID(), numero, fecha: contHoy(),
-                proveedor, numeroFacturaProveedor, categoria, subcategoria, items, monto, saldoPendiente: monto, fechaVencimiento, estado: 'pendiente', idEgreso: null,
+                proveedor, numeroFacturaProveedor, categoria, subcategoria, iva, items, monto, saldoPendiente: monto, fechaVencimiento, estado: 'pendiente', idEgreso: null,
             };
             db_cxp.push(cxp);
             tacticalSyncCxp(cxp);
 
-            document.getElementById('cxp-proveedor').value=''; document.getElementById('cxp-numFactura').value=''; document.getElementById('cxp-fechaVenc').value='';
+            document.getElementById('cxp-proveedor').value=''; document.getElementById('cxp-numFactura').value=''; document.getElementById('cxp-fechaVenc').value=''; document.getElementById('cxp-iva').value='0';
             contLimpiarItemsCxp();
             document.getElementById('cxp-numero').value=''; document.getElementById('cxp-numero').dataset.auto='';
             renderContabilidad();
@@ -5983,7 +5993,7 @@
                         <span class="tag" style="float:right; background:${c.estado==='pagado'?'var(--ganado)':(c.estado==='abonado_parcial'?'var(--proceso)':'var(--pendiente)')}; color:${c.estado==='pendiente'?'#744210':'white'};">${c.estado.toUpperCase()}</span>
                         <div class="card-title">${c.numero} — ${c.proveedor}</div>
                         <div class="card-subtitle">${c.categoria==='fijo'?'Gasto Fijo':'Gasto Variable'} — ${c.subcategoria||''}</div>
-                        <div style="font-size:0.9rem;">Monto factura: <strong>${cotFormatoCop(c.monto)}</strong><br>Saldo pendiente: <strong style="color:var(--primary);">${cotFormatoCop(c.saldoPendiente)}</strong> — Vence: <strong>${c.fechaVencimiento||'-'}</strong></div>
+                        <div style="font-size:0.9rem;">Monto factura: <strong>${cotFormatoCop(c.monto)}</strong>${c.iva?` (incl. IVA ${cotFormatoCop(c.iva)})`:''}<br>Saldo pendiente: <strong style="color:var(--primary);">${cotFormatoCop(c.saldoPendiente)}</strong> — Vence: <strong>${c.fechaVencimiento||'-'}</strong></div>
                     </div>`;
             });
             if(db_cxp.length===0) container.innerHTML = '<p style="color:#718096; grid-column: 1/-1;">No hay cuentas por pagar registradas.</p>';

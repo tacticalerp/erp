@@ -403,6 +403,7 @@ create table public.cuentas_por_pagar (
   numero_factura_proveedor text,
   categoria text check (categoria in ('fijo','variable')),
   subcategoria text,
+  iva numeric not null default 0, -- informativo, NO afecta monto ni saldo_pendiente (Conde 2026-08-20)
   monto numeric not null default 0,
   saldo_pendiente numeric not null default 0,
   fecha_vencimiento date,
