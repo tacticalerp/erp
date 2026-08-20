@@ -307,10 +307,8 @@
             </div>
 
             <div style="margin: 15px 20px 0 20px; background: var(--light-gray); border: 1px solid #cbd5e0; border-radius: 6px; padding: 12px 15px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                <span style="font-weight:bold; color:var(--dark);">💾 Copia de Seguridad (este modelo es beta — la información vive solo en este navegador):</span>
+                <span style="font-weight:bold; color:var(--dark);">💾 Copia de Seguridad (descarga un respaldo de todos los datos reales guardados en Supabase):</span>
                 <button class="btn-action" onclick="contExportarRespaldo()">⬇️ Exportar todo (backup)</button>
-                <button class="btn-action" onclick="document.getElementById('input-respaldo').click()">⬆️ Importar copia</button>
-                <input type="file" id="input-respaldo" accept="application/json" style="display:none;" onchange="contImportarRespaldoArchivo(event)">
                 <span id="respaldo-nota" style="font-size:0.82rem; color:#718096;"></span>
             </div>
 
@@ -1482,55 +1480,43 @@
             return false;
         }
 
-        /* ---- COPIA DE SEGURIDAD (export/import de TODA la información) ----
-           Todo el ERP vive en localStorage, que es local a este navegador/máquina y NO viaja
-           solo si esto se despliega como web real más adelante. Este backup en JSON es el
-           puente: sirve como respaldo manual hoy, y como fuente para migrar los datos cuando
-           haya un backend real. */
-        const TACTICAL_BACKUP_KEYS = [
-            // 'tactical_date', 'tactical_db_historico' y 'tactical_active_tasks' se quitaron de
-            // aquí 2026-08-19 -- Plan de Tareas ya vive en Supabase (tabla tareas), con fecha real
-            // automática en vez del reloj simulado.
-            // 'tactical_db_reprocesos_v4' se quitó de aquí 2026-08-19 -- Reprocesos ya vive en
-            // Supabase (tablas reprocesos/reprocesos_items).
-            // 'tactical_crm_clientes_v2' se quitó de aquí 2026-08-18 -- Clientes ya vive en
-            // Supabase (tabla clientes), no en localStorage. El respaldo de Clientes ahora
-            // se hace desde el propio panel de Supabase (Table Editor -> Export), no desde
-            // este botón.
-            // Oportunidades/Historial: el Hub YA guarda en Supabase (tablas opps/historial_cierres).
-            // Las 8 calculadoras standalone también se migraron 2026-08-19 -- lo único que sigue
-            // escribiendo estas 2 claves es modulo_montajes_rompecabezas.html (B2C), que todavía no
-            // se migra -- se quitan de esta lista cuando ese módulo también pase a Supabase.
-            'tactical_crm_opps_v2', 'tactical_crm_historial_v2',
-            // 'tactical_cotizaciones_v1' se quitó de aquí 2026-08-19 -- Cotizaciones Cuadernos
-            // ya vive en Supabase (tabla cotizaciones_cuadernos), no en localStorage.
-            // Contabilidad (proveedores/docventa/ingresos/cxp/egresos/gastos fijos + contadores
-            // fv/cc/ingreso/cxp/egreso) se quitó de aquí 2026-08-19 -- ya vive en Supabase.
-            // Kanban: el Hub ya guarda en Supabase, pero se deja esta clave en el respaldo porque
-            // modulo_montajes_rompecabezas.html (B2C) todavía escribe fichas nuevas aquí directo.
-            'tactical_kanban_fichas_v1',
-            // 'tactical_pedido_activo' y 'tactical_comparacion_activa' se quitaron de aquí
-            // 2026-08-19 -- ahora son por usuario en Supabase (pedidos_borrador/comparaciones_borrador).
-            // Estas 2 SÍ siguen viviendo en localStorage a propósito (ver nota en tactical-supabase.js):
-            // son la fuente síncrona que lee precios_tactical.js al cargar la página -- Supabase solo
-            // las mantiene sincronizadas entre dispositivos, no las reemplaza.
-            'tactical_precios_override_v1', 'tactical_precios_override_meta_v1',
-            // Agregadas 2026-08-18 -- faltaban en el respaldo aunque sí son datos reales de negocio
-            // (auditoría pre-nube encontró que un respaldo hecho hoy las perdería):
-            'tactical_precios_promo_override_v1',
-            // 'tactical_fototeca_v1', 'tactical_fototeca_videos_v1' y 'tactical_fototeca_custom_v1' se
-            // quitaron de aquí 2026-08-19 -- Fototeca ya vive en Supabase (tabla fototeca_items).
-            'tactical_ventas_b2c_rompecabezas_v1', 'tactical_carrito_rompecabezas',
+        /* ---- COPIA DE SEGURIDAD (export de TODA la información real del ERP) ----
+           Conde 2026-08-20: reescrito de raíz -- la versión vieja exportaba un puñado de claves
+           de localStorage, que ya casi no se usan desde que todo el ERP se migró a Supabase (ya
+           no protegía nada real). Ahora descarga, tabla por tabla, TODO lo que hoy vive en
+           Supabase -- un JSON con los datos crudos de cada tabla, útil como respaldo manual
+           independiente de lo que ya ofrezca el plan de Supabase (backups automáticos suelen ser
+           de los planes pagos). No incluye auth.users (las cuentas de login se administran desde
+           el panel de Supabase, no se restauran desde un JSON).
+           NO incluye una función de "restaurar" con un clic -- volver a insertar 32 tablas de
+           golpe, respetando el orden de padres/hijos, es una operación de riesgo real (podría
+           pisar información viva de todo el equipo). Si algún día hace falta restaurar de verdad,
+           se hace de forma guiada, tabla por tabla. */
+        const TACTICAL_TABLAS_BACKUP = [
+            'usuarios', 'clientes', 'opps', 'historial_cierres', 'cotizaciones_cuadernos',
+            'pedidos_borrador', 'comparaciones_borrador', 'b2c_carrito_borrador',
+            'kanban_fichas', 'kanban_lineas', 'kanban_checklist', 'kanban_fotos',
+            'reprocesos', 'reprocesos_items', 'tareas', 'proveedores',
+            'documentos_venta', 'documentos_venta_items', 'ingresos',
+            'cuentas_por_pagar', 'cuentas_por_pagar_items', 'egresos', 'gastos_fijos_config',
+            'personal', 'contadores', 'ot_contadores',
+            'precios_override', 'precios_promo_override', 'sustratos_custom', 'acabados_custom',
+            'fototeca_items', 'b2c_pedidos', 'b2c_pedido_items',
         ];
 
-        function contExportarRespaldo(){
+        async function contExportarRespaldo(){
+            const boton = document.querySelector('button[onclick="contExportarRespaldo()"]');
+            const nota = document.getElementById('respaldo-nota');
+            if(boton) boton.disabled = true;
+            if(nota) nota.innerText = 'Descargando datos de todas las tablas...';
             const data = {};
-            TACTICAL_BACKUP_KEYS.forEach(k => { const v = localStorage.getItem(k); if(v!==null) data[k] = v; });
-            // El contador de OT/cotizaciones ahora vive en una clave por año (tactical_ot_counter_2026,
-            // tactical_ot_counter_2027, ...) para que el consecutivo se reinicie solo cada 1° de enero
-            // -- se recorren todas las claves de localStorage porque el nombre exacto cambia cada año.
-            Object.keys(localStorage).forEach(k => { if(k.indexOf('tactical_ot_counter_')===0) data[k] = localStorage.getItem(k); });
-            const respaldo = { version: 1, exportadoEn: new Date().toISOString(), data };
+            const errores = [];
+            for(const tabla of TACTICAL_TABLAS_BACKUP){
+                const { data: filas, error } = await tacticalSupabase.from(tabla).select('*');
+                if(error){ console.error(`Error respaldando tabla ${tabla}:`, error); errores.push(tabla); continue; }
+                data[tabla] = filas;
+            }
+            const respaldo = { version: 2, exportadoEn: new Date().toISOString(), origen: 'supabase', data };
             const blob = new Blob([JSON.stringify(respaldo, null, 2)], {type: 'application/json'});
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -1538,25 +1524,10 @@
             a.href = url; a.download = `tactical-erp-backup-${fecha}.json`;
             document.body.appendChild(a); a.click(); document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            const nota = document.getElementById('respaldo-nota');
-            if(nota) nota.innerText = `✓ Backup descargado (${fecha})`;
-        }
-
-        function contImportarRespaldoArchivo(event){
-            const file = event.target.files[0];
-            if(!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e){
-                let respaldo;
-                try { respaldo = JSON.parse(e.target.result); } catch(err){ alert('El archivo no es un backup JSON válido.'); return; }
-                if(!respaldo.data){ alert('El archivo no tiene el formato esperado de backup del ERP.'); return; }
-                const ok = confirm(`Esto reemplazará TODA la información actual del ERP en este navegador por la del backup (exportado el ${respaldo.exportadoEn||'—'}). ¿Continuar?`);
-                if(!ok) { event.target.value = ''; return; }
-                Object.keys(respaldo.data).forEach(k => { localStorage.setItem(k, respaldo.data[k]); });
-                alert('Backup restaurado. La página se va a recargar.');
-                location.reload();
-            };
-            reader.readAsText(file);
+            if(boton) boton.disabled = false;
+            if(nota) nota.innerText = errores.length
+                ? `⚠️ Backup descargado (${fecha}) pero fallaron estas tablas: ${errores.join(', ')}`
+                : `✓ Backup completo descargado (${fecha})`;
         }
 
         // Navegación rápida desde otras herramientas (Conde 2026-08-06): un botón de acceso
