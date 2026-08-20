@@ -1198,7 +1198,7 @@ async function guardarCotizacionClick(){
     planoCorte = ultimoResultado.detalleMaterial.planoCorte || null;
   }
   const recomendaciones = RECOMENDACIONES_PRODUCCION.filter(reg=>reg.aplica(ultimoResultado)).map(reg=>typeof reg.texto==='function'?reg.texto(ultimoResultado):reg.texto);
-  const opp = { id: crypto.randomUUID(), ot: ultimoOT, idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, desc, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'bolsas', cantidad: ultimoParams.cantidad, maquina, material, nPliegos, planoCorte, recomendaciones };
+  const opp = { id: crypto.randomUUID(), ot: ultimoOT, idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'bolsas', cantidad: ultimoParams.cantidad, maquina, material, nPliegos, planoCorte, recomendaciones };
   db_opps.push(opp);
   tacticalSyncOpps(db_opps);
 
@@ -1258,7 +1258,7 @@ async function iniciarOAgregarPedido(){
     pd = null;
   }
   if(!pd){
-    pd = { ot: await siguienteOT(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, vendedor, lineas: [], creado: new Date().toISOString() };
+    pd = { ot: await siguienteOT(), idCli: cli.id, nombreCli: tacticalNombreCliente(cli), vendedor, lineas: [], creado: new Date().toISOString() };
   }
 
   const desc = tacticalTituloCorto(`${ultimoParams.cantidad} Bolsas ${ultimoResultado.troquel.id}`, document.getElementById("in-descCliente").value);
@@ -1405,7 +1405,7 @@ async function agregarOpcionComparacion(){
     comp = null;
   }
   if(!comp){
-    comp = { ot: await siguienteOT(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, vendedor, opciones: [], creado: new Date().toISOString() };
+    comp = { ot: await siguienteOT(), idCli: cli.id, nombreCli: tacticalNombreCliente(cli), vendedor, opciones: [], creado: new Date().toISOString() };
   }
 
   const titulo = tacticalTituloCorto(`${ultimoParams.cantidad} Bolsas ${ultimoResultado.troquel.id}`, document.getElementById("in-descCliente").value);

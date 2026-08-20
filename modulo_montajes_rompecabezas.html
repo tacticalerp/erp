@@ -1078,9 +1078,12 @@ function aprobarPedido(id){
   const maxFichas = Math.max(...items.map(it=>it.fichas||0));
   const diasHabiles = maxFichas > 500 ? 5 : 4;
   const fechaEntrega = tacticalSumarDiasHabilesColombia(new Date(), diasHabiles);
+  // Conde 2026-08-20: el título de la ficha es solo la descripción del producto -- el nombre del
+  // cliente ya va en "nombreCli" (mismo criterio que las demás calculadoras), ponerlo aquí también
+  // lo duplicaba en textos que arman los dos juntos (ej. la tarea automática "Facturar a...").
   const titulo = items.length > 1
-    ? `${pedido.nombre} — ${items.length} rompecabezas (${pedido.cantidad} unidades)`
-    : `${pedido.nombre} — ${items[0].fichas} fichas — ${items[0].medida}cm`;
+    ? `${items.length} rompecabezas (${pedido.cantidad} unidades)`
+    : `${items[0].fichas} fichas — ${items[0].medida}cm`;
   const lineasFicha = items.map(it => ({
     linea:'rompecabezas',
     desc: `${it.cantidad}x ${it.linea==='laser'?'Láser':'Troquel'}${it.forma?' - '+it.forma:''} ${it.medida}cm (${it.fichas}f)`,
@@ -1088,7 +1091,7 @@ function aprobarPedido(id){
   }));
   const ficha = {
     id: crypto.randomUUID(), ot: null,
-    idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, titulo,
+    idCli: cli.id, nombreCli: tacticalNombreCliente(cli), titulo,
     columna: 'diseno', lineas: lineasFicha,
     checklist: checklistBase, urgente:false, fechaEntrega, entrega: pedido.entrega||'',
     fechaCreacion: new Date().toISOString(), responsable:'', origen:'b2c',

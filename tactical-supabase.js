@@ -16,6 +16,18 @@ const TACTICAL_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3M
 
 const tacticalSupabase = supabase.createClient(TACTICAL_SUPABASE_URL, TACTICAL_SUPABASE_ANON_KEY);
 
+// Conde 2026-08-20: clientes "particulares" (B2C -- Rompecabezas, pedidos rápidos por WhatsApp,
+// etc.) se guardan con empresa===nombre porque no tienen razón social aparte. El patrón
+// `${cli.empresa} - ${cli.nombre}` que arma "nombreCli" en todas las calculadoras + el Hub
+// duplicaba el nombre completo ("Pedro Perez - Pedro Perez") en esos casos -- esta función
+// centraliza esa construcción para mostrar el nombre una sola vez cuando empresa y nombre coinciden.
+function tacticalNombreCliente(cli){
+  if(!cli) return '';
+  const empresa = (cli.empresa||'').trim(), nombre = (cli.nombre||'').trim();
+  if(!nombre || empresa.toLowerCase() === nombre.toLowerCase()) return empresa || nombre;
+  return `${empresa} - ${nombre}`;
+}
+
 async function tacticalSesionActual(){
   const { data: { session } } = await tacticalSupabase.auth.getSession();
   return session;

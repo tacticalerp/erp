@@ -2505,7 +2505,7 @@
 
             if(!idCli || !desc) { alert("Debe seleccionar un cliente y escribir la descripción."); return; }
             const cliObj = db_clientes.find(c => c.id === idCli);
-            db_opps.push({ id: crypto.randomUUID(), idCli, nombreCli: `${cliObj.empresa} - ${cliObj.nombre}`, desc, monto, etapa, fecha: new Date().toISOString() });
+            db_opps.push({ id: crypto.randomUUID(), idCli, nombreCli: tacticalNombreCliente(cliObj), desc, monto, etapa, fecha: new Date().toISOString() });
             tacticalSyncOpps(db_opps);
 
             document.getElementById('opp-desc').value = ''; document.getElementById('opp-monto').value = '0';
@@ -2767,7 +2767,7 @@
           }
           const ot = await cotSiguienteOT();
           const ficha = {
-            id: crypto.randomUUID(), ot, idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`,
+            id: crypto.randomUUID(), ot, idCli: cli.id, nombreCli: tacticalNombreCliente(cli),
             titulo: desc, cantidad, columna: 'aprobada', lineas: [{linea, desc, cantidad}],
             checklist: generarChecklistParaFicha({linea, lineas:null}), urgente:false, fechaEntrega,
             fechaCreacion: new Date().toISOString(), responsable:'', origen:'manual',
@@ -3207,7 +3207,7 @@
           const titulo = `Rompecabezas B2C ${p.linea==='laser'?'Láser':'Troquel'}${p.forma?' - '+p.forma:''} — ${p.fichas}f x${p.cantidad} — ${p.nombre}`;
           const ficha = {
             id: crypto.randomUUID(), ot: null,
-            idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, titulo,
+            idCli: cli.id, nombreCli: tacticalNombreCliente(cli), titulo,
             columna: 'aprobada', lineas: [{linea:'rompecabezas', desc: titulo, cantidad: p.cantidad}],
             checklist: checklistBase, urgente:false, fechaEntrega:'',
             fechaCreacion: new Date().toISOString(), responsable:'', origen:'bot_whatsapp',
@@ -5263,7 +5263,7 @@
           // desglose más detallado (varias líneas: carátula/taco/insertos) que Reportes sigue leyendo
           // de tactical_cotizaciones_v1 para Consumo de Papel y Uso de Máquinas.
           const planoCorteLineas = Object.keys(r.detalleLineas).map(clave => ({clave, planoCorte: (r.detalleLineas[clave].detalleMaterial||{}).planoCorte || null})).filter(pc=>pc.planoCorte);
-          const opp = { id: crypto.randomUUID(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, desc, vendedor, monto: Math.round(r.precioFinalTotal), etapa: 'cot', linea: 'cuadernos', cantidad: p.cantidad, planoCorteLineas, fecha: new Date().toISOString() };
+          const opp = { id: crypto.randomUUID(), idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc, vendedor, monto: Math.round(r.precioFinalTotal), etapa: 'cot', linea: 'cuadernos', cantidad: p.cantidad, planoCorteLineas, fecha: new Date().toISOString() };
           db_opps.push(opp);
           tacticalSyncOpps(db_opps);
 
@@ -5330,7 +5330,7 @@
             pd = null;
           }
           if(!pd){
-            pd = { ot: await cotSiguienteOT(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, vendedor, lineas: [], creado: new Date().toISOString() };
+            pd = { ot: await cotSiguienteOT(), idCli: cli.id, nombreCli: tacticalNombreCliente(cli), vendedor, lineas: [], creado: new Date().toISOString() };
           }
 
           const r = cotUltimoResultado, p = cotUltimoParams;
@@ -5412,7 +5412,7 @@
             comp = null;
           }
           if(!comp){
-            comp = { ot: await cotSiguienteOT(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, vendedor, opciones: [], creado: new Date().toISOString() };
+            comp = { ot: await cotSiguienteOT(), idCli: cli.id, nombreCli: tacticalNombreCliente(cli), vendedor, opciones: [], creado: new Date().toISOString() };
           }
 
           const r = cotUltimoResultado, p = cotUltimoParams;

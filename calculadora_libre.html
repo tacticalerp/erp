@@ -461,7 +461,7 @@ async function guardarCotizacionClick(){
   tacticalSyncClientes(db_clientes);
 
   if(!ultimoOT) ultimoOT = await siguienteOT();
-  const opp = { id: crypto.randomUUID(), ot: ultimoOT, idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, desc: ultimoResultado.descripcion, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'manual', cantidad: ultimoParams.cantidad, maquina: null, material: null, nPliegos: null };
+  const opp = { id: crypto.randomUUID(), ot: ultimoOT, idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc: ultimoResultado.descripcion, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'manual', cantidad: ultimoParams.cantidad, maquina: null, material: null, nPliegos: null };
   db_opps.push(opp);
   tacticalSyncOpps(db_opps);
 
@@ -521,7 +521,7 @@ async function iniciarOAgregarPedido(){
     pd = null;
   }
   if(!pd){
-    pd = { ot: await siguienteOT(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, vendedor, lineas: [], creado: new Date().toISOString() };
+    pd = { ot: await siguienteOT(), idCli: cli.id, nombreCli: tacticalNombreCliente(cli), vendedor, lineas: [], creado: new Date().toISOString() };
   }
 
   pd.lineas.push({ linea:'manual', desc: ultimoResultado.descripcion, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), precioUnitario: ultimoResultado.precioVentaUnitario, maquina: null, material: null, nPliegos: null });
@@ -592,7 +592,7 @@ async function agregarOpcionComparacion(){
     comp = null;
   }
   if(!comp){
-    comp = { ot: await siguienteOT(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, vendedor, opciones: [], creado: new Date().toISOString() };
+    comp = { ot: await siguienteOT(), idCli: cli.id, nombreCli: tacticalNombreCliente(cli), vendedor, opciones: [], creado: new Date().toISOString() };
   }
 
   comp.opciones.push({ titulo: ultimoResultado.descripcion, params: {cantidad: ultimoParams.cantidad}, resultado: {precioVentaUnitario: ultimoResultado.precioVentaUnitario, precioVentaTotal: ultimoResultado.precioVentaTotal, ivaTotal: ultimoResultado.ivaTotal, precioFinalTotal: ultimoResultado.precioFinalTotal}, fotoUrl: null });
