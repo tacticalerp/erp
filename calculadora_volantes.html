@@ -87,6 +87,40 @@
 </head>
 <body>
 
+<!-- ============ GATE DE LOGIN (Supabase Auth) ============
+     Cubre toda la pantalla hasta que haya una sesión válida -- ver
+     tactical-supabase.js. Agregado 2026-08-19 (migración a la nube). -->
+<style>
+    body.tactical-bloqueado > *:not(#tactical-login-overlay){ display:none; }
+    #tactical-login-overlay{
+        display:flex; position:fixed; inset:0; z-index:99999;
+        background:linear-gradient(135deg,#1a202c,#2d3748);
+        align-items:center; justify-content:center; padding:20px;
+    }
+    #tactical-login-card{ background:#fff; border-radius:10px; padding:32px 30px; width:100%; max-width:340px; box-shadow:0 20px 50px rgba(0,0,0,0.4); }
+    #tactical-login-card h2{ margin:0 0 4px; color:#1a202c; font-size:1.3rem; }
+    #tactical-login-card p{ margin:0 0 20px; color:#718096; font-size:0.85rem; }
+    #tactical-login-card label{ display:block; font-size:0.8rem; color:#4a5568; margin-bottom:4px; font-weight:600; }
+    #tactical-login-card input{ width:100%; box-sizing:border-box; padding:10px; border:1px solid #cbd5e0; border-radius:6px; font-size:0.95rem; margin-bottom:14px; }
+    #tactical-login-card button{ width:100%; background:#cc0000; color:#fff; border:none; border-radius:6px; padding:11px; font-weight:700; font-size:0.95rem; cursor:pointer; }
+    #tactical-login-card button:disabled{ opacity:0.6; cursor:default; }
+    #tactical-login-error{ display:none; background:#fde8e8; color:#b91c1c; border:1px solid #f3b4b4; border-radius:6px; padding:8px 10px; font-size:0.82rem; margin-bottom:14px; }
+</style>
+<div id="tactical-login-overlay">
+    <div id="tactical-login-card">
+        <h2>Tactical ERP</h2>
+        <p>Inicia sesión para continuar.</p>
+        <div id="tactical-login-error"></div>
+        <form id="tactical-login-form">
+            <label for="tactical-login-email">Correo</label>
+            <input type="email" id="tactical-login-email" required autocomplete="username">
+            <label for="tactical-login-password">Contraseña</label>
+            <input type="password" id="tactical-login-password" required autocomplete="current-password">
+            <button type="submit" id="tactical-login-btn">Entrar</button>
+        </form>
+    </div>
+</div>
+
 <header style="display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;"><div>
   <h1>Calculadora de Cotización — Volantes, Afiches y Plegables (BETA)</h1>
   <p>Papelería Comercial — Tactical Marketing Group SAS. Reutiliza el motor de impresión de Cuadernos.</p>
@@ -136,6 +170,7 @@
           <select id="in-tipoProducto" onchange="onCambioTipoProducto()">
             <option value="volante">Volante / Afiche / Plegable</option>
             <option value="iman">Imanes (adhesivo + lámina de imán + corte)</option>
+            <option value="multiitem">Kit multi-ítem (varias piezas en un mismo pedido, ej. Cartilla + Sobre)</option>
           </select>
         </div>
       </div>
@@ -144,20 +179,29 @@
     <div class="card">
       <h2>1. Tamaño y cantidad</h2>
       <div class="fila">
-        <div class="campo chico">
+        <div class="campo chico" id="fila-ancho-simple">
           <label>Ancho (cm):</label>
           <input type="number" id="in-ancho" value="21.5" step="0.1" min="1">
         </div>
-        <div class="campo chico">
+        <div class="campo chico" id="fila-alto-simple">
           <label>Alto (cm):</label>
           <input type="number" id="in-alto" value="28" step="0.1" min="1">
         </div>
         <div class="campo chico">
           <label>Cantidad:</label>
-          <input type="number" id="in-cantidad" value="1000" min="1">
+          <input type="text" inputmode="numeric" id="in-cantidad" value="1000" oninput="tacticalFormatearMiles(this)">
         </div>
       </div>
       <div class="hint" id="hint-tamano"></div>
+    </div>
+
+    <div id="seccion-multiitem" style="display:none;">
+      <div class="card">
+        <h2>Ítems del kit</h2>
+        <p class="hint" style="margin:0 0 10px;">Cada ítem lleva su propio papel, tamaño, tintas y acabados. La "Cantidad" de arriba aplica a todos por igual (se producen y entregan juntos, ej. 200 kits de Cartilla + Sobre).</p>
+        <div id="multiitem-lista"></div>
+        <button type="button" class="btn-add" onclick="volMultiAgregarItem()">+ Agregar ítem</button>
+      </div>
     </div>
 
     <div id="seccion-volante-normal">
@@ -199,6 +243,11 @@
             </select>
           </div>
         </div>
+      </div>
+
+      <div class="card" id="card-acabados-custom" style="display:none;">
+        <h2>3b. Acabados adicionales</h2>
+        <div id="acabados-custom-box"></div>
       </div>
 
       <div class="card">
@@ -308,14 +357,14 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="tactical-supabase.js"></script>
 <script src="precios_tactical.js"></script>
 <script>
 /* ============ CONSTANTES REUTILIZADAS DEL MOTOR DE CUADERNOS (ya validadas) ============ */
-const SUSTRATOS = tacticalSeleccionarSustratos([
-  "Bond__60","Bond__70","Bond__75","Bond__90","Bond__115",
-  "Propalcote__80","Propalcote__90","Propalcote__115","Propalcote__150","Propalcote__200","Propalcote__240","Propalcote__300",
-  "Cartulina C11__190","Cartulina C12__205","Cartulina C14__225","Cartulina C16__255","Cartulina C18__275","Cartulina C20__305","Cartulina C22__330",
-]);
+// Conde 2026-08-20: Volantes es la calculadora "comodín" -- debe ofrecer TODOS los papeles del
+// sistema (igual que hace el Hub para Cuadernos), no solo el subconjunto curado que tenía antes.
+const SUSTRATOS = tacticalSeleccionarSustratos(Object.keys(PRECIOS_SUSTRATOS_MAESTRO), 'volantes');
 const PLIEGOS_CM = {"60x90":[60,90], "70x100":[70,100]};
 
 const PLASTIFICADO_COP_M2 = PRECIOS_PLASTIFICADO_COP_M2;     // ya validado (Cuadernos/Rompecabezas/Rubik/Carpetas)
@@ -331,6 +380,14 @@ const DIGITAL_MERMA_HOJAS = {policromia:20, negro:10, promedio:18};
 const OFFSET_CTP_COP = PRECIOS_OFFSET_CTP_COP;
 const OFFSET_MILLAR_COP = PRECIOS_OFFSET_MILLAR_COP;
 const OFFSET_FORMATOS_CM = {medio_pliego:[50,70], cuarto:[35,50], octavo:[25,35]};
+// Conde 2026-08-20: el ÁREA REAL de impresión (donde sí entra tinta) es más chica que el tamaño
+// físico del pliego -- cada máquina litográfica pierde margen de pinza distinto, confirmado por
+// Conde con estos números exactos (NO es una fórmula uniforme, Octavo va al revés que
+// Cuarto/Medio: ahí el lado chico pierde 0.5cm y el grande pierde 1cm, no al contrario). Esto es
+// SOLO para calcular cuántas piezas caben por pasada (costo de impresión y plano de impresión) --
+// el material (compra/corte del pliego madre) sigue usando OFFSET_FORMATOS_CM completo arriba,
+// porque el papel físico sí ocupa el tamaño completo aunque no todo reciba tinta.
+const OFFSET_FORMATOS_IMPRESION_CM = {medio_pliego:[49,69.5], cuarto:[34,49.5], octavo:[24.5,34]};
 const OFFSET_MERMA_HOJAS = [[1000,100],[2000,130],[Infinity,160]];
 const OFFSET_MERMA_FACTOR_2_MAS_TINTAS = 1.30;
 const OFFSET_RECARGO_RETIRO_MEDIO_PLIEGO_POLICROMIA_PCT = 0.30;
@@ -370,6 +427,12 @@ const SUSTRATOS_ADHESIVOS = tacticalSeleccionarSustratos([
 const IMAN_LAMINA_CM = {ancho:100, alto:60};
 const IMAN_LAMINA_PRECIO_COP = PRECIOS_IMAN_C5_LAMINA_COP;
 const IMAN_CORTE_LASER_COP_PIEZA = PRECIOS_CORTE_LASER_IMAN_COP;
+// Conde 2026-08-20: el adhesivo impreso se monta luego sobre un CUARTO de la lámina Imán
+// (100x60cm -> 50x30cm por cuarto) -- no se puede imprimir un montaje más grande que eso aunque
+// la prensa (digital u offset) sí podría, porque no cabría al pegarlo en la lámina. Aplica SOLO
+// a Imán (no a los demás productos de esta calculadora ni a otras calculadoras).
+const IMAN_MONTAJE_MAX_CM = {ancho:30, alto:50};
+const IMAN_DIGITAL_FORMATOS_CM = {carta:[21.5,28], octavo:[25,35], pliego_max:[IMAN_MONTAJE_MAX_CM.ancho, IMAN_MONTAJE_MAX_CM.alto]};
 
 /* ============ FUNCIONES DE MOTOR (copiadas 1:1 de motor_cotizacion/calculadora.html — Cuadernos) ============ */
 function piezasPorPliego(pa,pal,pw,ph){
@@ -408,6 +471,50 @@ function costoMaterialPliegos(pa,pal,sustratoNombre,gramaje,piezasNecesarias,mer
   const [costoTotal, formato, nPorPliego, nPliegos, precioPliego, columnas, filas, rotado, pliegoAncho, pliegoAlto] = mejores[0];
   const planoCorte = {piezaAncho:pa, piezaAlto:pal, pliegoAncho, pliegoAlto, columnas, filas, rotado, piezasPorPliego:nPorPliego};
   return {formato, piezasPorPliego:nPorPliego, nPliegos, precioPliego, costoTotal, planoCorte};
+}
+
+// Conde 2026-08-20: plano de impresión para la Orden de Producción -- muestra cómo caben las
+// piezas DENTRO del pliego de impresión (pliego_max/cuarto/etc.), aparte del plano de corte del
+// material (que muestra cómo se cortan esos pedazos grandes del pliego madre 60x90/70x100).
+function planoImpresionDigital(piezaAncho, piezaAlto, clase){
+  const [sheetW, sheetH] = DIGITAL_FORMATOS_CM[clase];
+  const margenCm = DIGITAL_PINZA_MM/10;
+  const pliegoAncho = sheetW, pliegoAlto = sheetH - margenCm;
+  const colsSinRotar = Math.floor(pliegoAncho/piezaAncho), filasSinRotar = Math.floor(pliegoAlto/piezaAlto);
+  const nSinRotar = colsSinRotar*filasSinRotar;
+  const colsRotada = Math.floor(pliegoAncho/piezaAlto), filasRotada = Math.floor(pliegoAlto/piezaAncho);
+  const nRotada = colsRotada*filasRotada;
+  const rotado = nRotada > nSinRotar;
+  // Si ninguna orientación cabe (pieza justo en el límite del pliego, ej. carta 21.5x28), se
+  // fuerza a 1 -- mismo respaldo que ya usa el motor de precios (costoImpresionDigital) para no
+  // dividir por cero ni mostrar "0 piezas" cuando en la práctica sí entra 1.
+  if(nSinRotar===0 && nRotada===0){
+    return { piezaAncho, piezaAlto, pliegoAncho, pliegoAlto, columnas:1, filas:1, rotado:false, piezasPorPliego:1 };
+  }
+  return {
+    piezaAncho, piezaAlto, pliegoAncho, pliegoAlto,
+    columnas: rotado?colsRotada:colsSinRotar, filas: rotado?filasRotada:filasSinRotar, rotado,
+    piezasPorPliego: rotado?nRotada:nSinRotar,
+  };
+}
+function planoImpresionOffset(piezaAncho, piezaAlto, fraccion){
+  const [pliegoAncho, pliegoAlto] = OFFSET_FORMATOS_IMPRESION_CM[fraccion];
+  const colsSinRotar = Math.floor(pliegoAncho/piezaAncho), filasSinRotar = Math.floor(pliegoAlto/piezaAlto);
+  const nSinRotar = colsSinRotar*filasSinRotar;
+  const colsRotada = Math.floor(pliegoAncho/piezaAlto), filasRotada = Math.floor(pliegoAlto/piezaAncho);
+  const nRotada = colsRotada*filasRotada;
+  const rotado = nRotada > nSinRotar;
+  // Si ninguna orientación cabe (pieza justo en el límite del pliego, ej. carta 21.5x28), se
+  // fuerza a 1 -- mismo respaldo que ya usa el motor de precios (costoImpresionDigital) para no
+  // dividir por cero ni mostrar "0 piezas" cuando en la práctica sí entra 1.
+  if(nSinRotar===0 && nRotada===0){
+    return { piezaAncho, piezaAlto, pliegoAncho, pliegoAlto, columnas:1, filas:1, rotado:false, piezasPorPliego:1 };
+  }
+  return {
+    piezaAncho, piezaAlto, pliegoAncho, pliegoAlto,
+    columnas: rotado?colsRotada:colsSinRotar, filas: rotado?filasRotada:filasSinRotar, rotado,
+    piezasPorPliego: rotado?nRotada:nSinRotar,
+  };
 }
 
 function claseFormatoDigital(ancho,alto){
@@ -456,10 +563,50 @@ function costoImpresionDigital(nPaginas,caras,esColor,ancho,alto,cantidadUnidade
   return {total:mejor.total, via:"digital", nClics:mejor.nClics, precioClic:mejor.precioClic, descuentoPct:descuento, clase:mejor.clase, piezasPorClic:mejor.piezasPorClic};
 }
 
-function fraccionPliegoOffset(ancho,alto,esPolicromia=false){
+// Conde 2026-08-20: versión de costoImpresionDigital SOLO para Imán -- misma lógica, pero con
+// IMAN_DIGITAL_FORMATOS_CM (pliego_max tope 30x50, ver IMAN_MONTAJE_MAX_CM) en vez de
+// DIGITAL_FORMATOS_CM, para no afectar Volante/Plegable normales.
+function claseFormatoDigitalIman(ancho,alto){
   const [a,b]=ordenar2(ancho,alto);
-  if(a<=25 && b<=35 && !esPolicromia) return "octavo";
-  if(a<=35 && b<=50) return "cuarto";
+  if(a<=21.5 && b<=28) return "carta";
+  if(a<=25 && b<=35) return "octavo";
+  if(a<=IMAN_MONTAJE_MAX_CM.ancho && b<=IMAN_MONTAJE_MAX_CM.alto) return "pliego_max";
+  return null;
+}
+function elegibleDigitalIman(ancho,alto,gramaje,cantidadUnidades=1){
+  if(gramaje>DIGITAL_GRAMAJE_MAX) return false;
+  if(cantidadUnidades>200) return false;
+  return claseFormatoDigitalIman(ancho,alto)!==null;
+}
+function costoImpresionDigitalIman(nPaginas,caras,esColor,ancho,alto,cantidadUnidades=1){
+  const claseMin=claseFormatoDigitalIman(ancho,alto);
+  if(claseMin===null) return null;
+  const ordenClasesDigital=['carta','octavo','pliego_max'];
+  const clasesViables=ordenClasesDigital.slice(ordenClasesDigital.indexOf(claseMin));
+  const margenCm=DIGITAL_PINZA_MM/10;
+  const descuento=descuentoVolumenDigital(cantidadUnidades);
+  let opciones=[];
+  for(const clase of clasesViables){
+    const [sheetW,sheetH]=IMAN_DIGITAL_FORMATOS_CM[clase];
+    let piezasPorClic=piezasPorPliego(ancho,alto,sheetW,sheetH-margenCm);
+    if(piezasPorClic===0) piezasPorClic=1;
+    const nClics=Math.ceil(nPaginas/piezasPorClic)*caras;
+    const precioClic=DIGITAL_CLIC_COP[clase][esColor?"color":"negro"];
+    const total=nClics*precioClic*(1-descuento);
+    opciones.push({total, nClics, precioClic, clase, piezasPorClic});
+  }
+  opciones.sort((x,y)=>x.total-y.total);
+  const mejor=opciones[0];
+  return {total:mejor.total, via:"digital", nClics:mejor.nClics, precioClic:mejor.precioClic, descuentoPct:descuento, clase:mejor.clase, piezasPorClic:mejor.piezasPorClic};
+}
+
+function fraccionPliegoOffset(ancho,alto,esPolicromia=false){
+  // Conde 2026-08-20: la pieza tiene que caber en el ÁREA REAL de impresión (con margen de pinza
+  // ya descontado), no en el tamaño físico del pliego -- si no, se estaría asumiendo que cabe algo
+  // que en realidad necesita subir a la máquina más grande.
+  const [a,b]=ordenar2(ancho,alto);
+  if(a<=24.5 && b<=34 && !esPolicromia) return "octavo";
+  if(a<=34 && b<=49.5) return "cuarto";
   return "medio_pliego";
 }
 function mermaOffsetHojas(nHojasFisicas,cantTintas){
@@ -483,7 +630,7 @@ function millaresConTolerancia(nPasadas){
 }
 function costoImpresionOffset(nPiezasFinales,tintasTiro,tintasRetiro,esPolicromia,ancho,alto){
   const fraccion=fraccionPliegoOffset(ancho,alto,esPolicromia);
-  const [sheetW,sheetH]=OFFSET_FORMATOS_CM[fraccion];
+  const [sheetW,sheetH]=OFFSET_FORMATOS_IMPRESION_CM[fraccion];
   let piezasPorPasada=piezasPorPliego(ancho,alto,sheetW,sheetH);
   if(piezasPorPasada===0) piezasPorPasada=1;
   const nPasadas=Math.ceil(nPiezasFinales/piezasPorPasada);
@@ -520,7 +667,50 @@ function costoImpresionOffset(nPiezasFinales,tintasTiro,tintasRetiro,esPolicromi
   }
 
   const nPlanchas = tiroJob.nPlanchas + (retiroJob?retiroJob.nPlanchas:0);
-  return {total, via:"offset", fraccion, nPlanchas, nMillares:millares, tiroJob, retiroJob, recargoRetiro, piezasPorPasada};
+  return {total, via:"offset", fraccion, nPlanchas, nMillares:millares, tiroJob, retiroJob, recargoRetiro, piezasPorPasada, nPasadas};
+}
+
+// Conde 2026-08-20: versión de costoImpresionOffset SOLO para Imán -- se sigue pagando la plancha
+// completa según la fracción real (mismo OFFSET_CTP_COP/OFFSET_MILLAR_COP, mismo criterio de
+// fraccionPliegoOffset para decidir octavo/cuarto/medio_pliego), pero las piezas por pasada Y el
+// material se calculan sobre el montaje recortado a IMAN_MONTAJE_MAX_CM (30x50) -- lo que exceda
+// ese tamaño dentro de la plancha no sirve porque no cabría al pegarlo en la lámina Imán.
+function costoImpresionOffsetIman(nPiezasFinales,tintasTiro,tintasRetiro,esPolicromia,ancho,alto){
+  const fraccion=fraccionPliegoOffset(ancho,alto,esPolicromia);
+  const [realW,realH]=OFFSET_FORMATOS_IMPRESION_CM[fraccion];
+  const sheetW=Math.min(realW,IMAN_MONTAJE_MAX_CM.ancho), sheetH=Math.min(realH,IMAN_MONTAJE_MAX_CM.alto);
+  let piezasPorPasada=piezasPorPliego(ancho,alto,sheetW,sheetH);
+  if(piezasPorPasada===0) piezasPorPasada=1;
+  const nPasadas=Math.ceil(nPiezasFinales/piezasPorPasada);
+  const millares=millaresConTolerancia(nPasadas);
+
+  function costoTrabajo(nTintas){
+    const nPlanchas=Math.max(nTintas,1);
+    const costoCtp=OFFSET_CTP_COP[fraccion]*nPlanchas;
+    let costoMillar;
+    if(fraccion==="medio_pliego" && esPolicromia && nTintas>=4){
+      costoMillar=OFFSET_MILLAR_COP.medio_pliego_policromia_4x0*millares;
+    } else if(fraccion==="medio_pliego"){
+      costoMillar=OFFSET_MILLAR_COP.medio_pliego_color*nPlanchas*millares;
+    } else {
+      costoMillar=OFFSET_MILLAR_COP[fraccion]*nPlanchas*millares;
+    }
+    return {nPlanchas, costoCtp, costoMillar, total:costoCtp+costoMillar};
+  }
+
+  const tiroJob = costoTrabajo(tintasTiro);
+  let retiroJob = null, recargoRetiro = false, total = tiroJob.total;
+  if(tintasRetiro>0){
+    if(tintasTiro!==tintasRetiro){
+      retiroJob = costoTrabajo(tintasRetiro);
+      total += retiroJob.total;
+    } else if(esPolicromia){
+      total += tiroJob.total*OFFSET_RECARGO_RETIRO_MEDIO_PLIEGO_POLICROMIA_PCT;
+      recargoRetiro = true;
+    }
+  }
+  const nPlanchas = tiroJob.nPlanchas + (retiroJob?retiroJob.nPlanchas:0);
+  return {total, via:"offset", fraccion, nPlanchas, nMillares:millares, tiroJob, retiroJob, recargoRetiro, piezasPorPasada, nPasadas, montajeAncho:sheetW, montajeAlto:sheetH};
 }
 
 function precioVentaDesdeSubtotal(subtotal,utilidadPct=0.40,comisionPct=0.03){
@@ -591,19 +781,39 @@ function cotizarVolante(p){
   const detalleImpresion = usaDigital ? impDigital : impOffset;
 
   const piezasConMerma = p.cantidad + (usaDigital ? mermaDigitalHojas(cantTintas) : mermaOffset);
-  const detalleMaterial = costoMaterialPliegos(p.ancho, p.alto, sustratoNombre, gramaje, piezasConMerma, 0);
+
+  // Conde 2026-08-20: el papel no se corta directo al tamaño final del volante -- primero hay que
+  // cortar el pliego madre (60x90/70x100) al tamaño que realmente alimenta la máquina (Carta/
+  // Octavo/Pliego Máximo si es digital, o Medio Pliego/Cuarto/Octavo si es offset -- ninguna
+  // máquina, ni litográfica ni digital, toma el pliego madre completo sin cortar primero), se
+  // imprime y se plastifica ahí, y SOLO DESPUÉS se corta a piezas finales (mismo criterio ya
+  // corregido en Rompecabezas). El material y el plastificado se cobran sobre ese tamaño real de
+  // máquina, no sobre el tamaño final del volante -- aunque eso suba el costo frente al corte
+  // directo, es lo correcto.
+  let anchoMontajeImpresion, altoMontajeImpresion, nPliegosImpresion;
+  if(usaDigital){
+    [anchoMontajeImpresion, altoMontajeImpresion] = DIGITAL_FORMATOS_CM[detalleImpresion.clase];
+    nPliegosImpresion = Math.ceil(piezasConMerma/detalleImpresion.piezasPorClic);
+  } else {
+    [anchoMontajeImpresion, altoMontajeImpresion] = OFFSET_FORMATOS_CM[detalleImpresion.fraccion];
+    nPliegosImpresion = detalleImpresion.nPasadas;
+  }
+  const detalleMaterial = costoMaterialPliegos(anchoMontajeImpresion, altoMontajeImpresion, sustratoNombre, gramaje, nPliegosImpresion, 0);
 
   const costoRefile = costoRefileComercial(tamano, p.cantidad);
   const costoEmpaque = costoEmpaqueComercial(tamano, p.cantidad);
   const costoPlegadoTotal = costoPlegado(p.esPlegable, p.cantidad);
 
   const areaM2 = (p.ancho*p.alto)/10000;
+  const areaMontajeImpresionM2 = (anchoMontajeImpresion*altoMontajeImpresion)/10000;
   let costoPlastificado = 0;
   if(p.plastificado){
-    costoPlastificado = Math.max(areaM2*p.cantidad*p.carasPlastificado*PLASTIFICADO_COP_M2, PLASTIFICADO_PISO_COP);
+    costoPlastificado = Math.max(areaMontajeImpresionM2*nPliegosImpresion*p.carasPlastificado*PLASTIFICADO_COP_M2, PLASTIFICADO_PISO_COP);
   }
+  const acabadosCustomSel = tacticalLeerAcabadosSeleccionados('volantes', 'chk-acab-custom');
+  const acabadosCustomCosto = tacticalCostoAcabadosCustom(acabadosCustomSel, areaM2, p.cantidad);
 
-  const costoDirecto = detalleMaterial.costoTotal + detalleImpresion.total + costoRefile + costoEmpaque + costoPlegadoTotal + costoPlastificado;
+  const costoDirecto = detalleMaterial.costoTotal + detalleImpresion.total + costoRefile + costoEmpaque + costoPlegadoTotal + costoPlastificado + acabadosCustomCosto.costoTotal;
 
   const disenoCop = disenoYPreprensa(costoDirecto);
   const fondoSeguridadPct = tramoFondoSeguridad(costoDirecto);
@@ -625,6 +835,7 @@ function cotizarVolante(p){
     esPlegable:p.esPlegable, secciones:p.secciones, gramaje,
     tintasTiro:p.tintasTiro, tintasRetiro:p.tintasRetiro,
     plastificado:p.plastificado, carasPlastificado:p.carasPlastificado, costoPlastificado,
+    acabadosCustomLineas: acabadosCustomCosto.lineas, acabadosCustomCosto: acabadosCustomCosto.costoTotal,
     costoRefile, costoEmpaque, costoPlegadoTotal, costoDirecto,
     disenoCop, fondoSeguridadPct, fondoSeguridadCop, sherpaCop, transporte,
     subtotal, precioVentaTotal, precioVentaUnitario, ivaTotal, precioFinalTotal,
@@ -646,17 +857,32 @@ function cotizarIman(p){
   const esColor = cantTintas>=2;
 
   let impDigital = null;
-  if(elegibleDigital(p.ancho, p.alto, gramaje, p.cantidad)){
+  if(elegibleDigitalIman(p.ancho, p.alto, gramaje, p.cantidad)){
     const merma = mermaDigitalHojas(cantTintas);
-    impDigital = costoImpresionDigital(p.cantidad+merma, 1, esColor, p.ancho, p.alto, p.cantidad);
+    impDigital = costoImpresionDigitalIman(p.cantidad+merma, 1, esColor, p.ancho, p.alto, p.cantidad);
   }
   const mermaOffset = mermaOffsetHojas(p.cantidad, cantTintas);
-  const impOffset = costoImpresionOffset(p.cantidad+mermaOffset, p.tintasTiro, 0, esPolicromia, p.ancho, p.alto);
+  const impOffset = costoImpresionOffsetIman(p.cantidad+mermaOffset, p.tintasTiro, 0, esPolicromia, p.ancho, p.alto);
   const usaDigital = !!(impDigital && impDigital.total < impOffset.total);
   const detalleImpresion = usaDigital ? impDigital : impOffset;
 
   const piezasConMerma = p.cantidad + (usaDigital ? mermaDigitalHojas(cantTintas) : mermaOffset);
-  const detalleMaterial = costoMaterialPliegos(p.ancho, p.alto, sustratoNombre, gramaje, piezasConMerma, 0, SUSTRATOS_ADHESIVOS);
+
+  // Conde 2026-08-20: el adhesivo no se corta directo al tamaño final del imán -- primero hay que
+  // imprimir el montaje (Carta/Octavo/Pliego Máximo-30x50 si es digital, o el pedazo recortado a
+  // 30x50 si es offset, ver IMAN_MONTAJE_MAX_CM) y SOLO DESPUÉS se corta a piezas finales (mismo
+  // criterio ya corregido en Volante normal y Rompecabezas). El adhesivo se cobra sobre ese tamaño
+  // de montaje, no sobre el tamaño final del imán.
+  let anchoMontajeImpresion, altoMontajeImpresion, nPliegosImpresion;
+  if(usaDigital){
+    [anchoMontajeImpresion, altoMontajeImpresion] = IMAN_DIGITAL_FORMATOS_CM[detalleImpresion.clase];
+    nPliegosImpresion = Math.ceil(piezasConMerma/detalleImpresion.piezasPorClic);
+  } else {
+    anchoMontajeImpresion = detalleImpresion.montajeAncho;
+    altoMontajeImpresion = detalleImpresion.montajeAlto;
+    nPliegosImpresion = detalleImpresion.nPasadas;
+  }
+  const detalleMaterial = costoMaterialPliegos(anchoMontajeImpresion, altoMontajeImpresion, sustratoNombre, gramaje, nPliegosImpresion, 0, SUSTRATOS_ADHESIVOS);
 
   let piezasPorLamina = piezasPorPliego(p.ancho, p.alto, IMAN_LAMINA_CM.ancho, IMAN_LAMINA_CM.alto);
   if(piezasPorLamina===0) piezasPorLamina = 1;
@@ -732,11 +958,20 @@ function esModoIman(){
   const sel = document.getElementById('in-tipoProducto');
   return sel && sel.value === 'iman';
 }
+function esModoMultiItem(){
+  const sel = document.getElementById('in-tipoProducto');
+  return sel && sel.value === 'multiitem';
+}
 function onCambioTipoProducto(){
   const iman = esModoIman();
-  document.getElementById('seccion-volante-normal').style.display = iman ? 'none' : 'block';
+  const multiitem = esModoMultiItem();
+  document.getElementById('seccion-volante-normal').style.display = (iman||multiitem) ? 'none' : 'block';
   document.getElementById('seccion-iman').style.display = iman ? 'block' : 'none';
-  document.getElementById('hint-tamano').style.display = iman ? 'none' : 'block';
+  document.getElementById('seccion-multiitem').style.display = multiitem ? 'block' : 'none';
+  document.getElementById('hint-tamano').style.display = (iman||multiitem) ? 'none' : 'block';
+  document.getElementById('fila-ancho-simple').style.display = multiitem ? 'none' : 'flex';
+  document.getElementById('fila-alto-simple').style.display = multiitem ? 'none' : 'flex';
+  if(multiitem && volMultiItems.length===0) volMultiAgregarItem();
 }
 function onCambioCorteIman(){
   document.getElementById('fila-troquelIman').style.display = document.getElementById('in-corteIman').value==='troquel' ? 'flex' : 'none';
@@ -757,14 +992,199 @@ function onCambioPlastificado(){
   document.getElementById("fila-caras-plastificado").style.display = document.getElementById("in-plastificado").checked ? "flex" : "none";
 }
 
-function calcular(){
+/* ============ KIT MULTI-ÍTEM (Conde 2026-08-20: "Volantes es la calculadora comodín" -- varias
+   piezas en un mismo pedido, ej. Cartilla + Sobre, cada una con su propio papel/tamaño/tintas/
+   acabados/troquel. Cada ítem reutiliza el motor de cotizarVolante() ya validado para su costo
+   directo (material+impresión+refile+empaque+plegado+plastificado+acabados); el troquel siempre es
+   "nuevo" con costo manual (confirmado por Conde, no hay banco de troqueles de estos ítems). El
+   overhead (Diseño/Fondo de Seguridad/Sherpa/Transporte/Utilidad/Comisión/IVA) se calcula UNA sola
+   vez sobre la suma de todos los ítems, no por ítem -- igual que un producto único. ============ */
+let volMultiItems = [];
+function opcionesSustratosHtml(selected){
+  return Object.keys(SUSTRATOS).map(key => {
+    const [nombre,gramaje] = key.split("__");
+    return `<option value="${key}" ${key===selected?'selected':''}>${nombre} ${gramaje}g</option>`;
+  }).join("");
+}
+function volMultiAgregarItem(){
+  volMultiItems.push({
+    id: crypto.randomUUID(), nombre: '', sustrato: Object.keys(SUSTRATOS)[0],
+    ancho: 10, alto: 15, tintasTiro: 4, tintasRetiro: 0,
+    esPlegable: false, secciones: 2,
+    plastificado: false, carasPlastificado: 1,
+    llevaTroquel: false, costoTroquelManual: 0,
+  });
+  renderVolMultiItems();
+}
+function volMultiEliminarItem(id){
+  if(volMultiItems.length<=1){ alert('El kit necesita al menos un ítem.'); return; }
+  volMultiItems = volMultiItems.filter(i=>i.id!==id);
+  renderVolMultiItems();
+}
+function volMultiActualizarCampo(id, campo, valor){
+  const item = volMultiItems.find(i=>i.id===id);
+  if(item) item[campo] = valor;
+  if(campo==='esPlegable' || campo==='plastificado' || campo==='llevaTroquel') renderVolMultiItems();
+}
+function renderVolMultiItems(){
+  const cont = document.getElementById('multiitem-lista');
+  if(!cont) return;
+  cont.innerHTML = volMultiItems.map((item,idx) => `
+    <div class="card" style="background:#f8fafc;">
+      <h2 style="font-size:0.95rem;">Ítem ${idx+1}${item.nombre?' — '+item.nombre:''}</h2>
+      <div class="fila">
+        <div class="campo"><label>Nombre del ítem:</label><input type="text" value="${item.nombre}" placeholder="Ej: Cartilla, Sobre..." onchange="volMultiActualizarCampo('${item.id}','nombre',this.value)"></div>
+        <div class="campo chico"><label>Ancho (cm):</label><input type="number" value="${item.ancho}" step="0.1" min="1" onchange="volMultiActualizarCampo('${item.id}','ancho',parseFloat(this.value)||0)"></div>
+        <div class="campo chico"><label>Alto (cm):</label><input type="number" value="${item.alto}" step="0.1" min="1" onchange="volMultiActualizarCampo('${item.id}','alto',parseFloat(this.value)||0)"></div>
+      </div>
+      <div class="fila">
+        <div class="campo"><label>Papel:</label><select onchange="volMultiActualizarCampo('${item.id}','sustrato',this.value)">${opcionesSustratosHtml(item.sustrato)}</select></div>
+        <div class="campo chico"><label>Tintas tiro:</label><input type="number" value="${item.tintasTiro}" min="0" max="4" onchange="volMultiActualizarCampo('${item.id}','tintasTiro',parseInt(this.value)||0)"></div>
+        <div class="campo chico"><label>Tintas retiro:</label><input type="number" value="${item.tintasRetiro}" min="0" max="4" onchange="volMultiActualizarCampo('${item.id}','tintasRetiro',parseInt(this.value)||0)"></div>
+      </div>
+      <div class="fila">
+        <div class="checkbox-row"><input type="checkbox" ${item.esPlegable?'checked':''} onchange="volMultiActualizarCampo('${item.id}','esPlegable',this.checked)"> <label style="font-weight:normal;">Es plegable</label></div>
+        ${item.esPlegable ? `<div class="campo chico"><label>Secciones:</label><select onchange="volMultiActualizarCampo('${item.id}','secciones',parseInt(this.value))"><option value="2" ${item.secciones===2?'selected':''}>Díptico</option><option value="3" ${item.secciones===3?'selected':''}>Tríptico</option></select></div>` : ''}
+        <div class="checkbox-row"><input type="checkbox" ${item.plastificado?'checked':''} onchange="volMultiActualizarCampo('${item.id}','plastificado',this.checked)"> <label style="font-weight:normal;">Plastificado</label></div>
+        ${item.plastificado ? `<div class="campo chico"><label>Caras a plastificar:</label><select onchange="volMultiActualizarCampo('${item.id}','carasPlastificado',parseInt(this.value))"><option value="1" ${item.carasPlastificado===1?'selected':''}>1 cara</option><option value="2" ${item.carasPlastificado===2?'selected':''}>2 caras</option></select></div>` : ''}
+      </div>
+      <div class="fila">
+        <div class="checkbox-row"><input type="checkbox" ${item.llevaTroquel?'checked':''} onchange="volMultiActualizarCampo('${item.id}','llevaTroquel',this.checked)"> <label style="font-weight:normal;">Lleva troquel (corte especial, ej. sobre con solapa)</label></div>
+        ${item.llevaTroquel ? `<div class="campo chico"><label>Costo troquel nuevo (COP):</label><input type="number" value="${item.costoTroquelManual}" min="0" onchange="volMultiActualizarCampo('${item.id}','costoTroquelManual',parseFloat(this.value)||0)"></div>` : ''}
+      </div>
+      <div id="multiitem-acabados-${item.id}"></div>
+      <button type="button" class="btn-action" style="margin-top:6px;" onclick="volMultiEliminarItem('${item.id}')">🗑️ Eliminar ítem</button>
+    </div>
+  `).join('');
+  volMultiItems.forEach(item => {
+    const box = document.getElementById(`multiitem-acabados-${item.id}`);
+    if(box) box.innerHTML = tacticalRenderAcabadosCustomHtml('volantes', `multiitem-acab-${item.id}`);
+  });
+}
+function cotizarVolanteMultiItem(items, cantidad, utilidadPct, comisionPct){
+  let costoDirectoTotal = 0;
+  const detallesItems = items.map(item => {
+    const r = cotizarVolante({
+      ancho: item.ancho, alto: item.alto, cantidad,
+      sustrato: item.sustrato, tintasTiro: item.tintasTiro, tintasRetiro: item.tintasRetiro,
+      plastificado: item.plastificado, carasPlastificado: item.carasPlastificado||1,
+      esPlegable: item.esPlegable, secciones: item.secciones||2,
+    });
+    const acabadosSel = tacticalLeerAcabadosSeleccionados('volantes', `multiitem-acab-${item.id}`);
+    const areaM2 = (item.ancho*item.alto)/10000;
+    const acabadosCosto = tacticalCostoAcabadosCustom(acabadosSel, areaM2, cantidad);
+    const costoTroquel = item.llevaTroquel ? (item.costoTroquelManual||0) : 0;
+    const costoItemDirecto = r.costoDirecto + acabadosCosto.costoTotal + costoTroquel;
+    costoDirectoTotal += costoItemDirecto;
+    return { nombre: item.nombre||'Ítem sin nombre', item, resultado: r, acabadosCosto, costoTroquel, costoItemDirecto };
+  });
+
+  const disenoCop = disenoYPreprensa(costoDirectoTotal);
+  const fondoSeguridadPct = tramoFondoSeguridad(costoDirectoTotal);
+  const fondoSeguridadCop = costoDirectoTotal*fondoSeguridadPct;
+  const sherpaCop = SHERPA_BASE_COP;
+  const itemMayor = items.reduce((max,i)=> (i.ancho*i.alto > max.ancho*max.alto ? i : max), items[0]);
+  const tamanoTransporte = claseTamanoComercial(itemMayor.ancho, itemMayor.alto);
+  const transporte = costoTransporteComercial(tamanoTransporte ? tamanoTransporte.clase : 'carta', cantidad);
+
+  const subtotal = costoDirectoTotal + disenoCop + fondoSeguridadCop + sherpaCop + transporte.total;
+  const precioVentaTotal = precioVentaDesdeSubtotal(subtotal, utilidadPct, comisionPct);
+  const precioVentaUnitario = precioVentaTotal/cantidad;
+  const ivaTotal = precioVentaTotal*0.19;
+  const precioFinalTotal = precioVentaTotal+ivaTotal;
+  const gananciaTotal = precioVentaTotal - subtotal;
+  const gananciaUnitaria = gananciaTotal/cantidad;
+
+  return {
+    esMultiItem: true, detallesItems, costoDirecto: costoDirectoTotal,
+    disenoCop, fondoSeguridadPct, fondoSeguridadCop, sherpaCop, transporte,
+    subtotal, precioVentaTotal, precioVentaUnitario, ivaTotal, precioFinalTotal,
+    gananciaTotal, gananciaUnitaria, cantidad,
+  };
+}
+function calcularMultiItem(){
+  const cont = document.getElementById("resultado-contenido");
+  try{
+    if(volMultiItems.length===0) throw new Error("Agrega al menos un ítem al kit.");
+    const sinNombre = volMultiItems.some(i=>!i.nombre.trim());
+    if(sinNombre) throw new Error("Ponle nombre a todos los ítems (ej. Cartilla, Sobre).");
+    const cantidad = tacticalLeerNumeroFormateado("in-cantidad");
+    const utilidadPct = parseFloat(document.getElementById("in-utilidadPct").value)/100;
+    const comisionPct = parseFloat(document.getElementById("in-comisionPct").value)/100;
+    const r = cotizarVolanteMultiItem(volMultiItems, cantidad, utilidadPct, comisionPct);
+    document.getElementById("recomendaciones-contenido").innerHTML = '';
+
+    let filas = `<table class="resultado-tabla">`;
+    r.detallesItems.forEach(d => {
+      filas += `<tr class="grupo"><td colspan="2">${d.nombre} (${d.item.ancho}x${d.item.alto}cm)</td></tr>`;
+      filas += `<tr class="detalle"><td colspan="2">Material: ${cop(d.resultado.detalleMaterial.costoTotal)} — Impresión: ${cop(d.resultado.detalleImpresion.total)}</td></tr>`;
+      if(d.item.plastificado) filas += `<tr class="detalle"><td colspan="2">Plastificado: ${cop(d.resultado.costoPlastificado)}</td></tr>`;
+      d.acabadosCosto.lineas.forEach(a => { filas += `<tr class="detalle"><td colspan="2">${a.nombre}: ${cop(a.costo)}</td></tr>`; });
+      if(d.item.llevaTroquel) filas += `<tr class="detalle"><td colspan="2">Troquel nuevo: ${cop(d.costoTroquel)}</td></tr>`;
+      filas += `<tr><td>Subtotal ${d.nombre}</td><td class="num">${cop(d.costoItemDirecto)}</td></tr>`;
+    });
+    filas += `<tr class="sub"><td>Costo directo total</td><td class="num">${cop(r.costoDirecto)}</td></tr>`;
+    filas += `<tr><td>Diseño / Preprensa</td><td class="num">${cop(r.disenoCop)}</td></tr>`;
+    filas += `<tr><td>Fondo de Seguridad (${(r.fondoSeguridadPct*100).toFixed(1)}%)</td><td class="num">${cop(r.fondoSeguridadCop)}</td></tr>`;
+    filas += `<tr><td>Sherpa (muestra de color)</td><td class="num">${cop(r.sherpaCop)}</td></tr>`;
+    filas += `<tr><td>Transporte (${r.transporte.via})</td><td class="num">${cop(r.transporte.total)}</td></tr>`;
+    filas += `<tr class="sub"><td>Subtotal</td><td class="num">${cop(r.subtotal)}</td></tr>`;
+    filas += `<tr><td>Precio de venta (total pedido)</td><td class="num">${cop(r.precioVentaTotal)}</td></tr>`;
+    filas += `<tr style="font-weight:bold; color:var(--rojo); font-size:1.05rem; border-top:2px solid var(--rojo);"><td>Precio de venta UNITARIO</td><td class="num">${cop(r.precioVentaUnitario)}</td></tr>`;
+    filas += `<tr><td>IVA (19%)</td><td class="num">${cop(r.ivaTotal)}</td></tr>`;
+    filas += `<tr style="font-weight:bold;"><td>Precio final total (con IVA)</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
+    filas += `<tr style="font-weight:bold; color:var(--verde); border-top:2px solid var(--verde);"><td>Ganancia total del pedido (utilidad+comisión, sin IVA)</td><td class="num">${cop(r.gananciaTotal)}</td></tr>`;
+    filas += `<tr class="detalle"><td colspan="2">↳ Ganancia por unidad: ${cop(r.gananciaUnitaria)}</td></tr>`;
+    filas += `</table>`;
+    cont.innerHTML = filas;
+    ultimoResultado = r;
+    ultimoParams = { cantidad, utilidadPct, comisionPct, items: volMultiItems.map(i=>({...i})) };
+    document.getElementById("in-descCliente").value = `${cantidad} Kit (${r.detallesItems.map(d=>d.nombre).join(' + ')})`;
+    document.getElementById("cot-ot-nota").style.display = "none";
+  } catch(err){
+    cont.innerHTML = `<div class="error-box">Error en el cálculo: ${err.message}</div>`;
+    ultimoResultado = null; ultimoParams = null;
+  }
+}
+
+// Conde 2026-08-20: "yo analizo automáticamente lo de la pinza porque hago esto hace años, pero
+// lo que estoy diseñando es para alguien que no tiene esa experiencia" -- el margen de pinza puede
+// hacer que un tamaño "redondo" (ej. 10x10cm) pierda una fila/columna completa de piezas por
+// pliego con solo unos milímetros de sobra. Busca si reducir un poco el ancho o el alto (pasos de
+// 1mm, hasta 15% o 2cm, lo que sea menor) recupera esa fila/columna, y solo lo reporta si el
+// ahorro es de al menos 10% (para no molestar con mejoras insignificantes).
+function buscarTamanoMasEficiente(ancho, alto, piezasPorPliegoActual, pliegoAncho, pliegoAlto){
+  const PASO_CM = 0.1, MAX_REDUCCION_CM = 2, MAX_REDUCCION_PCT = 0.15;
+  function piezasCon(a, b){ return piezasPorPliego(a, b, pliegoAncho, pliegoAlto); }
+  function buscarEnDimension(valorActual, obtenerPiezas){
+    const limite = Math.min(MAX_REDUCCION_CM, valorActual*MAX_REDUCCION_PCT);
+    for(let red=PASO_CM; red<=limite+0.0001; red+=PASO_CM){
+      const nuevoValor = Math.round((valorActual-red)*10)/10;
+      const piezas = obtenerPiezas(nuevoValor);
+      if(piezas>piezasPorPliegoActual) return {valor:nuevoValor, piezas};
+    }
+    return null;
+  }
+  const porAncho = buscarEnDimension(ancho, v=>piezasCon(v, alto));
+  const porAlto = buscarEnDimension(alto, v=>piezasCon(ancho, v));
+  let mejor = null;
+  if(porAncho && (!porAlto || porAncho.piezas>=porAlto.piezas)) mejor = {...porAncho, dimension:'ancho'};
+  else if(porAlto) mejor = {...porAlto, dimension:'alto'};
+  if(!mejor) return null;
+  const mejoraPct = (mejor.piezas-piezasPorPliegoActual)/piezasPorPliegoActual;
+  if(mejoraPct < 0.10) return null;
+  return { ...mejor, mejoraPct };
+}
+
+function calcular(saltarSugerencia){
   if(esModoIman()) return calcularIman();
+  if(esModoMultiItem()) return calcularMultiItem();
   const cont = document.getElementById("resultado-contenido");
   try{
     const p = {
       ancho: parseFloat(document.getElementById("in-ancho").value),
       alto: parseFloat(document.getElementById("in-alto").value),
-      cantidad: parseFloat(document.getElementById("in-cantidad").value),
+      cantidad: tacticalLeerNumeroFormateado("in-cantidad"),
       sustrato: document.getElementById("in-sustrato").value,
       tintasTiro: parseInt(document.getElementById("in-tintasTiro").value)||0,
       tintasRetiro: parseInt(document.getElementById("in-tintasRetiro").value)||0,
@@ -776,6 +1196,26 @@ function calcular(){
       comisionPct: parseFloat(document.getElementById("in-comisionPct").value)/100,
     };
     const r = cotizarVolante(p);
+
+    if(!saltarSugerencia){
+      const planoActual = r.usaDigital
+        ? planoImpresionDigital(p.ancho, p.alto, r.detalleImpresion.clase)
+        : planoImpresionOffset(p.ancho, p.alto, r.detalleImpresion.fraccion);
+      const sugerencia = buscarTamanoMasEficiente(p.ancho, p.alto, planoActual.piezasPorPliego, planoActual.pliegoAncho, planoActual.pliegoAlto);
+      if(sugerencia){
+        const nuevoAncho = sugerencia.dimension==='ancho' ? sugerencia.valor : p.ancho;
+        const nuevoAlto = sugerencia.dimension==='alto' ? sugerencia.valor : p.alto;
+        const ahorroPct = Math.round(sugerencia.mejoraPct*100);
+        const aceptar = confirm(`💡 AHORRO DE MATERIAL DISPONIBLE\n\nCon el tamaño actual (${p.ancho}x${p.alto}cm) caben ${planoActual.piezasPorPliego} piezas por pliego.\n\nSi lo cambias a ${nuevoAncho}x${nuevoAlto}cm, caben ${sugerencia.piezas} piezas por pliego — ahorras aproximadamente ${ahorroPct}% de material.\n\n¿Aplicar este tamaño?`);
+        if(aceptar){
+          document.getElementById('in-ancho').value = nuevoAncho;
+          document.getElementById('in-alto').value = nuevoAlto;
+          onCambioTamano();
+          return calcular(true);
+        }
+      }
+    }
+
     renderRecomendaciones(r);
 
     const viaImpresionTxt = r.detalleImpresion.via==="digital"
@@ -799,6 +1239,9 @@ function calcular(){
     if(r.plastificado){
       filas += `<tr><td>Plastificado (${r.carasPlastificado} cara${r.carasPlastificado>1?'s':''}, $950/m²)</td><td class="num">${cop(r.costoPlastificado)}</td></tr>`;
     }
+    r.acabadosCustomLineas.forEach(a => {
+      filas += `<tr><td>${a.nombre}</td><td class="num">${cop(a.costo)}</td></tr>`;
+    });
     filas += `<tr class="sub"><td>Costo directo total</td><td class="num">${cop(r.costoDirecto)}</td></tr>`;
     filas += `<tr><td>Diseño / Preprensa</td><td class="num">${cop(r.disenoCop)}</td></tr>`;
     filas += `<tr><td>Fondo de Seguridad (${(r.fondoSeguridadPct*100).toFixed(1)}%)</td><td class="num">${cop(r.fondoSeguridadCop)}</td></tr>`;
@@ -828,7 +1271,7 @@ function calcularIman(){
     const p = {
       ancho: parseFloat(document.getElementById("in-ancho").value),
       alto: parseFloat(document.getElementById("in-alto").value),
-      cantidad: parseFloat(document.getElementById("in-cantidad").value),
+      cantidad: tacticalLeerNumeroFormateado("in-cantidad"),
       sustrato: document.getElementById("in-sustratoIman").value,
       tintasTiro: parseInt(document.getElementById("in-tintasTiroIman").value)||0,
       corteTipo: document.getElementById("in-corteIman").value,
@@ -875,9 +1318,19 @@ function calcularIman(){
   }
 }
 
-/* ============ CLIENTE Y CRM (comparte localStorage con TACTICAL_ERP_HUB.html) ============ */
-let db_clientes = JSON.parse(localStorage.getItem('tactical_crm_clientes_v2')) || [];
-let db_opps = JSON.parse(localStorage.getItem('tactical_crm_opps_v2')) || [];
+/* ============ CLIENTE Y CRM (Supabase, compartido con TACTICAL_ERP_HUB.html y las demás calculadoras) ============ */
+let db_clientes = [];
+let db_opps = [];
+
+// Se llama automático (ver tactical-supabase.js) apenas el login confirma sesión válida.
+window.tacticalOnLogin = async function(){
+  db_clientes = await tacticalClientesCargar();
+  db_opps = await tacticalOppsCargar();
+  refrescarDatalistClientes();
+  tacticalFototecaCargar();
+  await tacticalPedidoBorradorCargar(); refrescarBannerPedido();
+  await tacticalComparacionBorradorCargar(); refrescarBannerComparacion();
+};
 let ultimoResultado = null, ultimoParams = null, ultimoOT = null;
 
 function refrescarDatalistClientes(){
@@ -917,8 +1370,8 @@ function autocompletarCliente(){
     nota.style.display = 'none';
   }
 }
-function siguienteOT(){
-  return tacticalSiguienteOT();
+async function siguienteOT(){
+  return await tacticalSiguienteOT();
 }
 function toggleCondicionesComerciales(){
   const panel = document.getElementById('condicionesComerciales-panel');
@@ -983,15 +1436,22 @@ function tacticalImprimirConTitulo(nombreArchivo){
 function imprimirPDFCliente(datos){
   const fecha = datos.fecha.toLocaleDateString('es-CO', {year:'numeric', month:'long', day:'numeric'});
   const validoHasta = fechaMasDias(datos.fecha, 30);
-  const filasLineas = datos.lineas.map(l => `<tr><td><div style="display:flex; align-items:center; gap:6px;">${l.fotoUrl?`<img src="${l.fotoUrl}" style="width:90px; height:90px; object-fit:contain; background:#f8fafc; border:1px solid #d7dee5; border-radius:4px; flex-shrink:0;">`:''}<div>${l.desc}${l.videoUrl?`<br><a href="${l.videoUrl}" style="color:#cc0000; text-decoration:none; font-size:0.65rem; font-weight:bold;">▶ Ver video del producto</a>`:''}</div></div></td><td style="text-align:right;">${l.cantidad||'-'}</td><td style="text-align:right;">${cop(l.monto)}</td></tr>`).join('');
-  let desgloseHtml = '';
-  if(datos.ivaTotal!=null){
-    const subtotal = datos.total - datos.ivaTotal;
-    desgloseHtml = `<table class="doc-table" style="margin-top:6px;">
-      <tr><td>Subtotal</td><td style="text-align:right;">${cop(subtotal)}</td></tr>
-      <tr><td>IVA (19%)</td><td style="text-align:right;">${cop(datos.ivaTotal)}</td></tr>
-    </table>`;
-  }
+  // Conde 2026-08-19: el cliente necesita ver el valor unitario SIN IVA de cada línea, no solo
+  // el total de esa línea con IVA incluido -- si no viene precalculado (l.precioUnitario), se
+  // deriva del monto total de la línea asumiendo el 19% plano que se usa en toda la cotización.
+  const filasLineas = datos.lineas.map(l => {
+    const cant = l.cantidad || 1;
+    const unitario = l.precioUnitario!=null ? l.precioUnitario : (l.monto/cant/1.19);
+    return `<tr><td><div style="display:flex; align-items:center; gap:6px;">${l.fotoUrl?`<img src="${l.fotoUrl}" style="width:90px; height:90px; object-fit:contain; background:#f8fafc; border:1px solid #d7dee5; border-radius:4px; flex-shrink:0;">`:''}<div>${l.desc}${l.videoUrl?`<br><a href="${l.videoUrl}" style="color:#cc0000; text-decoration:none; font-size:0.65rem; font-weight:bold;">▶ Ver video del producto</a>`:''}</div></div></td><td style="text-align:right;">${l.cantidad||'-'}</td><td style="text-align:right;">${cop(unitario)}</td><td style="text-align:right;">${cop(l.monto)}</td></tr>`;
+  }).join('');
+  // El desglose Subtotal/IVA se calcula siempre a partir del total (IVA plano del 19% en toda
+  // la cotización) -- antes se saltaba en los pedidos multi-producto porque no se pasaba ivaTotal.
+  const subtotal = datos.total/1.19;
+  const ivaTotal = datos.total - subtotal;
+  const desgloseHtml = `<table class="doc-table" style="margin-top:6px;">
+    <tr><td>Subtotal (sin IVA)</td><td style="text-align:right;">${cop(subtotal)}</td></tr>
+    <tr><td>IVA (19%)</td><td style="text-align:right;">${cop(ivaTotal)}</td></tr>
+  </table>`;
   const html = `
     <div class="doc-header">
       <div><img src="${TACTICAL_LOGO_B64}" style="height:68px; margin-bottom:8px; display:block;" alt="Tactical Marketing"><div class="doc-tipo">COTIZACIÓN ${datos.ot||''}</div></div>
@@ -1002,9 +1462,9 @@ function imprimirPDFCliente(datos){
       <div class="doc-cliente-meta">Atención: ${datos.cliente.encargado||'-'} &nbsp;·&nbsp; ${datos.cliente.telefono||'-'} &nbsp;·&nbsp; ${datos.cliente.correo||'-'}</div>
       <div class="doc-cliente-fechas">Fecha de emisión: ${fecha} &nbsp;|&nbsp; Válida hasta: ${validoHasta} (30 días calendario)</div>
     </div>
-    <div class="doc-section-title">Productos Cotizados${datos.ivaTotal==null?' (cada valor ya incluye IVA)':''}</div>
+    <div class="doc-section-title">Productos Cotizados</div>
     <table class="doc-table">
-      <tr><th>Descripción</th><th>Cantidad</th><th>Valor</th></tr>
+      <tr><th>Descripción</th><th>Cantidad</th><th>Valor Unitario (sin IVA)</th><th>Valor Total</th></tr>
       ${filasLineas}
     </table>
     ${desgloseHtml}
@@ -1020,10 +1480,10 @@ function imprimirPDFCliente(datos){
   document.getElementById('print-area').style.display = 'block';
   tacticalImprimirConTitulo(`${datos.cliente.empresa||'Cliente'} - ${datos.ot||''}`);
 }
-function generarOrdenProduccion(){
+async function generarOrdenProduccion(){
   if(!ultimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
   const r = ultimoResultado, p = ultimoParams;
-  if(!ultimoOT) ultimoOT = siguienteOT();
+  if(!ultimoOT) ultimoOT = await siguienteOT();
   let maquina = 'N/A (sin impresión)';
   if(r.detalleImpresion){
     const esDigital = r.detalleImpresion.via === 'digital' || r.usaDigital;
@@ -1035,33 +1495,86 @@ function generarOrdenProduccion(){
   const nombreClienteOP = (document.getElementById('in-cli-empresa')||{}).value?.trim() || 'Cliente';
   const fechaEntregaOP = prompt('Fecha de entrega para esta Orden de Producción:', '');
   const recomendaciones = RECOMENDACIONES_PRODUCCION.filter(reg=>reg.aplica(r)).map(reg=>typeof reg.texto==='function'?reg.texto(r):reg.texto);
-  const tituloProducto = r.esIman ? 'Imán' : (p.esPlegable?'Plegable':'Volante/Afiche');
-  const filasTabla = r.esIman
-    ? [['Tamaño', `${p.ancho} x ${p.alto} cm`], ['Cantidad', `${p.cantidad} unidades`], ['Corte', r.detalleCorte.via==='laser'?'Láser':'Troquel'], ['Lámina Imán C5', `${r.nLaminas} lámina(s), ${r.piezasPorLamina} pieza(s)/lámina`]]
-    : [['Tamaño', `${p.ancho} x ${p.alto} cm`], ['Cantidad', `${p.cantidad} unidades`], ['Formato', r.tamano.clase], ['Plegado', r.esPlegable?(r.secciones===3?'Tríptico':'Díptico'):'No']];
-  const bloqueLineas = r.esIman
-    ? [
-        `Máquina: <strong>${maquina}</strong> — Adhesivo: <strong>${nombreSus} ${gramajeSus}g</strong> — Pliegos: <strong>${r.detalleMaterial.nPliegos}</strong>`,
-        `Impresión: <strong>${p.tintasTiro}x0</strong>`,
-        `Corte: <strong>${r.detalleCorte.via==='laser'?'Láser':'Troquel'}</strong> — Lámina Imán C5: <strong>${r.nLaminas} lámina(s)</strong>`,
-      ]
-    : [
-        `Máquina: <strong>${maquina}</strong> — Papel: <strong>${nombreSus} ${gramajeSus}g</strong> — Pliegos: <strong>${r.detalleMaterial.nPliegos}</strong>`,
-        `Impresión: <strong>${caras}</strong>`,
-        `Acabados: <strong>${r.plastificado?`Plastificado (${r.carasPlastificado} cara${r.carasPlastificado>1?'s':''})`:'Sin plastificar'}${r.esPlegable?` — Plegado ${r.secciones===3?'Tríptico':'Díptico'}`:''}</strong>`,
-      ];
+  let filasTabla, bloques;
+  if(r.esMultiItem){
+    filasTabla = [['Cantidad', `${p.cantidad} unidades`], ['Ítems', `${r.detallesItems.length}`]];
+    bloques = r.detallesItems.flatMap(d => {
+      const [nSus, gSus] = d.item.sustrato.split('__');
+      const dUsaDigital = d.resultado.detalleImpresion.via==='digital';
+      const dMaquina = dUsaDigital ? 'Digital' : (TACTICAL_NOMBRE_MAQUINA[d.resultado.detalleImpresion.fraccion]||d.resultado.detalleImpresion.fraccion);
+      const dCaras = (d.item.tintasRetiro||0)>0 ? `${d.item.tintasTiro}x${d.item.tintasRetiro}` : `${d.item.tintasTiro}x0`;
+      const dConteoTxt = dUsaDigital
+        ? ` — <strong>${d.resultado.detalleImpresion.nClics.toLocaleString('es-CO')} clics de impresión</strong>`
+        : ` — <strong>${d.resultado.detalleImpresion.nPasadas.toLocaleString('es-CO')} tamaños ${OFFSET_FORMATOS_CM[d.resultado.detalleImpresion.fraccion][0]}x${OFFSET_FORMATOS_CM[d.resultado.detalleImpresion.fraccion][1]} de impresión</strong>`;
+      const acabadosTxt = [
+        d.item.plastificado ? `Plastificado (${d.item.carasPlastificado} cara${d.item.carasPlastificado>1?'s':''})` : null,
+        d.item.esPlegable ? `Plegado ${d.item.secciones===3?'Tríptico':'Díptico'}` : null,
+        d.item.llevaTroquel ? `Troquel nuevo (${cop(d.costoTroquel)})` : null,
+        ...d.acabadosCosto.lineas.map(a=>a.nombre),
+      ].filter(Boolean).join(' — ') || 'Sin acabados';
+      const bloqueMaterial = {
+        titulo: `${d.nombre} (${d.item.ancho}x${d.item.alto}cm)`,
+        lineasTexto: [
+          `Máquina: <strong>${dMaquina}</strong> — Papel: <strong>${nSus} ${gSus}g</strong> — Pliegos: <strong>${d.resultado.detalleMaterial.nPliegos}</strong>`,
+          `Impresión: <strong>${dCaras}</strong>${dConteoTxt}`,
+          `Acabados: <strong>${acabadosTxt}</strong>`,
+        ],
+        planoCorte: d.resultado.detalleMaterial.planoCorte,
+      };
+      // Conde 2026-08-20: mismo plano de impresión (piezas dentro del pedazo grande) que ya tiene
+      // el modo de un solo producto -- al Kit multi-ítem le faltaba, solo mostraba el plano de material.
+      const planoImpresionItem = dUsaDigital
+        ? planoImpresionDigital(d.item.ancho, d.item.alto, d.resultado.detalleImpresion.clase)
+        : planoImpresionOffset(d.item.ancho, d.item.alto, d.resultado.detalleImpresion.fraccion);
+      const bloquePlano = {
+        titulo: `${d.nombre} — Plano de impresión (${planoImpresionItem.piezaAncho}x${planoImpresionItem.piezaAlto}cm por pliego de ${planoImpresionItem.pliegoAncho}x${planoImpresionItem.pliegoAlto}cm)`,
+        lineasTexto: [`${planoImpresionItem.piezasPorPliego} pieza(s) por pliego de impresión${dUsaDigital?' (con margen de pinza descontado)':''}`],
+        planoCorte: planoImpresionItem,
+      };
+      return [bloqueMaterial, bloquePlano];
+    });
+  } else {
+    const tituloProducto = r.esIman ? 'Imán' : (p.esPlegable?'Plegable':'Volante/Afiche');
+    filasTabla = r.esIman
+      ? [['Tamaño', `${p.ancho} x ${p.alto} cm`], ['Cantidad', `${p.cantidad} unidades`], ['Corte', r.detalleCorte.via==='laser'?'Láser':'Troquel'], ['Lámina Imán C5', `${r.nLaminas} lámina(s), ${r.piezasPorLamina} pieza(s)/lámina`]]
+      : [['Tamaño', `${p.ancho} x ${p.alto} cm`], ['Cantidad', `${p.cantidad} unidades`], ['Formato', r.tamano.clase], ['Plegado', r.esPlegable?(r.secciones===3?'Tríptico':'Díptico'):'No']];
+    const bloqueLineas = r.esIman
+      ? [
+          `Máquina: <strong>${maquina}</strong> — Adhesivo: <strong>${nombreSus} ${gramajeSus}g</strong> — Pliegos: <strong>${r.detalleMaterial.nPliegos} pliego(s) ${r.detalleMaterial.formato}</strong> (cortar primero en pedazos de ${r.detalleMaterial.planoCorte.piezaAncho}x${r.detalleMaterial.planoCorte.piezaAlto}cm para imprimir, tope 30x50cm por la lámina Imán)`,
+          `Impresión: <strong>${p.tintasTiro}x0</strong>${r.usaDigital ? ` — <strong>${r.detalleImpresion.nClics.toLocaleString('es-CO')} clics de impresión</strong>` : ` — <strong>${r.detalleImpresion.nPasadas.toLocaleString('es-CO')} tamaños ${r.detalleImpresion.montajeAncho}x${r.detalleImpresion.montajeAlto} de impresión</strong>`}`,
+          `Corte: <strong>${r.detalleCorte.via==='laser'?'Láser':'Troquel'}</strong> — Lámina Imán C5: <strong>${r.nLaminas} lámina(s)</strong>`,
+        ]
+      : [
+          `Papel: <strong>${nombreSus} ${gramajeSus}g</strong> — Material: <strong>${r.detalleMaterial.nPliegos} pliego(s) ${r.detalleMaterial.formato}</strong> (cortar primero en pedazos de ${r.detalleMaterial.planoCorte.piezaAncho}x${r.detalleMaterial.planoCorte.piezaAlto}cm para imprimir)`,
+          `Impresión: <strong>${maquina} — ${caras}</strong>${r.usaDigital ? ` — <strong>${r.detalleImpresion.nClics.toLocaleString('es-CO')} clics de impresión</strong>` : ` — <strong>${r.detalleImpresion.nPasadas.toLocaleString('es-CO')} tamaños ${OFFSET_FORMATOS_CM[r.detalleImpresion.fraccion][0]}x${OFFSET_FORMATOS_CM[r.detalleImpresion.fraccion][1]} de impresión</strong>`} — Acabados: <strong>${r.plastificado?`Plastificado (${r.carasPlastificado} cara${r.carasPlastificado>1?'s':''}, sobre el pedazo grande)`:'Sin plastificar'}</strong>`,
+          `Corte a piezas: cada pedazo se corta luego en piezas de <strong>${p.ancho}x${p.alto}cm</strong>${r.esPlegable?` — Plegado ${r.secciones===3?'Tríptico':'Díptico'}`:''}`,
+        ];
+    bloques = [{ titulo: tituloProducto, lineasTexto: bloqueLineas, planoCorte: r.detalleMaterial.planoCorte }];
+    // Conde 2026-08-20: plano de impresión aparte del plano de corte del material -- cómo caben
+    // las piezas finales DENTRO del pedazo grande de impresión (no aplica al modo Imán).
+    if(!r.esIman){
+      const planoImpresion = r.usaDigital
+        ? planoImpresionDigital(p.ancho, p.alto, r.detalleImpresion.clase)
+        : planoImpresionOffset(p.ancho, p.alto, r.detalleImpresion.fraccion);
+      bloques.push({
+        titulo: `Plano de impresión (${planoImpresion.piezaAncho}x${planoImpresion.piezaAlto}cm por pliego de ${planoImpresion.pliegoAncho}x${planoImpresion.pliegoAlto}cm)`,
+        lineasTexto: [`${planoImpresion.piezasPorPliego} pieza(s) por pliego de impresión${r.usaDigital?' (con margen de pinza descontado)':''}`],
+        planoCorte: planoImpresion,
+      });
+    }
+  }
   const html = tacticalOPDocumentoHtml({
     logoB64: TACTICAL_LOGO_B64, ot: ultimoOT, cliente: nombreClienteOP,
     fechaEntrega: (fechaEntregaOP && fechaEntregaOP.trim()) ? fechaEntregaOP.trim() : 'Por definir',
     filasTabla,
-    bloques: [{ titulo: tituloProducto, lineasTexto: bloqueLineas, planoCorte: r.detalleMaterial.planoCorte }],
+    bloques,
     recomendaciones,
   });
   document.getElementById('print-area').innerHTML = html;
   document.getElementById('print-area').style.display = 'block';
   tacticalImprimirConTitulo(`${nombreClienteOP} - ${ultimoOT} - OP`);
 }
-function guardarCotizacionClick(){
+async function guardarCotizacionClick(){
   if(!ultimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
   const empresa = document.getElementById('in-cli-empresa').value.trim();
   const encargado = document.getElementById('in-cli-encargado').value.trim();
@@ -1074,7 +1587,7 @@ function guardarCotizacionClick(){
 
   let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
   if(!cli){
-    cli = { id: Date.now().toString(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo, identificacion };
+    cli = { id: crypto.randomUUID(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo, identificacion };
     db_clientes.push(cli);
   } else {
     if(telefono) cli.wp = telefono;
@@ -1082,25 +1595,31 @@ function guardarCotizacionClick(){
     if(tipo) cli.tipo = tipo;
     if(identificacion) cli.identificacion = identificacion;
   }
-  localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
+  tacticalSyncClientes(db_clientes);
 
-  if(!ultimoOT) ultimoOT = siguienteOT();
-  const desc = tacticalTituloCorto(`${ultimoParams.cantidad} ${ultimoResultado.esIman?'Imán':(ultimoParams.esPlegable?'Plegable':'Volante/Afiche')} ${ultimoParams.ancho}x${ultimoParams.alto}cm`, document.getElementById("in-descCliente").value);
+  if(!ultimoOT) ultimoOT = await siguienteOT();
+  const desc = ultimoResultado.esMultiItem
+    ? tacticalTituloCorto(`${ultimoParams.cantidad} Kit (${ultimoResultado.detallesItems.map(d=>d.nombre).join(' + ')})`, document.getElementById("in-descCliente").value)
+    : tacticalTituloCorto(`${ultimoParams.cantidad} ${ultimoResultado.esIman?'Imán':(ultimoParams.esPlegable?'Plegable':'Volante/Afiche')} ${ultimoParams.ancho}x${ultimoParams.alto}cm`, document.getElementById("in-descCliente").value);
   let maquina = 'otro', material = null, nPliegos = null, planoCorte = null;
-  if(ultimoResultado.detalleImpresion){
-    if(ultimoResultado.detalleImpresion.via === 'digital') maquina = 'digital';
-    else if(ultimoResultado.detalleImpresion.fraccion) maquina = ultimoResultado.detalleImpresion.fraccion;
-  }
-  if(ultimoResultado.detalleMaterial && ultimoParams.sustrato){
-    const [nombreSus, gramajeSus] = ultimoParams.sustrato.split('__');
-    material = `${nombreSus} ${gramajeSus}g`;
-    nPliegos = ultimoResultado.detalleMaterial.nPliegos;
-    planoCorte = ultimoResultado.detalleMaterial.planoCorte || null;
+  if(ultimoResultado.esMultiItem){
+    material = ultimoResultado.detallesItems.map(d=>d.nombre).join(' + ');
+  } else {
+    if(ultimoResultado.detalleImpresion){
+      if(ultimoResultado.detalleImpresion.via === 'digital') maquina = 'digital';
+      else if(ultimoResultado.detalleImpresion.fraccion) maquina = ultimoResultado.detalleImpresion.fraccion;
+    }
+    if(ultimoResultado.detalleMaterial && ultimoParams.sustrato){
+      const [nombreSus, gramajeSus] = ultimoParams.sustrato.split('__');
+      material = `${nombreSus} ${gramajeSus}g`;
+      nPliegos = ultimoResultado.detalleMaterial.nPliegos;
+      planoCorte = ultimoResultado.detalleMaterial.planoCorte || null;
+    }
   }
   const recomendaciones = RECOMENDACIONES_PRODUCCION.filter(reg=>reg.aplica(ultimoResultado)).map(reg=>typeof reg.texto==='function'?reg.texto(ultimoResultado):reg.texto);
-  const opp = { id: Date.now().toString()+'_opp', ot: ultimoOT, idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, desc, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'volantes', cantidad: ultimoParams.cantidad, maquina, material, nPliegos, planoCorte, recomendaciones };
+  const opp = { id: crypto.randomUUID(), ot: ultimoOT, idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, desc, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'volantes', cantidad: ultimoParams.cantidad, maquina, material, nPliegos, planoCorte, recomendaciones };
   db_opps.push(opp);
-  localStorage.setItem('tactical_crm_opps_v2', JSON.stringify(db_opps));
+  tacticalSyncOpps(db_opps);
 
   refrescarDatalistClientes();
   const nota = document.getElementById('cot-ot-nota');
@@ -1109,13 +1628,13 @@ function guardarCotizacionClick(){
 
   imprimirPDFCliente({
     ot: ultimoOT, fecha: new Date(), vendedor, cliente: {empresa: cli.empresa, encargado: cli.nombre, telefono: cli.wp, correo: cli.correo},
-    lineas: [{desc, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), fotoUrl: fotoParaCotizacion('volantes'), videoUrl: videoParaCotizacion('volantes')}],
+    lineas: [{desc, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), precioUnitario: ultimoResultado.precioVentaUnitario, fotoUrl: fotoParaCotizacion('volantes'), videoUrl: videoParaCotizacion('volantes')}],
     ivaTotal: ultimoResultado.ivaTotal, total: Math.round(ultimoResultado.precioFinalTotal),
   });
 }
 
 /* ============ PEDIDO MULTI-PRODUCTO (varias líneas, un solo cliente/OT) ============ */
-function pedidoActivo(){ return JSON.parse(localStorage.getItem('tactical_pedido_activo')) || null; }
+function pedidoActivo(){ return window.tacticalPedidoBorradorCache || null; }
 function refrescarBannerPedido(){
   const pd = pedidoActivo();
   const el = document.getElementById('pedido-banner');
@@ -1127,7 +1646,7 @@ function refrescarBannerPedido(){
     <button type="button" style="margin-top:6px; background:var(--verde); color:#fff;" onclick="cerrarPedido()">✅ Cerrar pedido y guardar en CRM</button>
     <button type="button" style="margin-top:6px; background:var(--rojo); color:#fff;" onclick="cancelarPedido()">✕ Cancelar pedido</button>`;
 }
-function iniciarOAgregarPedido(){
+async function iniciarOAgregarPedido(){
   if(!ultimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
   const empresa = document.getElementById('in-cli-empresa').value.trim();
   const encargado = document.getElementById('in-cli-encargado').value.trim();
@@ -1140,7 +1659,7 @@ function iniciarOAgregarPedido(){
 
   let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
   if(!cli){
-    cli = { id: Date.now().toString(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo, identificacion };
+    cli = { id: crypto.randomUUID(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo, identificacion };
     db_clientes.push(cli);
   } else {
     if(telefono) cli.wp = telefono;
@@ -1148,7 +1667,7 @@ function iniciarOAgregarPedido(){
     if(tipo) cli.tipo = tipo;
     if(identificacion) cli.identificacion = identificacion;
   }
-  localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
+  tacticalSyncClientes(db_clientes);
   refrescarDatalistClientes();
 
   let pd = pedidoActivo();
@@ -1158,7 +1677,7 @@ function iniciarOAgregarPedido(){
     pd = null;
   }
   if(!pd){
-    pd = { ot: siguienteOT(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, vendedor, lineas: [], creado: new Date().toISOString() };
+    pd = { ot: await siguienteOT(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, vendedor, lineas: [], creado: new Date().toISOString() };
   }
 
   const desc = tacticalTituloCorto(`${ultimoParams.cantidad} ${ultimoResultado.esIman?'Imán':(ultimoParams.esPlegable?'Plegable':'Volante/Afiche')} ${ultimoParams.ancho}x${ultimoParams.alto}cm`, document.getElementById("in-descCliente").value);
@@ -1174,30 +1693,30 @@ function iniciarOAgregarPedido(){
     planoCorte = ultimoResultado.detalleMaterial.planoCorte || null;
   }
   const recomendaciones = RECOMENDACIONES_PRODUCCION.filter(reg=>reg.aplica(ultimoResultado)).map(reg=>typeof reg.texto==='function'?reg.texto(ultimoResultado):reg.texto);
-  pd.lineas.push({ linea:'volantes', desc, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), maquina, material, nPliegos, planoCorte, recomendaciones, fotoUrl: fotoParaCotizacion('volantes'), videoUrl: videoParaCotizacion('volantes') });
+  pd.lineas.push({ linea:'volantes', desc, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), precioUnitario: ultimoResultado.precioVentaUnitario, maquina, material, nPliegos, planoCorte, recomendaciones, fotoUrl: fotoParaCotizacion('volantes'), videoUrl: videoParaCotizacion('volantes') });
   fotoPersonalReiniciar();
-  localStorage.setItem('tactical_pedido_activo', JSON.stringify(pd));
+  window.tacticalPedidoBorradorCache = pd; tacticalGuardarPedidoBorrador(pd);
   refrescarBannerPedido();
   alert(`Agregado al pedido ${pd.ot}. Ahora tiene ${pd.lineas.length} producto(s).`);
 }
 function cerrarPedido(){
   const pd = pedidoActivo();
-  if(!pd || pd.lineas.length===0){ localStorage.removeItem('tactical_pedido_activo'); refrescarBannerPedido(); return; }
+  if(!pd || pd.lineas.length===0){ window.tacticalPedidoBorradorCache = null; tacticalEliminarPedidoBorrador(); refrescarBannerPedido(); return; }
   const montoTotal = pd.lineas.reduce((s,l)=>s+l.monto,0);
   const cantidadTotal = pd.lineas.reduce((s,l)=>s+(l.cantidad||0),0);
   const descConsolidada = pd.lineas.map(l=>l.desc).join(' + ');
-  const opp = { id: Date.now().toString()+'_opp', ot: pd.ot, idCli: pd.idCli, nombreCli: pd.nombreCli, desc: descConsolidada, monto: montoTotal, etapa: 'cot', linea: 'multi', cantidad: cantidadTotal, vendedor: pd.vendedor, lineas: pd.lineas };
+  const opp = { id: crypto.randomUUID(), ot: pd.ot, idCli: pd.idCli, nombreCli: pd.nombreCli, desc: descConsolidada, monto: montoTotal, etapa: 'cot', linea: 'multi', cantidad: cantidadTotal, vendedor: pd.vendedor, lineas: pd.lineas };
   db_opps.push(opp);
-  localStorage.setItem('tactical_crm_opps_v2', JSON.stringify(db_opps));
-  localStorage.removeItem('tactical_pedido_activo');
+  tacticalSyncOpps(db_opps);
+  window.tacticalPedidoBorradorCache = null; tacticalEliminarPedidoBorrador();
   refrescarBannerPedido();
   alert(`Pedido ${pd.ot} guardado en el CRM — ${pd.lineas.length} producto(s), total ${cop(montoTotal)}.`);
 
   const cliPd = db_clientes.find(c=>c.id===pd.idCli) || {empresa:pd.nombreCli, nombre:'', wp:'', correo:''};
   imprimirPDFCliente({
     ot: pd.ot, fecha: new Date(), vendedor: pd.vendedor, cliente: {empresa: cliPd.empresa, encargado: cliPd.nombre, telefono: cliPd.wp, correo: cliPd.correo},
-    lineas: pd.lineas.map(l=>({desc:l.desc, cantidad:l.cantidad, monto:l.monto})),
-    ivaTotal: null, total: montoTotal,
+    lineas: pd.lineas.map(l=>({desc:l.desc, cantidad:l.cantidad, monto:l.monto, precioUnitario:l.precioUnitario})),
+    total: montoTotal,
   });
 }
 /* ============ COMPARACIÓN DE OPCIONES (varias variantes, precios SEPARADOS, el cliente
@@ -1264,7 +1783,7 @@ function fotoPersonalReiniciar(){
   if(sel) sel.value = '';
 }
 
-function comparacionActiva(){ return JSON.parse(localStorage.getItem('tactical_comparacion_activa')) || null; }
+function comparacionActiva(){ return window.tacticalComparacionBorradorCache || null; }
 function refrescarBannerComparacion(){
   const comp = comparacionActiva();
   const el = document.getElementById('comparacion-banner');
@@ -1275,7 +1794,7 @@ function refrescarBannerComparacion(){
     <button type="button" style="margin-top:6px; background:var(--verde); color:#fff;" onclick="generarPDFComparativo()">✅ Generar PDF comparativo</button>
     <button type="button" style="margin-top:6px; background:var(--rojo); color:#fff;" onclick="cancelarComparacion()">✕ Cancelar comparación</button>`;
 }
-function agregarOpcionComparacion(){
+async function agregarOpcionComparacion(){
   if(!ultimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
   const empresa = document.getElementById('in-cli-empresa').value.trim();
   const encargado = document.getElementById('in-cli-encargado').value.trim();
@@ -1288,7 +1807,7 @@ function agregarOpcionComparacion(){
 
   let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
   if(!cli){
-    cli = { id: Date.now().toString(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo, identificacion };
+    cli = { id: crypto.randomUUID(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo, identificacion };
     db_clientes.push(cli);
   } else {
     if(telefono) cli.wp = telefono;
@@ -1296,7 +1815,7 @@ function agregarOpcionComparacion(){
     if(tipo) cli.tipo = tipo;
     if(identificacion) cli.identificacion = identificacion;
   }
-  localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
+  tacticalSyncClientes(db_clientes);
   refrescarDatalistClientes();
 
   let comp = comparacionActiva();
@@ -1305,13 +1824,13 @@ function agregarOpcionComparacion(){
     comp = null;
   }
   if(!comp){
-    comp = { ot: siguienteOT(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, vendedor, opciones: [], creado: new Date().toISOString() };
+    comp = { ot: await siguienteOT(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, vendedor, opciones: [], creado: new Date().toISOString() };
   }
 
   const titulo = tacticalTituloCorto(`${ultimoParams.cantidad} ${ultimoResultado.esIman?'Imán':(ultimoParams.esPlegable?'Plegable':'Volante/Afiche')} ${ultimoParams.ancho}x${ultimoParams.alto}cm`, document.getElementById("in-descCliente").value);
   comp.opciones.push({ titulo, params: {cantidad: ultimoParams.cantidad}, resultado: {precioVentaUnitario: ultimoResultado.precioVentaUnitario, precioVentaTotal: ultimoResultado.precioVentaTotal, ivaTotal: ultimoResultado.ivaTotal, precioFinalTotal: ultimoResultado.precioFinalTotal}, fotoUrl: fotoParaCotizacion('volantes'), videoUrl: videoParaCotizacion('volantes') });
   fotoPersonalReiniciar();
-  localStorage.setItem('tactical_comparacion_activa', JSON.stringify(comp));
+  window.tacticalComparacionBorradorCache = comp; tacticalGuardarComparacionBorrador(comp);
   refrescarBannerComparacion();
   alert(`Agregada como opción ${comp.opciones.length} de la comparación ${comp.ot}.`);
 }
@@ -1319,7 +1838,7 @@ function cancelarComparacion(){
   const comp = comparacionActiva();
   if(!comp) return;
   if(!confirm(`¿Cancelar la comparación ${comp.ot} en curso? Se perderán las ${comp.opciones.length} opción(es) agregadas.`)) return;
-  localStorage.removeItem('tactical_comparacion_activa');
+  window.tacticalComparacionBorradorCache = null; tacticalEliminarComparacionBorrador();
   refrescarBannerComparacion();
 }
 function generarPDFComparativo(){
@@ -1364,17 +1883,17 @@ function generarPDFComparativo(){
   tacticalImprimirConTitulo(`${cli.empresa||'Cliente'} - ${comp.ot} - Comparativa`);
 
   const montoRef = Math.min(...comp.opciones.map(o=>o.resultado.precioFinalTotal));
-  const opp = { id: Date.now().toString()+'_opp', ot: comp.ot, idCli: comp.idCli, nombreCli: comp.nombreCli, desc: `Comparativa: ${comp.opciones.map(o=>o.titulo).join(' vs ')}`, monto: Math.round(montoRef), etapa: 'cot', linea: 'volantes', cantidad: comp.opciones[0].params.cantidad, vendedor: comp.vendedor, opcionesComparativa: comp.opciones };
+  const opp = { id: crypto.randomUUID(), ot: comp.ot, idCli: comp.idCli, nombreCli: comp.nombreCli, desc: `Comparativa: ${comp.opciones.map(o=>o.titulo).join(' vs ')}`, monto: Math.round(montoRef), etapa: 'cot', linea: 'volantes', cantidad: comp.opciones[0].params.cantidad, vendedor: comp.vendedor, opcionesComparativa: comp.opciones };
   db_opps.push(opp);
-  localStorage.setItem('tactical_crm_opps_v2', JSON.stringify(db_opps));
-  localStorage.removeItem('tactical_comparacion_activa');
+  tacticalSyncOpps(db_opps);
+  window.tacticalComparacionBorradorCache = null; tacticalEliminarComparacionBorrador();
   refrescarBannerComparacion();
 }
 function cancelarPedido(){
   const pd = pedidoActivo();
   if(!pd) return;
   if(!confirm(`¿Cancelar el pedido ${pd.ot} en curso? Se perderán las ${pd.lineas.length} línea(s) agregadas (no borra cotizaciones individuales ya guardadas aparte).`)) return;
-  localStorage.removeItem('tactical_pedido_activo');
+  window.tacticalPedidoBorradorCache = null; tacticalEliminarPedidoBorrador();
   refrescarBannerPedido();
 }
 
@@ -1391,6 +1910,11 @@ refrescarBannerComparacion();
 document.getElementById('in-condicionesComerciales').value = CONDICIONES_COMERCIALES_DEFAULT.join(String.fromCharCode(10));
 poblarVarianteFoto();
 onCambioPlegable();
+(function(){
+  const box = document.getElementById('acabados-custom-box');
+  const html = tacticalRenderAcabadosCustomHtml('volantes', 'chk-acab-custom');
+  if(html){ box.innerHTML = html; document.getElementById('card-acabados-custom').style.display = 'block'; }
+})();
 </script>
 <div id="print-area" style="display:none;"></div>
 

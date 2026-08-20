@@ -21,6 +21,25 @@ function tacticalLeerOverridesPrecios(){
 }
 const TACTICAL_PRECIOS_OVERRIDE = tacticalLeerOverridesPrecios();
 
+// Papeles agregados por Conde desde el Panel de Precios (no forman parte del catálogo fijo de
+// PRECIOS_BASE_SUSTRATOS de abajo). Cada uno lleva su propia lista de calculadoras donde debe
+// aparecer, elegida a mano por Conde al crearlo (2026-08-19: "Eliges en cuáles calculadoras").
+function tacticalLeerSustratosCustom(){
+  try{ return JSON.parse(localStorage.getItem('tactical_sustratos_custom_v1')) || []; }
+  catch(e){ return []; }
+}
+const TACTICAL_SUSTRATOS_CUSTOM = tacticalLeerSustratosCustom();
+// Calculadoras que ofrecen selección de sustrato/papel (Promocionales y Cotización Manual no aplican).
+const TACTICAL_CALCULADORAS_SUSTRATOS = [
+  {id:'cuadernos', label:'Cuadernos (Hub)'},
+  {id:'bolsas', label:'Bolsas'},
+  {id:'cajas', label:'Cajas'},
+  {id:'carpetas', label:'Carpetas'},
+  {id:'volantes', label:'Volantes/Afiches/Plegables'},
+  {id:'rompecabezas', label:'Rompecabezas'},
+  {id:'cubo_rubik', label:'Cubo Rubik'},
+];
+
 function tacticalMergeNivel1(base, ov){ return Object.assign({}, base, ov||{}); }
 function tacticalMergeNivel2(base, ov){
   const out = {};
@@ -69,9 +88,20 @@ const PRECIOS_BASE_SUSTRATOS = {
   "Adhesivo Arclad - P4__160": {p6090:null, p70100:2268.91},
 };
 const PRECIOS_SUSTRATOS_MAESTRO = tacticalMergeNivel2(PRECIOS_BASE_SUSTRATOS, TACTICAL_PRECIOS_OVERRIDE.sustratos);
-function tacticalSeleccionarSustratos(claves){
+function tacticalSeleccionarSustratos(claves, calculadoraId){
   const out = {};
   claves.forEach(k => { out[k] = PRECIOS_SUSTRATOS_MAESTRO[k] || {p6090:null, p70100:null}; });
+  if(calculadoraId){
+    TACTICAL_SUSTRATOS_CUSTOM.forEach(s => {
+      if(!(s.calculadoras||[]).includes(calculadoraId)) return;
+      const clave = s.nombre + '__' + s.gramaje;
+      const ov = (TACTICAL_PRECIOS_OVERRIDE.sustratos && TACTICAL_PRECIOS_OVERRIDE.sustratos[clave]) || {};
+      out[clave] = {
+        p6090: ov.p6090 !== undefined ? ov.p6090 : s.p6090,
+        p70100: ov.p70100 !== undefined ? ov.p70100 : s.p70100,
+      };
+    });
+  }
   return out;
 }
 
@@ -89,6 +119,49 @@ const PRECIOS_DIGITAL_CLIC_OTRAS_LINEAS = tacticalMergeNivel2({ carta:{color:100
 const PRECIOS_PLASTIFICADO_COP_M2 = (TACTICAL_PRECIOS_OVERRIDE.plastificadoM2 != null) ? TACTICAL_PRECIOS_OVERRIDE.plastificadoM2 : 950;
 const PRECIOS_PLASTIFICADO_PISO_COP = (TACTICAL_PRECIOS_OVERRIDE.plastificadoPiso != null) ? TACTICAL_PRECIOS_OVERRIDE.plastificadoPiso : 30000;
 const PRECIOS_COLAMINADO_COP_M2 = (TACTICAL_PRECIOS_OVERRIDE.colaminadoM2 != null) ? TACTICAL_PRECIOS_OVERRIDE.colaminadoM2 : 900;
+
+// ---- ACABADOS ADICIONALES (creados por Conde desde el Panel de Precios, 2026-08-19) ----
+// Igual que los papeles custom: se cobran por m² (área de la pieza × cantidad), igual que
+// Plastificado/Colaminado de arriba, y cada uno lleva su propia lista de calculadoras donde
+// aparece como checkbox opcional. El precio se puede reeditar después desde el Panel de Precios
+// -- el override vive en TACTICAL_PRECIOS_OVERRIDE.acabadosCustom, mismo patrón que los papeles.
+function tacticalLeerAcabadosCustom(){
+  try{ return JSON.parse(localStorage.getItem('tactical_acabados_custom_v1')) || []; }
+  catch(e){ return []; }
+}
+const TACTICAL_ACABADOS_CUSTOM = tacticalLeerAcabadosCustom();
+function tacticalAcabadosDisponibles(calculadoraId){
+  return TACTICAL_ACABADOS_CUSTOM.filter(a => (a.calculadoras||[]).includes(calculadoraId)).map(a => {
+    const ov = TACTICAL_PRECIOS_OVERRIDE.acabadosCustom && TACTICAL_PRECIOS_OVERRIDE.acabadosCustom[a.id];
+    return { id: a.id, nombre: a.nombre, precioM2: (ov != null) ? ov : a.precioM2 };
+  });
+}
+function tacticalRenderAcabadosCustomHtml(calculadoraId, prefijoId){
+  const lista = tacticalAcabadosDisponibles(calculadoraId);
+  if(lista.length === 0) return '';
+  return `<div class="fila" style="flex-direction:column; align-items:flex-start; gap:6px;">
+    <label style="font-weight:bold;">Acabados adicionales (opcional):</label>
+    ${lista.map(a => `<label style="font-weight:normal; display:flex; align-items:center; gap:6px; margin:0;">
+      <input type="checkbox" id="${prefijoId}-${a.id}">
+      ${a.nombre} ($${Math.round(a.precioM2).toLocaleString('es-CO')}/m²)
+    </label>`).join('')}
+  </div>`;
+}
+function tacticalLeerAcabadosSeleccionados(calculadoraId, prefijoId){
+  return tacticalAcabadosDisponibles(calculadoraId).filter(a => {
+    const el = document.getElementById(`${prefijoId}-${a.id}`);
+    return el && el.checked;
+  });
+}
+function tacticalCostoAcabadosCustom(seleccionados, areaM2, cantidad){
+  let costoTotal = 0;
+  const lineas = seleccionados.map(a => {
+    const costo = areaM2*cantidad*a.precioM2;
+    costoTotal += costo;
+    return { nombre: a.nombre, costo };
+  });
+  return { costoTotal, lineas };
+}
 
 /* ---- IMANES (Volantes) -- lámina Imán C5 100x60cm de la que se cortan las piezas,
    y corte por láser (Conde 2026-08-14, precio de corte láser aún sin definir por Conde
@@ -110,7 +183,7 @@ const PRECIOS_CAMPOS_PANEL = [
   {grupo:"Impresión Offset — Recargo fondo pleno", tipo:"nivel1", clave:"offsetRecargoFondoPleno", base:{medio_pliego:90000, cuarto:50000, octavo:50000}, etiquetas:{medio_pliego:"Medio pliego", cuarto:"Cuarto de pliego", octavo:"Octavo de pliego"}},
   {grupo:"Impresión Digital — Cuadernos ($/clic)", tipo:"nivel2", clave:"digitalClicCuadernos", base:{ carta:{color:750, negro:350}, octavo:{color:900, negro:450}, pliego_max:{color:1000, negro:550} }},
   {grupo:"Impresión Digital — Otras líneas ($/clic)", tipo:"nivel2", clave:"digitalClicOtrasLineas", base:{ carta:{color:1000, negro:250}, octavo:{color:1400, negro:350}, pliego_max:{color:2200, negro:550} }},
-  {grupo:"Acabados", tipo:"simple", campos:[
+  {grupo:"Acabados", tipo:"simple", customAcabados:true, campos:[
     {clave:"plastificadoM2", etiqueta:"Plastificado ($/m²)", base:950},
     {clave:"plastificadoPiso", etiqueta:"Plastificado (piso mínimo OT)", base:30000},
     {clave:"colaminadoM2", etiqueta:"Colaminado ($/m²)", base:900},
@@ -130,20 +203,36 @@ const PRECIOS_CAMPOS_PANEL = [
 /* ---- NUMERACIÓN DE COTIZACIONES / ÓRDENES DE PRODUCCIÓN (OT) ----
    Formato: OT-AAMM-CC (año 2 dígitos + mes 2 dígitos + consecutivo, mínimo 2 dígitos, sin tope).
    El consecutivo NO se reinicia cada mes -- sigue sumando durante todo el año y solo vuelve a 01
-   el 1 de enero (cada año usa su propia clave de localStorage, así el reinicio es automático).
-   Ej: primera cotización de agosto 2026 -> OT-2608-01; si en septiembre ya van 15 -> OT-2609-16;
-   primera cotización de 2027 -> OT-2701-01. Compartido por las 8 calculadoras + el hub para que
-   el número de OT/cotización sea el mismo consecutivo único en todo el ERP (Conde 2026-08-12). */
-function tacticalSiguienteOT(fecha){
-  fecha = fecha || new Date();
-  const anio = fecha.getFullYear();
-  const yy = String(anio).slice(-2);
-  const mm = String(fecha.getMonth()+1).padStart(2,'0');
-  const counterKey = 'tactical_ot_counter_' + anio;
-  const n = (parseInt(localStorage.getItem(counterKey)||'0', 10) || 0) + 1;
-  localStorage.setItem(counterKey, String(n));
-  const cc = String(n).padStart(2,'0');
-  return `OT-${yy}${mm}-${cc}`;
+   el 1 de enero. Ej: primera cotización de agosto 2026 -> OT-2608-01; si en septiembre ya van 15
+   -> OT-2609-16; primera cotización de 2027 -> OT-2701-01. Compartido por las 8 calculadoras + el
+   hub para que el número de OT/cotización sea el mismo consecutivo único en todo el ERP (Conde
+   2026-08-12).
+   Migrado a Supabase 2026-08-20 (Conde: "falta migrar algo más?" -> este era el hueco real que
+   quedaba): antes cada navegador contaba por su cuenta en localStorage -- dos personas en
+   dispositivos distintos el mismo mes podían generar el mismo número de OT sin darse cuenta. Ahora
+   usa el RPC atómico `siguiente_ot()` (ya existe en Supabase desde el arreglo de Contabilidad,
+   mismo criterio que siguiente_numero() para FV/CC/etc., ver schema.sql) -- un solo consecutivo
+   real por año, sin importar cuántos dispositivos lo pidan al mismo tiempo. Por eso ahora es
+   asíncrona (antes no lo era) -- todo el que la llama debe usar await. Si por algún motivo la
+   llamada a Supabase falla (sin internet, etc.) cae de respaldo al contador local viejo, para no
+   dejar a alguien sin poder generar su Orden de Producción en ese momento. */
+async function tacticalSiguienteOT(fecha){
+  try{
+    const { data, error } = await tacticalSupabase.rpc('siguiente_ot');
+    if(error) throw error;
+    return data;
+  } catch(e){
+    console.error('No se pudo generar el número de OT desde Supabase, se usó el contador local de respaldo:', e);
+    fecha = fecha || new Date();
+    const anio = fecha.getFullYear();
+    const yy = String(anio).slice(-2);
+    const mm = String(fecha.getMonth()+1).padStart(2,'0');
+    const counterKey = 'tactical_ot_counter_' + anio;
+    const n = (parseInt(localStorage.getItem(counterKey)||'0', 10) || 0) + 1;
+    localStorage.setItem(counterKey, String(n));
+    const cc = String(n).padStart(2,'0');
+    return `OT-${yy}${mm}-${cc}`;
+  }
 }
 
 // Título corto para CRM/Kanban: siempre arranca con el formato corto automático (cantidad +
@@ -158,19 +247,16 @@ function tacticalTituloCorto(auto, textoLargo){
 // Fototeca de Productos: foto fija de referencia por línea (o variante), subida una sola vez
 // desde el hub (vista "Fototeca") y reutilizada automáticamente en el PDF de cada cotización
 // de esa línea, sin que el usuario tenga que hacer nada por cotización (Conde 2026-08-12).
+// Desde 2026-08-19 vive en Supabase (tabla fototeca_items) -- se lee de "tacticalFototecaCache"
+// (precargada en memoria al iniciar sesión, ver tactical-supabase.js), no de localStorage,
+// porque esta función se llama de forma síncrona justo al generar un PDF.
 function tacticalObtenerFotoProducto(clave){
-  try{
-    const fototeca = JSON.parse(localStorage.getItem('tactical_fototeca_v1')) || {};
-    return fototeca[clave] || null;
-  }catch(e){ return null; }
+  return (typeof tacticalFototecaCache !== 'undefined' && tacticalFototecaCache[clave]) ? tacticalFototecaCache[clave].foto : null;
 }
 // Link de video (YouTube) opcional por ficha de la Fototeca -- cada foto puede o no tener video,
 // independiente de la foto misma (Conde 2026-08-13).
 function tacticalObtenerVideoProducto(clave){
-  try{
-    const videos = JSON.parse(localStorage.getItem('tactical_fototeca_videos_v1')) || {};
-    return videos[clave] || null;
-  }catch(e){ return null; }
+  return (typeof tacticalFototecaCache !== 'undefined' && tacticalFototecaCache[clave]) ? tacticalFototecaCache[clave].video : null;
 }
 
 // Líneas base para etiquetar fichas nuevas de la Fototeca (variantes: "Cuaderno con inserto",
@@ -185,11 +271,16 @@ const TACTICAL_LINEAS_BASE = [
   {clave:'rompecabezas', label:'Rompecabezas (B2B)'},
   {clave:'cubo_rubik', label:'Cubo Rubik'},
 ];
+// Migrado a Supabase 2026-08-20: esta función leía una clave de localStorage
+// (tactical_fototeca_custom_v1) que ya nadie llenaba desde que Fototeca se migró a Supabase
+// 2026-08-19 -- siempre devolvía [] en silencio (bug latente, encontrado en una auditoría general,
+// no reportado por Conde). Ahora lee de tacticalFototecaCache (tactical-supabase.js), la misma
+// cache en memoria precargada al login que ya usa tacticalObtenerFotoProducto/VideoProducto.
 function tacticalListarVariantesFoto(lineaBase){
-  try{
-    const custom = JSON.parse(localStorage.getItem('tactical_fototeca_custom_v1')) || [];
-    return custom.filter(c => c.lineaBase === lineaBase);
-  }catch(e){ return []; }
+  const cache = (typeof tacticalFototecaCache !== 'undefined') ? tacticalFototecaCache : {};
+  return Object.keys(cache)
+    .filter(clave => cache[clave].esCustom && cache[clave].lineaBase === lineaBase)
+    .map(clave => ({ clave, label: cache[clave].label }));
 }
 
 // Compresión adaptativa de imágenes subidas/pegadas (Fototeca, galería del Kanban, etc.): recorta
@@ -407,4 +498,26 @@ function tacticalOPDocumentoHtml(cfg){
     ${cfg.piePagina ? `<div class="doc-section-title" style="font-size:0.82rem; padding:3px 7px; margin:4px 0 4px;">Armado / Terminado</div><p style="font-size:0.76rem; margin:2px 0;">${cfg.piePagina}</p>` : ''}
     ${recsHtml}
   `;
+}
+
+/* ==========================================
+   CAMPOS NUMÉRICOS CON SEPARADOR DE MILES (Conde 2026-08-20: "en este momento 1000 es asi
+   quiero que sea 1.000 para asi evitar errores"). <input type="number"> del navegador NO puede
+   mostrar puntos de miles (los rechaza), así que estos campos son type="text" con estas 2
+   funciones: tacticalFormatearMiles(this) se pone en oninput para reformatear mientras se
+   escribe, y tacticalLeerNumeroFormateado(id) se usa en vez de parseFloat(...value) para leerlo
+   de vuelta (le quita los puntos antes de convertir a número -- parseFloat("1.000") solo daría 1
+   si no se le quitan primero). ---- */
+function tacticalFormatearMiles(input){
+  const cursorDesdeElFinal = input.value.length - input.selectionStart;
+  const soloDigitos = input.value.replace(/[^\d]/g, '');
+  const numero = soloDigitos === '' ? '' : parseInt(soloDigitos, 10).toLocaleString('es-CO');
+  input.value = numero;
+  const nuevaPos = Math.max(0, input.value.length - cursorDesdeElFinal);
+  input.setSelectionRange(nuevaPos, nuevaPos);
+}
+function tacticalLeerNumeroFormateado(id){
+  const el = document.getElementById(id);
+  if(!el) return 0;
+  return parseFloat(String(el.value).replace(/\./g,'')) || 0;
 }

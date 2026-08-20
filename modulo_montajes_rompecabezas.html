@@ -66,6 +66,40 @@
 </style>
 </head>
 <body>
+<!-- ============ GATE DE LOGIN (Supabase Auth) ============
+     Cubre toda la pantalla hasta que haya una sesión válida -- ver
+     tactical-supabase.js. Agregado 2026-08-20 (migración a la nube). -->
+<style>
+    body.tactical-bloqueado > *:not(#tactical-login-overlay){ display:none; }
+    #tactical-login-overlay{
+        display:flex; position:fixed; inset:0; z-index:99999;
+        background:linear-gradient(135deg,#1a202c,#2d3748);
+        align-items:center; justify-content:center; padding:20px;
+    }
+    #tactical-login-card{ background:#fff; border-radius:10px; padding:32px 30px; width:100%; max-width:340px; box-shadow:0 20px 50px rgba(0,0,0,0.4); }
+    #tactical-login-card h2{ margin:0 0 4px; color:#1a202c; font-size:1.3rem; }
+    #tactical-login-card p{ margin:0 0 20px; color:#718096; font-size:0.85rem; }
+    #tactical-login-card label{ display:block; font-size:0.8rem; color:#4a5568; margin-bottom:4px; font-weight:600; }
+    #tactical-login-card input{ width:100%; box-sizing:border-box; padding:10px; border:1px solid #cbd5e0; border-radius:6px; font-size:0.95rem; margin-bottom:14px; }
+    #tactical-login-card button{ width:100%; background:#cc0000; color:#fff; border:none; border-radius:6px; padding:11px; font-weight:700; font-size:0.95rem; cursor:pointer; }
+    #tactical-login-card button:disabled{ opacity:0.6; cursor:default; }
+    #tactical-login-error{ display:none; background:#fde8e8; color:#b91c1c; border:1px solid #f3b4b4; border-radius:6px; padding:8px 10px; font-size:0.82rem; margin-bottom:14px; }
+</style>
+<div id="tactical-login-overlay">
+    <div id="tactical-login-card">
+        <h2>Tactical ERP</h2>
+        <p>Inicia sesión para continuar.</p>
+        <div id="tactical-login-error"></div>
+        <form id="tactical-login-form">
+            <label for="tactical-login-email">Correo</label>
+            <input type="email" id="tactical-login-email" required autocomplete="username">
+            <label for="tactical-login-password">Contraseña</label>
+            <input type="password" id="tactical-login-password" required autocomplete="current-password">
+            <button type="submit" id="tactical-login-btn">Entrar</button>
+        </form>
+    </div>
+</div>
+
 <!-- Recortes reales (silueta exacta del corazón, una entrada por talla del catálogo) usados como
      clip-path del stage para que la foto quede recortada igual que las líneas de corte -- no es una
      forma de corazón aproximada, es la misma silueta que ya trae cada SVG real. -->
@@ -243,6 +277,8 @@ document.addEventListener('click', function(ev){
 });
 </script>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="tactical-supabase.js"></script>
 <script src="template_svg_data.js?v=7"></script>
 <script>
 /* =====================  CATÁLOGOS  ===================== */
@@ -806,9 +842,13 @@ document.getElementById('btnEmail').addEventListener('click', ()=>{
 });
 
 /* =====================  GUARDAR PEDIDO (localStorage compartido con el Hub)  ===================== */
-const LS_KEY_VENTAS = 'tactical_ventas_b2c_rompecabezas_v1';
-function dbVentas(){ return JSON.parse(localStorage.getItem(LS_KEY_VENTAS)) || []; }
-function guardarDbVentas(db){ localStorage.setItem(LS_KEY_VENTAS, JSON.stringify(db)); }
+// Conde 2026-08-20: migrado de localStorage a Supabase (tablas b2c_pedidos/b2c_pedido_items,
+// ver tactical-supabase.js). db_ventas_b2c/db_clientes_b2c se precargan en window.tacticalOnLogin
+// (mismo patrón que db_clientes en el resto del ERP) porque dbVentas() se sigue leyendo de forma
+// síncrona en varios sitios de este archivo.
+let db_ventas_b2c = [];
+let db_clientes_b2c = [];
+function dbVentas(){ return db_ventas_b2c; }
 // Normaliza pedidos viejos (guardados antes de soportar varios rompecabezas por pedido) al mismo
 // formato items[] que usan los nuevos, para que toda la pantalla de Buscar/Aprobar/Reportes lea
 // siempre de un solo lugar (Conde 2026-08-13).
@@ -842,7 +882,11 @@ function generarMiniaturaFoto(){
 // Carrito del pedido en curso (Conde 2026-08-13): permite juntar varios rompecabezas de tamaños/
 // formas distintas para el MISMO cliente en un solo pedido -- ej. 2 de 50x33 rectangular + 1 de
 // 66x50 -- en vez de que cada tamaño se guarde como un pedido/OT separado.
-function carritoActivo(){ return JSON.parse(localStorage.getItem('tactical_carrito_rompecabezas')) || null; }
+// Conde 2026-08-20: migrado de localStorage a Supabase (tabla b2c_carrito_borrador, un borrador
+// por USUARIO en vez de por navegador) -- se precarga en window.tacticalB2CCarritoCache dentro de
+// window.tacticalOnLogin (mismo patrón ya usado para Pedido Activo/Comparación Activa) porque se
+// lee de forma síncrona en varios sitios de este archivo mientras se arma el pedido.
+function carritoActivo(){ return window.tacticalB2CCarritoCache || null; }
 function itemActualComoLinea(){
   const r = calcularPrecioTotal();
   return {
@@ -869,13 +913,15 @@ document.getElementById('btnAgregarOtro').addEventListener('click', ()=>{
   let car = carritoActivo();
   if(!car) car = { items: [] };
   car.items.push(itemActualComoLinea());
-  localStorage.setItem('tactical_carrito_rompecabezas', JSON.stringify(car));
+  window.tacticalB2CCarritoCache = car;
+  tacticalGuardarB2CCarrito(car);
   refrescarBannerCarrito();
   alert(`Agregado. Este pedido ya tiene ${car.items.length} rompecabezas. Ahora configura el siguiente tamaño/forma/foto y agrégalo también, o guarda el pedido completo con "Guardar pedido" cuando termines.`);
 });
 function cancelarCarrito(){
   if(!confirm('¿Cancelar los rompecabezas agregados a este pedido?')) return;
-  localStorage.removeItem('tactical_carrito_rompecabezas');
+  window.tacticalB2CCarritoCache = null;
+  tacticalEliminarB2CCarrito();
   refrescarBannerCarrito();
 }
 
@@ -894,17 +940,17 @@ document.getElementById('btnGuardarPedido').addEventListener('click', ()=>{
   const total = items.reduce((s,it)=>s+(it.total||0),0);
   const cantidad = items.reduce((s,it)=>s+(it.cantidad||0),0);
   const pedido = {
-    id: Date.now().toString(),
+    id: crypto.randomUUID(),
     fecha: new Date().toISOString(),
     estado: 'pendiente',
     nombre, cel, correo, entrega,
     items, total, cantidad,
     idKanban: null,
   };
-  const db = dbVentas();
-  db.push(pedido);
-  guardarDbVentas(db);
-  localStorage.removeItem('tactical_carrito_rompecabezas');
+  db_ventas_b2c.push(pedido);
+  tacticalSyncB2CPedido(pedido);
+  window.tacticalB2CCarritoCache = null;
+  tacticalEliminarB2CCarrito();
   refrescarBannerCarrito();
   document.getElementById('notaGuardado').innerHTML = `<div class="note ok">Pedido guardado como <strong>Pendiente</strong> (${items.length} rompecabezas). Búscalo en la pestaña "Buscar / Aprobar Pedidos" cuando el cliente confirme el pago.</div>`;
   renderBusqueda();
@@ -1000,29 +1046,26 @@ function tacticalSumarDiasHabilesColombia(fechaInicio, n){
 }
 
 function aprobarPedido(id){
-  const db = dbVentas();
-  const pedido = db.find(p=>p.id===id);
+  const pedido = db_ventas_b2c.find(p=>p.id===id);
   if(!pedido) return;
   pedido.estado = 'aprobado';
   pedido.fechaAprobado = new Date().toISOString();
 
-  // Cliente en el CRM compartido del Hub (mismo esquema que tactical_crm_clientes_v2). soloB2C:true
-  // -- Conde 2026-08-12: los clientes de rompecabezas suelen comprar una sola vez y son muchos, así
-  // que se marcan para que las demás calculadoras los oculten de su buscador de clientes (siguen
-  // guardados aquí para historial/LTV, solo no aparecen en el autocompletar al cotizar otras líneas).
-  let db_clientes = JSON.parse(localStorage.getItem('tactical_crm_clientes_v2')) || [];
-  let cli = db_clientes.find(c => c.wp === pedido.cel);
+  // Cliente en el CRM compartido del Hub (tabla clientes de Supabase). soloB2C:true -- Conde
+  // 2026-08-12: los clientes de rompecabezas suelen comprar una sola vez y son muchos, así que se
+  // marcan para que las demás calculadoras los oculten de su buscador de clientes (siguen guardados
+  // aquí para historial/LTV, solo no aparecen en el autocompletar al cotizar otras líneas).
+  let cli = db_clientes_b2c.find(c => c.wp === pedido.cel);
   if(!cli){
-    cli = { id: Date.now().toString()+'_cli', empresa: pedido.nombre, nombre: pedido.nombre, wp: pedido.cel, correo: pedido.correo||'', clase:'nuevo', ltv:0, tipo:'personalizado', identificacion:'', soloB2C:true };
-    db_clientes.push(cli);
+    cli = { id: crypto.randomUUID(), empresa: pedido.nombre, nombre: pedido.nombre, wp: pedido.cel, correo: pedido.correo||'', clase:'nuevo', ltv:0, tipo:'personalizado', identificacion:'', soloB2C:true };
+    db_clientes_b2c.push(cli);
   }
   cli.ltv += (pedido.total||0);
-  localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
+  tacticalSyncClientes(db_clientes_b2c);
 
-  // Ficha de producción en el Kanban compartido del Hub (mismo esquema que tactical_kanban_fichas_v1).
-  // Entra directo a Diseño (no a Cotización Aprobada, ya está aprobada) y con fecha de entrega
-  // automática: 4 días hábiles en Colombia para 500 fichas o menos, 5 para más de 500.
-  let db_kanban = JSON.parse(localStorage.getItem('tactical_kanban_fichas_v1')) || [];
+  // Ficha de producción en el Kanban compartido del Hub (tablas kanban_fichas/kanban_lineas de
+  // Supabase). Entra directo a Diseño (no a Cotización Aprobada, ya está aprobada) y con fecha de
+  // entrega automática: 4 días hábiles en Colombia para 500 fichas o menos, 5 para más de 500.
   const items = pedidoItems(pedido);
   const hayLaser = items.some(it=>it.linea==='laser');
   const hayTroquel = items.some(it=>it.linea!=='laser');
@@ -1044,17 +1087,16 @@ function aprobarPedido(id){
     cantidad: it.cantidad, fotoUrl: it.fotoThumb||null,
   }));
   const ficha = {
-    id: Date.now().toString()+'_kb', ot: null,
+    id: crypto.randomUUID(), ot: null,
     idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, titulo,
     columna: 'diseno', lineas: lineasFicha,
     checklist: checklistBase, urgente:false, fechaEntrega, entrega: pedido.entrega||'',
     fechaCreacion: new Date().toISOString(), responsable:'', origen:'b2c',
   };
-  db_kanban.push(ficha);
-  localStorage.setItem('tactical_kanban_fichas_v1', JSON.stringify(db_kanban));
+  tacticalSyncFichaKanban(ficha);
 
   pedido.idKanban = ficha.id;
-  guardarDbVentas(db);
+  tacticalSyncB2CPedido(pedido);
   renderBusqueda();
   alert(`Pedido aprobado. Se creó la ficha de producción en el Kanban del Hub (columna Diseño, entrega estimada ${fechaEntrega}) y se registró la venta.`);
 }
@@ -1093,9 +1135,27 @@ document.getElementById('btnDescargarCSV').addEventListener('click', ()=>{
 /* =====================  INIT  ===================== */
 buildFormaButtons();
 rebuildCatalogoSelect();
-renderBusqueda();
-renderReporte();
-refrescarBannerCarrito();
+
+// Se llama automático (ver tactical-supabase.js) apenas el login confirma sesión válida.
+// db_ventas_b2c/db_clientes_b2c se cargan aquí (Conde 2026-08-20, migración a Supabase) porque
+// renderBusqueda()/renderReporte()/aprobarPedido() los leen de forma síncrona en varios sitios.
+// Conde 2026-08-20: matriz de roles del Hub (ver TACTICAL_ERP_HUB.html/TACTICAL_ROLES_POR_VISTA) --
+// Montajes es para administrador/comercial/diseno/produccion, NO contabilidad.
+const MONTAJES_ROLES_PERMITIDOS = ['administrador', 'comercial', 'diseno', 'produccion'];
+window.tacticalOnLogin = async function(){
+  const rolActual = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol;
+  if(!MONTAJES_ROLES_PERMITIDOS.includes(rolActual)){
+    alert('No tienes permiso para entrar a este módulo.');
+    window.location.href = 'TACTICAL_ERP_HUB.html';
+    return;
+  }
+  db_ventas_b2c = await tacticalB2CPedidosCargar();
+  db_clientes_b2c = await tacticalClientesCargar();
+  await tacticalB2CCarritoCargar();
+  renderBusqueda();
+  renderReporte();
+  refrescarBannerCarrito();
+};
 </script>
 </body>
 </html>

@@ -194,6 +194,17 @@ alter table public.comparaciones_borrador enable row level security;
 create policy "autenticados_todo_comparaciones_borrador" on public.comparaciones_borrador for all
   using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 
+-- "Pedido en curso" del Módulo de Montajes Rompecabezas (B2C) -- varios rompecabezas de tamaños
+-- distintos armándose para un mismo pedido, antes de guardarlo (Conde 2026-08-20).
+create table public.b2c_carrito_borrador (
+  usuario_id uuid primary key references auth.users(id) on delete cascade,
+  items jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now()
+);
+alter table public.b2c_carrito_borrador enable row level security;
+create policy "autenticados_todo_b2c_carrito_borrador" on public.b2c_carrito_borrador for all
+  using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+
 -- --------------------------------------------------------------------------
 -- 5. KANBAN -- fichas + líneas + checklist + fotos (normalizado)
 -- --------------------------------------------------------------------------
@@ -293,7 +304,10 @@ create policy "autenticados_todo_reprocesos_items" on public.reprocesos_items fo
   using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 
 -- --------------------------------------------------------------------------
--- 7. PLAN DE TAREAS -- ahora con fecha real (sin simulación)
+-- 7. PLAN DE TAREAS -- fecha real automática (Conde 2026-08-19: se quitó el
+-- reloj simulado "Simular Fin del Día"; el retraso ahora se calcula en vivo
+-- como hoy - fecha_origen, y las tareas Listo/Finalizado se archivan solas
+-- al Histórico apenas alguien cambia el estado, sin ritual manual).
 -- --------------------------------------------------------------------------
 create table public.tareas (
   id uuid primary key default gen_random_uuid(),
@@ -301,11 +315,12 @@ create table public.tareas (
   descripcion text not null,
   especificaciones text,
   responsables jsonb not null default '[]'::jsonb,  -- array de nombres
-  status text not null default 'pendiente' check (status in ('pendiente','proceso','externo','listo')),
-  origen text,
-  delay boolean not null default false,
+  status text not null default 'pendiente' check (status in ('pendiente','proceso','externo','listo','finalizado')),
   aclaracion text,
-  cerrada boolean not null default false,
+  fecha_origen timestamptz not null default now(), -- desde cuándo cuenta el retraso (se reinicia al "Reabrir")
+  orden double precision not null default extract(epoch from now()), -- prioridad manual dentro de su área (🔼🔽)
+  cerrada boolean not null default false,           -- false = tablero activo, true = Histórico
+  delay_cerrado integer,                            -- días de atraso, congelados al archivar (null si sigue activa)
   fecha_cierre timestamptz,
   created_at timestamptz not null default now()
 );
@@ -392,6 +407,7 @@ create table public.cuentas_por_pagar (
   saldo_pendiente numeric not null default 0,
   fecha_vencimiento date,
   estado text not null default 'pendiente' check (estado in ('pendiente','abonado_parcial','pagado')),
+  id_egreso uuid, -- sin "references" -- ver nota de guardado optimista; solo referencia informativa
   created_at timestamptz not null default now()
 );
 alter table public.cuentas_por_pagar enable row level security;
@@ -438,6 +454,21 @@ create policy "autenticados_todo_gastos_fijos" on public.gastos_fijos_config for
   using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 
 -- --------------------------------------------------------------------------
+-- 8b. PERSONAL -- Conde 2026-08-19: reemplaza la lista fija de nombres que antes
+-- estaba escrita en el código (Plan de Tareas y "Responsable del Error" de
+-- Reprocesos) por una tabla editable desde el propio Hub.
+-- --------------------------------------------------------------------------
+create table public.personal (
+  id uuid primary key default gen_random_uuid(),
+  nombre text not null,
+  areas jsonb not null default '[]'::jsonb, -- ej: ["diseno","produccion"] -- para qué áreas de Plan de Tareas puede recibir tareas
+  orden integer not null default 0
+);
+alter table public.personal enable row level security;
+create policy "autenticados_todo_personal" on public.personal for all
+  using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+
+-- --------------------------------------------------------------------------
 -- 9. CONTADORES ATÓMICOS -- reemplaza los contadores manuales de localStorage
 -- --------------------------------------------------------------------------
 create table public.contadores (
@@ -448,11 +479,29 @@ insert into public.contadores (tipo, valor) values
   ('fv',0), ('cc',0), ('ingreso',0), ('cxp',0), ('egreso',0);
 alter table public.contadores enable row level security;
 create policy "autenticados_leen_contadores" on public.contadores for select using (auth.role() = 'authenticated');
+-- SIN policy de "update" a propósito -- nadie actualiza esta tabla directo,
+-- solo a través de la función siguiente_numero() (ver "security definer" abajo).
 
+-- "security definer" + "search_path" fijo: la función corre con permisos del
+-- dueño de la base (no del usuario que la llama), así puede sumarle 1 al
+-- contador aunque el usuario normal no tenga permiso de UPDATE en la tabla
+-- directamente -- solo puede pasar por acá, un renglón a la vez, nunca
+-- pisando ni leyendo el contador de otro tipo de documento.
 create or replace function public.siguiente_numero(p_tipo text)
-returns integer language sql as $$
+returns integer language sql security definer set search_path = public as $$
   update public.contadores set valor = valor + 1 where tipo = p_tipo returning valor;
 $$;
+grant execute on function public.siguiente_numero(text) to authenticated;
+
+-- Para cuando alguien escribe su PROPIO número a mano en vez de usar la
+-- sugerencia (ej. para registrar una factura vieja) -- adelanta el contador
+-- compartido para que la próxima sugerencia automática no repita ese número.
+-- No hace nada si el valor escrito es menor o igual al contador actual.
+create or replace function public.avanzar_contador_si_mayor(p_tipo text, p_valor integer)
+returns void language sql security definer set search_path = public as $$
+  update public.contadores set valor = greatest(valor, p_valor) where tipo = p_tipo;
+$$;
+grant execute on function public.avanzar_contador_si_mayor(text, integer) to authenticated;
 
 create table public.ot_contadores (
   anio integer primary key,
@@ -462,7 +511,7 @@ alter table public.ot_contadores enable row level security;
 create policy "autenticados_leen_ot_contadores" on public.ot_contadores for select using (auth.role() = 'authenticated');
 
 create or replace function public.siguiente_ot()
-returns text language plpgsql as $$
+returns text language plpgsql security definer set search_path = public as $$
 declare
   v_anio integer := extract(year from now())::integer;
   v_mes text := to_char(now(), 'MM');
@@ -474,6 +523,7 @@ begin
   return 'OT-' || to_char(now(),'YY') || v_mes || '-' || lpad(v_valor::text, 2, '0');
 end;
 $$;
+grant execute on function public.siguiente_ot() to authenticated;
 
 -- --------------------------------------------------------------------------
 -- 10. PRECIOS (overrides del Panel de Precios)
@@ -496,6 +546,31 @@ create table public.precios_promo_override (
 insert into public.precios_promo_override (id, datos) values (true, '{}'::jsonb);
 alter table public.precios_promo_override enable row level security;
 create policy "autenticados_todo_precios_promo" on public.precios_promo_override for all
+  using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+
+-- Papeles/sustratos que Conde agrega desde el Panel de Precios además del catálogo fijo,
+-- cada uno con la lista de calculadoras donde debe aparecer (Conde 2026-08-19).
+create table public.sustratos_custom (
+  id boolean primary key default true check (id),
+  datos jsonb not null default '[]'::jsonb,
+  actualizado_en timestamptz not null default now()
+);
+insert into public.sustratos_custom (id, datos) values (true, '[]'::jsonb);
+alter table public.sustratos_custom enable row level security;
+create policy "autenticados_todo_sustratos_custom" on public.sustratos_custom for all
+  using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+
+-- Acabados adicionales (ej. plastificado especial, UV a color) que Conde agrega desde el Panel
+-- de Precios, cobrados por m² igual que Plastificado/Colaminado, con su lista de calculadoras
+-- donde debe aparecer como checkbox opcional (Conde 2026-08-19).
+create table public.acabados_custom (
+  id boolean primary key default true check (id),
+  datos jsonb not null default '[]'::jsonb,
+  actualizado_en timestamptz not null default now()
+);
+insert into public.acabados_custom (id, datos) values (true, '[]'::jsonb);
+alter table public.acabados_custom enable row level security;
+create policy "autenticados_todo_acabados_custom" on public.acabados_custom for all
   using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 
 -- --------------------------------------------------------------------------

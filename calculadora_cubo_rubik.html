@@ -88,6 +88,40 @@
 </head>
 <body>
 
+<!-- ============ GATE DE LOGIN (Supabase Auth) ============
+     Cubre toda la pantalla hasta que haya una sesión válida -- ver
+     tactical-supabase.js. Agregado 2026-08-19 (migración a la nube). -->
+<style>
+    body.tactical-bloqueado > *:not(#tactical-login-overlay){ display:none; }
+    #tactical-login-overlay{
+        display:flex; position:fixed; inset:0; z-index:99999;
+        background:linear-gradient(135deg,#1a202c,#2d3748);
+        align-items:center; justify-content:center; padding:20px;
+    }
+    #tactical-login-card{ background:#fff; border-radius:10px; padding:32px 30px; width:100%; max-width:340px; box-shadow:0 20px 50px rgba(0,0,0,0.4); }
+    #tactical-login-card h2{ margin:0 0 4px; color:#1a202c; font-size:1.3rem; }
+    #tactical-login-card p{ margin:0 0 20px; color:#718096; font-size:0.85rem; }
+    #tactical-login-card label{ display:block; font-size:0.8rem; color:#4a5568; margin-bottom:4px; font-weight:600; }
+    #tactical-login-card input{ width:100%; box-sizing:border-box; padding:10px; border:1px solid #cbd5e0; border-radius:6px; font-size:0.95rem; margin-bottom:14px; }
+    #tactical-login-card button{ width:100%; background:#cc0000; color:#fff; border:none; border-radius:6px; padding:11px; font-weight:700; font-size:0.95rem; cursor:pointer; }
+    #tactical-login-card button:disabled{ opacity:0.6; cursor:default; }
+    #tactical-login-error{ display:none; background:#fde8e8; color:#b91c1c; border:1px solid #f3b4b4; border-radius:6px; padding:8px 10px; font-size:0.82rem; margin-bottom:14px; }
+</style>
+<div id="tactical-login-overlay">
+    <div id="tactical-login-card">
+        <h2>Tactical ERP</h2>
+        <p>Inicia sesión para continuar.</p>
+        <div id="tactical-login-error"></div>
+        <form id="tactical-login-form">
+            <label for="tactical-login-email">Correo</label>
+            <input type="email" id="tactical-login-email" required autocomplete="username">
+            <label for="tactical-login-password">Contraseña</label>
+            <input type="password" id="tactical-login-password" required autocomplete="current-password">
+            <button type="submit" id="tactical-login-btn">Entrar</button>
+        </form>
+    </div>
+</div>
+
 <header style="display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;"><div>
   <h1>Calculadora de Cotización — Cubo Rubik Premium (BETA)</h1>
   <p>Herramienta de pruebas paralelas — Tactical Marketing Group SAS. Reutiliza el motor de impresión digital/offset ya validado en Cuadernos/Rompecabezas.</p>
@@ -135,7 +169,7 @@
       <div class="fila">
         <div class="campo chico">
           <label>Cantidad de cubos:</label>
-          <input type="number" id="in-cantidad" value="200" min="1">
+          <input type="text" inputmode="numeric" id="in-cantidad" value="200" oninput="tacticalFormatearMiles(this)">
         </div>
         <div class="campo chico">
           <label>Caras a marcar:</label>
@@ -224,10 +258,12 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="tactical-supabase.js"></script>
 <script src="precios_tactical.js"></script>
 <script>
 /* ============ CONSTANTES REUTILIZADAS DEL MOTOR YA VALIDADO ============ */
-const SUSTRATOS = tacticalSeleccionarSustratos(["Propalcote__300"]);
+const SUSTRATOS = tacticalSeleccionarSustratos(["Propalcote__300"], 'cubo_rubik');
 const PLIEGOS_CM = {"60x90":[60,90], "70x100":[70,100]};
 
 const PLASTIFICADO_COP_M2 = PRECIOS_PLASTIFICADO_COP_M2;     // ya validado (Cuadernos/Rompecabezas)
@@ -240,6 +276,54 @@ const OFFSET_CTP_COP = PRECIOS_OFFSET_CTP_COP;
 const OFFSET_MILLAR_COP = PRECIOS_OFFSET_MILLAR_COP;
 const OFFSET_FORMATOS_CM = {medio_pliego:[50,70], cuarto:[35,50], octavo:[25,35]};
 
+/* Motor de impresión digital GENERAL (el mismo de Carpetas/Cajas/Volantes) -- para la CAJA de
+   empaque del cubo (26x23cm), no para las caras del cubo (que usan su propia tarifa de clic,
+   CUBO_DIGITAL_CLIC_COP, ya definida más abajo). Conde 2026-08-19: "también puede ser digital y
+   calculas el precio según clic que tienes guardado" -- se refiere a esta tarifa general. */
+const DIGITAL_GRAMAJE_MAX = 240;
+const DIGITAL_PINZA_MM = 5;
+const DIGITAL_CLIC_COP = PRECIOS_DIGITAL_CLIC_OTRAS_LINEAS;
+const DIGITAL_DESCUENTO_VOLUMEN = [[9,0.0],[50,0.10],[200,0.18],[400,0.26],[Infinity,0.30]];
+const DIGITAL_FORMATOS_CM = {carta:[21.5,28], octavo:[25,35], pliego_max:[33,50]};
+function claseFormatoDigital(ancho,alto){
+  const [a,b]=ordenar2(ancho,alto);
+  if(a<=21.5 && b<=28) return "carta";
+  if(a<=25 && b<=35) return "octavo";
+  if(a<=33 && b<=50) return "pliego_max";
+  return null;
+}
+function elegibleDigital(ancho,alto,gramaje,cantidadUnidades=1){
+  if(gramaje>DIGITAL_GRAMAJE_MAX) return false;
+  if(cantidadUnidades>200) return false;
+  return claseFormatoDigital(ancho,alto)!==null;
+}
+function descuentoVolumenDigital(cantidadUnidades){
+  for(const [tope,pct] of DIGITAL_DESCUENTO_VOLUMEN){
+    if(cantidadUnidades<=tope) return pct;
+  }
+  return 0.0;
+}
+function costoImpresionDigital(nPaginas,caras,esColor,ancho,alto,cantidadUnidades=1){
+  const claseMin=claseFormatoDigital(ancho,alto);
+  if(claseMin===null) return null;
+  const ordenClasesDigital=['carta','octavo','pliego_max'];
+  const clasesViables=ordenClasesDigital.slice(ordenClasesDigital.indexOf(claseMin));
+  const margenCm=DIGITAL_PINZA_MM/10;
+  const descuento=descuentoVolumenDigital(cantidadUnidades);
+  let opciones=[];
+  for(const clase of clasesViables){
+    const [sheetW,sheetH]=DIGITAL_FORMATOS_CM[clase];
+    let piezasPorClic=piezasPorPliego(ancho,alto,sheetW,sheetH-margenCm);
+    if(piezasPorClic===0) piezasPorClic=1;
+    const nClics=Math.ceil(nPaginas/piezasPorClic)*caras;
+    const precioClic=DIGITAL_CLIC_COP[clase][esColor?"color":"negro"];
+    const total=nClics*precioClic*(1-descuento);
+    opciones.push({total, nClics, precioClic, clase, piezasPorClic});
+  }
+  opciones.sort((x,y)=>x.total-y.total);
+  return opciones[0];
+}
+
 /* ============ REGLAS PROPIAS DE CUBO RUBIK (confirmadas por Conde 2026-07-24) ============ */
 const CUBO_INSUMO_COP = 3200;
 const CUBO_MERMA_PCT = 0.02;
@@ -248,8 +332,32 @@ const CUBO_MARCACION_CARAS_COP = {1:200, 2:400, 3:600, 4:800, 5:900, 6:1000};
 const CUBO_UV_TRAMOS = [[200,50000],[1000,100000],[2000,150000]];
 const CUBO_UV_INCREMENTO_POR_1000 = 50000;
 
-const CUBO_DIGITAL_CUBOS_POR_PLIEGO = 7;      // pliego 50x33cm (=pliego_max)
 const CUBO_DIGITAL_CLIC_COP = {color:1000, negro:550}; // tabla propia de esta línea, distinta de Cuadernos/Rompecabezas
+
+/* Conde 2026-08-19: la impresión del cubo compara 3 formatos y usa el más barato (igual que ya
+   comparaba digital vs litográfico, ahora con una tercera opción). Cada formato tiene una capacidad
+   FIJA de caras por pliego -- no depende de cuántas caras se marquen por cubo, así que si se piden
+   menos de 6 caras, un mismo pliego rinde para más cubos (ej. 50x33cm caben 42 caras: a 6 caras/cubo
+   son 7 cubos/pliego, a 2 caras/cubo son 21 cubos/pliego). Por eso todo el cálculo trabaja en
+   TOTAL DE CARAS (cantidad × caras), no en "cubos por pliego". */
+// Los 2 formatos litográficos cobran la MISMA tarifa de "máquina de cuarto" (plancha+millar) --
+// confirmado por Conde 2026-08-19: no son fracciones de la hoja madre estándar (medio pliego/cuarto/
+// octavo de 70x100 o 60x90), son 2 montajes distintos en la misma máquina de cuarto, y se diferencian
+// solo en cuántas caras caben por pliego según cómo se acomoden (6 caras a 17x25cm, o 12 caras -- el
+// doble de aprovechamiento -- a 25x35cm).
+const CUBO_FORMATOS_IMPRESION = [
+  { id:'digital', via:'digital', caraSheetLabel:'50x33cm', caraSheetAncho:50, caraSheetAlto:33, facesPorPliego:42 },
+  { id:'litografico_17x25', via:'offset', fraccion:'cuarto', caraSheetLabel:'17x25cm (máquina de cuarto)', caraSheetAncho:17, caraSheetAlto:25, facesPorPliego:6 },
+  { id:'litografico_25x35', via:'offset', fraccion:'cuarto', caraSheetLabel:'25x35cm (máquina de cuarto)', caraSheetAncho:25, caraSheetAlto:35, facesPorPliego:12 },
+];
+// Conde 2026-08-20: el adhesivo de las caras solo se fabrica en pliego 70x100 -- para que el
+// pedido de insumos de la Orden de Producción no confunda "pliegos de impresión" (el tamaño que usa
+// la máquina/cotización) con "pliegos de material a pedir" (lo único que existe para comprar), se
+// convierte cuántos de esos pliegos de impresión caben en un pliego real de 70x100.
+function materialCuboPliegos70x100(formato, nPliegosImpresion){
+  const piezasPor70x100 = piezasPorPliego(formato.caraSheetAncho, formato.caraSheetAlto, 70, 100);
+  return Math.ceil(nPliegosImpresion/piezasPor70x100);
+}
 
 const CUBO_TROQUELADO_COP_MILLAR = 35000;     // tarifa genérica del banco de troqueles (sección 8 índice maestro)
 
@@ -305,16 +413,69 @@ function costoMaterialPliegos(pa,pal,sustratoNombre,gramaje,piezasNecesarias,mer
     const [pw,ph]=PLIEGOS_CM[formato];
     const precioPliego = precioMap[formato];
     if(precioPliego==null) continue;
-    const nPorPliego = piezasPorPliego(pa,pal,pw,ph);
+    const colsSinRotar = Math.floor(pw/pa), filasSinRotar = Math.floor(ph/pal);
+    const nSinRotar = colsSinRotar*filasSinRotar;
+    const colsRotada = Math.floor(pw/pal), filasRotada = Math.floor(ph/pa);
+    const nRotada = colsRotada*filasRotada;
+    const rotado = nRotada > nSinRotar;
+    const nPorPliego = rotado ? nRotada : nSinRotar;
+    const columnas = rotado ? colsRotada : colsSinRotar;
+    const filas = rotado ? filasRotada : filasSinRotar;
     if(nPorPliego===0) continue;
     const nPliegos = Math.ceil(piezasTotales/nPorPliego);
     const costoTotal = nPliegos*precioPliego;
-    mejores.push([costoTotal, formato, nPorPliego, nPliegos, precioPliego]);
+    mejores.push([costoTotal, formato, nPorPliego, nPliegos, precioPliego, columnas, filas, rotado, pw, ph]);
   }
   if(mejores.length===0) throw new Error(`La pieza ${pa}x${pal}cm no cabe en ningún pliego disponible para ${sustratoNombre} ${gramaje}g`);
   mejores.sort((x,y)=>x[0]-y[0]);
-  const [costoTotal, formato, nPorPliego, nPliegos, precioPliego] = mejores[0];
-  return {formato, piezasPorPliego:nPorPliego, nPliegos, precioPliego, costoTotal};
+  const [costoTotal, formato, nPorPliego, nPliegos, precioPliego, columnas, filas, rotado, pliegoAncho, pliegoAlto] = mejores[0];
+  const planoCorte = {piezaAncho:pa, piezaAlto:pal, pliegoAncho, pliegoAlto, columnas, filas, rotado, piezasPorPliego:nPorPliego};
+  return {formato, piezasPorPliego:nPorPliego, nPliegos, precioPliego, costoTotal, planoCorte};
+}
+
+// Conde 2026-08-20: plano de impresión para la Orden de Producción -- muestra cómo caben las
+// piezas DENTRO del pliego de impresión (pliego_max/cuarto/etc.), aparte del plano de corte del
+// material (que muestra cómo se cortan esos pedazos grandes del pliego madre 60x90/70x100). Solo
+// aplica a la CAJA de empaque (las caras del cubo ya tienen su propio plano específico aparte).
+function planoImpresionDigital(piezaAncho, piezaAlto, clase){
+  const [sheetW, sheetH] = DIGITAL_FORMATOS_CM[clase];
+  const margenCm = DIGITAL_PINZA_MM/10;
+  const pliegoAncho = sheetW, pliegoAlto = sheetH - margenCm;
+  const colsSinRotar = Math.floor(pliegoAncho/piezaAncho), filasSinRotar = Math.floor(pliegoAlto/piezaAlto);
+  const nSinRotar = colsSinRotar*filasSinRotar;
+  const colsRotada = Math.floor(pliegoAncho/piezaAlto), filasRotada = Math.floor(pliegoAlto/piezaAncho);
+  const nRotada = colsRotada*filasRotada;
+  const rotado = nRotada > nSinRotar;
+  // Si ninguna orientación cabe (pieza justo en el límite del pliego, ej. carta 21.5x28), se
+  // fuerza a 1 -- mismo respaldo que ya usa el motor de precios (costoImpresionDigital) para no
+  // dividir por cero ni mostrar "0 piezas" cuando en la práctica sí entra 1.
+  if(nSinRotar===0 && nRotada===0){
+    return { piezaAncho, piezaAlto, pliegoAncho, pliegoAlto, columnas:1, filas:1, rotado:false, piezasPorPliego:1 };
+  }
+  return {
+    piezaAncho, piezaAlto, pliegoAncho, pliegoAlto,
+    columnas: rotado?colsRotada:colsSinRotar, filas: rotado?filasRotada:filasSinRotar, rotado,
+    piezasPorPliego: rotado?nRotada:nSinRotar,
+  };
+}
+function planoImpresionOffset(piezaAncho, piezaAlto, fraccion){
+  const [pliegoAncho, pliegoAlto] = OFFSET_FORMATOS_CM[fraccion];
+  const colsSinRotar = Math.floor(pliegoAncho/piezaAncho), filasSinRotar = Math.floor(pliegoAlto/piezaAlto);
+  const nSinRotar = colsSinRotar*filasSinRotar;
+  const colsRotada = Math.floor(pliegoAncho/piezaAlto), filasRotada = Math.floor(pliegoAlto/piezaAncho);
+  const nRotada = colsRotada*filasRotada;
+  const rotado = nRotada > nSinRotar;
+  // Si ninguna orientación cabe (pieza justo en el límite del pliego, ej. carta 21.5x28), se
+  // fuerza a 1 -- mismo respaldo que ya usa el motor de precios (costoImpresionDigital) para no
+  // dividir por cero ni mostrar "0 piezas" cuando en la práctica sí entra 1.
+  if(nSinRotar===0 && nRotada===0){
+    return { piezaAncho, piezaAlto, pliegoAncho, pliegoAlto, columnas:1, filas:1, rotado:false, piezasPorPliego:1 };
+  }
+  return {
+    piezaAncho, piezaAlto, pliegoAncho, pliegoAlto,
+    columnas: rotado?colsRotada:colsSinRotar, filas: rotado?filasRotada:filasSinRotar, rotado,
+    piezasPorPliego: rotado?nRotada:nSinRotar,
+  };
 }
 
 function fraccionPliegoOffset(ancho,alto,esPolicromia=false){
@@ -352,25 +513,50 @@ function costoImpresionOffset(nPiezasFinales,tintasTiro,tintasRetiro,esPolicromi
     costoMillar=OFFSET_MILLAR_COP[fraccion]*nPlanchas*millares;
   }
   const total=costoCtp+costoMillar;
-  return {total, via:"offset", fraccion, nPlanchas, nMillares:millares, costoCtp, costoMillar, piezasPorPasada};
+  return {total, via:"offset", fraccion, nPlanchas, nMillares:millares, costoCtp, costoMillar, piezasPorPasada, nPasadas};
 }
 
 function precioVentaDesdeSubtotal(subtotal,utilidadPct=0.40,comisionPct=0.03){
   return subtotal*(1+utilidadPct)*(1+comisionPct);
 }
 
-/* ============ CUBO RUBIK — IMPRESIÓN DEL CUBO (digital vs litográfico, elige el más barato) ============ */
-function costoImpresionDigitalCubo(cantidad){
-  const nPliegosBase = Math.ceil(cantidad/CUBO_DIGITAL_CUBOS_POR_PLIEGO);
-  const nPliegos = nPliegosBase + DIGITAL_MERMA_HOJAS.policromia; // color, merma de alistamiento
+/* ============ CUBO RUBIK — IMPRESIÓN DEL CUBO (compara 3 formatos, elige el más barato) ============
+   Confirmado por Conde 2026-08-19: se compara costo entre los 3 formatos (igual que antes comparaba
+   solo digital vs un litográfico fijo) y se elige el más barato para cualquier cantidad -- no son
+   rangos fijos de cantidad, es comparación de costo real. */
+function costoImpresionDigitalCuboFormato(totalCaras, formato){
+  // Conde 2026-08-20: la merma de alistamiento (DIGITAL_MERMA_HOJAS) está pensada en TODO el
+  // sistema como piezas extra del producto final, no pliegos extra -- sumarla como pliegos
+  // completos (como se hacía antes) infla la merma real: en un pliego de 42 caras, "+20 pliegos"
+  // son 840 caras extra (140 cubos) solo de calibración. Se suma en caras, como en todo lo demás.
+  const totalCarasConMerma = totalCaras + DIGITAL_MERMA_HOJAS.policromia;
+  const nPliegos = Math.ceil(totalCarasConMerma/formato.facesPorPliego);
   const costoClics = nPliegos*CUBO_DIGITAL_CLIC_COP.color;
   const costoSemicorte = nPliegos*DIGITAL_SEMICORTE_COP;
-  return {total: costoClics+costoSemicorte, via:"digital", nPliegos, costoClics, costoSemicorte};
+  const nPliegosMaterial70x100 = materialCuboPliegos70x100(formato, nPliegos);
+  return { id:formato.id, via:"digital", caraSheetLabel:formato.caraSheetLabel, nPliegos, nPliegosMaterial70x100, costoClics, costoSemicorte, total: costoClics+costoSemicorte };
 }
-function costoImpresionLitograficoCubo(cantidad){
-  const impresion = costoImpresionOffset(cantidad, 4, 0, true, 24, 17); // montaje 24x17cm por cubo
+function costoImpresionLitograficoCuboFormato(totalCaras, formato, cantidad){
+  const nPliegos = Math.ceil(totalCaras/formato.facesPorPliego);
+  const millares = millaresConTolerancia(nPliegos);
+  const nPlanchas = 4; // policromía 4 tintas, igual que siempre en esta línea
+  const costoCtp = OFFSET_CTP_COP[formato.fraccion]*nPlanchas;
+  const costoMillar = OFFSET_MILLAR_COP[formato.fraccion]*nPlanchas*millares;
   const costoTroquelado = Math.ceil(cantidad/1000)*CUBO_TROQUELADO_COP_MILLAR;
-  return {total: impresion.total+costoTroquelado, via:"offset", detalleImpresion:impresion, costoTroquelado};
+  const nPliegosMaterial70x100 = materialCuboPliegos70x100(formato, nPliegos);
+  return {
+    id:formato.id, via:"offset", fraccion:formato.fraccion, caraSheetLabel:formato.caraSheetLabel,
+    nPliegos, nPliegosMaterial70x100, nPlanchas, nMillares:millares, costoCtp, costoMillar, costoTroquelado,
+    total: costoCtp+costoMillar+costoTroquelado,
+  };
+}
+function costoImpresionCubo(cantidad, caras){
+  const totalCaras = cantidad*caras;
+  const opciones = CUBO_FORMATOS_IMPRESION.map(formato => formato.via==="digital"
+    ? costoImpresionDigitalCuboFormato(totalCaras, formato)
+    : costoImpresionLitograficoCuboFormato(totalCaras, formato, cantidad));
+  opciones.sort((a,b) => a.total-b.total);
+  return opciones[0];
 }
 function costoPegadoCaja(cantidad){
   let tarifa = CUBO_PEGADO_CAJA_COP_TRAMOS[CUBO_PEGADO_CAJA_COP_TRAMOS.length-1][1];
@@ -400,31 +586,47 @@ function cotizarCuboRubik(p){
   const costoMarcacion = CUBO_MARCACION_CARAS_COP[p.caras] * p.cantidad;
   const costoUV = costoUVCubo(p.cantidad); // obligatorio, fijo por tramo de orden
 
-  const digital = costoImpresionDigitalCubo(p.cantidad);
-  const litografico = costoImpresionLitograficoCubo(p.cantidad);
-  const usaDigital = digital.total < litografico.total;
-  const detalleImpresionCubo = usaDigital ? digital : litografico;
-  const costoImpresionCubo = detalleImpresionCubo.total;
+  const detalleImpresionCubo = costoImpresionCubo(p.cantidad, p.caras);
+  const usaDigital = detalleImpresionCubo.via === "digital";
+  const costoImpresionCuboTotal = detalleImpresionCubo.total;
 
   let costoCaja = 0, detalleCaja = null;
   if(p.conCaja){
     const areaCajaM2 = (CUBO_CAJA_ANCHO_CM*CUBO_CAJA_ALTO_CM)/10000;
-    // Impresión de la caja usa offset directo (línea Cuarto) — no hay formato digital propio para
-    // 26x23cm definido por Conde todavía; se deja la comparación digital-vs-offset para una
-    // iteración futura si Conde la pide, igual que se hizo con la impresión del cubo mismo.
     // Tintas de la caja seleccionables (Conde 2026-08-12): 4+ tintas = full color/policromía
     // (mismo criterio ya usado en Carpetas/Volantes), menos tintas = colores planos.
     const tintasCaja = p.tintasCaja || 4;
     const esPolicromiaCaja = tintasCaja >= 4;
+    const [cajaSustratoNombre, cajaGramajeStr] = CUBO_CAJA_SUSTRATO.split("__");
+    const cajaGramaje = parseFloat(cajaGramajeStr);
+
+    // Material (papel) de la caja -- antes no se cobraba aparte; Conde 2026-08-19 pidió también el
+    // plano de corte para la Orden de Producción, lo que exige pasar por costoMaterialPliegos (que
+    // ahora sí calcula columnas/filas, no solo el total de piezas por pliego).
+    const detalleMaterialCaja = costoMaterialPliegos(CUBO_CAJA_ANCHO_CM, CUBO_CAJA_ALTO_CM, cajaSustratoNombre, cajaGramaje, p.cantidad, 0);
+
+    // Impresión: compara digital (tarifa general de clic) vs litográfico, igual que ya hace el cubo
+    // mismo -- Conde 2026-08-19: "también puede ser digital y calculas el precio según clic que
+    // tienes guardado".
     const impresionCajaOffset = costoImpresionOffset(p.cantidad, tintasCaja, 0, esPolicromiaCaja, CUBO_CAJA_ANCHO_CM, CUBO_CAJA_ALTO_CM);
+    let impresionCajaDigital = null;
+    if(elegibleDigital(CUBO_CAJA_ANCHO_CM, CUBO_CAJA_ALTO_CM, cajaGramaje, p.cantidad)){
+      impresionCajaDigital = costoImpresionDigital(p.cantidad, 1, esPolicromiaCaja, CUBO_CAJA_ANCHO_CM, CUBO_CAJA_ALTO_CM, p.cantidad);
+    }
+    const usaDigitalCaja = !!(impresionCajaDigital && impresionCajaDigital.total < impresionCajaOffset.total);
+    const impresionCajaElegida = usaDigitalCaja ? impresionCajaDigital : impresionCajaOffset;
+
     const costoPlastificadoCaja = Math.max(areaCajaM2*p.cantidad*PLASTIFICADO_COP_M2, PLASTIFICADO_PISO_COP);
     const costoTroqueladoCaja = Math.ceil(p.cantidad/1000)*CUBO_TROQUELADO_COP_MILLAR;
     const costoPegadoCajaTotal = costoPegadoCaja(p.cantidad);
-    costoCaja = impresionCajaOffset.total + costoPlastificadoCaja + costoTroqueladoCaja + costoPegadoCajaTotal;
-    detalleCaja = {impresionCajaOffset, costoPlastificadoCaja, costoTroqueladoCaja, costoPegadoCajaTotal, tintasCaja};
+    costoCaja = detalleMaterialCaja.costoTotal + impresionCajaElegida.total + costoPlastificadoCaja + costoTroqueladoCaja + costoPegadoCajaTotal;
+    detalleCaja = {
+      detalleMaterialCaja, usaDigitalCaja, impresionCajaElegida,
+      costoPlastificadoCaja, costoTroqueladoCaja, costoPegadoCajaTotal, tintasCaja,
+    };
   }
 
-  const costoDirecto = costoInsumo + costoMarcacion + costoUV + costoImpresionCubo + costoCaja;
+  const costoDirecto = costoInsumo + costoMarcacion + costoUV + costoImpresionCuboTotal + costoCaja;
 
   const disenoCop = disenoYPreprensa(costoDirecto);
   const fondoSeguridadPct = tramoFondoSeguridad(costoDirecto);
@@ -443,7 +645,8 @@ function cotizarCuboRubik(p){
   const gananciaUnitaria = gananciaTotal/p.cantidad;
 
   return {
-    costoInsumo, costoMarcacion, costoUV, usaDigital, detalleImpresionCubo, costoImpresionCubo,
+    costoInsumo, costoMarcacion, costoUV, usaDigital, detalleImpresionCubo,
+    costoImpresionCubo: costoImpresionCuboTotal,
     conCaja: p.conCaja, costoCaja, detalleCaja, costoDirecto,
     disenoCop, fondoSeguridadPct, fondoSeguridadCop, sherpaCop, empaqueCop, costoTransporte,
     subtotal, precioVentaTotal, precioVentaUnitario, ivaTotal, precioFinalTotal,
@@ -470,7 +673,7 @@ function calcular(){
   const cont = document.getElementById("resultado-contenido");
   try{
     const p = {
-      cantidad: parseFloat(document.getElementById("in-cantidad").value),
+      cantidad: tacticalLeerNumeroFormateado("in-cantidad"),
       caras: parseInt(document.getElementById("in-caras").value),
       conCaja: document.getElementById("in-conCaja").checked,
       tintasCaja: parseInt(document.getElementById("in-tintasCaja").value)||4,
@@ -481,8 +684,8 @@ function calcular(){
     renderRecomendaciones(r);
 
     const viaTxt = r.usaDigital
-      ? `Digital — ${r.detalleImpresionCubo.nPliegos} pliegos (50x33cm, ${CUBO_DIGITAL_CUBOS_POR_PLIEGO} cubos/pliego, con merma) — clics ${cop(r.detalleImpresionCubo.costoClics)} + semicorte ${cop(r.detalleImpresionCubo.costoSemicorte)}`
-      : `Litográfico — Cuarto de Pliego, ${r.detalleImpresionCubo.detalleImpresion.nPlanchas} plancha(s), ${r.detalleImpresionCubo.detalleImpresion.nMillares} millar(es) + troquelado ${cop(r.detalleImpresionCubo.costoTroquelado)}`;
+      ? `Digital — ${r.detalleImpresionCubo.caraSheetLabel}, ${r.detalleImpresionCubo.nPliegos} pliegos (con merma) — clics ${cop(r.detalleImpresionCubo.costoClics)} + semicorte ${cop(r.detalleImpresionCubo.costoSemicorte)}`
+      : `Litográfico — ${r.detalleImpresionCubo.caraSheetLabel}, ${r.detalleImpresionCubo.nPliegos} pliegos, ${r.detalleImpresionCubo.nPlanchas} plancha(s), ${r.detalleImpresionCubo.nMillares} millar(es) + troquelado ${cop(r.detalleImpresionCubo.costoTroquelado)}`;
 
     let filas = `<table class="resultado-tabla">`;
     filas += `<tr><td>Insumo cubo (con 2% merma)</td><td class="num">${cop(r.costoInsumo)}</td></tr>`;
@@ -491,7 +694,8 @@ function calcular(){
     filas += `<tr><td>Impresión — ${viaTxt}</td><td class="num">${cop(r.costoImpresionCubo)}</td></tr>`;
     if(r.conCaja){
       filas += `<tr class="grupo"><td colspan="2">Caja de empaque (26x23cm, Cote 300gr, ${r.detalleCaja.tintasCaja}x0)</td></tr>`;
-      filas += `<tr class="detalle"><td colspan="2">Impresión: ${cop(r.detalleCaja.impresionCajaOffset.total)}</td></tr>`;
+      filas += `<tr class="detalle"><td colspan="2">Material: ${cop(r.detalleCaja.detalleMaterialCaja.costoTotal)} (${r.detalleCaja.detalleMaterialCaja.nPliegos} pliego(s) ${r.detalleCaja.detalleMaterialCaja.formato})</td></tr>`;
+      filas += `<tr class="detalle"><td colspan="2">Impresión — ${r.detalleCaja.usaDigitalCaja?'Digital':'Litográfico'}: ${cop(r.detalleCaja.impresionCajaElegida.total)}</td></tr>`;
       filas += `<tr class="detalle"><td colspan="2">Plastificado 1 cara: ${cop(r.detalleCaja.costoPlastificadoCaja)}</td></tr>`;
       filas += `<tr class="detalle"><td colspan="2">Troquelado: ${cop(r.detalleCaja.costoTroqueladoCaja)}</td></tr>`;
       filas += `<tr class="detalle"><td colspan="2">Pegado: ${cop(r.detalleCaja.costoPegadoCajaTotal)}</td></tr>`;
@@ -521,9 +725,19 @@ function calcular(){
   }
 }
 
-/* ============ CLIENTE Y CRM (comparte localStorage con TACTICAL_ERP_HUB.html) ============ */
-let db_clientes = JSON.parse(localStorage.getItem('tactical_crm_clientes_v2')) || [];
-let db_opps = JSON.parse(localStorage.getItem('tactical_crm_opps_v2')) || [];
+/* ============ CLIENTE Y CRM (Supabase, compartido con TACTICAL_ERP_HUB.html y las demás calculadoras) ============ */
+let db_clientes = [];
+let db_opps = [];
+
+// Se llama automático (ver tactical-supabase.js) apenas el login confirma sesión válida.
+window.tacticalOnLogin = async function(){
+  db_clientes = await tacticalClientesCargar();
+  db_opps = await tacticalOppsCargar();
+  refrescarDatalistClientes();
+  tacticalFototecaCargar();
+  await tacticalPedidoBorradorCargar(); refrescarBannerPedido();
+  await tacticalComparacionBorradorCargar(); refrescarBannerComparacion();
+};
 let ultimoResultado = null, ultimoParams = null, ultimoOT = null;
 
 function refrescarDatalistClientes(){
@@ -563,8 +777,8 @@ function autocompletarCliente(){
     nota.style.display = 'none';
   }
 }
-function siguienteOT(){
-  return tacticalSiguienteOT();
+async function siguienteOT(){
+  return await tacticalSiguienteOT();
 }
 function toggleCondicionesComerciales(){
   const panel = document.getElementById('condicionesComerciales-panel');
@@ -629,15 +843,22 @@ function tacticalImprimirConTitulo(nombreArchivo){
 function imprimirPDFCliente(datos){
   const fecha = datos.fecha.toLocaleDateString('es-CO', {year:'numeric', month:'long', day:'numeric'});
   const validoHasta = fechaMasDias(datos.fecha, 30);
-  const filasLineas = datos.lineas.map(l => `<tr><td><div style="display:flex; align-items:center; gap:6px;">${l.fotoUrl?`<img src="${l.fotoUrl}" style="width:90px; height:90px; object-fit:contain; background:#f8fafc; border:1px solid #d7dee5; border-radius:4px; flex-shrink:0;">`:''}<div>${l.desc}${l.videoUrl?`<br><a href="${l.videoUrl}" style="color:#cc0000; text-decoration:none; font-size:0.65rem; font-weight:bold;">▶ Ver video del producto</a>`:''}</div></div></td><td style="text-align:right;">${l.cantidad||'-'}</td><td style="text-align:right;">${cop(l.monto)}</td></tr>`).join('');
-  let desgloseHtml = '';
-  if(datos.ivaTotal!=null){
-    const subtotal = datos.total - datos.ivaTotal;
-    desgloseHtml = `<table class="doc-table" style="margin-top:6px;">
-      <tr><td>Subtotal</td><td style="text-align:right;">${cop(subtotal)}</td></tr>
-      <tr><td>IVA (19%)</td><td style="text-align:right;">${cop(datos.ivaTotal)}</td></tr>
-    </table>`;
-  }
+  // Conde 2026-08-19: el cliente necesita ver el valor unitario SIN IVA de cada línea, no solo
+  // el total de esa línea con IVA incluido -- si no viene precalculado (l.precioUnitario), se
+  // deriva del monto total de la línea asumiendo el 19% plano que se usa en toda la cotización.
+  const filasLineas = datos.lineas.map(l => {
+    const cant = l.cantidad || 1;
+    const unitario = l.precioUnitario!=null ? l.precioUnitario : (l.monto/cant/1.19);
+    return `<tr><td><div style="display:flex; align-items:center; gap:6px;">${l.fotoUrl?`<img src="${l.fotoUrl}" style="width:90px; height:90px; object-fit:contain; background:#f8fafc; border:1px solid #d7dee5; border-radius:4px; flex-shrink:0;">`:''}<div>${l.desc}${l.videoUrl?`<br><a href="${l.videoUrl}" style="color:#cc0000; text-decoration:none; font-size:0.65rem; font-weight:bold;">▶ Ver video del producto</a>`:''}</div></div></td><td style="text-align:right;">${l.cantidad||'-'}</td><td style="text-align:right;">${cop(unitario)}</td><td style="text-align:right;">${cop(l.monto)}</td></tr>`;
+  }).join('');
+  // El desglose Subtotal/IVA se calcula siempre a partir del total (IVA plano del 19% en toda
+  // la cotización) -- antes se saltaba en los pedidos multi-producto porque no se pasaba ivaTotal.
+  const subtotal = datos.total/1.19;
+  const ivaTotal = datos.total - subtotal;
+  const desgloseHtml = `<table class="doc-table" style="margin-top:6px;">
+    <tr><td>Subtotal (sin IVA)</td><td style="text-align:right;">${cop(subtotal)}</td></tr>
+    <tr><td>IVA (19%)</td><td style="text-align:right;">${cop(ivaTotal)}</td></tr>
+  </table>`;
   const html = `
     <div class="doc-header">
       <div><img src="${TACTICAL_LOGO_B64}" style="height:68px; margin-bottom:8px; display:block;" alt="Tactical Marketing"><div class="doc-tipo">COTIZACIÓN ${datos.ot||''}</div></div>
@@ -648,9 +869,9 @@ function imprimirPDFCliente(datos){
       <div class="doc-cliente-meta">Atención: ${datos.cliente.encargado||'-'} &nbsp;·&nbsp; ${datos.cliente.telefono||'-'} &nbsp;·&nbsp; ${datos.cliente.correo||'-'}</div>
       <div class="doc-cliente-fechas">Fecha de emisión: ${fecha} &nbsp;|&nbsp; Válida hasta: ${validoHasta} (30 días calendario)</div>
     </div>
-    <div class="doc-section-title">Productos Cotizados${datos.ivaTotal==null?' (cada valor ya incluye IVA)':''}</div>
+    <div class="doc-section-title">Productos Cotizados</div>
     <table class="doc-table">
-      <tr><th>Descripción</th><th>Cantidad</th><th>Valor</th></tr>
+      <tr><th>Descripción</th><th>Cantidad</th><th>Valor Unitario (sin IVA)</th><th>Valor Total</th></tr>
       ${filasLineas}
     </table>
     ${desgloseHtml}
@@ -666,30 +887,44 @@ function imprimirPDFCliente(datos){
   document.getElementById('print-area').style.display = 'block';
   tacticalImprimirConTitulo(`${datos.cliente.empresa||'Cliente'} - ${datos.ot||''}`);
 }
-function generarOrdenProduccion(){
+async function generarOrdenProduccion(){
   if(!ultimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
   const r = ultimoResultado, p = ultimoParams;
-  if(!ultimoOT) ultimoOT = siguienteOT();
+  if(!ultimoOT) ultimoOT = await siguienteOT();
   const nombreClienteOP = (document.getElementById('in-cli-empresa')||{}).value?.trim() || 'Cliente';
   const fechaEntregaOP = prompt('Fecha de entrega para esta Orden de Producción:', '');
   const recomendaciones = RECOMENDACIONES_PRODUCCION.filter(reg=>reg.aplica(r)).map(reg=>reg.texto);
   const impresionTxt = r.usaDigital
-    ? `Digital — ${r.detalleImpresionCubo.nPliegos} pliegos (50x33cm, ${CUBO_DIGITAL_CUBOS_POR_PLIEGO} cubos/pliego)`
-    : `Litográfico — Cuarto de Pliego, ${r.detalleImpresionCubo.detalleImpresion.nPlanchas} plancha(s), ${r.detalleImpresionCubo.detalleImpresion.nMillares} millar(es)`;
+    ? `Digital — ${r.detalleImpresionCubo.caraSheetLabel}, ${r.detalleImpresionCubo.nPliegos} pliegos`
+    : `Litográfico — ${r.detalleImpresionCubo.caraSheetLabel}, ${r.detalleImpresionCubo.nPlanchas} plancha(s), ${r.detalleImpresionCubo.nMillares} millar(es)`;
+  // Conde 2026-08-20: el adhesivo solo se fabrica en pliego 70x100 -- para pedir el insumo hay que
+  // convertir los pliegos de impresión (17x25/25x35/50x33, el tamaño que usa la máquina) a pliegos
+  // de material real, para no confundir al pedirlo.
   const bloques = [{
     titulo: `Cubo Rubik (${p.caras} cara${p.caras>1?'s':''})`,
     lineasTexto: [
       `Impresión: <strong>${impresionTxt}</strong>`,
-      `Insumo cubo: <strong>Adhesivo P4</strong> — Brillo UV: <strong>Screen (serigrafía) total</strong>`,
+      `Material a pedir: <strong>${r.detalleImpresionCubo.nPliegosMaterial70x100} pliego(s) de Adhesivo P4 70x100cm</strong>`,
+      `Brillo UV: <strong>Screen (serigrafía) total</strong>`,
     ],
   }];
   if(r.conCaja){
     bloques.push({
       titulo: `Caja de empaque (26x23cm, Propalcote 300gr)`,
       lineasTexto: [
-        `Impresión: <strong>${r.detalleCaja.tintasCaja}x0</strong> — Acabados: <strong>Plastificado 1 cara</strong>`,
-        `Troquelado y pegado incluidos`,
+        `Impresión: <strong>${r.detalleCaja.usaDigitalCaja?'Digital':'Litográfico'} ${r.detalleCaja.tintasCaja}x0</strong>${r.detalleCaja.usaDigitalCaja ? ` — <strong>${r.detalleCaja.impresionCajaElegida.nClics.toLocaleString('es-CO')} clics de impresión</strong>` : ` — <strong>${r.detalleCaja.impresionCajaElegida.nPasadas.toLocaleString('es-CO')} tamaños ${OFFSET_FORMATOS_CM[r.detalleCaja.impresionCajaElegida.fraccion][0]}x${OFFSET_FORMATOS_CM[r.detalleCaja.impresionCajaElegida.fraccion][1]} de impresión</strong>`} — Acabados: <strong>Plastificado 1 cara</strong>`,
+        `Material: <strong>${r.detalleCaja.detalleMaterialCaja.nPliegos} pliego(s) ${r.detalleCaja.detalleMaterialCaja.formato}</strong> — Troquelado y pegado incluidos`,
       ],
+      planoCorte: r.detalleCaja.detalleMaterialCaja.planoCorte,
+    });
+    // Conde 2026-08-20: plano de impresión aparte del plano de corte del material.
+    const planoImpresionCaja = r.detalleCaja.usaDigitalCaja
+      ? planoImpresionDigital(CUBO_CAJA_ANCHO_CM, CUBO_CAJA_ALTO_CM, r.detalleCaja.impresionCajaElegida.clase)
+      : planoImpresionOffset(CUBO_CAJA_ANCHO_CM, CUBO_CAJA_ALTO_CM, r.detalleCaja.impresionCajaElegida.fraccion);
+    bloques.push({
+      titulo: `Plano de impresión — Caja (${planoImpresionCaja.piezaAncho}x${planoImpresionCaja.piezaAlto}cm por pliego de ${planoImpresionCaja.pliegoAncho}x${planoImpresionCaja.pliegoAlto}cm)`,
+      lineasTexto: [`${planoImpresionCaja.piezasPorPliego} pieza(s) por pliego de impresión${r.detalleCaja.usaDigitalCaja?' (con margen de pinza descontado)':''}`],
+      planoCorte: planoImpresionCaja,
     });
   }
   const html = tacticalOPDocumentoHtml({
@@ -706,7 +941,7 @@ function generarOrdenProduccion(){
   document.getElementById('print-area').style.display = 'block';
   tacticalImprimirConTitulo(`${nombreClienteOP} - ${ultimoOT} - OP`);
 }
-function guardarCotizacionClick(){
+async function guardarCotizacionClick(){
   if(!ultimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
   const empresa = document.getElementById('in-cli-empresa').value.trim();
   const encargado = document.getElementById('in-cli-encargado').value.trim();
@@ -719,7 +954,7 @@ function guardarCotizacionClick(){
 
   let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
   if(!cli){
-    cli = { id: Date.now().toString(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo, identificacion };
+    cli = { id: crypto.randomUUID(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo, identificacion };
     db_clientes.push(cli);
   } else {
     if(telefono) cli.wp = telefono;
@@ -727,17 +962,17 @@ function guardarCotizacionClick(){
     if(tipo) cli.tipo = tipo;
     if(identificacion) cli.identificacion = identificacion;
   }
-  localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
+  tacticalSyncClientes(db_clientes);
 
-  if(!ultimoOT) ultimoOT = siguienteOT();
+  if(!ultimoOT) ultimoOT = await siguienteOT();
   const desc = tacticalTituloCorto(`${ultimoParams.cantidad} Cubo Rubik (${ultimoParams.caras} caras)${ultimoParams.conCaja?` con caja ${ultimoParams.tintasCaja}x0`:''}`, document.getElementById("in-descCliente").value);
   // Rubik no usa papel/sustrato como las demás líneas (insumo del cubo es fijo) — solo se
   // clasifica la máquina de impresión (digital vs litográfico en Cuarto de Pliego).
   const maquina = ultimoResultado.usaDigital ? 'digital' : 'cuarto';
   const recomendaciones = RECOMENDACIONES_PRODUCCION.filter(reg=>reg.aplica(ultimoResultado)).map(reg=>reg.texto);
-  const opp = { id: Date.now().toString()+'_opp', ot: ultimoOT, idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, desc, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'cubo_rubik', cantidad: ultimoParams.cantidad, maquina, material: null, nPliegos: null, recomendaciones };
+  const opp = { id: crypto.randomUUID(), ot: ultimoOT, idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, desc, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'cubo_rubik', cantidad: ultimoParams.cantidad, maquina, material: null, nPliegos: null, recomendaciones };
   db_opps.push(opp);
-  localStorage.setItem('tactical_crm_opps_v2', JSON.stringify(db_opps));
+  tacticalSyncOpps(db_opps);
 
   refrescarDatalistClientes();
   const nota = document.getElementById('cot-ot-nota');
@@ -746,13 +981,13 @@ function guardarCotizacionClick(){
 
   imprimirPDFCliente({
     ot: ultimoOT, fecha: new Date(), vendedor, cliente: {empresa: cli.empresa, encargado: cli.nombre, telefono: cli.wp, correo: cli.correo},
-    lineas: [{desc, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), fotoUrl: fotoParaCotizacion(ultimoParams.conCaja ? 'cubo_rubik_con_caja' : 'cubo_rubik_sin_caja'), videoUrl: videoParaCotizacion(ultimoParams.conCaja ? 'cubo_rubik_con_caja' : 'cubo_rubik_sin_caja')}],
+    lineas: [{desc, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), precioUnitario: ultimoResultado.precioVentaUnitario, fotoUrl: fotoParaCotizacion(ultimoParams.conCaja ? 'cubo_rubik_con_caja' : 'cubo_rubik_sin_caja'), videoUrl: videoParaCotizacion(ultimoParams.conCaja ? 'cubo_rubik_con_caja' : 'cubo_rubik_sin_caja')}],
     ivaTotal: ultimoResultado.ivaTotal, total: Math.round(ultimoResultado.precioFinalTotal),
   });
 }
 
 /* ============ PEDIDO MULTI-PRODUCTO (varias líneas, un solo cliente/OT) ============ */
-function pedidoActivo(){ return JSON.parse(localStorage.getItem('tactical_pedido_activo')) || null; }
+function pedidoActivo(){ return window.tacticalPedidoBorradorCache || null; }
 function refrescarBannerPedido(){
   const pd = pedidoActivo();
   const el = document.getElementById('pedido-banner');
@@ -764,7 +999,7 @@ function refrescarBannerPedido(){
     <button type="button" style="margin-top:6px; background:var(--verde); color:#fff;" onclick="cerrarPedido()">✅ Cerrar pedido y guardar en CRM</button>
     <button type="button" style="margin-top:6px; background:var(--rojo); color:#fff;" onclick="cancelarPedido()">✕ Cancelar pedido</button>`;
 }
-function iniciarOAgregarPedido(){
+async function iniciarOAgregarPedido(){
   if(!ultimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
   const empresa = document.getElementById('in-cli-empresa').value.trim();
   const encargado = document.getElementById('in-cli-encargado').value.trim();
@@ -777,7 +1012,7 @@ function iniciarOAgregarPedido(){
 
   let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
   if(!cli){
-    cli = { id: Date.now().toString(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo, identificacion };
+    cli = { id: crypto.randomUUID(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo, identificacion };
     db_clientes.push(cli);
   } else {
     if(telefono) cli.wp = telefono;
@@ -785,7 +1020,7 @@ function iniciarOAgregarPedido(){
     if(tipo) cli.tipo = tipo;
     if(identificacion) cli.identificacion = identificacion;
   }
-  localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
+  tacticalSyncClientes(db_clientes);
   refrescarDatalistClientes();
 
   let pd = pedidoActivo();
@@ -795,36 +1030,36 @@ function iniciarOAgregarPedido(){
     pd = null;
   }
   if(!pd){
-    pd = { ot: siguienteOT(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, vendedor, lineas: [], creado: new Date().toISOString() };
+    pd = { ot: await siguienteOT(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, vendedor, lineas: [], creado: new Date().toISOString() };
   }
 
   const desc = tacticalTituloCorto(`${ultimoParams.cantidad} Cubo Rubik (${ultimoParams.caras} caras)${ultimoParams.conCaja?` con caja ${ultimoParams.tintasCaja}x0`:''}`, document.getElementById("in-descCliente").value);
   const maquina = ultimoResultado.usaDigital ? 'digital' : 'cuarto';
   const recomendaciones = RECOMENDACIONES_PRODUCCION.filter(reg=>reg.aplica(ultimoResultado)).map(reg=>reg.texto);
-  pd.lineas.push({ linea:'cubo_rubik', desc, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), maquina, material: null, nPliegos: null, recomendaciones, fotoUrl: fotoParaCotizacion(ultimoParams.conCaja ? 'cubo_rubik_con_caja' : 'cubo_rubik_sin_caja'), videoUrl: videoParaCotizacion(ultimoParams.conCaja ? 'cubo_rubik_con_caja' : 'cubo_rubik_sin_caja') });
+  pd.lineas.push({ linea:'cubo_rubik', desc, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), precioUnitario: ultimoResultado.precioVentaUnitario, maquina, material: null, nPliegos: null, recomendaciones, fotoUrl: fotoParaCotizacion(ultimoParams.conCaja ? 'cubo_rubik_con_caja' : 'cubo_rubik_sin_caja'), videoUrl: videoParaCotizacion(ultimoParams.conCaja ? 'cubo_rubik_con_caja' : 'cubo_rubik_sin_caja') });
   fotoPersonalReiniciar();
-  localStorage.setItem('tactical_pedido_activo', JSON.stringify(pd));
+  window.tacticalPedidoBorradorCache = pd; tacticalGuardarPedidoBorrador(pd);
   refrescarBannerPedido();
   alert(`Agregado al pedido ${pd.ot}. Ahora tiene ${pd.lineas.length} producto(s).`);
 }
 function cerrarPedido(){
   const pd = pedidoActivo();
-  if(!pd || pd.lineas.length===0){ localStorage.removeItem('tactical_pedido_activo'); refrescarBannerPedido(); return; }
+  if(!pd || pd.lineas.length===0){ window.tacticalPedidoBorradorCache = null; tacticalEliminarPedidoBorrador(); refrescarBannerPedido(); return; }
   const montoTotal = pd.lineas.reduce((s,l)=>s+l.monto,0);
   const cantidadTotal = pd.lineas.reduce((s,l)=>s+(l.cantidad||0),0);
   const descConsolidada = pd.lineas.map(l=>l.desc).join(' + ');
-  const opp = { id: Date.now().toString()+'_opp', ot: pd.ot, idCli: pd.idCli, nombreCli: pd.nombreCli, desc: descConsolidada, monto: montoTotal, etapa: 'cot', linea: 'multi', cantidad: cantidadTotal, vendedor: pd.vendedor, lineas: pd.lineas };
+  const opp = { id: crypto.randomUUID(), ot: pd.ot, idCli: pd.idCli, nombreCli: pd.nombreCli, desc: descConsolidada, monto: montoTotal, etapa: 'cot', linea: 'multi', cantidad: cantidadTotal, vendedor: pd.vendedor, lineas: pd.lineas };
   db_opps.push(opp);
-  localStorage.setItem('tactical_crm_opps_v2', JSON.stringify(db_opps));
-  localStorage.removeItem('tactical_pedido_activo');
+  tacticalSyncOpps(db_opps);
+  window.tacticalPedidoBorradorCache = null; tacticalEliminarPedidoBorrador();
   refrescarBannerPedido();
   alert(`Pedido ${pd.ot} guardado en el CRM — ${pd.lineas.length} producto(s), total ${cop(montoTotal)}.`);
 
   const cliPd = db_clientes.find(c=>c.id===pd.idCli) || {empresa:pd.nombreCli, nombre:'', wp:'', correo:''};
   imprimirPDFCliente({
     ot: pd.ot, fecha: new Date(), vendedor: pd.vendedor, cliente: {empresa: cliPd.empresa, encargado: cliPd.nombre, telefono: cliPd.wp, correo: cliPd.correo},
-    lineas: pd.lineas.map(l=>({desc:l.desc, cantidad:l.cantidad, monto:l.monto})),
-    ivaTotal: null, total: montoTotal,
+    lineas: pd.lineas.map(l=>({desc:l.desc, cantidad:l.cantidad, monto:l.monto, precioUnitario:l.precioUnitario})),
+    total: montoTotal,
   });
 }
 /* ============ COMPARACIÓN DE OPCIONES (varias variantes, precios SEPARADOS, el cliente
@@ -891,7 +1126,7 @@ function fotoPersonalReiniciar(){
   if(sel) sel.value = '';
 }
 
-function comparacionActiva(){ return JSON.parse(localStorage.getItem('tactical_comparacion_activa')) || null; }
+function comparacionActiva(){ return window.tacticalComparacionBorradorCache || null; }
 function refrescarBannerComparacion(){
   const comp = comparacionActiva();
   const el = document.getElementById('comparacion-banner');
@@ -902,7 +1137,7 @@ function refrescarBannerComparacion(){
     <button type="button" style="margin-top:6px; background:var(--verde); color:#fff;" onclick="generarPDFComparativo()">✅ Generar PDF comparativo</button>
     <button type="button" style="margin-top:6px; background:var(--rojo); color:#fff;" onclick="cancelarComparacion()">✕ Cancelar comparación</button>`;
 }
-function agregarOpcionComparacion(){
+async function agregarOpcionComparacion(){
   if(!ultimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
   const empresa = document.getElementById('in-cli-empresa').value.trim();
   const encargado = document.getElementById('in-cli-encargado').value.trim();
@@ -915,7 +1150,7 @@ function agregarOpcionComparacion(){
 
   let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
   if(!cli){
-    cli = { id: Date.now().toString(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo, identificacion };
+    cli = { id: crypto.randomUUID(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo, identificacion };
     db_clientes.push(cli);
   } else {
     if(telefono) cli.wp = telefono;
@@ -923,7 +1158,7 @@ function agregarOpcionComparacion(){
     if(tipo) cli.tipo = tipo;
     if(identificacion) cli.identificacion = identificacion;
   }
-  localStorage.setItem('tactical_crm_clientes_v2', JSON.stringify(db_clientes));
+  tacticalSyncClientes(db_clientes);
   refrescarDatalistClientes();
 
   let comp = comparacionActiva();
@@ -932,13 +1167,13 @@ function agregarOpcionComparacion(){
     comp = null;
   }
   if(!comp){
-    comp = { ot: siguienteOT(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, vendedor, opciones: [], creado: new Date().toISOString() };
+    comp = { ot: await siguienteOT(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, vendedor, opciones: [], creado: new Date().toISOString() };
   }
 
   const titulo = tacticalTituloCorto(`${ultimoParams.cantidad} Cubo Rubik (${ultimoParams.caras} caras)${ultimoParams.conCaja?` con caja ${ultimoParams.tintasCaja}x0`:''}`, document.getElementById("in-descCliente").value);
   comp.opciones.push({ titulo, params: {cantidad: ultimoParams.cantidad}, resultado: {precioVentaUnitario: ultimoResultado.precioVentaUnitario, precioVentaTotal: ultimoResultado.precioVentaTotal, ivaTotal: ultimoResultado.ivaTotal, precioFinalTotal: ultimoResultado.precioFinalTotal}, fotoUrl: fotoParaCotizacion(ultimoParams.conCaja ? 'cubo_rubik_con_caja' : 'cubo_rubik_sin_caja'), videoUrl: videoParaCotizacion(ultimoParams.conCaja ? 'cubo_rubik_con_caja' : 'cubo_rubik_sin_caja') });
   fotoPersonalReiniciar();
-  localStorage.setItem('tactical_comparacion_activa', JSON.stringify(comp));
+  window.tacticalComparacionBorradorCache = comp; tacticalGuardarComparacionBorrador(comp);
   refrescarBannerComparacion();
   alert(`Agregada como opción ${comp.opciones.length} de la comparación ${comp.ot}.`);
 }
@@ -946,7 +1181,7 @@ function cancelarComparacion(){
   const comp = comparacionActiva();
   if(!comp) return;
   if(!confirm(`¿Cancelar la comparación ${comp.ot} en curso? Se perderán las ${comp.opciones.length} opción(es) agregadas.`)) return;
-  localStorage.removeItem('tactical_comparacion_activa');
+  window.tacticalComparacionBorradorCache = null; tacticalEliminarComparacionBorrador();
   refrescarBannerComparacion();
 }
 function generarPDFComparativo(){
@@ -991,17 +1226,17 @@ function generarPDFComparativo(){
   tacticalImprimirConTitulo(`${cli.empresa||'Cliente'} - ${comp.ot} - Comparativa`);
 
   const montoRef = Math.min(...comp.opciones.map(o=>o.resultado.precioFinalTotal));
-  const opp = { id: Date.now().toString()+'_opp', ot: comp.ot, idCli: comp.idCli, nombreCli: comp.nombreCli, desc: `Comparativa: ${comp.opciones.map(o=>o.titulo).join(' vs ')}`, monto: Math.round(montoRef), etapa: 'cot', linea: 'cubo_rubik', cantidad: comp.opciones[0].params.cantidad, vendedor: comp.vendedor, opcionesComparativa: comp.opciones };
+  const opp = { id: crypto.randomUUID(), ot: comp.ot, idCli: comp.idCli, nombreCli: comp.nombreCli, desc: `Comparativa: ${comp.opciones.map(o=>o.titulo).join(' vs ')}`, monto: Math.round(montoRef), etapa: 'cot', linea: 'cubo_rubik', cantidad: comp.opciones[0].params.cantidad, vendedor: comp.vendedor, opcionesComparativa: comp.opciones };
   db_opps.push(opp);
-  localStorage.setItem('tactical_crm_opps_v2', JSON.stringify(db_opps));
-  localStorage.removeItem('tactical_comparacion_activa');
+  tacticalSyncOpps(db_opps);
+  window.tacticalComparacionBorradorCache = null; tacticalEliminarComparacionBorrador();
   refrescarBannerComparacion();
 }
 function cancelarPedido(){
   const pd = pedidoActivo();
   if(!pd) return;
   if(!confirm(`¿Cancelar el pedido ${pd.ot} en curso? Se perderán las ${pd.lineas.length} línea(s) agregadas (no borra cotizaciones individuales ya guardadas aparte).`)) return;
-  localStorage.removeItem('tactical_pedido_activo');
+  window.tacticalPedidoBorradorCache = null; tacticalEliminarPedidoBorrador();
   refrescarBannerPedido();
 }
 

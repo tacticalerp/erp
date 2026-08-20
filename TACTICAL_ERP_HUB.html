@@ -506,7 +506,29 @@
                     </div>
                 </div>
 
-                <button class="cron-simulator" onclick="simulateMidnight()">⏳ Simular Fin del Día (11:59 PM)</button>
+                <div class="accordion-item">
+                    <div class="accordion-header header-special" id="head-personal" onclick="toggleSection('personal'); renderPersonal();">
+                        <span>👥 Gestionar Personal</span><span class="arrow" id="arrow-personal">►</span>
+                    </div>
+                    <div id="personal" class="accordion-content">
+                        <h3 style="margin-top:0; color: var(--dark);">Personal disponible para asignar tareas y reprocesos</h3>
+                        <p style="font-size:0.85rem; color:#718096; margin-top:-8px;">Marca en qué áreas puede recibir tareas cada persona. Este mismo listado alimenta el selector "Responsable del Error" de Control de Reprocesos.</p>
+                        <div class="table-responsive">
+                            <table id="table-personal">
+                                <thead><tr><th>Nombre</th><th>Diseño</th><th>Producción</th><th>Comercial</th><th>Gerencia</th><th></th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-top:12px;">
+                            <div class="form-group" style="flex:1 1 200px; margin-bottom:0;">
+                                <label>Nombre de la persona nueva:</label>
+                                <input type="text" id="personal-nombre-nuevo" placeholder="Ej: Camila" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e0; border-radius:4px;">
+                            </div>
+                            <button class="btn-add" style="width:auto; padding:10px 16px;" onclick="personalAgregar()">+ Añadir Persona</button>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -529,14 +551,7 @@
                     <div style="display: flex; gap: 15px; flex-wrap: wrap;">
                         <div class="form-group" style="flex: 1; min-width: 140px;">
                             <label>Responsable del Error:</label>
-                            <select id="sel-responsable">
-                                <option value="Nicol">Nicol</option>
-                                <option value="Helver">Helver</option>
-                                <option value="Norely">Norely</option>
-                                <option value="Sebastian">Sebastian</option>
-                                <option value="Susana">Susana</option>
-                                <option value="Yasmid">Yasmid</option>
-                            </select>
+                            <select id="sel-responsable"></select>
                         </div>
                         <div class="form-group" style="flex: 1; min-width: 140px;">
                             <label>Proveedor Asociado al Insumo:</label>
@@ -701,6 +716,12 @@
                             <label style="font-weight:bold; color:#553c9a; display:block; margin-bottom:8px;">🆚 Esta es una cotización comparativa — ¿cuál opción eligió el cliente?</label>
                             <div id="lista-opciones-eleccion" style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;"></div>
                             <input type="hidden" id="opp-id-eleccion">
+                        </div>
+
+                        <div id="modal-fecha-ganado" style="display:none; background:#f0fff4; border:1px solid #9ae6b4; padding:15px; border-radius:6px; margin-top:10px;">
+                            <label style="font-weight:bold; color:#276749; display:block; margin-bottom:8px;">📅 ¿Para qué fecha se compromete la entrega? (queda como fecha de entrega en el Kanban)</label>
+                            <input type="date" id="ganado-fecha-entrega" style="margin-bottom:10px;">
+                            <div><button class="btn-submit" style="width:auto; background:var(--ganado);" onclick="confirmarFechaYGanado()">✅ Confirmar y crear ficha en Kanban</button></div>
                         </div>
 
                         <div id="modal-perdida">
@@ -909,7 +930,7 @@
                                     <option value="libretas">Libretas</option>
                                 </select>
                             </div>
-                            <div class="form-group"><label>Cantidad (unidades):</label><input type="number" id="cot-cantidad" value="100" min="1"></div>
+                            <div class="form-group"><label>Cantidad (unidades):</label><input type="text" inputmode="numeric" id="cot-cantidad" value="100" oninput="tacticalFormatearMiles(this)"></div>
                             <div class="form-group"><label>Ancho (cm):</label><input type="number" id="cot-anchoCm" value="24" step="0.1"></div>
                             <div class="form-group"><label>Alto (cm):</label><input type="number" id="cot-altoCm" value="17" step="0.1"></div>
                             <div class="form-group">
@@ -1341,7 +1362,7 @@
                                 </select>
                             </div>
                             <div class="form-group"><label>Descripción:</label><input type="text" id="kb-descripcion" placeholder="Ej: Corte láser 50 llaveros MDF"></div>
-                            <div class="form-group"><label>Cantidad:</label><input type="number" id="kb-cantidad" value="1" min="1"></div>
+                            <div class="form-group"><label>Cantidad:</label><input type="text" inputmode="numeric" id="kb-cantidad" value="1" oninput="tacticalFormatearMiles(this)"></div>
                             <div class="form-group"><label>Fecha de entrega (opcional):</label><input type="date" id="kb-fechaEntrega"></div>
                         </div>
                         <div style="display:flex; gap:10px;">
@@ -1421,24 +1442,43 @@
     <script src="precios_promocionales.js"></script>
     <script>
         // NAVEGACIÓN SPA DEL HUB
-        let contAutenticado = false;
-        const CONT_PASSWORD = 'JHVHa10.@';
-        function contVerificarAcceso(){
-            if(contAutenticado) return true;
-            const intento = prompt('🔒 Módulo Contabilidad protegido.\nIngrese la contraseña de acceso:');
-            if(intento === CONT_PASSWORD){ contAutenticado = true; return true; }
-            if(intento !== null) alert('Contraseña incorrecta.');
+        // Conde 2026-08-20: antes estas 4 vistas se protegían con 2 contraseñas fijas escritas en
+        // texto plano en este archivo (CONT_PASSWORD/MOD_PASSWORD) -- cualquiera que abriera el
+        // código fuente de la página podía leerlas. Ahora se usa el ROL real del usuario ya
+        // logueado en Supabase (window.tacticalUsuarioPerfil, ver tactical-supabase.js) -- no hay
+        // ninguna clave que "adivinar" en el código, el control es quién inició sesión de verdad.
+        // Matriz de permisos por rol dada por Conde 2026-08-20 (imagen con las 4 áreas comercial/
+        // diseño/producción/contabilidad x 11 módulos -- administrador siempre ve/puede todo, no
+        // aparece como fila en la matriz). Plan de Tareas, Reprocesos y Kanban quedaron "OK" para
+        // los 4 roles en la matriz, por eso no aparecen aquí (sin restricción = todos entran).
+        // "MONTAJES" de la matriz es modulo_montajes_rompecabezas.html, un archivo aparte que no
+        // usa este showView() ni tiene todavía su propio login por rol -- pendiente, no cubierto
+        // por este cambio.
+        const TACTICAL_ROLES_POR_VISTA = {
+            crm: ['administrador', 'comercial', 'contabilidad'],
+            calculadoras: ['administrador', 'comercial'],
+            cotizador: ['administrador', 'comercial'],
+            reportes: ['administrador', 'comercial', 'contabilidad'],
+            contabilidad: ['administrador', 'contabilidad'],
+            precios: ['administrador', 'produccion', 'contabilidad'],
+            fototeca: ['administrador', 'diseno'],
+            botwa: ['administrador', 'comercial'],
+        };
+        function tacticalAccesoPermitido(viewId){
+            const rolesPermitidos = TACTICAL_ROLES_POR_VISTA[viewId];
+            if(!rolesPermitidos) return true; // vista sin restricción de rol
+            const rolActual = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol;
+            if(rolesPermitidos.includes(rolActual)) return true;
+            alert(`No tienes permiso para entrar aquí.\nEsta sección es solo para: ${rolesPermitidos.join(', ')}.`);
             return false;
         }
-
-        let modAutenticado = false;
-        const MOD_PASSWORD = '1984';
-        const MOD_VISTAS_PROTEGIDAS = ['reportes', 'cotizador', 'crm', 'precios'];
-        function modVerificarAcceso(){
-            if(modAutenticado) return true;
-            const intento = prompt('🔒 Módulo protegido.\nIngrese la clave de acceso:');
-            if(intento === MOD_PASSWORD){ modAutenticado = true; return true; }
-            if(intento !== null) alert('Clave incorrecta.');
+        // Conde 2026-08-20: dentro de Precios y de Gestionar Personal, VER está permitido a varios
+        // roles (según la matriz de arriba), pero MODIFICAR (guardar precios, agregar/eliminar
+        // papeles o acabados, crear/borrar personas) es solo para administrador.
+        function tacticalRequiereAdministrador(){
+            const rolActual = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol;
+            if(rolActual === 'administrador') return true;
+            alert('Solo el administrador puede hacer esto.');
             return false;
         }
 
@@ -1448,28 +1488,38 @@
            puente: sirve como respaldo manual hoy, y como fuente para migrar los datos cuando
            haya un backend real. */
         const TACTICAL_BACKUP_KEYS = [
-            'tactical_date', 'tactical_db_historico', 'tactical_active_tasks',
-            'tactical_db_reprocesos_v4',
+            // 'tactical_date', 'tactical_db_historico' y 'tactical_active_tasks' se quitaron de
+            // aquí 2026-08-19 -- Plan de Tareas ya vive en Supabase (tabla tareas), con fecha real
+            // automática en vez del reloj simulado.
+            // 'tactical_db_reprocesos_v4' se quitó de aquí 2026-08-19 -- Reprocesos ya vive en
+            // Supabase (tablas reprocesos/reprocesos_items).
             // 'tactical_crm_clientes_v2' se quitó de aquí 2026-08-18 -- Clientes ya vive en
             // Supabase (tabla clientes), no en localStorage. El respaldo de Clientes ahora
             // se hace desde el propio panel de Supabase (Table Editor -> Export), no desde
             // este botón.
-            // Oportunidades/Historial: el Hub YA guarda en Supabase (tablas opps/historial_cierres),
-            // pero estas 2 claves se dejan en el respaldo TODAVÍA porque las 8 calculadoras
-            // standalone (Bolsas, Cajas, etc.) siguen escribiendo aquí hasta que también se migren
-            // -- se quitan de esta lista cuando esa segunda tanda esté lista.
+            // Oportunidades/Historial: el Hub YA guarda en Supabase (tablas opps/historial_cierres).
+            // Las 8 calculadoras standalone también se migraron 2026-08-19 -- lo único que sigue
+            // escribiendo estas 2 claves es modulo_montajes_rompecabezas.html (B2C), que todavía no
+            // se migra -- se quitan de esta lista cuando ese módulo también pase a Supabase.
             'tactical_crm_opps_v2', 'tactical_crm_historial_v2',
-            'tactical_cotizaciones_v1',
-            'tactical_docventa_v1', 'tactical_ingresos_v1', 'tactical_cxp_v1', 'tactical_egresos_v1',
-            'tactical_gastos_fijos_config_v1', 'tactical_proveedores_v1',
-            'tactical_fv_counter', 'tactical_cc_counter', 'tactical_ingreso_counter', 'tactical_cxp_counter', 'tactical_egreso_counter',
+            // 'tactical_cotizaciones_v1' se quitó de aquí 2026-08-19 -- Cotizaciones Cuadernos
+            // ya vive en Supabase (tabla cotizaciones_cuadernos), no en localStorage.
+            // Contabilidad (proveedores/docventa/ingresos/cxp/egresos/gastos fijos + contadores
+            // fv/cc/ingreso/cxp/egreso) se quitó de aquí 2026-08-19 -- ya vive en Supabase.
             // Kanban: el Hub ya guarda en Supabase, pero se deja esta clave en el respaldo porque
             // modulo_montajes_rompecabezas.html (B2C) todavía escribe fichas nuevas aquí directo.
-            'tactical_kanban_fichas_v1', 'tactical_pedido_activo', 'tactical_comparacion_activa',
-            'tactical_precios_override_v1', 'tactical_precios_override_meta_v1', 'tactical_fototeca_v1',
+            'tactical_kanban_fichas_v1',
+            // 'tactical_pedido_activo' y 'tactical_comparacion_activa' se quitaron de aquí
+            // 2026-08-19 -- ahora son por usuario en Supabase (pedidos_borrador/comparaciones_borrador).
+            // Estas 2 SÍ siguen viviendo en localStorage a propósito (ver nota en tactical-supabase.js):
+            // son la fuente síncrona que lee precios_tactical.js al cargar la página -- Supabase solo
+            // las mantiene sincronizadas entre dispositivos, no las reemplaza.
+            'tactical_precios_override_v1', 'tactical_precios_override_meta_v1',
             // Agregadas 2026-08-18 -- faltaban en el respaldo aunque sí son datos reales de negocio
             // (auditoría pre-nube encontró que un respaldo hecho hoy las perdería):
-            'tactical_precios_promo_override_v1', 'tactical_fototeca_videos_v1', 'tactical_fototeca_custom_v1',
+            'tactical_precios_promo_override_v1',
+            // 'tactical_fototeca_v1', 'tactical_fototeca_videos_v1' y 'tactical_fototeca_custom_v1' se
+            // quitaron de aquí 2026-08-19 -- Fototeca ya vive en Supabase (tabla fototeca_items).
             'tactical_ventas_b2c_rompecabezas_v1', 'tactical_carrito_rompecabezas',
         ];
 
@@ -1520,8 +1570,7 @@
         window.addEventListener('hashchange', irAVistaDesdeHash);
 
         function showView(viewId) {
-            if(viewId === 'contabilidad' && !contVerificarAcceso()) return;
-            if(MOD_VISTAS_PROTEGIDAS.includes(viewId) && !modVerificarAcceso()) return;
+            if(!tacticalAccesoPermitido(viewId)) return;
             document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active-view'));
             document.getElementById('view-' + viewId).classList.add('active-view');
 
@@ -1597,21 +1646,75 @@
         // ==========================================
         // MÓDULO 1: PLAN DE TAREAS
         // ==========================================
-        let currentDate = localStorage.getItem('tactical_date') ? new Date(localStorage.getItem('tactical_date')) : new Date(2026, 6, 15);
-        let db_historico = JSON.parse(localStorage.getItem('tactical_db_historico')) || [];
-        let activeTasks = JSON.parse(localStorage.getItem('tactical_active_tasks')) || [
-            { area: 'diseno', desc: 'Aprobación de arte: Cuadernos Cliente Especial', espec: '', emp: 'Nicol', status: 'externo', origin: 'Desde hace 2 semanas', delay: 14, aclaracion: 'El cliente no responde llamadas ni aprueba el boceto' },
-            { area: 'produccion', desc: 'Plastificado Caratulas Rubinus', espec: '', emp: 'Sebastian', status: 'pendiente', origin: 'Hoy', delay: 0, aclaracion: '' },
-            { area: 'produccion', desc: 'Plastificado insertos Rubinus', espec: '', emp: 'Sebastian', status: 'pendiente', origin: 'Hoy', delay: 0, aclaracion: '' },
-            { area: 'produccion', desc: 'corte rompecabezas personalizados', espec: '', emp: 'Sebastian', status: 'pendiente', origin: 'Hoy', delay: 0, aclaracion: '' }
-        ];
+        // Conde 2026-08-19: se quitó el reloj simulado (antes había que apretar
+        // "Simular Fin del Día" para que las tareas envejecieran) -- ahora el
+        // retraso se calcula solo, comparando la fecha real de hoy contra la
+        // fecha real en que la tarea quedó pendiente (tareaDiasRetraso). Las
+        // tareas se guardan una por una en Supabase (no todo el tablero junto)
+        // para que 2 personas puedan editar tareas distintas al mismo tiempo
+        // sin que el guardado de una le borre el cambio a la otra.
+        let db_historico = [];
+        function tareaDiasRetraso(fechaOrigenIso){
+            const origen = new Date(fechaOrigenIso); origen.setHours(0,0,0,0);
+            const hoy = new Date(); hoy.setHours(0,0,0,0);
+            return Math.max(0, Math.round((hoy - origen) / 86400000));
+        }
+        function tareaOrigenTexto(fechaOrigenIso){
+            const dias = tareaDiasRetraso(fechaOrigenIso);
+            return dias <= 0 ? 'Hoy' : `Desde ${new Date(fechaOrigenIso).toLocaleDateString('es-CO', {day:'numeric', month:'long'})}`;
+        }
 
-        const employees = {
-            'diseno': ['Nicol', 'Helver'],
-            'produccion': ['Sebastian', 'Susana', 'Helver'],
-            'comercial': ['Norely', 'Helver', 'Yasmid'],
-            'gerencia': ['Helver', 'Norely', 'Yasmid']
-        };
+        // Personal editable desde "Plan de Tareas -> Gestionar Personal" (Conde 2026-08-19) --
+        // reemplaza la lista fija que antes estaba escrita aquí a mano.
+        let db_personal = [];
+        const PERSONAL_AREAS = [{clave:'diseno', label:'Diseño'}, {clave:'produccion', label:'Producción'}, {clave:'comercial', label:'Comercial'}, {clave:'gerencia', label:'Gerencia'}];
+        function empleadosPorArea(area){ return db_personal.filter(p => (p.areas||[]).includes(area)).map(p => p.nombre); }
+        function nombresTodoPersonal(){ return db_personal.map(p => p.nombre); }
+        function renderPersonal(){
+            const tbody = document.querySelector('#table-personal tbody');
+            if(!tbody) return;
+            tbody.innerHTML = db_personal.map(p => `
+                <tr>
+                    <td>${p.nombre}</td>
+                    ${PERSONAL_AREAS.map(a => `<td style="text-align:center;"><input type="checkbox" ${(p.areas||[]).includes(a.clave)?'checked':''} onchange="personalToggleArea('${p.id}','${a.clave}',this.checked)"></td>`).join('')}
+                    <td style="text-align:center;"><button class="btn-action btn-del-row" onclick="personalEliminar('${p.id}')" title="Eliminar">🗑️</button></td>
+                </tr>`).join('') || '<tr><td colspan="6" style="text-align:center; color:#a0aec0; font-style:italic;">Sin personal registrado.</td></tr>';
+        }
+        function personalAgregar(){
+            if(!tacticalRequiereAdministrador()) return;
+            const input = document.getElementById('personal-nombre-nuevo');
+            const nombre = input.value.trim();
+            if(!nombre){ alert('Escribe el nombre de la persona.'); return; }
+            const p = { id: crypto.randomUUID(), nombre, areas: [], orden: db_personal.length };
+            db_personal.push(p);
+            tacticalSyncPersonal(p);
+            input.value = '';
+            renderPersonal();
+        }
+        function personalToggleArea(id, area, marcado){
+            const p = db_personal.find(x => x.id === id);
+            if(!p) return;
+            p.areas = p.areas || [];
+            if(marcado && !p.areas.includes(area)) p.areas.push(area);
+            else if(!marcado) p.areas = p.areas.filter(a => a !== area);
+            tacticalSyncPersonal(p);
+        }
+        function personalEliminar(id){
+            if(!tacticalRequiereAdministrador()) return;
+            const p = db_personal.find(x => x.id === id);
+            if(!confirm(`¿Eliminar a "${p?p.nombre:''}" de la lista de personal? Ya no aparecerá para asignar tareas nuevas ni como responsable de reprocesos (las tareas/incidentes ya guardados no se tocan).`)) return;
+            tacticalEliminarPersonalRemoto(id);
+            db_personal = db_personal.filter(x => x.id !== id);
+            renderPersonal();
+            poblarSelectResponsableReproceso();
+        }
+        function poblarSelectResponsableReproceso(){
+            const sel = document.getElementById('sel-responsable');
+            if(!sel) return;
+            const actual = sel.value;
+            sel.innerHTML = nombresTodoPersonal().map(n => `<option value="${n}">${n}</option>`).join('');
+            if(actual && nombresTodoPersonal().includes(actual)) sel.value = actual;
+        }
 
         function toggleSection(sectionId) {
             const content = document.getElementById(sectionId);
@@ -1622,53 +1725,73 @@
             } else {
                 content.classList.add('active'); header.classList.add('active'); arrow.innerText = '▼';
             }
-            saveStateToLocalStorage();
         }
 
         function formatDate(date) { return date.toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }); }
 
-        function saveStateToLocalStorage() {
-            localStorage.setItem('tactical_date', currentDate.toISOString());
-            localStorage.setItem('tactical_db_historico', JSON.stringify(db_historico));
-
-            let currentActive = [];
-            ['diseno', 'produccion', 'comercial', 'gerencia'].forEach(area => {
-                const rows = document.querySelectorAll(`#table-${area} tbody tr`);
-                rows.forEach(row => {
-                    const desc = row.querySelector('.task-desc').value;
-                    const espec = row.querySelector('.task-espec').value;
-                    const emp = taskLeerResponsables(row);
-                    const status = row.querySelector('.status-select').value;
-                    const aclaracion = row.querySelector('.input-aclaracion').value;
-                    const origin = row.querySelector('.task-origin').innerText;
-                    let delayText = row.querySelector('.badge-delay') ? row.querySelector('.badge-delay').innerText : '';
-                    let delay = delayText ? parseInt(delayText.replace(/[^0-9]/g, '')) : 0;
-                    if(desc.trim() !== '') currentActive.push({ area, desc, espec, emp, status, origin, delay, aclaracion });
-                });
+        // Guarda SOLO la fila que cambió (no todo el tablero) -- así el guardado
+        // de una persona no le borra un cambio recién hecho por otra en otra fila.
+        function guardarFila(tr){
+            if(!tr || !tr.dataset.id) return;
+            const area = tr.closest('table').id.replace('table-','');
+            const desc = tr.querySelector('.task-desc').value;
+            if(desc.trim() === '') return; // fila todavía vacía, nada que guardar
+            const espec = tr.querySelector('.task-espec').value;
+            const emp = taskLeerResponsables(tr);
+            const status = tr.querySelector('.status-select').value;
+            const aclaracion = tr.querySelector('.input-aclaracion').value;
+            tacticalSyncTarea({
+                id: tr.dataset.id, area, desc, espec, emp, status, aclaracion,
+                fechaOrigen: tr.dataset.fechaOrigen, orden: parseFloat(tr.dataset.orden),
             });
-            localStorage.setItem('tactical_active_tasks', JSON.stringify(currentActive));
         }
 
-        function addTask(area, desc = '', espec = '', assigned = '', status = 'pendiente', originDate = null, daysDelayed = 0, aclaracion = '') {
+        // Conde 2026-08-19: en cuanto una tarea queda Lista/Finalizada, se archiva
+        // sola al Histórico -- ya no hace falta el botón de "fin del día" para
+        // que las tareas terminadas pasen al registro.
+        function archivarTarea(tr, status){
+            const area = tr.closest('table').id.replace('table-','');
+            const desc = tr.querySelector('.task-desc').value;
+            if(desc.trim() === ''){ tr.remove(); return; }
+            const espec = tr.querySelector('.task-espec').value;
+            const emp = taskLeerResponsables(tr);
+            const aclaracion = tr.querySelector('.input-aclaracion').value;
+            const fechaOrigen = tr.dataset.fechaOrigen;
+            tacticalSyncTarea({
+                id: tr.dataset.id, area, desc, espec, emp, status, aclaracion, fechaOrigen,
+                orden: parseFloat(tr.dataset.orden),
+                cerrada: true, fechaCierre: new Date().toISOString(), delayCerrado: tareaDiasRetraso(fechaOrigen),
+            });
+            db_historico.push({ id: tr.dataset.id, area, desc, espec, emp, status, aclaracion, fechaCierre: new Date().toISOString(), delay: tareaDiasRetraso(fechaOrigen) });
+            tr.remove();
+            if(document.getElementById('historico') && document.getElementById('historico').classList.contains('active')) renderHistory();
+            if(document.getElementById('kpis') && document.getElementById('kpis').classList.contains('active')) renderKPIs();
+        }
+
+        function addTask(area, desc = '', espec = '', assigned = '', status = 'pendiente', id = null, fechaOrigen = null, orden = null, aclaracion = '') {
             const tbody = document.querySelector(`#table-${area} tbody`);
             const tr = document.createElement('tr');
-            const dateStr = originDate ? originDate : 'Hoy';
+            tr.dataset.id = id || crypto.randomUUID();
+            tr.dataset.fechaOrigen = fechaOrigen || new Date().toISOString();
+            tr.dataset.orden = orden != null ? orden : Date.now();
+            const dateStr = tareaOrigenTexto(tr.dataset.fechaOrigen);
+            const diasRetraso = tareaDiasRetraso(tr.dataset.fechaOrigen);
 
             // "assigned" acepta tanto el formato viejo (un solo nombre en string, tareas guardadas
             // antes de este cambio) como el nuevo (array de nombres) -- se normaliza a array siempre.
             const assignedList = Array.isArray(assigned) ? assigned.filter(Boolean) : (assigned ? [assigned] : []);
 
-            let delayBadge = daysDelayed > 0 ? `<div class="badge-delay">⚠️ Retraso: ${daysDelayed} día(s)</div><br>` : '';
-            let displayAclaracion = (daysDelayed > 0 || status === 'externo') ? 'block' : 'none';
+            let delayBadge = diasRetraso > 0 ? `<div class="badge-delay">⚠️ Retraso: ${diasRetraso} día(s)</div><br>` : '';
+            let displayAclaracion = (diasRetraso > 0 || status === 'externo') ? 'block' : 'none';
             let inputPlaceholder = area === 'diseno' ? 'Cant. y tipo de impresión...' : (area === 'produccion' ? 'Dirección proveedor...' : 'Notas...');
 
             tr.innerHTML = `
                 <td>
                     ${delayBadge}
-                    <input type="text" style="width:95%; font-weight:bold;" placeholder="Escriba la tarea..." value="${desc}" class="task-desc" onchange="saveStateToLocalStorage()">
-                    <input type="text" class="input-aclaracion" style="display: ${displayAclaracion};" placeholder="💡 Motivo del retraso externo..." value="${aclaracion}" onchange="saveStateToLocalStorage()">
+                    <input type="text" style="width:95%; font-weight:bold;" placeholder="Escriba la tarea..." value="${desc}" class="task-desc" onchange="guardarFila(this.closest('tr'))">
+                    <input type="text" class="input-aclaracion" style="display: ${displayAclaracion};" placeholder="💡 Motivo del retraso externo..." value="${aclaracion}" onchange="guardarFila(this.closest('tr'))">
                 </td>
-                <td><input type="text" class="task-espec" placeholder="${inputPlaceholder}" value="${espec}" onchange="saveStateToLocalStorage()"></td>
+                <td><input type="text" class="task-espec" placeholder="${inputPlaceholder}" value="${espec}" onchange="guardarFila(this.closest('tr'))"></td>
                 <td>
                     <div class="task-emp-list" data-emp='${JSON.stringify(assignedList)}'></div>
                     <select class="task-emp-add" onchange="taskAgregarResponsable(this)"></select>
@@ -1697,8 +1820,8 @@
             const tr = btn.closest('tr');
             const desc = tr.querySelector('.task-desc').value.trim();
             if(!confirm(`¿Eliminar esta tarea${desc ? ' ("'+desc+'")' : ''}?\n\nEsta acción no se puede deshacer.`)) return;
+            if(desc.trim() !== '') tacticalEliminarTareaRemoto(tr.dataset.id);
             tr.remove();
-            saveStateToLocalStorage();
         }
 
         // Varias personas por tarea: la lista asignada vive en data-emp (JSON) del contenedor de
@@ -1710,7 +1833,7 @@
             container.innerHTML = list.map(n => `<span class="emp-chip">${n}<button type="button" onclick="taskQuitarResponsable(this)" title="Quitar a ${n} de esta tarea">×</button></span>`).join('')
                 || '<span style="font-size:11.5px; color:#a0aec0;">Sin asignar</span>';
             const select = container.nextElementSibling;
-            const disponibles = (employees[area]||[]).filter(e => !list.includes(e));
+            const disponibles = empleadosPorArea(area).filter(e => !list.includes(e));
             select.innerHTML = '<option value="">+ Agregar responsable</option>' + disponibles.map(e=>`<option value="${e}">${e}</option>`).join('');
         }
         function taskAgregarResponsable(select){
@@ -1723,7 +1846,7 @@
             if(!list.includes(select.value)) list.push(select.value);
             container.dataset.emp = JSON.stringify(list);
             taskRenderChips(container, area);
-            saveStateToLocalStorage();
+            guardarFila(tr);
         }
         function taskQuitarResponsable(btn){
             const container = btn.closest('.task-emp-list');
@@ -1735,7 +1858,7 @@
             list = list.filter(n => n !== nombre);
             container.dataset.emp = JSON.stringify(list);
             taskRenderChips(container, area);
-            saveStateToLocalStorage();
+            guardarFila(tr);
         }
         function taskLeerResponsables(tr){
             const container = tr.querySelector('.task-emp-list');
@@ -1746,16 +1869,23 @@
         function taskEmpComoTexto(emp){ return Array.isArray(emp) ? emp.join(', ') : (emp || ''); }
         function taskEmpIncluye(emp, nombre){ return Array.isArray(emp) ? emp.includes(nombre) : emp === nombre; }
 
+        function intercambiarOrden(rowA, rowB){
+            const ordenA = rowA.dataset.orden;
+            rowA.dataset.orden = rowB.dataset.orden;
+            rowB.dataset.orden = ordenA;
+            guardarFila(rowA); guardarFila(rowB);
+        }
+
         function moveRowUp(button) {
             const row = button.closest('tr');
             const previousRow = row.previousElementSibling;
-            if (previousRow) { row.parentNode.insertBefore(row, previousRow); saveStateToLocalStorage(); }
+            if (previousRow) { row.parentNode.insertBefore(row, previousRow); intercambiarOrden(row, previousRow); }
         }
 
         function moveRowDown(button) {
             const row = button.closest('tr');
             const nextRow = row.nextElementSibling;
-            if (nextRow) { row.parentNode.insertBefore(nextRow, row); saveStateToLocalStorage(); }
+            if (nextRow) { row.parentNode.insertBefore(nextRow, row); intercambiarOrden(row, nextRow); }
         }
 
         function evaluarEstadoFila(selectElement) {
@@ -1764,51 +1894,11 @@
             const aclInput = tr.querySelector('.input-aclaracion');
             if (selectElement.value === 'externo') aclInput.style.display = 'block';
             else if (!tr.querySelector('.badge-delay')) aclInput.style.display = 'none';
-            saveStateToLocalStorage();
-        }
-
-        function simulateMidnight() {
-            const allAreas = ['diseno', 'produccion', 'comercial', 'gerencia'];
-            let nextDayTasks = [];
-
-            allAreas.forEach(area => {
-                const rows = document.querySelectorAll(`#table-${area} tbody tr`);
-                rows.forEach(row => {
-                    const desc = row.querySelector('.task-desc').value;
-                    const espec = row.querySelector('.task-espec').value;
-                    const emp = taskLeerResponsables(row);
-                    const status = row.querySelector('.status-select').value;
-                    const aclaracion = row.querySelector('.input-aclaracion').value;
-                    let origin = row.querySelector('.task-origin').innerText;
-
-                    if (desc.trim() !== '') {
-                        let delayText = row.querySelector('.badge-delay') ? row.querySelector('.badge-delay').innerText : '';
-                        let currentDelay = delayText ? parseInt(delayText.replace(/[^0-9]/g, '')) : 0;
-
-                        if (origin.startsWith('Desde')) { /* Ignorar */ }
-                        else if (origin === 'Hoy') { origin = "Desde " + formatDate(currentDate).split(',')[0]; }
-
-                        if (status === 'pendiente' || status === 'proceso') {
-                            nextDayTasks.push({ area, desc, espec, emp, status, origin, delay: currentDelay + 1, aclaracion });
-                        } else {
-                            db_historico.push({
-                                closeDate: formatDate(currentDate), desc, espec, emp, status, origin, delay: currentDelay, area,
-                                aclaracion: status === 'externo' ? (aclaracion || 'No especificada') : aclaracion
-                            });
-                        }
-                    }
-                });
-                document.querySelector(`#table-${area} tbody`).innerHTML = '';
-            });
-
-            currentDate.setDate(currentDate.getDate() + 1);
-            const elFechaMidnight = document.getElementById('display-fecha');
-            if (elFechaMidnight) elFechaMidnight.innerText = formatDate(currentDate);
-
-            nextDayTasks.forEach(task => addTask(task.area, task.desc, task.espec, task.emp, task.status, task.origin, task.delay, task.aclaracion));
-            saveStateToLocalStorage();
-            if(document.getElementById('historico').classList.contains('active')) renderHistory();
-            if(document.getElementById('kpis').classList.contains('active')) renderKPIs();
+            if(selectElement.value === 'listo' || selectElement.value === 'finalizado'){
+                archivarTarea(tr, selectElement.value);
+            } else {
+                guardarFila(tr);
+            }
         }
 
         function renderHistory() {
@@ -1817,10 +1907,10 @@
             const keyword = document.getElementById('search-keyword').value.toLowerCase();
             const dateSearch = document.getElementById('search-date').value.toLowerCase();
 
-            let mappedHistory = db_historico.map((task, originalIndex) => ({ ...task, originalIndex }));
+            let mappedHistory = db_historico.map(task => ({ ...task, closeDateTxt: task.fechaCierre ? formatDate(new Date(task.fechaCierre)) : '-' }));
             let filteredHistory = mappedHistory.filter(task => {
                 const matchKeyword = !keyword || task.desc.toLowerCase().includes(keyword) || (task.espec && task.espec.toLowerCase().includes(keyword)) || taskEmpComoTexto(task.emp).toLowerCase().includes(keyword) || (task.aclaracion && task.aclaracion.toLowerCase().includes(keyword));
-                const matchDate = !dateSearch || task.closeDate.toLowerCase().includes(dateSearch);
+                const matchDate = !dateSearch || task.closeDateTxt.toLowerCase().includes(dateSearch);
                 return matchKeyword && matchDate;
             });
 
@@ -1829,24 +1919,30 @@
                 let textTarea = `<strong>${task.desc}</strong>` + (task.aclaracion ? `<br><span style="color:var(--externo); font-size:0.85rem; font-style:italic;">💡 Nota: ${task.aclaracion}</span>` : '');
                 let textEstado = task.status === 'externo' ? '⚠️ Bloqueo Ext.' : (task.status === 'listo' ? '✅ Listo' : '🏁 Finalizado');
                 let textEspec = task.espec ? task.espec : '---';
-                tbody.innerHTML += `<tr><td>${task.closeDate}</td><td>${textTarea}</td><td><em>${textEspec}</em></td><td>${taskEmpComoTexto(task.emp)}</td><td>${textEstado}</td><td>${logResultado}</td><td><button onclick="reabrirTarea(${task.originalIndex})" style="padding:6px 12px; cursor: pointer;">↩️ Reabrir</button></td></tr>`;
+                tbody.innerHTML += `<tr><td>${task.closeDateTxt}</td><td>${textTarea}</td><td><em>${textEspec}</em></td><td>${taskEmpComoTexto(task.emp)}</td><td>${textEstado}</td><td>${logResultado}</td><td><button onclick="reabrirTarea('${task.id}')" style="padding:6px 12px; cursor: pointer;">↩️ Reabrir</button></td></tr>`;
             });
             if(filteredHistory.length === 0) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#cbd5e0; font-style:italic;">No hay registros.</td></tr>';
         }
 
         function clearSearch() { document.getElementById('search-keyword').value = ''; document.getElementById('search-date').value = ''; renderHistory(); }
 
-        function reabrirTarea(realIndex) {
-            let t = db_historico[realIndex];
-            addTask(t.area, t.desc, t.espec, t.emp, 'proceso', t.origin, t.delay, t.aclaracion);
-            db_historico.splice(realIndex, 1);
-            saveStateToLocalStorage(); renderHistory(); toggleSection(t.area);
+        function reabrirTarea(id) {
+            let t = db_historico.find(x => x.id === id);
+            if(!t) return;
+            const fechaOrigenNueva = new Date().toISOString();
+            addTask(t.area, t.desc, t.espec, t.emp, 'proceso', t.id, fechaOrigenNueva, Date.now(), t.aclaracion);
+            tacticalSyncTarea({
+                id: t.id, area: t.area, desc: t.desc, espec: t.espec, emp: t.emp, status: 'proceso', aclaracion: t.aclaracion,
+                fechaOrigen: fechaOrigenNueva, orden: Date.now(), cerrada: false, fechaCierre: null, delayCerrado: null,
+            });
+            db_historico = db_historico.filter(x => x.id !== id);
+            renderHistory(); toggleSection(t.area);
         }
 
         function renderKPIs() {
             const container = document.getElementById('kpi-container');
             container.innerHTML = '';
-            ['Norely', 'Helver', 'Nicol', 'Sebastian', 'Susana', 'Yasmid'].forEach(emp => {
+            nombresTodoPersonal().forEach(emp => {
                 let empTasks = db_historico.filter(t => taskEmpIncluye(t.emp, emp));
                 let totalHistorico = empTasks.length;
                 let evaluables = empTasks.filter(t => t.status !== 'externo');
@@ -1903,7 +1999,7 @@
             'MANUAL_PROC': { name: '❌ OTRO PROCESO (Digitar Manual)', cost: 0 }
         };
 
-        let db_reprocesos = JSON.parse(localStorage.getItem('tactical_db_reprocesos_v4')) || [];
+        let db_reprocesos = [];
 
         function actualizarFormularioReceta() {
             const ot = document.getElementById('inp-ot').value.trim();
@@ -2104,14 +2200,25 @@
                 desgloseItems.push({ nameConcepto, cantidad, costoFila, medida, caracteristica });
             });
 
-            db_reprocesos.push({ ot, responsable, proveedor, origen, deteccion, observaciones, costoTotal: costoTotalIncidente, items: desgloseItems });
-            localStorage.setItem('tactical_db_reprocesos_v4', JSON.stringify(db_reprocesos));
+            const incidente = { id: crypto.randomUUID(), ot, responsable, proveedor, origen, deteccion, observaciones, costoTotal: costoTotalIncidente, items: desgloseItems };
+            db_reprocesos.push(incidente);
+            tacticalSyncReproceso(incidente);
 
+            // Conde 2026-08-19: antes solo se limpiaban observaciones/items/proveedor -- la OT y los
+            // demás selects quedaban con el valor del incidente anterior, sin ningún aviso, y no era
+            // obvio que el formulario ya estaba listo para registrar uno nuevo. Ahora se reinicia
+            // completo y se avisa con un mensaje claro.
+            document.getElementById('inp-ot').value = '';
+            document.getElementById('sel-responsable').selectedIndex = 0;
+            document.getElementById('sel-proveedor').value = 'Ninguno';
+            document.getElementById('sel-origen').selectedIndex = 0;
+            document.getElementById('sel-deteccion').selectedIndex = 0;
             document.getElementById('txt-observaciones').value = '';
             document.getElementById('wrapper-detail-rows').innerHTML = '';
-            document.getElementById('sel-proveedor').value = 'Ninguno';
             reprocesoUltimoOTBuscado = null;
-            renderAllReprocesos(); actualizarFormularioReceta();
+            renderAllReprocesos();
+            actualizarFormularioReceta(); // ya deja una fila de insumo en blanco lista para el siguiente incidente
+            alert(`Incidente registrado (pérdida: ${cotFormatoCop(costoTotalIncidente)}). El formulario quedó limpio y listo para registrar otro incidente.`);
         }
 
         function renderAllReprocesos() {
@@ -2121,7 +2228,7 @@
 
             let totalCostoPlanta = 0, countEscape = 0;
             let kpiPersonas = {}, kpiProveedores = {};
-            ['Nicol','Helver','Norely','Sebastian','Susana','Yasmid'].forEach(p => kpiPersonas[p] = 0);
+            nombresTodoPersonal().forEach(p => kpiPersonas[p] = 0);
             ['Ninguno','Cuarto Iván policromía','Cuarto Iván 1 tinta','Medio Alfredo 1 tinta','Medio Alfredo policromía','Cuarto Alfredo','Octavo Alex','Delta Planchas','Belpar','Dispapeles','RyR'].forEach(pr => kpiProveedores[pr] = 0);
 
             let filteredList = db_reprocesos.filter(inc => {
@@ -2130,7 +2237,7 @@
                 return !filterKeyword || matchString.includes(filterKeyword);
             });
 
-            filteredList.reverse().forEach((inc, index) => {
+            filteredList.reverse().forEach((inc) => {
                 totalCostoPlanta += inc.costoTotal;
                 if(inc.deteccion === 'Cliente') countEscape++;
                 if(kpiPersonas[inc.responsable] !== undefined) kpiPersonas[inc.responsable] += inc.costoTotal;
@@ -2154,7 +2261,7 @@
                         <td>${htmlDesglose}</td>
                         <td style="font-weight:bold; color:var(--primary); font-size:1.05rem;">$${inc.costoTotal.toLocaleString()}</td>
                         <td><span style="font-size:0.85rem; font-style:italic;">"${inc.observaciones}"</span></td>
-                        <td><button class="btn-action btn-del-row" onclick="eliminarIncidenteReproceso(${db_reprocesos.length - 1 - index})">🗑️</button></td>
+                        <td><button class="btn-action btn-del-row" onclick="eliminarIncidenteReproceso('${inc.id}')">🗑️</button></td>
                     </tr>
                 `;
             });
@@ -2180,10 +2287,10 @@
             if(filteredList.length === 0) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#cbd5e0; font-style:italic;">No hay incidentes reportados. Planta limpia.</td></tr>';
         }
 
-        function eliminarIncidenteReproceso(index) {
+        function eliminarIncidenteReproceso(id) {
             if(!confirm('¿Eliminar este incidente de reproceso?\n\nEsta acción no se puede deshacer.')) return;
-            db_reprocesos.splice(index, 1);
-            localStorage.setItem('tactical_db_reprocesos_v4', JSON.stringify(db_reprocesos));
+            tacticalEliminarReprocesoRemoto(id);
+            db_reprocesos = db_reprocesos.filter(inc => inc.id !== id);
             renderAllReprocesos();
         }
 
@@ -2209,12 +2316,40 @@
           db_opps = await tacticalOppsCargar();
           db_historial_cierres = await tacticalHistorialCargar();
           db_kanban = await tacticalFichasKanbanCargar();
+          db_cotizaciones = await tacticalCotizacionesCargar();
+          const tareas = await tacticalTareasCargar();
+          db_historico = tareas.historico;
+          tareas.activas.forEach(t => addTask(t.area, t.desc, t.espec, t.emp, t.status, t.id, t.fechaOrigen, t.orden, t.aclaracion));
+          db_proveedores = await tacticalProveedoresCargar();
+          db_docventa = await tacticalDocVentaCargar();
+          db_ingresos = await tacticalIngresosCargar();
+          db_cxp = await tacticalCxpCargar();
+          db_egresos = await tacticalEgresosCargar();
+          db_gastosFijos = await tacticalGastosFijosCargar();
+          db_reprocesos = await tacticalReprocesosCargar();
+          if(document.getElementById('view-reprocesos') && document.getElementById('view-reprocesos').classList.contains('active-view')){
+            renderAllReprocesos();
+          }
+          db_fototeca = await tacticalFototecaCargar();
+          if(document.getElementById('view-fototeca') && document.getElementById('view-fototeca').classList.contains('active-view')){
+            renderFototeca();
+          }
+          db_personal = await tacticalPersonalCargar();
+          poblarSelectResponsableReproceso();
+          if(document.getElementById('personal') && document.getElementById('personal').classList.contains('active')){
+            renderPersonal();
+          }
+          await tacticalPedidoBorradorCargar(); cotRefrescarBannerPedido();
+          await tacticalComparacionBorradorCargar(); cotRefrescarBannerComparacion();
           // Si ya se está viendo CRM/Kanban justo cuando termina de cargar, refresca:
           if(document.getElementById('view-crm') && document.getElementById('view-crm').classList.contains('active-view')){
             renderClientes(); llenarSelectClientes(); renderOportunidades();
           }
           if(typeof renderKanban === 'function' && document.getElementById('view-kanban') && document.getElementById('view-kanban').classList.contains('active-view')){
             renderKanban();
+          }
+          if(document.getElementById('view-contabilidad') && document.getElementById('view-contabilidad').classList.contains('active-view')){
+            renderContabilidad();
           }
         };
 
@@ -2328,7 +2463,7 @@
 
             if(!idCli || !desc) { alert("Debe seleccionar un cliente y escribir la descripción."); return; }
             const cliObj = db_clientes.find(c => c.id === idCli);
-            db_opps.push({ id: crypto.randomUUID(), idCli, nombreCli: `${cliObj.empresa} - ${cliObj.nombre}`, desc, monto, etapa });
+            db_opps.push({ id: crypto.randomUUID(), idCli, nombreCli: `${cliObj.empresa} - ${cliObj.nombre}`, desc, monto, etapa, fecha: new Date().toISOString() });
             tacticalSyncOpps(db_opps);
 
             document.getElementById('opp-desc').value = ''; document.getElementById('opp-monto').value = '0';
@@ -2376,7 +2511,40 @@
                 abrirModalEleccionOpcion(idOpp);
                 return;
             }
-            cerrarNegocio(idOpp, 'ganado');
+            pedirFechaEntregaYGanado(idOpp, null);
+        }
+        // Conde 2026-08-19: al aprobar (marcar Ganado) se pide la fecha de entrega comprometida
+        // con un <input type="date"> (día/mes/año) en vez de un prompt de texto libre, para que
+        // quede directo como fechaEntrega de la ficha nueva del Kanban.
+        let pendienteGanado = null;
+        function pedirFechaEntregaYGanado(idOpp, opcionElegida){
+            pendienteGanado = { idOpp, opcionElegida };
+            document.getElementById('ganado-fecha-entrega').value = '';
+            document.getElementById('modal-fecha-ganado').style.display = 'block';
+            document.getElementById('modal-fecha-ganado').scrollIntoView();
+        }
+        function confirmarFechaYGanado(){
+            if(!pendienteGanado) return;
+            const fecha = document.getElementById('ganado-fecha-entrega').value;
+            if(!fecha){ alert('Elige el día, mes y año de entrega comprometida.'); return; }
+            const { idOpp, opcionElegida } = pendienteGanado;
+            const opp = db_opps.find(o => o.id === idOpp);
+            const ot = opp ? opp.ot : null;
+            document.getElementById('modal-fecha-ganado').style.display = 'none';
+            cerrarNegocio(idOpp, 'ganado', '', opcionElegida, fecha);
+            pendienteGanado = null;
+            if(opcionElegida){
+              // Deja lista la Orden de Producción de la opción elegida, lista para que Conde solo
+              // presione el botón en el cotizador de Cuadernos (misma OT de la comparativa, no una nueva).
+              cotUltimoResultado = opcionElegida.resultado;
+              cotUltimoParams = opcionElegida.params;
+              cotUltimoOT = ot;
+              if(typeof showView === 'function'){
+                showView('cotizador');
+                if(typeof cotRenderResultado === 'function') cotRenderResultado(opcionElegida.resultado, opcionElegida.params);
+                alert(`Ficha creada en el Kanban (columna "Cotización Aprobada") con entrega comprometida para ${kanbanFormatearFecha(fecha)}.\n\nYa quedó cargada aquí en el cotizador — presiona "🏭 Generar Orden de Producción" para imprimirla.`);
+              }
+            }
         }
         function abrirModalEleccionOpcion(idOpp){
             document.getElementById('opp-id-eleccion').value = idOpp;
@@ -2394,19 +2562,9 @@
             const opp = db_opps.find(o => o.id === idOpp);
             const elegida = opp.opcionesComparativa[idx];
             document.getElementById('modal-eleccion-opcion').style.display = 'none';
-            cerrarNegocio(idOpp, 'ganado', '', elegida);
-            // Deja lista la Orden de Producción de la opción elegida, lista para que Conde solo
-            // presione el botón en el cotizador de Cuadernos (misma OT de la comparativa, no una nueva).
-            cotUltimoResultado = elegida.resultado;
-            cotUltimoParams = elegida.params;
-            cotUltimoOT = opp.ot;
-            if(typeof showView === 'function'){
-              showView('cotizador');
-              if(typeof cotRenderResultado === 'function') cotRenderResultado(elegida.resultado, elegida.params);
-              alert(`Ficha creada en el Kanban (columna "Cotización Aprobada") para la opción elegida.\n\nYa quedó cargada aquí en el cotizador — presiona "🏭 Generar Orden de Producción" para imprimirla.`);
-            }
+            pedirFechaEntregaYGanado(idOpp, elegida);
         }
-        function cerrarNegocio(idOpp, estado, motivo = '', opcionElegida = null) {
+        function cerrarNegocio(idOpp, estado, motivo = '', opcionElegida = null, fechaEntrega = '') {
             let idx = db_opps.findIndex(o => o.id === idOpp);
             let opp = db_opps[idx];
 
@@ -2422,7 +2580,7 @@
                     tacticalSyncClientes(db_clientes);
                 }
                 if(typeof contCrearDocVentaDesdeOpp === 'function') contCrearDocVentaDesdeOpp(opp, cli);
-                if(typeof crearFichaKanbanDesdeOpp === 'function') crearFichaKanbanDesdeOpp(opp, cli);
+                if(typeof crearFichaKanbanDesdeOpp === 'function') crearFichaKanbanDesdeOpp(opp, cli, fechaEntrega);
             }
 
             const entradaHistorial = { ...opp, estado, motivo, fechaCierre: new Date().toISOString() };
@@ -2521,22 +2679,22 @@
           });
           return items;
         }
-        function crearFichaKanbanDesdeOpp(opp, cli){
+        function crearFichaKanbanDesdeOpp(opp, cli, fechaEntrega){
           const ficha = {
             id: crypto.randomUUID(), ot: opp.ot || null,
             idCli: opp.idCli, nombreCli: opp.nombreCli, titulo: opp.desc,
             columna: 'aprobada', lineas: opp.lineas || [{linea:opp.linea||'manual', desc:opp.desc, cantidad:opp.cantidad, maquina:opp.maquina, material:opp.material, nPliegos:opp.nPliegos, planoCorte:opp.planoCorte, planoCorteLineas:opp.planoCorteLineas, recomendaciones:opp.recomendaciones, fotoUrl:opp.fotoUrl, videoUrl:opp.videoUrl}],
-            checklist: generarChecklistParaFicha(opp), urgente:false, fechaEntrega:'',
+            checklist: generarChecklistParaFicha(opp), urgente:false, fechaEntrega: fechaEntrega || '',
             fechaCreacion: new Date().toISOString(), responsable:'', origen:'automatica',
           };
           db_kanban.push(ficha);
           tacticalSyncFichaKanban(ficha);
         }
-        function crearFichaManual(){
+        async function crearFichaManual(){
           const clienteTxt = document.getElementById('kb-cliente').value.trim();
           const linea = document.getElementById('kb-linea').value;
           const desc = document.getElementById('kb-descripcion').value.trim();
-          const cantidad = parseFloat(document.getElementById('kb-cantidad').value)||1;
+          const cantidad = tacticalLeerNumeroFormateado('kb-cantidad')||1;
           const fechaEntrega = document.getElementById('kb-fechaEntrega').value;
           if(!clienteTxt || !desc){ alert('Ingresa al menos el Cliente y la Descripción.'); return; }
 
@@ -2546,7 +2704,7 @@
             db_clientes.push(cli);
             tacticalSyncClientes(db_clientes);
           }
-          const ot = cotSiguienteOT();
+          const ot = await cotSiguienteOT();
           const ficha = {
             id: crypto.randomUUID(), ot, idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`,
             titulo: desc, cantidad, columna: 'aprobada', lineas: [{linea, desc, cantidad}],
@@ -2772,9 +2930,16 @@
           {clave:'cubo_rubik_con_caja', label:'🎲 Cubo Rubik — con caja'},
           {clave:'cubo_rubik_sin_caja', label:'🎲 Cubo Rubik — sin caja'},
         ];
-        function fototecaLeer(){ try{ return JSON.parse(localStorage.getItem('tactical_fototeca_v1')) || {}; }catch(e){ return {}; } }
-        function fototecaLeerVideos(){ try{ return JSON.parse(localStorage.getItem('tactical_fototeca_videos_v1')) || {}; }catch(e){ return {}; } }
-        function fototecaLeerCustom(){ try{ return JSON.parse(localStorage.getItem('tactical_fototeca_custom_v1')) || []; }catch(e){ return []; } }
+        // Fototeca vive en Supabase (tabla fototeca_items) desde 2026-08-19; db_fototeca se
+        // carga en window.tacticalOnLogin. fototecaItem() busca la fila de una clave dada, si
+        // existe (las 8 líneas fijas no tienen fila hasta que alguien les sube foto o video).
+        let db_fototeca = [];
+        function fototecaItem(clave){ return db_fototeca.find(x=>x.clave===clave); }
+        function fototecaObtenerOCrearItem(clave, esCustom){
+          let item = fototecaItem(clave);
+          if(!item){ item = {clave, label:null, lineaBase:null, foto:null, video:null, esCustom:!!esCustom}; db_fototeca.push(item); }
+          return item;
+        }
         function fototecaAgregarFicha(){
           const label = prompt('Nombre de la ficha nueva (ej. "Cuaderno con inserto", "Cuaderno con caucho", o cualquier referencia que quieras guardar):');
           if(!label || !label.trim()) return;
@@ -2782,36 +2947,34 @@
           const eleccion = prompt(`¿A qué línea pertenece "${label.trim()}"? Escribe el número (o déjalo vacío si es general / no aplica a ninguna):\n\n${listaLineas}`);
           const idx = parseInt(eleccion);
           const lineaBase = (!isNaN(idx) && TACTICAL_LINEAS_BASE[idx-1]) ? TACTICAL_LINEAS_BASE[idx-1].clave : null;
-          const clave = 'custom_' + Date.now().toString();
-          const custom = fototecaLeerCustom();
-          custom.push({clave, label: label.trim(), lineaBase});
-          localStorage.setItem('tactical_fototeca_custom_v1', JSON.stringify(custom));
+          const clave = 'custom_' + crypto.randomUUID();
+          const item = {clave, label: label.trim(), lineaBase, foto:null, video:null, esCustom:true};
+          db_fototeca.push(item);
+          tacticalSyncFototecaItem(item);
           renderFototeca();
         }
         function fototecaEliminarFicha(clave){
           if(!confirm('¿Eliminar esta ficha de la Fototeca (foto y video incluidos)? Esta acción no se puede deshacer.')) return;
-          const custom = fototecaLeerCustom().filter(c=>c.clave!==clave);
-          localStorage.setItem('tactical_fototeca_custom_v1', JSON.stringify(custom));
-          const fototeca = fototecaLeer(); delete fototeca[clave]; localStorage.setItem('tactical_fototeca_v1', JSON.stringify(fototeca));
-          const videos = fototecaLeerVideos(); delete videos[clave]; localStorage.setItem('tactical_fototeca_videos_v1', JSON.stringify(videos));
+          tacticalEliminarFototecaItemRemoto(clave);
+          db_fototeca = db_fototeca.filter(x=>x.clave!==clave);
           renderFototeca();
         }
         function fototecaGuardarVideo(clave, inputEl){
           const url = inputEl.value.trim();
-          const videos = fototecaLeerVideos();
-          if(url) videos[clave] = url; else delete videos[clave];
-          localStorage.setItem('tactical_fototeca_videos_v1', JSON.stringify(videos));
+          const item = fototecaObtenerOCrearItem(clave, clave.startsWith('custom_'));
+          item.video = url || null;
+          tacticalSyncFototecaItem(item);
         }
         function renderFototeca(){
-          const fototeca = fototecaLeer();
-          const videos = fototecaLeerVideos();
-          const todasLasFichas = [...FOTOTECA_LINEAS, ...fototecaLeerCustom()];
+          const customFichas = db_fototeca.filter(x=>x.esCustom).map(x=>({clave:x.clave, label:x.label, lineaBase:x.lineaBase}));
+          const todasLasFichas = [...FOTOTECA_LINEAS, ...customFichas];
           const el = document.getElementById('fototeca-grid');
           if(!el) return;
           el.innerHTML = todasLasFichas.map(l => {
             const esCustom = l.clave.startsWith('custom_');
-            const foto = fototeca[l.clave];
-            const video = videos[l.clave] || '';
+            const item = fototecaItem(l.clave);
+            const foto = item ? item.foto : null;
+            const video = (item && item.video) || '';
             const contenido = foto
               ? `<img src="${foto}" alt="${l.label}">`
               : `📎 Clic aquí y pega (Ctrl+V)<br>o sube un archivo`;
@@ -2842,9 +3005,9 @@
             const img = new Image();
             img.onload = function(){
               const dataUrl = tacticalComprimirImagen(img);
-              const fototeca = fototecaLeer();
-              fototeca[clave] = dataUrl;
-              localStorage.setItem('tactical_fototeca_v1', JSON.stringify(fototeca));
+              const item = fototecaObtenerOCrearItem(clave, clave.startsWith('custom_'));
+              item.foto = dataUrl;
+              tacticalSyncFototecaItem(item);
               renderFototeca();
             };
             img.src = e.target.result;
@@ -2867,9 +3030,8 @@
         }
         function fototecaQuitar(clave){
           if(!confirm('¿Quitar esta foto de referencia?')) return;
-          const fototeca = fototecaLeer();
-          delete fototeca[clave];
-          localStorage.setItem('tactical_fototeca_v1', JSON.stringify(fototeca));
+          const item = fototecaItem(clave);
+          if(item){ item.foto = null; tacticalSyncFototecaItem(item); }
           renderFototeca();
         }
         // ==========================================
@@ -3313,6 +3475,163 @@
           corteLaserIman: () => PRECIOS_CORTE_LASER_IMAN_COP,
         };
 
+        // ---- Papeles agregados por Conde (fuera del catálogo fijo de arriba) ----
+        // Conde eligió (2026-08-19) que cada papel nuevo se active a mano por calculadora,
+        // en vez de aparecer automáticamente en las 8 herramientas.
+        let db_sustratos_custom = TACTICAL_SUSTRATOS_CUSTOM.slice();
+        function tacticalPersistirSustratosCustom(){
+          localStorage.setItem('tactical_sustratos_custom_v1', JSON.stringify(db_sustratos_custom));
+          tacticalGuardarSustratosCustom(db_sustratos_custom);
+        }
+        function renderSustratosCustomHtml(){
+          let h = `<div style="margin-top:12px; padding-top:12px; border-top:1px solid #e2e8f0;">
+            <div style="font-weight:600; color:#4a5568; margin-bottom:8px;">Papeles agregados por ti</div>`;
+          if(db_sustratos_custom.length === 0){
+            h += `<div style="color:#a0aec0; font-style:italic; margin-bottom:10px;">Todavía no has agregado ningún papel nuevo.</div>`;
+          } else {
+            h += `<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; margin-bottom:10px;">
+              <tr style="text-align:left; border-bottom:2px solid #e2e8f0;">
+                <th style="padding:6px;">Papel</th><th style="padding:6px;">$ Pliego 60x90</th><th style="padding:6px;">$ Pliego 70x100</th>
+                ${TACTICAL_CALCULADORAS_SUSTRATOS.map(c => `<th style="padding:6px; text-align:center; font-size:0.72rem;">${c.label}</th>`).join('')}
+                <th style="padding:6px;"></th>
+              </tr>`;
+            db_sustratos_custom.forEach(s => {
+              const clave = s.nombre + '__' + s.gramaje;
+              const ov = (TACTICAL_PRECIOS_OVERRIDE.sustratos && TACTICAL_PRECIOS_OVERRIDE.sustratos[clave]) || {};
+              const p6090 = ov.p6090 !== undefined ? ov.p6090 : s.p6090;
+              const p70100 = ov.p70100 !== undefined ? ov.p70100 : s.p70100;
+              h += `<tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:6px;">${tacticalNombreSustrato(clave)}</td>
+                <td style="padding:6px;"><input type="number" step="0.01" class="precio-input" data-tipo="sustratos" data-clave="sustratos" data-subclave="${clave}" data-subcampo="p6090" value="${p6090 ?? ''}" style="width:110px;" placeholder="N/A"></td>
+                <td style="padding:6px;"><input type="number" step="0.01" class="precio-input" data-tipo="sustratos" data-clave="sustratos" data-subclave="${clave}" data-subcampo="p70100" value="${p70100 ?? ''}" style="width:110px;" placeholder="N/A"></td>
+                ${TACTICAL_CALCULADORAS_SUSTRATOS.map(c => `<td style="padding:6px; text-align:center;"><input type="checkbox" ${(s.calculadoras||[]).includes(c.id)?'checked':''} onchange="sustratoCustomToggleCalculadora('${s.id}','${c.id}',this.checked)"></td>`).join('')}
+                <td style="padding:6px;"><button type="button" class="btn-action" style="padding:4px 8px; font-size:0.75rem;" onclick="sustratoCustomEliminar('${s.id}')">Eliminar</button></td>
+              </tr>`;
+            });
+            h += `</table></div>`;
+          }
+          h += `<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; background:#f8fafc; padding:10px; border-radius:6px;">
+            <div class="form-group" style="margin:0;"><label style="font-size:0.75rem;">Nombre</label><input id="sc-nombre" type="text" placeholder="Ej: Adhesivo Vinilo" style="width:170px;"></div>
+            <div class="form-group" style="margin:0;"><label style="font-size:0.75rem;">Gramaje</label><input id="sc-gramaje" type="text" placeholder="Ej: 150" style="width:80px;"></div>
+            <div class="form-group" style="margin:0;"><label style="font-size:0.75rem;">$ Pliego 60x90</label><input id="sc-p6090" type="number" step="0.01" placeholder="N/A" style="width:100px;"></div>
+            <div class="form-group" style="margin:0;"><label style="font-size:0.75rem;">$ Pliego 70x100</label><input id="sc-p70100" type="number" step="0.01" placeholder="N/A" style="width:100px;"></div>
+            ${TACTICAL_CALCULADORAS_SUSTRATOS.map(c => `<label style="font-size:0.72rem; display:flex; align-items:center; gap:3px;"><input type="checkbox" id="sc-calc-${c.id}"> ${c.label}</label>`).join('')}
+            <button type="button" class="btn-add" style="width:auto; padding:8px 14px;" onclick="sustratoCustomAgregar()">+ Agregar papel</button>
+          </div></div>`;
+          return h;
+        }
+        function sustratoCustomAgregar(){
+          if(!tacticalRequiereAdministrador()) return;
+          const nombre = document.getElementById('sc-nombre').value.trim();
+          const gramaje = document.getElementById('sc-gramaje').value.trim();
+          if(!nombre || !gramaje){ alert('Escribe el nombre y el gramaje del papel.'); return; }
+          const calculadoras = TACTICAL_CALCULADORAS_SUSTRATOS.filter(c => document.getElementById('sc-calc-'+c.id).checked).map(c => c.id);
+          if(calculadoras.length === 0){ alert('Marca en cuáles calculadoras debe aparecer este papel.'); return; }
+          const p6090raw = document.getElementById('sc-p6090').value.trim();
+          const p70100raw = document.getElementById('sc-p70100').value.trim();
+          db_sustratos_custom.push({
+            id: crypto.randomUUID(), nombre, gramaje,
+            p6090: p6090raw === '' ? null : parseFloat(p6090raw),
+            p70100: p70100raw === '' ? null : parseFloat(p70100raw),
+            calculadoras,
+          });
+          tacticalPersistirSustratosCustom();
+          renderPanelPrecios();
+        }
+        function sustratoCustomToggleCalculadora(id, calcId, marcado){
+          if(!tacticalRequiereAdministrador()) { renderPanelPrecios(); return; }
+          const s = db_sustratos_custom.find(x => x.id === id);
+          if(!s) return;
+          s.calculadoras = s.calculadoras || [];
+          if(marcado && !s.calculadoras.includes(calcId)) s.calculadoras.push(calcId);
+          if(!marcado) s.calculadoras = s.calculadoras.filter(c => c !== calcId);
+          tacticalPersistirSustratosCustom();
+        }
+        function sustratoCustomEliminar(id){
+          if(!tacticalRequiereAdministrador()) return;
+          const s = db_sustratos_custom.find(x => x.id === id);
+          if(!s) return;
+          if(!confirm(`¿Eliminar el papel "${s.nombre} ${s.gramaje}g"? Se quita de todas las calculadoras donde estaba activo.`)) return;
+          db_sustratos_custom = db_sustratos_custom.filter(x => x.id !== id);
+          tacticalPersistirSustratosCustom();
+          renderPanelPrecios();
+        }
+
+        // ---- Acabados agregados por Conde (ej. plastificado especial, UV a color) ----
+        // Mismo patrón que los papeles custom de arriba: se cobran por m² (área × cantidad, igual
+        // que Plastificado/Colaminado), y aparecen como checkbox opcional solo en las calculadoras
+        // que Conde marque (2026-08-19).
+        let db_acabados_custom = TACTICAL_ACABADOS_CUSTOM.slice();
+        function tacticalPersistirAcabadosCustom(){
+          localStorage.setItem('tactical_acabados_custom_v1', JSON.stringify(db_acabados_custom));
+          tacticalGuardarAcabadosCustom(db_acabados_custom);
+        }
+        function renderAcabadosCustomHtml(){
+          let h = `<div style="margin-top:12px; padding-top:12px; border-top:1px solid #e2e8f0;">
+            <div style="font-weight:600; color:#4a5568; margin-bottom:8px;">Acabados agregados por ti (se cobran por m²)</div>`;
+          if(db_acabados_custom.length === 0){
+            h += `<div style="color:#a0aec0; font-style:italic; margin-bottom:10px;">Todavía no has agregado ningún acabado nuevo.</div>`;
+          } else {
+            h += `<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; margin-bottom:10px;">
+              <tr style="text-align:left; border-bottom:2px solid #e2e8f0;">
+                <th style="padding:6px;">Acabado</th><th style="padding:6px;">$ por m²</th>
+                ${TACTICAL_CALCULADORAS_SUSTRATOS.map(c => `<th style="padding:6px; text-align:center; font-size:0.72rem;">${c.label}</th>`).join('')}
+                <th style="padding:6px;"></th>
+              </tr>`;
+            db_acabados_custom.forEach(a => {
+              const ov = TACTICAL_PRECIOS_OVERRIDE.acabadosCustom && TACTICAL_PRECIOS_OVERRIDE.acabadosCustom[a.id];
+              const precioM2 = (ov != null) ? ov : a.precioM2;
+              h += `<tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:6px;">${a.nombre}</td>
+                <td style="padding:6px;"><input type="number" step="0.01" class="precio-input" data-tipo="acabadosCustom" data-subclave="${a.id}" value="${precioM2 ?? ''}" style="width:110px;" placeholder="N/A"></td>
+                ${TACTICAL_CALCULADORAS_SUSTRATOS.map(c => `<td style="padding:6px; text-align:center;"><input type="checkbox" ${(a.calculadoras||[]).includes(c.id)?'checked':''} onchange="acabadoCustomToggleCalculadora('${a.id}','${c.id}',this.checked)"></td>`).join('')}
+                <td style="padding:6px;"><button type="button" class="btn-action" style="padding:4px 8px; font-size:0.75rem;" onclick="acabadoCustomEliminar('${a.id}')">Eliminar</button></td>
+              </tr>`;
+            });
+            h += `</table></div>`;
+          }
+          h += `<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; background:#f8fafc; padding:10px; border-radius:6px;">
+            <div class="form-group" style="margin:0;"><label style="font-size:0.75rem;">Nombre del acabado</label><input id="ac-nombre" type="text" placeholder="Ej: Barniz UV" style="width:200px;"></div>
+            <div class="form-group" style="margin:0;"><label style="font-size:0.75rem;">$ por m²</label><input id="ac-precio" type="number" step="0.01" placeholder="0" style="width:100px;"></div>
+            ${TACTICAL_CALCULADORAS_SUSTRATOS.map(c => `<label style="font-size:0.72rem; display:flex; align-items:center; gap:3px;"><input type="checkbox" id="ac-calc-${c.id}"> ${c.label}</label>`).join('')}
+            <button type="button" class="btn-add" style="width:auto; padding:8px 14px;" onclick="acabadoCustomAgregar()">+ Agregar acabado</button>
+          </div></div>`;
+          return h;
+        }
+        function acabadoCustomAgregar(){
+          if(!tacticalRequiereAdministrador()) return;
+          const nombre = document.getElementById('ac-nombre').value.trim();
+          const precioRaw = document.getElementById('ac-precio').value.trim();
+          if(!nombre){ alert('Escribe el nombre del acabado.'); return; }
+          const calculadoras = TACTICAL_CALCULADORAS_SUSTRATOS.filter(c => document.getElementById('ac-calc-'+c.id).checked).map(c => c.id);
+          if(calculadoras.length === 0){ alert('Marca en cuáles calculadoras debe aparecer este acabado.'); return; }
+          db_acabados_custom.push({
+            id: crypto.randomUUID(), nombre,
+            precioM2: precioRaw === '' ? 0 : parseFloat(precioRaw),
+            calculadoras,
+          });
+          tacticalPersistirAcabadosCustom();
+          renderPanelPrecios();
+        }
+        function acabadoCustomToggleCalculadora(id, calcId, marcado){
+          if(!tacticalRequiereAdministrador()) { renderPanelPrecios(); return; }
+          const a = db_acabados_custom.find(x => x.id === id);
+          if(!a) return;
+          a.calculadoras = a.calculadoras || [];
+          if(marcado && !a.calculadoras.includes(calcId)) a.calculadoras.push(calcId);
+          if(!marcado) a.calculadoras = a.calculadoras.filter(c => c !== calcId);
+          tacticalPersistirAcabadosCustom();
+        }
+        function acabadoCustomEliminar(id){
+          if(!tacticalRequiereAdministrador()) return;
+          const a = db_acabados_custom.find(x => x.id === id);
+          if(!a) return;
+          if(!confirm(`¿Eliminar el acabado "${a.nombre}"? Se quita de todas las calculadoras donde estaba activo.`)) return;
+          db_acabados_custom = db_acabados_custom.filter(x => x.id !== id);
+          tacticalPersistirAcabadosCustom();
+          renderPanelPrecios();
+        }
+
         function renderPanelPrecios(){
           const cont = document.getElementById('precios-grupos');
           if(!cont) return;
@@ -3338,6 +3657,8 @@
                   <td style="padding:6px;"><input type="number" step="0.01" class="precio-input" data-tipo="sustratos" data-clave="sustratos" data-subclave="${clave}" data-subcampo="p70100" value="${val.p70100 ?? ''}" style="width:110px;" placeholder="N/A"></td>
                 </tr>`;
               });
+              html += `</table></div>`;
+              html += renderSustratosCustomHtml();
             } else if(campo.tipo === 'nivel1'){
               html += `<tr style="text-align:left; border-bottom:2px solid #e2e8f0;"><th style="padding:6px;">Formato</th><th style="padding:6px;">Precio</th></tr>`;
               const actual = precioEfectivoGrupo(campo);
@@ -3368,9 +3689,13 @@
                   <td style="padding:6px;"><input type="number" class="precio-input" data-tipo="simple" data-clave="${c.clave}" value="${val}" style="width:130px;"></td>
                 </tr>`;
               });
+              if(campo.customAcabados){
+                html += `</table></div>`;
+                html += renderAcabadosCustomHtml();
+              }
             }
 
-            html += `</table></div></div>`;
+            html += (campo.tipo === 'sustratos' || campo.customAcabados) ? `</div>` : `</table></div></div>`;
           });
           cont.innerHTML = html;
           renderPanelPreciosPromo();
@@ -3460,8 +3785,9 @@
           cont.innerHTML = html || '<span style="color:#a0aec0; font-style:italic;">No se pudo cargar el tarifario de Promocionales.</span>';
         }
 
-        function guardarPanelPrecios(){
-          const ov = { sustratos:{}, offsetCtp:{}, offsetMillar:{}, offsetRecargoFondoPleno:{}, digitalClicCuadernos:{}, digitalClicOtrasLineas:{} };
+        async function guardarPanelPrecios(){
+          if(!tacticalRequiereAdministrador()) return;
+          const ov = { sustratos:{}, offsetCtp:{}, offsetMillar:{}, offsetRecargoFondoPleno:{}, digitalClicCuadernos:{}, digitalClicOtrasLineas:{}, acabadosCustom:{} };
           document.querySelectorAll('.precio-input').forEach(inp => {
             const tipo = inp.dataset.tipo, clave = inp.dataset.clave, subclave = inp.dataset.subclave, subcampo = inp.dataset.subcampo;
             const raw = inp.value.trim();
@@ -3476,6 +3802,8 @@
               ov[clave][subclave][subcampo] = num;
             } else if(tipo === 'simple'){
               ov[clave] = num;
+            } else if(tipo === 'acabadosCustom'){
+              ov.acabadosCustom[subclave] = num;
             }
           });
           localStorage.setItem('tactical_precios_override_v1', JSON.stringify(ov));
@@ -3489,17 +3817,21 @@
           });
           localStorage.setItem('tactical_precios_promo_override_v1', JSON.stringify(ovPromo));
 
-          alert('Precios guardados. La página se va a recargar para aplicarlos en esta herramienta — las demás calculadoras los toman la próxima vez que se abran.');
+          await Promise.all([tacticalGuardarPreciosOverride(ov), tacticalGuardarPreciosPromoOverride(ovPromo)]);
+
+          alert('Precios guardados y compartidos con el resto del equipo. La página se va a recargar para aplicarlos aquí — las demás herramientas los toman la próxima vez que alguien inicie sesión.');
           location.reload();
         }
 
-        function restaurarTodoPanelPrecios(){
-          const ok = confirm('Esto borra TODOS tus ajustes de precio (incluida la marcación de Promocionales) y vuelve a los valores base de fábrica en las 8 herramientas. ¿Continuar?');
+        async function restaurarTodoPanelPrecios(){
+          if(!tacticalRequiereAdministrador()) return;
+          const ok = confirm('Esto borra TODOS tus ajustes de precio (incluida la marcación de Promocionales) para TODO el equipo y vuelve a los valores base de fábrica en las 9 herramientas. ¿Continuar?');
           if(!ok) return;
           localStorage.removeItem('tactical_precios_override_v1');
           localStorage.removeItem('tactical_precios_override_meta_v1');
           localStorage.removeItem('tactical_precios_promo_override_v1');
-          alert('Precios restaurados a valores de fábrica. La página se va a recargar.');
+          await Promise.all([tacticalGuardarPreciosOverride({}), tacticalGuardarPreciosPromoOverride({})]);
+          alert('Precios restaurados a valores de fábrica para todo el equipo. La página se va a recargar.');
           location.reload();
         }
 
@@ -3547,6 +3879,10 @@
         }
         function fechaDeRegistro(r){
           if(r.fechaCierre) return new Date(r.fechaCierre);
+          if(r.fecha) return new Date(r.fecha);
+          // Conde 2026-08-19: desde que los IDs pasaron de Date.now() a crypto.randomUUID()
+          // (migración a Supabase), esto ya NO sirve para registros nuevos -- se deja solo
+          // como respaldo para registros viejos que todavía tengan el id numérico de antes.
           const ts = parseInt(r.id);
           return isNaN(ts) ? null : new Date(ts);
         }
@@ -3602,15 +3938,11 @@
         // ---- BUSCADOR DE COTIZACIONES (Conde 2026-08-06): todas las cotizaciones de las 8
         // calculadoras, activas o cerradas, en un solo lugar buscable — antes solo se veían en el
         // embudo (activas) o dispersas, sin forma de encontrar una cotización cerrada rápido.
-        function fechaDesdeOppId(id){
-          const ts = parseInt(id);
-          return isNaN(ts) ? null : new Date(ts);
-        }
         function renderBuscadorCotizaciones(){
           const texto = ((document.getElementById('search-cotizaciones')||{}).value || '').toLowerCase();
           const activos = db_opps.map(o => ({...o, estadoTxt: (tags_etapa[o.etapa]||{}).lbl || o.etapa}));
           const cerrados = db_historial_cierres.map(o => ({...o, estadoTxt: o.estado==='ganado' ? '✅ Ganada' : '❌ Perdida'}));
-          let todas = [...activos, ...cerrados].sort((a,b) => parseInt(b.id) - parseInt(a.id));
+          let todas = [...activos, ...cerrados].sort((a,b) => (fechaDeRegistro(b)||0) - (fechaDeRegistro(a)||0));
           if(texto){
             todas = todas.filter(o =>
               (o.nombreCli||'').toLowerCase().includes(texto) ||
@@ -3660,7 +3992,7 @@
           const iCot = db_cotizaciones.findIndex(c => c.id === id);
           if(iCot > -1){
             db_cotizaciones.splice(iCot, 1);
-            localStorage.setItem('tactical_cotizaciones_v1', JSON.stringify(db_cotizaciones));
+            tacticalEliminarCotizacionRemoto(id);
           }
           renderBuscadorCotizaciones();
         }
@@ -3677,17 +4009,17 @@
           }
           const cli = db_clientes.find(c => c.id === opp.idCli) || {empresa: opp.nombreCli, nombre:'', wp:'', correo:''};
           const lineas = (opp.lineas && opp.lineas.length)
-            ? opp.lineas.map(l => ({desc:l.desc, cantidad:l.cantidad, monto:l.monto, fotoUrl:l.fotoUrl, videoUrl:l.videoUrl}))
+            ? opp.lineas.map(l => ({desc:l.desc, cantidad:l.cantidad, monto:l.monto, precioUnitario:l.precioUnitario, fotoUrl:l.fotoUrl, videoUrl:l.videoUrl}))
             : [{desc: opp.desc, cantidad: opp.cantidad||1, monto: opp.monto}];
           verPDFGenerico({
-            ot: opp.ot||'', fecha: fechaDesdeOppId(opp.id) || new Date(), vendedor: opp.vendedor,
+            ot: opp.ot||'', fecha: fechaDeRegistro(opp) || new Date(), vendedor: opp.vendedor,
             cliente: {empresa: cli.empresa, encargado: cli.nombre, telefono: cli.wp, correo: cli.correo},
-            lineas, ivaTotal: null, total: opp.monto,
+            lineas, total: opp.monto,
           });
         }
         function verPDFComparativoGuardado(opp){
           const cli = db_clientes.find(c => c.id === opp.idCli) || {empresa: opp.nombreCli, nombre:'', wp:'', correo:''};
-          const fecha = fechaDesdeOppId(opp.id) || new Date();
+          const fecha = fechaDeRegistro(opp) || new Date();
           const fechaStr = fecha.toLocaleDateString('es-CO', {year:'numeric', month:'long', day:'numeric'});
           const validoHasta = fechaMasDias(fecha, 30);
           const bloquesOpciones = opp.opcionesComparativa.map((op,i) => `
@@ -3742,7 +4074,20 @@
         function verPDFGenerico(datos){
           const fecha = datos.fecha.toLocaleDateString('es-CO', {year:'numeric', month:'long', day:'numeric'});
           const validoHasta = fechaMasDias(datos.fecha, 30);
-          const filasLineas = datos.lineas.map(l => `<tr><td><div style="display:flex; align-items:center; gap:6px;">${l.fotoUrl?`<img src="${l.fotoUrl}" style="width:90px; height:90px; object-fit:contain; background:#f8fafc; border:1px solid #cbd5e0; border-radius:4px; flex-shrink:0;">`:''}<div>${l.desc}${l.videoUrl?`<br><a href="${l.videoUrl}" style="color:#cc0000; text-decoration:none; font-size:0.65rem; font-weight:bold;">▶ Ver video del producto</a>`:''}</div></div></td><td style="text-align:right;">${l.cantidad||'-'}</td><td style="text-align:right;">${cotFormatoCop(l.monto)}</td></tr>`).join('');
+          // Conde 2026-08-19: el cliente necesita ver el valor unitario SIN IVA de cada línea, no
+          // solo el total de esa línea con IVA incluido -- si no viene precalculado (l.precioUnitario),
+          // se deriva del monto total de la línea asumiendo el 19% plano de toda la cotización.
+          const filasLineas = datos.lineas.map(l => {
+            const cant = l.cantidad || 1;
+            const unitario = l.precioUnitario!=null ? l.precioUnitario : (l.monto/cant/1.19);
+            return `<tr><td><div style="display:flex; align-items:center; gap:6px;">${l.fotoUrl?`<img src="${l.fotoUrl}" style="width:90px; height:90px; object-fit:contain; background:#f8fafc; border:1px solid #cbd5e0; border-radius:4px; flex-shrink:0;">`:''}<div>${l.desc}${l.videoUrl?`<br><a href="${l.videoUrl}" style="color:#cc0000; text-decoration:none; font-size:0.65rem; font-weight:bold;">▶ Ver video del producto</a>`:''}</div></div></td><td style="text-align:right;">${l.cantidad||'-'}</td><td style="text-align:right;">${cotFormatoCop(unitario)}</td><td style="text-align:right;">${cotFormatoCop(l.monto)}</td></tr>`;
+          }).join('');
+          const subtotalPedido = datos.total/1.19;
+          const ivaTotalPedido = datos.total - subtotalPedido;
+          const desglosePedidoHtml = `<table class="doc-table" style="margin-top:6px;">
+            <tr><td>Subtotal (sin IVA)</td><td style="text-align:right;">${cotFormatoCop(subtotalPedido)}</td></tr>
+            <tr><td>IVA (19%)</td><td style="text-align:right;">${cotFormatoCop(ivaTotalPedido)}</td></tr>
+          </table>`;
           const html = `
             <div class="doc-header">
               <div><img src="${TACTICAL_LOGO_B64}" style="height:68px; margin-bottom:8px; display:block;" alt="Tactical Marketing"><div class="doc-tipo">COTIZACIÓN ${datos.ot||''}</div></div>
@@ -3753,11 +4098,12 @@
               <div class="doc-cliente-meta">Atención: ${datos.cliente.encargado||'-'} &nbsp;·&nbsp; ${datos.cliente.telefono||'-'} &nbsp;·&nbsp; ${datos.cliente.correo||'-'}</div>
               <div class="doc-cliente-fechas">Fecha de emisión: ${fecha} &nbsp;|&nbsp; Válida hasta: ${validoHasta} (30 días calendario)</div>
             </div>
-            <div class="doc-section-title">Productos Cotizados (cada valor ya incluye IVA)</div>
+            <div class="doc-section-title">Productos Cotizados</div>
             <table class="doc-table">
-              <tr><th>Descripción</th><th>Cantidad</th><th>Valor</th></tr>
+              <tr><th>Descripción</th><th>Cantidad</th><th>Valor Unitario (sin IVA)</th><th>Valor Total</th></tr>
               ${filasLineas}
             </table>
+            ${desglosePedidoHtml}
             <div class="doc-total-box">TOTAL: ${cotFormatoCop(datos.total)} COP</div>
             <div class="doc-cta">✅ <strong>Para aprobar esta cotización</strong>, responde confirmando el número <strong>${datos.ot||''}</strong> por WhatsApp al ${TACTICAL_INFO.telefono} o al correo ${TACTICAL_INFO.correo}. Iniciamos producción con orden de compra, anticipo y archivos aprobados.</div>
             <div class="doc-section-title">Condiciones Comerciales</div>
@@ -3779,7 +4125,7 @@
 
         /* ---- DATOS MAESTROS ---- */
         /* Precios de papel/offset/digital/acabados/generales vienen de precios_tactical.js (Panel de Precios) */
-        const SUSTRATOS = tacticalSeleccionarSustratos(Object.keys(PRECIOS_SUSTRATOS_MAESTRO));
+        const SUSTRATOS = tacticalSeleccionarSustratos(Object.keys(PRECIOS_SUSTRATOS_MAESTRO), 'cuadernos');
         const PLIEGOS_CM = {"60x90":[60,90], "70x100":[70,100]};
         const CARTON_1_5MM_COP = 3500, CARTON_2_0MM_COP = 4500, ESPESOR_LOMO_MM_POR_HOJA = 0.13;
         const TAMANOS_CATALOGO_CM = {media_carta:[21,14], agenda:[17,24.5], carta:[28,21.5]};
@@ -4353,11 +4699,11 @@
         let cotUltimoResultado = null, cotUltimoParams = null;
         let cotUltimoOT = null;
 
-        function cotSiguienteOT(){
-          return tacticalSiguienteOT();
+        async function cotSiguienteOT(){
+          return await tacticalSiguienteOT();
         }
-        function cotObtenerOT(){
-          if(!cotUltimoOT) cotUltimoOT = cotSiguienteOT();
+        async function cotObtenerOT(){
+          if(!cotUltimoOT) cotUltimoOT = await cotSiguienteOT();
           const nota = document.getElementById('cot-ot-nota');
           if(nota){ nota.style.display = 'block'; nota.innerText = `📋 Esta cotización quedó registrada como ${cotUltimoOT} — usa este número para referenciarla en Reprocesos si llega a haber un incidente con este pedido.`; }
           return cotUltimoOT;
@@ -4527,7 +4873,7 @@
             const lineaProducto = document.getElementById("cot-lineaProducto").value;
             const anchoCm = parseFloat(document.getElementById("cot-anchoCm").value);
             const altoCm = parseFloat(document.getElementById("cot-altoCm").value);
-            const cantidad = parseFloat(document.getElementById("cot-cantidad").value);
+            const cantidad = tacticalLeerNumeroFormateado("cot-cantidad");
             const tapaTipo = document.getElementById("cot-tapaTipo").value;
             const cartonCalibreMm = parseFloat(document.getElementById("cot-cartonCalibre").value);
             const encuadernacionTipo = document.getElementById("cot-encuadernacionTipo").value;
@@ -4624,7 +4970,7 @@
         }
 
         /* ---- GUARDAR COTIZACIÓN: CRM + PDF CLIENTE ---- */
-        let db_cotizaciones = JSON.parse(localStorage.getItem('tactical_cotizaciones_v1')) || [];
+        let db_cotizaciones = [];
 
         function cotRefrescarDatalistClientes(){
           const dlEmpresa = document.getElementById('cot-clientes-datalist');
@@ -4692,7 +5038,7 @@
           const monto = cotUltimoResultado ? Math.round(cotUltimoResultado.precioFinalTotal) : 0;
           compartirWhatsApp(telefono, cotUltimoOT, monto, empresa);
         }
-        function cotGuardarYGenerarPDF(){
+        async function cotGuardarYGenerarPDF(){
           if(!cotUltimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
           const empresa = document.getElementById('cot-cli-empresa').value.trim().toUpperCase();
           const encargado = document.getElementById('cot-cli-encargado').value.trim().toUpperCase();
@@ -4725,7 +5071,7 @@
           // desglose más detallado (varias líneas: carátula/taco/insertos) que Reportes sigue leyendo
           // de tactical_cotizaciones_v1 para Consumo de Papel y Uso de Máquinas.
           const planoCorteLineas = Object.keys(r.detalleLineas).map(clave => ({clave, planoCorte: (r.detalleLineas[clave].detalleMaterial||{}).planoCorte || null})).filter(pc=>pc.planoCorte);
-          const opp = { id: crypto.randomUUID(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, desc, vendedor, monto: Math.round(r.precioFinalTotal), etapa: 'cot', linea: 'cuadernos', cantidad: p.cantidad, planoCorteLineas };
+          const opp = { id: crypto.randomUUID(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, desc, vendedor, monto: Math.round(r.precioFinalTotal), etapa: 'cot', linea: 'cuadernos', cantidad: p.cantidad, planoCorteLineas, fecha: new Date().toISOString() };
           db_opps.push(opp);
           tacticalSyncOpps(db_opps);
 
@@ -4733,7 +5079,7 @@
           const validezOferta = document.getElementById('cot-validezOferta').value.trim();
           const observaciones = document.getElementById('cot-observaciones').value.trim();
           const condicionesComerciales = document.getElementById('cot-condicionesComerciales').value.split('\n').map(l=>l.trim()).filter(Boolean);
-          const ot = cotObtenerOT();
+          const ot = await cotObtenerOT();
           opp.ot = ot;
           tacticalSyncOpps(db_opps);
           const cotizacion = {
@@ -4742,14 +5088,14 @@
             plazoEntrega, validezOferta, observaciones, condicionesComerciales,
           };
           db_cotizaciones.push(cotizacion);
-          localStorage.setItem('tactical_cotizaciones_v1', JSON.stringify(db_cotizaciones));
+          tacticalSyncCotizacion(cotizacion);
           cotRefrescarDatalistClientes();
 
           cotImprimirPDFCliente(cotizacion);
         }
 
         /* ============ PEDIDO MULTI-PRODUCTO (varias líneas, un solo cliente/OT) ============ */
-        function cotPedidoActivo(){ return JSON.parse(localStorage.getItem('tactical_pedido_activo')) || null; }
+        function cotPedidoActivo(){ return window.tacticalPedidoBorradorCache || null; }
         function cotRefrescarBannerPedido(){
           const pd = cotPedidoActivo();
           const el = document.getElementById('cot-pedido-banner');
@@ -4761,7 +5107,7 @@
             <button type="button" class="btn-submit" style="margin-top:6px; background:var(--ganado); display:inline-block; width:auto;" onclick="cotCerrarPedido()">✅ Cerrar pedido y guardar en CRM</button>
             <button type="button" class="btn-submit" style="margin-top:6px; background:var(--peligro); display:inline-block; width:auto;" onclick="cotCancelarPedido()">✕ Cancelar pedido</button>`;
         }
-        function cotIniciarOAgregarPedido(){
+        async function cotIniciarOAgregarPedido(){
           if(!cotUltimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
           const empresa = document.getElementById('cot-cli-empresa').value.trim().toUpperCase();
           const encargado = document.getElementById('cot-cli-encargado').value.trim().toUpperCase();
@@ -4792,34 +5138,34 @@
             pd = null;
           }
           if(!pd){
-            pd = { ot: cotSiguienteOT(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, vendedor, lineas: [], creado: new Date().toISOString() };
+            pd = { ot: await cotSiguienteOT(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, vendedor, lineas: [], creado: new Date().toISOString() };
           }
 
           const r = cotUltimoResultado, p = cotUltimoParams;
           const desc = cotTituloCorto(p, document.getElementById('cot-descCliente').value);
           const planoCorteLineas = Object.keys(r.detalleLineas).map(clave => ({clave, planoCorte: (r.detalleLineas[clave].detalleMaterial||{}).planoCorte || null})).filter(pc=>pc.planoCorte);
-          pd.lineas.push({ linea:'cuadernos', desc, cantidad: p.cantidad, monto: Math.round(r.precioFinalTotal), maquina: null, material: null, nPliegos: null, planoCorteLineas, fotoUrl: tacticalObtenerFotoProducto('cuadernos'), videoUrl: tacticalObtenerVideoProducto('cuadernos') });
-          localStorage.setItem('tactical_pedido_activo', JSON.stringify(pd));
+          pd.lineas.push({ linea:'cuadernos', desc, cantidad: p.cantidad, monto: Math.round(r.precioFinalTotal), precioUnitario: r.precioVentaUnitario, maquina: null, material: null, nPliegos: null, planoCorteLineas, fotoUrl: tacticalObtenerFotoProducto('cuadernos'), videoUrl: tacticalObtenerVideoProducto('cuadernos') });
+          window.tacticalPedidoBorradorCache = pd; tacticalGuardarPedidoBorrador(pd);
           cotRefrescarBannerPedido();
           alert(`Agregado al pedido ${pd.ot}. Ahora tiene ${pd.lineas.length} producto(s).`);
         }
         function cotCerrarPedido(){
           const pd = cotPedidoActivo();
-          if(!pd || pd.lineas.length===0){ localStorage.removeItem('tactical_pedido_activo'); cotRefrescarBannerPedido(); return; }
+          if(!pd || pd.lineas.length===0){ window.tacticalPedidoBorradorCache = null; tacticalEliminarPedidoBorrador(); cotRefrescarBannerPedido(); return; }
           const montoTotal = pd.lineas.reduce((s,l)=>s+l.monto,0);
           const cantidadTotal = pd.lineas.reduce((s,l)=>s+(l.cantidad||0),0);
           const descConsolidada = pd.lineas.map(l=>l.desc).join(' + ');
-          const opp = { id: crypto.randomUUID(), ot: pd.ot, idCli: pd.idCli, nombreCli: pd.nombreCli, desc: descConsolidada, monto: montoTotal, etapa: 'cot', linea: 'multi', cantidad: cantidadTotal, vendedor: pd.vendedor, lineas: pd.lineas };
+          const opp = { id: crypto.randomUUID(), ot: pd.ot, idCli: pd.idCli, nombreCli: pd.nombreCli, desc: descConsolidada, monto: montoTotal, etapa: 'cot', linea: 'multi', cantidad: cantidadTotal, vendedor: pd.vendedor, lineas: pd.lineas, fecha: new Date().toISOString() };
           db_opps.push(opp);
           tacticalSyncOpps(db_opps);
-          localStorage.removeItem('tactical_pedido_activo');
+          window.tacticalPedidoBorradorCache = null; tacticalEliminarPedidoBorrador();
           cotRefrescarBannerPedido();
           alert(`Pedido ${pd.ot} guardado en el CRM — ${pd.lineas.length} producto(s), total ${cotFormatoCop(montoTotal)}.`);
 
           const cliPd = db_clientes.find(c=>c.id===pd.idCli) || {empresa:pd.nombreCli, nombre:'', wp:'', correo:''};
           verPDFGenerico({
             ot: pd.ot, fecha: new Date(), vendedor: pd.vendedor, cliente: {empresa: cliPd.empresa, encargado: cliPd.nombre, telefono: cliPd.wp, correo: cliPd.correo},
-            lineas: pd.lineas.map(l=>({desc:l.desc, cantidad:l.cantidad, monto:l.monto})),
+            lineas: pd.lineas.map(l=>({desc:l.desc, cantidad:l.cantidad, monto:l.monto, precioUnitario:l.precioUnitario})),
             total: montoTotal,
           });
         }
@@ -4827,13 +5173,13 @@
           const pd = cotPedidoActivo();
           if(!pd) return;
           if(!confirm(`¿Cancelar el pedido ${pd.ot} en curso? Se perderán las ${pd.lineas.length} línea(s) agregadas (no borra cotizaciones individuales ya guardadas aparte).`)) return;
-          localStorage.removeItem('tactical_pedido_activo');
+          window.tacticalPedidoBorradorCache = null; tacticalEliminarPedidoBorrador();
           cotRefrescarBannerPedido();
         }
 
         /* ============ COMPARACIÓN DE OPCIONES (varias variantes, precios SEPARADOS, el cliente
            elige una — a diferencia del "pedido" de arriba, que suma todo en un solo total) ============ */
-        function cotComparacionActiva(){ return JSON.parse(localStorage.getItem('tactical_comparacion_activa')) || null; }
+        function cotComparacionActiva(){ return window.tacticalComparacionBorradorCache || null; }
         function cotRefrescarBannerComparacion(){
           const comp = cotComparacionActiva();
           const el = document.getElementById('cot-comparacion-banner');
@@ -4844,7 +5190,7 @@
             <button type="button" class="btn-submit" style="margin-top:6px; background:var(--ganado); display:inline-block; width:auto;" onclick="cotGenerarPDFComparativo()">✅ Generar PDF comparativo</button>
             <button type="button" class="btn-submit" style="margin-top:6px; background:var(--peligro); display:inline-block; width:auto;" onclick="cotCancelarComparacion()">✕ Cancelar comparación</button>`;
         }
-        function cotAgregarOpcionComparacion(){
+        async function cotAgregarOpcionComparacion(){
           if(!cotUltimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
           const empresa = document.getElementById('cot-cli-empresa').value.trim().toUpperCase();
           const encargado = document.getElementById('cot-cli-encargado').value.trim().toUpperCase();
@@ -4874,13 +5220,13 @@
             comp = null;
           }
           if(!comp){
-            comp = { ot: cotSiguienteOT(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, vendedor, opciones: [], creado: new Date().toISOString() };
+            comp = { ot: await cotSiguienteOT(), idCli: cli.id, nombreCli: `${cli.empresa} - ${cli.nombre}`, vendedor, opciones: [], creado: new Date().toISOString() };
           }
 
           const r = cotUltimoResultado, p = cotUltimoParams;
           const titulo = cotTituloCorto(p, document.getElementById('cot-descCliente').value);
           comp.opciones.push({ titulo, params: p, resultado: r, fotoUrl: tacticalObtenerFotoProducto('cuadernos'), videoUrl: tacticalObtenerVideoProducto('cuadernos') });
-          localStorage.setItem('tactical_comparacion_activa', JSON.stringify(comp));
+          window.tacticalComparacionBorradorCache = comp; tacticalGuardarComparacionBorrador(comp);
           cotRefrescarBannerComparacion();
           alert(`Agregada como opción ${comp.opciones.length} de la comparación ${comp.ot}.`);
         }
@@ -4888,7 +5234,7 @@
           const comp = cotComparacionActiva();
           if(!comp) return;
           if(!confirm(`¿Cancelar la comparación ${comp.ot} en curso? Se perderán las ${comp.opciones.length} opción(es) agregadas.`)) return;
-          localStorage.removeItem('tactical_comparacion_activa');
+          window.tacticalComparacionBorradorCache = null; tacticalEliminarComparacionBorrador();
           cotRefrescarBannerComparacion();
         }
         function cotGenerarPDFComparativo(){
@@ -4940,10 +5286,10 @@
           tacticalImprimirConTitulo(`${cli.empresa||'Cliente'} - ${comp.ot} - Comparativa`);
 
           const montoRef = Math.min(...comp.opciones.map(o=>o.resultado.precioFinalTotal));
-          const opp = { id: crypto.randomUUID(), ot: comp.ot, idCli: comp.idCli, nombreCli: comp.nombreCli, desc: `Comparativa: ${comp.opciones.map(o=>o.titulo).join(' vs ')}`, vendedor: comp.vendedor, monto: Math.round(montoRef), etapa: 'cot', linea: 'cuadernos', cantidad: comp.opciones[0].params.cantidad, opcionesComparativa: comp.opciones };
+          const opp = { id: crypto.randomUUID(), ot: comp.ot, idCli: comp.idCli, nombreCli: comp.nombreCli, desc: `Comparativa: ${comp.opciones.map(o=>o.titulo).join(' vs ')}`, vendedor: comp.vendedor, monto: Math.round(montoRef), etapa: 'cot', linea: 'cuadernos', cantidad: comp.opciones[0].params.cantidad, opcionesComparativa: comp.opciones, fecha: new Date().toISOString() };
           db_opps.push(opp);
           tacticalSyncOpps(db_opps);
-          localStorage.removeItem('tactical_comparacion_activa');
+          window.tacticalComparacionBorradorCache = null; tacticalEliminarComparacionBorrador();
           cotRefrescarBannerComparacion();
         }
 
@@ -4973,14 +5319,18 @@
             </div>
 
             <div class="doc-section-title">Cotización</div>
-            <table class="doc-table">
-              <tr><th>Producto</th><td>${nombresLinea[p.lineaProducto]}</td><th>Cantidad</th><td>${p.cantidad} unidades</td></tr>
-              <tr><th>Tamaño</th><td>${p.anchoCm} x ${p.altoCm} cm</td><th>Tapa</th><td>${nombresTapa[p.tapaTipo]}</td></tr>
-              <tr><th>Precio unitario</th><td>${cotFormatoCop(r.precioVentaUnitario)}</td><th>Subtotal</th><td>${cotFormatoCop(r.precioVentaTotal)}</td></tr>
-              <tr><th>IVA (19%)</th><td colspan="3">${cotFormatoCop(r.ivaTotal)}</td></tr>
-            </table>
-            ${tacticalObtenerFotoProducto('cuadernos') ? `<img src="${tacticalObtenerFotoProducto('cuadernos')}" style="max-width:160px; max-height:160px; margin-top:6px; border:1px solid #d7dee5; border-radius:4px;">` : ''}
-            ${tacticalObtenerVideoProducto('cuadernos') ? `<div style="margin-top:6px;"><a href="${tacticalObtenerVideoProducto('cuadernos')}" style="display:inline-block; background:#cc0000; color:#fff; text-decoration:none; padding:6px 12px; border-radius:4px; font-size:0.8rem; font-weight:bold;">▶ Ver video del producto</a></div>` : ''}
+            <div style="display:flex; gap:14px; align-items:flex-start; border-left:3px solid var(--rojo,#cc0000); padding-left:12px;">
+              ${tacticalObtenerFotoProducto('cuadernos') ? `<div style="flex:0 0 auto; text-align:center;">
+                <img src="${tacticalObtenerFotoProducto('cuadernos')}" style="width:140px; height:140px; object-fit:contain; border:1px solid #d7dee5; border-radius:4px; display:block;">
+                ${tacticalObtenerVideoProducto('cuadernos') ? `<a href="${tacticalObtenerVideoProducto('cuadernos')}" style="display:inline-block; margin-top:4px; color:#cc0000; text-decoration:none; font-size:0.75rem; font-weight:bold;">▶ Ver video del producto</a>` : ''}
+              </div>` : ''}
+              <table class="doc-table" style="flex:1; margin:0;">
+                <tr><th>Producto</th><td>${nombresLinea[p.lineaProducto]}</td><th>Cantidad</th><td>${p.cantidad} unidades</td></tr>
+                <tr><th>Tamaño</th><td>${p.anchoCm} x ${p.altoCm} cm</td><th>Tapa</th><td>${nombresTapa[p.tapaTipo]}</td></tr>
+                <tr><th>Precio unitario</th><td>${cotFormatoCop(r.precioVentaUnitario)}</td><th>Subtotal</th><td>${cotFormatoCop(r.precioVentaTotal)}</td></tr>
+                <tr><th>IVA (19%)</th><td colspan="3">${cotFormatoCop(r.ivaTotal)}</td></tr>
+              </table>
+            </div>
             <div class="doc-total-box">TOTAL: ${cotFormatoCop(r.precioFinalTotal)} COP</div>
             <div class="doc-cta">✅ <strong>Para aprobar esta cotización</strong>, responde confirmando el número <strong>${cot.ot||''}</strong> por WhatsApp al ${vend.telefono||TACTICAL_INFO.telefono} o al correo ${vend.correo||TACTICAL_INFO.correo}. Iniciamos producción con orden de compra, anticipo y archivos aprobados.</div>
 
@@ -5003,10 +5353,10 @@
 
         /* ---- ORDEN DE PRODUCCIÓN ---- */
         const COT_NOMBRE_MAQUINA = { octavo:"Octavo", cuarto:"Cuarto", medio_pliego:"Medio Pliego", digital:"Digital (Konica)" };
-        function cotGenerarOrdenProduccion(){
+        async function cotGenerarOrdenProduccion(){
           if(!cotUltimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
           const r = cotUltimoResultado, p = cotUltimoParams;
-          const ot = cotObtenerOT();
+          const ot = await cotObtenerOT();
           const nombresTapa = {dura:"Dura", semidura:"Semidura", blanda:"Blanda"};
           const nombresLinea = {escolar:"Cuaderno Escolar", cuaderno_anillado:"Cuaderno Anillado", agenda_ejecutiva:"Agenda Ejecutiva", libretas:"Libreta"};
 
@@ -5227,14 +5577,14 @@
         // ==========================================
         // MÓDULO 6: CONTABILIDAD
         // ==========================================
-        let db_proveedores = JSON.parse(localStorage.getItem('tactical_proveedores_v1')) || [];
+        let db_proveedores = [];
         // Devuelve el proveedor existente que coincida exacto (ya en mayúsculas) o crea uno nuevo — evita duplicados por variaciones de nombre.
-        function contObtenerOCrearProveedor(nombreMayus){
+        async function contObtenerOCrearProveedor(nombreMayus){
             let prov = db_proveedores.find(p => p.nombre === nombreMayus);
             if(!prov){
-                prov = { id: Date.now().toString(), nombre: nombreMayus };
+                prov = { id: crypto.randomUUID(), nombre: nombreMayus };
                 db_proveedores.push(prov);
-                contGuardar('tactical_proveedores_v1', db_proveedores);
+                tacticalSyncProveedor(prov);
             }
             return prov;
         }
@@ -5243,42 +5593,37 @@
             if(!dl) return;
             dl.innerHTML = db_proveedores.map(p => `<option value="${p.nombre}"></option>`).join('');
         }
-        let db_docventa = JSON.parse(localStorage.getItem('tactical_docventa_v1')) || [];
-        let db_ingresos = JSON.parse(localStorage.getItem('tactical_ingresos_v1')) || [];
-        let db_cxp = JSON.parse(localStorage.getItem('tactical_cxp_v1')) || [];
-        db_cxp.forEach(c => { if(c.saldoPendiente === undefined) c.saldoPendiente = c.estado==='pagado' ? 0 : c.monto; });
-        let db_egresos = JSON.parse(localStorage.getItem('tactical_egresos_v1')) || [];
-        let db_gastosFijos = JSON.parse(localStorage.getItem('tactical_gastos_fijos_config_v1')) || [
-            {concepto:'Arriendo', monto:2350000}, {concepto:'Luz', monto:300000}, {concepto:'Agua', monto:80000},
-            {concepto:'Celulares', monto:100000}, {concepto:'Internet', monto:90000}, {concepto:'Google Workspace', monto:250000},
-            {concepto:'Contadora', monto:400000}, {concepto:'Seguridad', monto:380000}, {concepto:'Seguro Camioneta', monto:270000},
-            {concepto:'Gerencia', monto:4000000}, {concepto:'Comercial/Ventas', monto:3000000}, {concepto:'MOD (3 operarios)', monto:5850000},
-        ];
+        let db_docventa = [];
+        let db_ingresos = [];
+        let db_cxp = [];
+        let db_egresos = [];
+        let db_gastosFijos = [];
 
         const CONT_SUBCATEGORIAS = {
             fijo: ['Arriendo','Nómina y prestaciones sociales','Servicios públicos (celular/internet)','Seguros/pólizas','Honorarios','Impuestos y licencias','Hosting y web','Amortizaciones y depreciación'],
             variable: ['Insumos (proveedores)','Servicios (proveedores)','Importados','Servicios públicos de producción (luz)','Mantenimiento correctivo','IVA/Retefuente','Comisiones pasarela de pago','Publicidad digital','Producción y operación (mano de obra temporal)','Logística y distribución'],
         };
 
-        function contGuardar(clave, arr){ localStorage.setItem(clave, JSON.stringify(arr)); }
-        function contSiguienteNumero(counterKey, prefijo){
-            let n = parseInt(localStorage.getItem(counterKey)||'0') + 1;
-            localStorage.setItem(counterKey, String(n));
+        // Conde 2026-08-19: la numeración (FV/CC/IN/CP/EG) ahora se saca de Supabase
+        // (contadores compartidos entre los 6 usuarios) en vez de localStorage --
+        // así 2 personas facturando al mismo tiempo nunca repiten un número.
+        // "Sugerir" solo LEE el contador (no lo gasta); "Siguiente" sí lo consume,
+        // y se llama solo al guardar de verdad.
+        async function contSiguienteNumero(tipo, prefijo){
+            const n = await tacticalSiguienteNumero(tipo);
             return prefijo + String(n).padStart(4,'0');
         }
         // Sugerencia editable: NO consume el contador, solo propone el próximo. El usuario puede
         // sobreescribirla con su propio consecutivo; al guardar, el contador se sincroniza hacia
         // adelante desde lo que haya quedado escrito (ver contActualizarContadorDesdeNumero).
-        function contSugerirNumero(counterKey, prefijo){
-            let n = parseInt(localStorage.getItem(counterKey)||'0') + 1;
-            return prefijo + String(n).padStart(4,'0');
+        async function contSugerirNumero(tipo, prefijo){
+            const actual = await tacticalNumeroActual(tipo);
+            return prefijo + String(actual+1).padStart(4,'0');
         }
-        function contActualizarContadorDesdeNumero(counterKey, numero){
+        function contActualizarContadorDesdeNumero(tipo, numero){
             const match = String(numero).match(/(\d+)\s*$/);
             if(!match) return;
-            const n = parseInt(match[1], 10);
-            const actual = parseInt(localStorage.getItem(counterKey)||'0');
-            if(n > actual) localStorage.setItem(counterKey, String(n));
+            tacticalAvanzarContadorSiMayor(tipo, parseInt(match[1], 10));
         }
         function contHoy(){ return new Date().toISOString().slice(0,10); }
         function contSumarDias(fechaISO, dias){ const d = new Date(fechaISO); d.setDate(d.getDate()+dias); return d.toISOString().slice(0,10); }
@@ -5390,7 +5735,7 @@
         }
 
         /* ---- CRUCE AUTOMÁTICO: negocio Ganado en CRM → Documento de Venta ---- */
-        function contCrearDocVentaDesdeOpp(opp, cli){
+        async function contCrearDocVentaDesdeOpp(opp, cli){
             if(!cli) return;
             const cot = db_cotizaciones.find(c => c.idOpp === opp.id);
             const tipoDoc = cli.tipo === 'corporativo' ? 'factura' : 'cuenta_cobro';
@@ -5409,9 +5754,9 @@
             const condicionPago = 'credito30';
             const fechaVencimiento = contSumarDias(contHoy(), 30);
             const prefijo = tipoDoc === 'factura' ? 'FV-' : 'CC-';
-            const counterKey = tipoDoc === 'factura' ? 'tactical_fv_counter' : 'tactical_cc_counter';
+            const tipoContador = tipoDoc === 'factura' ? 'fv' : 'cc';
             const doc = {
-                id: Date.now().toString(), numero: contSiguienteNumero(counterKey, prefijo), tipoDoc, fecha: contHoy(),
+                id: crypto.randomUUID(), numero: await contSiguienteNumero(tipoContador, prefijo), tipoDoc, fecha: contHoy(),
                 idCli: cli.id, idCot: cot ? cot.id : null, idOpp: opp.id, descripcion: opp.desc,
                 items: [{descripcion: opp.desc, cantidad: 1, valorUnitario: valorBruto, valorTotal: valorBruto}],
                 valorBruto, iva, reteiva, valorEnvio: 0, totalDocumento, totalCobrar: totalDocumento,
@@ -5419,7 +5764,7 @@
                 estado: 'pendiente', vendedor: cot ? cot.vendedor : '',
             };
             db_docventa.push(doc);
-            contGuardar('tactical_docventa_v1', db_docventa);
+            tacticalSyncDocVenta(doc);
         }
 
         /* ---- SELECTS COMPARTIDOS ---- */
@@ -5439,19 +5784,19 @@
         // Sugiere el próximo N° según el tipo de documento actual. Si el campo está vacío o todavía
         // tiene una sugerencia sin editar (dataset.auto), la reemplaza; si el usuario ya escribió su
         // propio consecutivo (oninput limpia dataset.auto), no lo toca.
-        function contSugerirNumeroDoc(){
+        async function contSugerirNumeroDoc(){
             const campo = document.getElementById('doc-numero');
             if(!campo) return;
             if(campo.value.trim() && campo.dataset.auto !== 'true') return;
             const tipoDoc = document.getElementById('doc-tipoDoc').value;
-            campo.value = tipoDoc === 'factura' ? contSugerirNumero('tactical_fv_counter','FV-') : contSugerirNumero('tactical_cc_counter','CC-');
+            campo.value = await (tipoDoc === 'factura' ? contSugerirNumero('fv','FV-') : contSugerirNumero('cc','CC-'));
             campo.dataset.auto = 'true';
         }
-        function contSugerirNumeroSiVacio(campoId, counterKey, prefijo){
+        async function contSugerirNumeroSiVacio(campoId, tipo, prefijo){
             const campo = document.getElementById(campoId);
             if(!campo) return;
             if(campo.value.trim() && campo.dataset.auto !== 'true') return;
-            campo.value = contSugerirNumero(counterKey, prefijo);
+            campo.value = await contSugerirNumero(tipo, prefijo);
             campo.dataset.auto = 'true';
         }
         function contLlenarSelectVendedorDoc(){
@@ -5466,7 +5811,7 @@
         }
 
         /* ---- DOCUMENTOS DE VENTA ---- */
-        function contGuardarDocVenta(){
+        async function contGuardarDocVenta(){
             const idCli = document.getElementById('doc-cliente').value;
             const cli = db_clientes.find(c => c.id === idCli);
             const tipoDoc = document.getElementById('doc-tipoDoc').value;
@@ -5477,11 +5822,17 @@
             const condicionPago = document.getElementById('doc-condicionPago').value;
             const aplicaReteiva = document.getElementById('doc-aplicaReteiva').checked;
             const vendedor = document.getElementById('doc-vendedor').value;
-            const counterKey = tipoDoc==='factura'?'tactical_fv_counter':'tactical_cc_counter';
-            const prefijo = tipoDoc==='factura'?'FV-':'CC-';
-            const numero = document.getElementById('doc-numero').value.trim() || contSugerirNumero(counterKey, prefijo);
 
             if(!cli || items.length===0 || valorBruto<=0){ alert("Debe seleccionar cliente y agregar al menos un ítem con valor mayor a 0."); return; }
+
+            const tipoContador = tipoDoc==='factura'?'fv':'cc';
+            const prefijo = tipoDoc==='factura'?'FV-':'CC-';
+            const campoNumero = document.getElementById('doc-numero');
+            const esManual = campoNumero.value.trim() && campoNumero.dataset.auto !== 'true';
+            // Si el número sigue siendo la sugerencia automática, se consume el contador de verdad
+            // recién aquí (no antes) -- así nunca se gasta un número si el usuario no llega a guardar.
+            const numero = esManual ? campoNumero.value.trim() : await contSiguienteNumero(tipoContador, prefijo);
+            if(esManual) contActualizarContadorDesdeNumero(tipoContador, numero);
 
             // La Cuenta de Cobro (Personalizado) no calcula IVA — solo la Factura (Corporativo) lo hace.
             const iva = tipoDoc === 'factura' ? Math.round(valorBruto*0.19) : 0;
@@ -5490,14 +5841,14 @@
             const totalCobrar = totalDocumento + valorEnvio;
             const fechaVencimiento = condicionPago === 'credito30' ? contSumarDias(contHoy(),30) : (condicionPago === 'contado' ? contHoy() : '');
 
-            db_docventa.push({
-                id: Date.now().toString(), numero,
+            const doc = {
+                id: crypto.randomUUID(), numero,
                 tipoDoc, fecha: contHoy(), idCli, idCot: null, idOpp: null, descripcion, items,
                 valorBruto, iva, reteiva, valorEnvio, totalDocumento, totalCobrar,
                 condicionPago, fechaVencimiento, saldoPendiente: totalCobrar, estado: 'pendiente', vendedor,
-            });
-            contGuardar('tactical_docventa_v1', db_docventa);
-            contActualizarContadorDesdeNumero(counterKey, numero);
+            };
+            db_docventa.push(doc);
+            tacticalSyncDocVenta(doc);
 
             contLimpiarItemsDoc();
             document.getElementById('doc-valorEnvio').value = '0';
@@ -5573,27 +5924,31 @@
         }
 
         /* ---- COMPROBANTE DE INGRESO ---- */
-        function contGuardarIngreso(){
+        async function contGuardarIngreso(){
             const idDocVenta = document.getElementById('ing-docventa').value;
             const doc = db_docventa.find(d => d.id === idDocVenta);
             const valor = contNumeroDesdeInput(document.getElementById('ing-valor'));
             const medioPago = document.getElementById('ing-medioPago').value;
             const concepto = document.getElementById('ing-concepto').value.trim();
             const referenciaSoporte = document.getElementById('ing-referencia').value.trim();
-            const numero = document.getElementById('ing-numero').value.trim() || contSugerirNumero('tactical_ingreso_counter','IN-');
 
             if(!doc || valor<=0){ alert("Debe seleccionar un documento de venta y un valor mayor a 0."); return; }
 
-            db_ingresos.push({
-                id: Date.now().toString(), numero, fecha: contHoy(),
+            const campoNumero = document.getElementById('ing-numero');
+            const esManual = campoNumero.value.trim() && campoNumero.dataset.auto !== 'true';
+            const numero = esManual ? campoNumero.value.trim() : await contSiguienteNumero('ingreso', 'IN-');
+            if(esManual) contActualizarContadorDesdeNumero('ingreso', numero);
+
+            const ingreso = {
+                id: crypto.randomUUID(), numero, fecha: contHoy(),
                 idCli: doc.idCli, idDocVenta, valor, concepto: concepto || `Abono a ${doc.numero}`, medioPago, referenciaSoporte,
-            });
-            contGuardar('tactical_ingresos_v1', db_ingresos);
-            contActualizarContadorDesdeNumero('tactical_ingreso_counter', numero);
+            };
+            db_ingresos.push(ingreso);
+            tacticalSyncIngreso(ingreso);
 
             doc.saldoPendiente = Math.max(0, doc.saldoPendiente - valor);
             doc.estado = doc.saldoPendiente<=0 ? 'pagada' : (doc.saldoPendiente<doc.totalCobrar ? 'abonado_parcial' : 'pendiente');
-            contGuardar('tactical_docventa_v1', db_docventa);
+            tacticalSyncDocVenta(doc);
 
             document.getElementById('ing-valor').value = '0'; document.getElementById('ing-concepto').value = ''; document.getElementById('ing-referencia').value = '';
             document.getElementById('ing-numero').value = ''; document.getElementById('ing-numero').dataset.auto = '';
@@ -5617,7 +5972,7 @@
         }
 
         /* ---- CUENTAS POR PAGAR (CxP) ---- */
-        function contGuardarCxp(){
+        async function contGuardarCxp(){
             const proveedor = document.getElementById('cxp-proveedor').value.trim().toUpperCase();
             const numeroFacturaProveedor = document.getElementById('cxp-numFactura').value.trim();
             const categoria = document.getElementById('cxp-categoria').value;
@@ -5625,17 +5980,21 @@
             const items = contObtenerItemsCxp();
             const monto = items.reduce((s,i)=>s+i.valorTotal,0);
             const fechaVencimiento = document.getElementById('cxp-fechaVenc').value.trim();
-            const numero = document.getElementById('cxp-numero').value.trim() || contSugerirNumero('tactical_cxp_counter','CP-');
 
             if(!proveedor || items.length===0 || monto<=0){ alert("Debe ingresar el proveedor y agregar al menos un ítem con valor mayor a 0."); return; }
 
-            contObtenerOCrearProveedor(proveedor); // registra el proveedor si es nuevo, o simplemente reutiliza el ya existente por nombre exacto
-            db_cxp.push({
-                id: Date.now().toString(), numero, fecha: contHoy(),
+            const campoNumero = document.getElementById('cxp-numero');
+            const esManual = campoNumero.value.trim() && campoNumero.dataset.auto !== 'true';
+            const numero = esManual ? campoNumero.value.trim() : await contSiguienteNumero('cxp', 'CP-');
+            if(esManual) contActualizarContadorDesdeNumero('cxp', numero);
+
+            await contObtenerOCrearProveedor(proveedor); // registra el proveedor si es nuevo, o simplemente reutiliza el ya existente por nombre exacto
+            const cxp = {
+                id: crypto.randomUUID(), numero, fecha: contHoy(),
                 proveedor, numeroFacturaProveedor, categoria, subcategoria, items, monto, saldoPendiente: monto, fechaVencimiento, estado: 'pendiente', idEgreso: null,
-            });
-            contGuardar('tactical_cxp_v1', db_cxp);
-            contActualizarContadorDesdeNumero('tactical_cxp_counter', numero);
+            };
+            db_cxp.push(cxp);
+            tacticalSyncCxp(cxp);
 
             document.getElementById('cxp-proveedor').value=''; document.getElementById('cxp-numFactura').value=''; document.getElementById('cxp-fechaVenc').value='';
             contLimpiarItemsCxp();
@@ -5679,7 +6038,7 @@
             }
         }
 
-        function contGuardarEgreso(){
+        async function contGuardarEgreso(){
             const idCxp = document.getElementById('egr-cxp').value || null;
             const beneficiario = document.getElementById('egr-beneficiario').value.trim();
             const concepto = document.getElementById('egr-concepto').value.trim();
@@ -5687,17 +6046,20 @@
             const categoria = document.getElementById('egr-categoria').value;
             const medioPago = document.getElementById('egr-medioPago').value;
             const referenciaSoporte = document.getElementById('egr-referencia').value.trim();
-            const numero = document.getElementById('egr-numero').value.trim() || contSugerirNumero('tactical_egreso_counter','EG-');
 
             if(!beneficiario || monto<=0){ alert("Debe ingresar el beneficiario y un monto mayor a 0."); return; }
 
+            const campoNumero = document.getElementById('egr-numero');
+            const esManual = campoNumero.value.trim() && campoNumero.dataset.auto !== 'true';
+            const numero = esManual ? campoNumero.value.trim() : await contSiguienteNumero('egreso', 'EG-');
+            if(esManual) contActualizarContadorDesdeNumero('egreso', numero);
+
             const nuevoEgreso = {
-                id: Date.now().toString(), numero, fecha: contHoy(),
+                id: crypto.randomUUID(), numero, fecha: contHoy(),
                 beneficiario, concepto, monto, categoria, medioPago, referenciaSoporte, idCxp,
             };
             db_egresos.push(nuevoEgreso);
-            contGuardar('tactical_egresos_v1', db_egresos);
-            contActualizarContadorDesdeNumero('tactical_egreso_counter', numero);
+            tacticalSyncEgreso(nuevoEgreso);
 
             if(idCxp){
                 const cxp = db_cxp.find(c => c.id === idCxp);
@@ -5705,7 +6067,7 @@
                     cxp.saldoPendiente = Math.max(0, cxp.saldoPendiente - monto);
                     cxp.estado = cxp.saldoPendiente<=0 ? 'pagado' : (cxp.saldoPendiente<cxp.monto ? 'abonado_parcial' : 'pendiente');
                     cxp.idEgreso = nuevoEgreso.id;
-                    contGuardar('tactical_cxp_v1', db_cxp);
+                    tacticalSyncCxp(cxp);
                 }
             }
 
@@ -5757,19 +6119,20 @@
         /* ---- GASTOS FIJOS (config) ---- */
         function contActualizarGastoFijo(idx, campo, valor){
             db_gastosFijos[idx][campo] = campo==='monto' ? (parseInt(String(valor).replace(/\D/g,''),10)||0) : valor;
-            contGuardar('tactical_gastos_fijos_config_v1', db_gastosFijos);
+            tacticalSyncGastoFijo(db_gastosFijos[idx], idx);
             renderGastosFijos(); renderContTablero();
         }
         function contEliminarGastoFijo(idx){
             const g = db_gastosFijos[idx];
             if(!confirm(`¿Eliminar el gasto fijo "${g?g.concepto:''}"?\n\nEsta acción no se puede deshacer.`)) return;
+            tacticalEliminarGastoFijoRemoto(g.id);
             db_gastosFijos.splice(idx,1);
-            contGuardar('tactical_gastos_fijos_config_v1', db_gastosFijos);
             renderGastosFijos(); renderContTablero();
         }
         function contAgregarGastoFijo(){
-            db_gastosFijos.push({concepto:'Nueva partida', monto:0});
-            contGuardar('tactical_gastos_fijos_config_v1', db_gastosFijos);
+            const g = {id: crypto.randomUUID(), concepto:'Nueva partida', monto:0};
+            db_gastosFijos.push(g);
+            tacticalSyncGastoFijo(g, db_gastosFijos.length-1);
             renderGastosFijos();
         }
         function renderGastosFijos(){
@@ -5866,16 +6229,13 @@
             renderGastosFijos();
             renderContTablero();
             contSugerirNumeroDoc();
-            contSugerirNumeroSiVacio('ing-numero', 'tactical_ingreso_counter', 'IN-');
-            contSugerirNumeroSiVacio('cxp-numero', 'tactical_cxp_counter', 'CP-');
-            contSugerirNumeroSiVacio('egr-numero', 'tactical_egreso_counter', 'EG-');
+            contSugerirNumeroSiVacio('ing-numero', 'ingreso', 'IN-');
+            contSugerirNumeroSiVacio('cxp-numero', 'cxp', 'CP-');
+            contSugerirNumeroSiVacio('egr-numero', 'egreso', 'EG-');
         }
 
         // CARGA GENERAL INICIAL
         window.onload = () => {
-            const elFecha = document.getElementById('display-fecha');
-            if (elFecha) elFecha.innerText = formatDate(currentDate);
-            activeTasks.forEach(t => addTask(t.area, t.desc, t.espec, t.emp, t.status, t.origin, t.delay, t.aclaracion));
             irAVistaDesdeHash();
         };
     </script>
