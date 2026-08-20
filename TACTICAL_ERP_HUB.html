@@ -694,7 +694,9 @@
                     </div>
                     <div id="pipeline" class="accordion-content">
                         <div class="form-grid">
-                            <div class="form-group"><label>Seleccionar Cliente:</label><select id="opp-cliente"></select></div>
+                            <div class="form-group"><label>Seleccionar Cliente:</label>
+                                <input type="text" id="opp-cliente-filtro" placeholder="Escribe para buscar..." oninput="tacticalFiltrarSelectClientes('opp-cliente-filtro','opp-cliente')" style="margin-bottom:4px;">
+                                <select id="opp-cliente"></select></div>
                             <div class="form-group"><label>¿Qué está cotizando / pidiendo?</label><input type="text" id="opp-desc" placeholder="Ej: 1000 Cuadernos Tapa Dura"></div>
                             <div class="form-group"><label>Monto Cotizado ($ COP):</label><input type="number" id="opp-monto" value="0"></div>
                             <div class="form-group">
@@ -1184,7 +1186,9 @@
                     <div id="cont-docventa" class="accordion-content">
                         <p style="font-size:0.85rem; color:#718096; margin-top:0;">Los negocios marcados "Ganado" en el CRM generan este documento automáticamente. Use este formulario solo para ventas que no vienen de una cotización/oportunidad.</p>
                         <div class="form-grid">
-                            <div class="form-group"><label>Cliente:</label><select id="doc-cliente" onchange="contAutocompletarTipoDoc()"></select></div>
+                            <div class="form-group"><label>Cliente:</label>
+                                <input type="text" id="doc-cliente-filtro" placeholder="Escribe para buscar..." oninput="tacticalFiltrarSelectClientes('doc-cliente-filtro','doc-cliente')" style="margin-bottom:4px;">
+                                <select id="doc-cliente" onchange="contAutocompletarTipoDoc()"></select></div>
                             <div class="form-group">
                                 <label>Tipo de Documento:</label>
                                 <select id="doc-tipoDoc" onchange="contSugerirNumeroDoc(); contActualizarTotalDoc();"
@@ -2466,10 +2470,25 @@
             renderClientes();
         }
 
+        // Conde 2026-08-20: "quiero que al digitar cliente automáticamente busque por similitud" --
+        // el <select> nativo de HTML no permite buscar por substring (solo por la primera letra
+        // escrita), así que se le agregó un campito de texto encima que reconstruye las <option>
+        // filtradas mientras se escribe, en vez de cambiar el <select> por un <input> + datalist
+        // (eso hubiera roto todo el código que lee el id del cliente directo del .value del select).
+        function tacticalPoblarSelectClientes(selectId, filtroTexto){
+            const sel = document.getElementById(selectId);
+            if(!sel) return;
+            const actual = sel.value;
+            const filtro = (filtroTexto||'').trim().toLowerCase();
+            const lista = filtro ? db_clientes.filter(c => `${c.empresa} ${c.nombre}`.toLowerCase().includes(filtro)) : db_clientes;
+            sel.innerHTML = '<option value="">-- Seleccione un Cliente --</option>' + lista.map(c => `<option value="${c.id}">${c.empresa} (${c.nombre})</option>`).join('');
+            if(lista.some(c=>c.id===actual)) sel.value = actual;
+        }
+        function tacticalFiltrarSelectClientes(filtroInputId, selectId){
+            tacticalPoblarSelectClientes(selectId, document.getElementById(filtroInputId).value);
+        }
         function llenarSelectClientes() {
-            const sel = document.getElementById('opp-cliente');
-            sel.innerHTML = '<option value="">-- Seleccione un Cliente --</option>';
-            db_clientes.forEach(c => { sel.innerHTML += `<option value="${c.id}">${c.empresa} (${c.nombre})</option>`; });
+            tacticalPoblarSelectClientes('opp-cliente', (document.getElementById('opp-cliente-filtro')||{}).value);
         }
 
         function guardarOportunidad() {
@@ -5987,12 +6006,7 @@
 
         /* ---- SELECTS COMPARTIDOS ---- */
         function contLlenarSelectClienteDoc(){
-            const sel = document.getElementById('doc-cliente');
-            if(!sel) return;
-            const actual = sel.value;
-            sel.innerHTML = '<option value="">-- Seleccione un Cliente --</option>';
-            db_clientes.forEach(c => { sel.innerHTML += `<option value="${c.id}">${c.empresa} (${c.nombre})</option>`; });
-            if(actual) sel.value = actual;
+            tacticalPoblarSelectClientes('doc-cliente', (document.getElementById('doc-cliente-filtro')||{}).value);
         }
         function contAutocompletarTipoDoc(){
             const cli = db_clientes.find(c => c.id === document.getElementById('doc-cliente').value);
