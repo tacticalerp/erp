@@ -1194,12 +1194,12 @@
                         </div>
                         <label style="display:block; font-weight:bold; margin-bottom:5px; font-size:0.88rem; color:var(--secondary);">Ítems del documento (hasta 10):</label>
                         <div class="table-responsive"><table>
-                            <thead><tr><th>Descripción</th><th style="width:90px;">Cantidad</th><th style="width:150px;">Valor Unitario</th><th style="width:150px;">Valor Total</th><th></th></tr></thead>
+                            <thead><tr><th>Descripción</th><th style="width:90px;">Cantidad</th><th style="width:140px;">Valor Unitario</th><th style="width:120px;">IVA</th><th style="width:150px;">Valor Total</th><th></th></tr></thead>
                             <tbody id="doc-items-body"></tbody>
                         </table></div>
                         <button class="btn-add-item" type="button" onclick="contAgregarItemDoc()">+ Agregar ítem</button>
                         <div class="metric-total" id="doc-valorBruto-total" style="margin-top:10px;">Valor Bruto Total: $0</div>
-                        <div class="metric-total" id="doc-iva-total" style="margin-top:4px; color:#718096; font-weight:normal;">IVA: $0</div>
+                        <div class="metric-total" id="doc-iva-total" style="margin-top:4px; color:#718096; font-weight:normal;">IVA total (suma de los ítems): $0</div>
                         <button class="btn-submit" style="margin-top:12px;" onclick="contGuardarDocVenta()">+ Registrar Documento de Venta</button>
                         <div class="card-grid" id="lista-docventa"></div>
                     </div>
@@ -1246,15 +1246,15 @@
                             </div>
                             <div class="form-group"><label>Subcategoría:</label><select id="cxp-subcategoria"></select></div>
                             <div class="form-group"><label>Fecha de Vencimiento:</label><input type="text" id="cxp-fechaVenc" placeholder="AAAA-MM-DD"></div>
-                            <div class="form-group"><label>IVA incluido (informativo, no cambia el Monto Total):</label><input type="text" inputmode="numeric" id="cxp-iva" value="0" oninput="contFormatearMiles(this)"></div>
                         </div>
                         <label style="display:block; font-weight:bold; margin-bottom:5px; font-size:0.88rem; color:var(--secondary);">Ítems de la factura de compra (hasta 10):</label>
                         <div class="table-responsive"><table>
-                            <thead><tr><th>Descripción</th><th style="width:90px;">Cantidad</th><th style="width:150px;">Valor Unitario</th><th style="width:150px;">Valor Total</th><th></th></tr></thead>
+                            <thead><tr><th>Descripción</th><th style="width:90px;">Cantidad</th><th style="width:140px;">Valor Unitario</th><th style="width:120px;">IVA</th><th style="width:150px;">Valor Total</th><th></th></tr></thead>
                             <tbody id="cxp-items-body"></tbody>
                         </table></div>
                         <button class="btn-add-item" type="button" onclick="contAgregarItemCxp()">+ Agregar ítem</button>
                         <div class="metric-total" id="cxp-monto-total" style="margin-top:10px;">Monto Total: $0</div>
+                        <div class="metric-total" id="cxp-iva-total" style="margin-top:4px; color:#718096; font-weight:normal;">IVA total (suma de los ítems): $0</div>
                         <button class="btn-submit" style="margin-top:12px;" onclick="contGuardarCxp()">+ Registrar Cuenta por Pagar</button>
                         <div class="card-grid" id="lista-cxp"></div>
                     </div>
@@ -5611,9 +5611,13 @@
             return parseInt(String(input.value).replace(/\D/g, ''), 10) || 0;
         }
 
-        /* ---- ÍTEMS: Documento de Venta (hasta 10 renglones, se suman a Valor Bruto) ---- */
+        /* ---- ÍTEMS: Documento de Venta (hasta 10 renglones, se suman a Valor Bruto) ----
+           Conde 2026-08-20: el IVA es una columna más por ítem (Descripción-Cantidad-Valor
+           Unitario-IVA-Valor Total), 100% manual (arranca en $0, sin sugerencia automática) --
+           reemplaza el cálculo único que había antes a nivel de documento. Valor Total de cada
+           ítem = Cantidad×Valor Unitario + IVA de ese ítem. */
         let contDocItemContador = 0;
-        function contAgregarItemDoc(descripcion, cantidad, valorUnitario){
+        function contAgregarItemDoc(descripcion, cantidad, valorUnitario, iva){
             if(document.querySelectorAll('#doc-items-body tr').length >= 10){ alert('Máximo 10 ítems por documento.'); return; }
             contDocItemContador++;
             const id = 'docitem_'+contDocItemContador;
@@ -5623,6 +5627,7 @@
                 <td><input type="text" id="${id}_desc" value="${descripcion||''}" placeholder="Descripción del ítem"></td>
                 <td><input type="number" id="${id}_cant" value="${cantidad||1}" min="1" oninput="contRecalcularItemDoc('${id}')"></td>
                 <td><input type="text" inputmode="numeric" id="${id}_valorU" value="${valorUnitario?Number(valorUnitario).toLocaleString('es-CO'):''}" oninput="contFormatearMiles(this); contRecalcularItemDoc('${id}')"></td>
+                <td><input type="text" inputmode="numeric" id="${id}_iva" value="${iva?Number(iva).toLocaleString('es-CO'):'0'}" oninput="contFormatearMiles(this); contRecalcularItemDoc('${id}')"></td>
                 <td id="${id}_total">$0</td>
                 <td><button type="button" class="btn-action btn-del-row" onclick="contQuitarItemDoc('${id}')">✕</button></td>`;
             document.getElementById('doc-items-body').appendChild(tr);
@@ -5631,7 +5636,8 @@
         function contRecalcularItemDoc(id){
             const cant = parseFloat(document.getElementById(id+'_cant').value) || 0;
             const valorU = contNumeroDesdeInput(document.getElementById(id+'_valorU'));
-            document.getElementById(id+'_total').innerText = cotFormatoCop(cant*valorU);
+            const iva = contNumeroDesdeInput(document.getElementById(id+'_iva'));
+            document.getElementById(id+'_total').innerText = cotFormatoCop(cant*valorU + iva);
             contActualizarTotalDoc();
         }
         function contQuitarItemDoc(id){
@@ -5639,16 +5645,13 @@
             if(el) el.remove();
             contActualizarTotalDoc();
         }
-        // Conde 2026-08-20: solo informativo -- muestra el IVA que se va a guardar con el documento
-        // (misma regla de siempre: 19% solo si es Factura, $0 si es Cuenta de Cobro), para que se
-        // vea en pantalla antes de guardar y no solo después, en el documento impreso.
         function contActualizarTotalDoc(){
-            const total = contObtenerItemsDoc().reduce((s,i)=>s+i.valorTotal,0);
-            document.getElementById('doc-valorBruto-total').innerText = 'Valor Bruto Total: ' + cotFormatoCop(total);
-            const tipoDoc = document.getElementById('doc-tipoDoc').value;
-            const iva = tipoDoc === 'factura' ? Math.round(total*0.19) : 0;
-            document.getElementById('doc-iva-total').innerText = `IVA${tipoDoc==='factura'?' (19%)':' (no aplica -- Cuenta de Cobro)'}: ${cotFormatoCop(iva)}`;
-            return total;
+            const items = contObtenerItemsDoc();
+            const valorBruto = items.reduce((s,i)=>s+(i.cantidad*i.valorUnitario),0);
+            const ivaTotal = items.reduce((s,i)=>s+i.iva,0);
+            document.getElementById('doc-valorBruto-total').innerText = 'Valor Bruto Total (sin IVA): ' + cotFormatoCop(valorBruto);
+            document.getElementById('doc-iva-total').innerText = `IVA total (suma de los ítems): ${cotFormatoCop(ivaTotal)} — Total con IVA: ${cotFormatoCop(valorBruto+ivaTotal)}`;
+            return valorBruto;
         }
         function contObtenerItemsDoc(){
             const items = [];
@@ -5656,7 +5659,8 @@
                 const descripcion = document.getElementById(tr.id+'_desc').value.trim();
                 const cantidad = parseFloat(document.getElementById(tr.id+'_cant').value) || 0;
                 const valorUnitario = contNumeroDesdeInput(document.getElementById(tr.id+'_valorU'));
-                if(descripcion || cantidad || valorUnitario) items.push({descripcion, cantidad, valorUnitario, valorTotal: cantidad*valorUnitario});
+                const iva = contNumeroDesdeInput(document.getElementById(tr.id+'_iva'));
+                if(descripcion || cantidad || valorUnitario || iva) items.push({descripcion, cantidad, valorUnitario, iva, valorTotal: cantidad*valorUnitario + iva});
             });
             return items;
         }
@@ -5665,9 +5669,10 @@
             contActualizarTotalDoc();
         }
 
-        /* ---- ÍTEMS: Cuenta por Pagar (hasta 10 renglones, se suman al Monto de la factura de compra) ---- */
+        /* ---- ÍTEMS: Cuenta por Pagar (hasta 10 renglones, se suman al Monto de la factura de compra) ----
+           Conde 2026-08-20: mismo criterio que Documento de Venta -- IVA por ítem, 100% manual. */
         let contCxpItemContador = 0;
-        function contAgregarItemCxp(descripcion, cantidad, valorUnitario){
+        function contAgregarItemCxp(descripcion, cantidad, valorUnitario, iva){
             if(document.querySelectorAll('#cxp-items-body tr').length >= 10){ alert('Máximo 10 ítems por factura.'); return; }
             contCxpItemContador++;
             const id = 'cxpitem_'+contCxpItemContador;
@@ -5677,6 +5682,7 @@
                 <td><input type="text" id="${id}_desc" value="${descripcion||''}" placeholder="Descripción del ítem"></td>
                 <td><input type="number" id="${id}_cant" value="${cantidad||1}" min="1" oninput="contRecalcularItemCxp('${id}')"></td>
                 <td><input type="text" inputmode="numeric" id="${id}_valorU" value="${valorUnitario?Number(valorUnitario).toLocaleString('es-CO'):''}" oninput="contFormatearMiles(this); contRecalcularItemCxp('${id}')"></td>
+                <td><input type="text" inputmode="numeric" id="${id}_iva" value="${iva?Number(iva).toLocaleString('es-CO'):'0'}" oninput="contFormatearMiles(this); contRecalcularItemCxp('${id}')"></td>
                 <td id="${id}_total">$0</td>
                 <td><button type="button" class="btn-action btn-del-row" onclick="contQuitarItemCxp('${id}')">✕</button></td>`;
             document.getElementById('cxp-items-body').appendChild(tr);
@@ -5685,7 +5691,8 @@
         function contRecalcularItemCxp(id){
             const cant = parseFloat(document.getElementById(id+'_cant').value) || 0;
             const valorU = contNumeroDesdeInput(document.getElementById(id+'_valorU'));
-            document.getElementById(id+'_total').innerText = cotFormatoCop(cant*valorU);
+            const iva = contNumeroDesdeInput(document.getElementById(id+'_iva'));
+            document.getElementById(id+'_total').innerText = cotFormatoCop(cant*valorU + iva);
             contActualizarTotalCxp();
         }
         function contQuitarItemCxp(id){
@@ -5694,8 +5701,11 @@
             contActualizarTotalCxp();
         }
         function contActualizarTotalCxp(){
-            const total = contObtenerItemsCxp().reduce((s,i)=>s+i.valorTotal,0);
+            const items = contObtenerItemsCxp();
+            const total = items.reduce((s,i)=>s+i.valorTotal,0);
+            const ivaTotal = items.reduce((s,i)=>s+i.iva,0);
             document.getElementById('cxp-monto-total').innerText = 'Monto Total: ' + cotFormatoCop(total);
+            document.getElementById('cxp-iva-total').innerText = 'IVA total (suma de los ítems): ' + cotFormatoCop(ivaTotal);
             return total;
         }
         function contObtenerItemsCxp(){
@@ -5704,7 +5714,8 @@
                 const descripcion = document.getElementById(tr.id+'_desc').value.trim();
                 const cantidad = parseFloat(document.getElementById(tr.id+'_cant').value) || 0;
                 const valorUnitario = contNumeroDesdeInput(document.getElementById(tr.id+'_valorU'));
-                if(descripcion || cantidad || valorUnitario) items.push({descripcion, cantidad, valorUnitario, valorTotal: cantidad*valorUnitario});
+                const iva = contNumeroDesdeInput(document.getElementById(tr.id+'_iva'));
+                if(descripcion || cantidad || valorUnitario || iva) items.push({descripcion, cantidad, valorUnitario, iva, valorTotal: cantidad*valorUnitario + iva});
             });
             return items;
         }
@@ -5737,7 +5748,7 @@
             const doc = {
                 id: crypto.randomUUID(), numero: await contSiguienteNumero(tipoContador, prefijo), tipoDoc, fecha: contHoy(),
                 idCli: cli.id, idCot: cot ? cot.id : null, idOpp: opp.id, descripcion: opp.desc,
-                items: [{descripcion: opp.desc, cantidad: 1, valorUnitario: valorBruto, valorTotal: valorBruto}],
+                items: [{descripcion: opp.desc, cantidad: 1, valorUnitario: valorBruto, iva, valorTotal: valorBruto + iva}],
                 valorBruto, iva, reteiva, valorEnvio: 0, totalDocumento, totalCobrar: totalDocumento,
                 condicionPago, fechaVencimiento, saldoPendiente: totalDocumento,
                 estado: 'pendiente', vendedor: cot ? cot.vendedor : '',
@@ -5796,7 +5807,9 @@
             const cli = db_clientes.find(c => c.id === idCli);
             const tipoDoc = document.getElementById('doc-tipoDoc').value;
             const items = contObtenerItemsDoc();
-            const valorBruto = items.reduce((s,i)=>s+i.valorTotal,0);
+            // valorBruto es el subtotal SIN IVA (cantidad×valor unitario) -- el IVA se suma aparte,
+            // porque item.valorTotal ya trae el IVA de esa línea incluido (Conde 2026-08-20).
+            const valorBruto = items.reduce((s,i)=>s+(i.cantidad*i.valorUnitario),0);
             const descripcion = items.map(i => `${i.cantidad}x ${i.descripcion}`).join(', ');
             const valorEnvio = contNumeroDesdeInput(document.getElementById('doc-valorEnvio'));
             const condicionPago = document.getElementById('doc-condicionPago').value;
@@ -5814,8 +5827,9 @@
             const numero = esManual ? campoNumero.value.trim() : await contSiguienteNumero(tipoContador, prefijo);
             if(esManual) contActualizarContadorDesdeNumero(tipoContador, numero);
 
-            // La Cuenta de Cobro (Personalizado) no calcula IVA — solo la Factura (Corporativo) lo hace.
-            const iva = tipoDoc === 'factura' ? Math.round(valorBruto*0.19) : 0;
+            // El IVA ya no se calcula automático -- es la suma del IVA que se escribió en cada ítem
+            // (Conde 2026-08-20, columna IVA por ítem, 100% manual).
+            const iva = items.reduce((s,i)=>s+i.iva,0);
             const reteiva = (tipoDoc === 'factura' && aplicaReteiva) ? Math.round(iva*0.15) : 0;
             const totalDocumento = valorBruto + iva - reteiva;
             const totalCobrar = totalDocumento + valorEnvio;
@@ -5959,8 +5973,8 @@
             const subcategoria = document.getElementById('cxp-subcategoria').value;
             const items = contObtenerItemsCxp();
             const monto = items.reduce((s,i)=>s+i.valorTotal,0);
+            const iva = items.reduce((s,i)=>s+i.iva,0);
             const fechaVencimiento = document.getElementById('cxp-fechaVenc').value.trim();
-            const iva = contNumeroDesdeInput(document.getElementById('cxp-iva'));
 
             if(!proveedor || items.length===0 || monto<=0){ alert("Debe ingresar el proveedor y agregar al menos un ítem con valor mayor a 0."); return; }
 
@@ -5977,7 +5991,7 @@
             db_cxp.push(cxp);
             tacticalSyncCxp(cxp);
 
-            document.getElementById('cxp-proveedor').value=''; document.getElementById('cxp-numFactura').value=''; document.getElementById('cxp-fechaVenc').value=''; document.getElementById('cxp-iva').value='0';
+            document.getElementById('cxp-proveedor').value=''; document.getElementById('cxp-numFactura').value=''; document.getElementById('cxp-fechaVenc').value='';
             contLimpiarItemsCxp();
             document.getElementById('cxp-numero').value=''; document.getElementById('cxp-numero').dataset.auto='';
             renderContabilidad();

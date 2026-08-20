@@ -479,9 +479,9 @@ async function tacticalSyncProveedor(p){
 
 // Ítems de Documento de Venta / Cuenta por Pagar: misma forma en ambas tablas hijas.
 function tacticalItemADb(fk, fkVal, it){
-  return { [fk]: fkVal, descripcion: it.descripcion||'', cantidad: it.cantidad||null, valor_unitario: it.valorUnitario||null, valor_total: it.valorTotal||null };
+  return { [fk]: fkVal, descripcion: it.descripcion||'', cantidad: it.cantidad||null, valor_unitario: it.valorUnitario||null, iva: it.iva||0, valor_total: it.valorTotal||null };
 }
-function tacticalItemDeDb(r){ return { descripcion: r.descripcion, cantidad: r.cantidad, valorUnitario: r.valor_unitario, valorTotal: r.valor_total }; }
+function tacticalItemDeDb(r){ return { descripcion: r.descripcion, cantidad: r.cantidad, valorUnitario: r.valor_unitario, iva: Number(r.iva)||0, valorTotal: r.valor_total }; }
 
 function tacticalDocVentaADb(d){
   return {

@@ -372,6 +372,7 @@ create table public.documentos_venta_items (
   descripcion text,
   cantidad numeric,
   valor_unitario numeric,
+  iva numeric not null default 0, -- Conde 2026-08-20: IVA por ítem, no por documento
   valor_total numeric
 );
 alter table public.documentos_venta_items enable row level security;
@@ -421,6 +422,7 @@ create table public.cuentas_por_pagar_items (
   descripcion text,
   cantidad numeric,
   valor_unitario numeric,
+  iva numeric not null default 0, -- Conde 2026-08-20: IVA por ítem, no por documento
   valor_total numeric
 );
 alter table public.cuentas_por_pagar_items enable row level security;
