@@ -718,6 +718,13 @@
                             <input type="hidden" id="opp-id-eleccion">
                         </div>
 
+                        <div id="modal-seleccion-lineas-ganado" style="display:none; background:#fff8e1; border:1px solid #f0d98c; padding:15px; border-radius:6px; margin-top:10px;">
+                            <label style="font-weight:bold; color:#7a5b00; display:block; margin-bottom:8px;">📦 Este pedido tiene varios productos — ¿cuáles aprobó el cliente? (desmarca los que NO)</label>
+                            <div id="lista-lineas-seleccion-ganado" style="display:flex; flex-direction:column; gap:4px; margin-bottom:10px;"></div>
+                            <input type="hidden" id="opp-id-seleccion-lineas">
+                            <div><button class="btn-submit" style="width:auto; background:var(--ganado);" onclick="confirmarSeleccionLineasGanado()">✅ Continuar con lo seleccionado</button></div>
+                        </div>
+
                         <div id="modal-fecha-ganado" style="display:none; background:#f0fff4; border:1px solid #9ae6b4; padding:15px; border-radius:6px; margin-top:10px;">
                             <label style="font-weight:bold; color:#276749; display:block; margin-bottom:8px;">📅 ¿Para qué fecha se compromete la entrega? (queda como fecha de entrega en el Kanban)</label>
                             <input type="date" id="ganado-fecha-entrega" style="margin-bottom:10px;">
@@ -2553,6 +2560,43 @@
                 abrirModalEleccionOpcion(idOpp);
                 return;
             }
+            // Conde 2026-08-20: un pedido multi-producto (Fase B, "lineas") no siempre se aprueba
+            // completo -- antes se creaba la ficha del Kanban Y el documento de venta con TODOS los
+            // ítems sin preguntar, aunque el cliente solo hubiera aprobado algunos.
+            if(opp && opp.lineas && opp.lineas.length > 1){
+                abrirModalSeleccionLineasGanado(idOpp);
+                return;
+            }
+            pedirFechaEntregaYGanado(idOpp, null);
+        }
+        function abrirModalSeleccionLineasGanado(idOpp){
+            document.getElementById('opp-id-seleccion-lineas').value = idOpp;
+            const opp = db_opps.find(o => o.id === idOpp);
+            const lista = document.getElementById('lista-lineas-seleccion-ganado');
+            lista.innerHTML = opp.lineas.map((l,i) => `
+                <label style="display:flex; align-items:center; gap:8px; background:white; border:1px solid #f0d98c; border-radius:4px; padding:6px 10px; cursor:pointer;">
+                    <input type="checkbox" class="chk-linea-ganado" data-idx="${i}" checked>
+                    <span>${l.desc} <span style="color:#a0aec0;">— ${cotFormatoCop(l.monto||0)}</span></span>
+                </label>`).join('');
+            document.getElementById('modal-seleccion-lineas-ganado').style.display = 'block';
+            document.getElementById('modal-seleccion-lineas-ganado').scrollIntoView();
+        }
+        function confirmarSeleccionLineasGanado(){
+            const idOpp = document.getElementById('opp-id-seleccion-lineas').value;
+            const idx = db_opps.findIndex(o => o.id === idOpp);
+            const opp = db_opps[idx];
+            const marcadas = [...document.querySelectorAll('.chk-linea-ganado')].filter(c=>c.checked).map(c=>parseInt(c.dataset.idx,10));
+            if(marcadas.length === 0){ alert('Selecciona al menos un producto aprobado.'); return; }
+            const lineasAprobadas = marcadas.map(i => opp.lineas[i]);
+            // Recalcula el resumen del negocio (monto/descripción/cantidad) para que reflejen SOLO lo
+            // aprobado -- de esto salen tanto el Documento de Venta como la ficha del Kanban.
+            db_opps[idx] = {
+                ...opp, lineas: lineasAprobadas,
+                monto: lineasAprobadas.reduce((s,l)=>s+(l.monto||0),0),
+                cantidad: lineasAprobadas.reduce((s,l)=>s+(l.cantidad||0),0),
+                desc: lineasAprobadas.map(l=>l.desc).join(' + '),
+            };
+            document.getElementById('modal-seleccion-lineas-ganado').style.display = 'none';
             pedirFechaEntregaYGanado(idOpp, null);
         }
         // Conde 2026-08-19: al aprobar (marcar Ganado) se pide la fecha de entrega comprometida
@@ -2860,30 +2904,30 @@
                   // impresión (importante para el diseñador: ahí es donde arma su archivo).
                   const planoImp = planoImpresionDeLineaCuaderno(dl);
                   return `
-                    <div style="margin-top:9px; padding-top:9px; border-top:1px dashed #e2e8f0;">
-                      <div style="display:flex; gap:20px; align-items:center;">
+                    <div style="margin-top:7px; padding-top:7px; border-top:1px dashed #e2e8f0; font-size:${TACTICAL_OP_FONT_SIZE};">
+                      <div style="display:flex; gap:14px; align-items:center;">
                         <div style="flex:1; min-width:0;">
-                          <div style="font-size:1.88rem; font-weight:bold;">${clave}</div>
-                          <div style="font-size:1.83rem; color:#4a5568; line-height:1.3;">Máquina: <strong>${maquinaTxt}</strong>${conteoTxt} — Papel: <strong>${dl.sustrato.nombre} ${dl.sustrato.gramaje}gr</strong> — Pliegos: <strong>${dl.detalleMaterial.nPliegos}</strong></div>
+                          <div style="font-weight:bold;">${clave}</div>
+                          <div style="color:#4a5568; line-height:1.4;">Máquina: <strong>${maquinaTxt}</strong>${conteoTxt} — Papel: <strong>${dl.sustrato.nombre} ${dl.sustrato.gramaje}gr</strong> — Pliegos: <strong>${dl.detalleMaterial.nPliegos}</strong></div>
                         </div>
-                        ${pc ? `<div style="flex-shrink:0; display:flex; gap:15px; align-items:center;"><div style="font-size:1.5rem; color:#a0aec0; text-align:center;">Corte del pliego</div>${tacticalDibujarPlanoCorteSVG(pc,144)}<div style="font-size:1.73rem; color:#4a5568; max-width:240px; line-height:1.25;">${tacticalPlanoCorteTexto(pc)}</div></div>` : ''}
+                        ${pc ? `<div style="flex-shrink:0; display:flex; gap:12px; align-items:center;"><div style="color:#a0aec0; text-align:center;">Corte del pliego</div>${tacticalDibujarPlanoCorteSVG(pc,140)}<div style="color:#4a5568; max-width:220px; line-height:1.35;">${tacticalPlanoCorteTexto(pc)}</div></div>` : ''}
                       </div>
                       ${planoImp ? `
-                      <div style="display:flex; gap:20px; align-items:center; margin-top:9px; padding-top:9px; border-top:1px dotted #e2e8f0;">
-                        <div style="flex:1; min-width:0; font-size:1.83rem; color:#4a5568;">🎨 <strong>Montaje para impresión:</strong> ${planoImp.piezasPorPliego} pieza(s) de ${planoImp.piezaAncho}x${planoImp.piezaAlto}cm en un tamaño de ${planoImp.pliegoAncho}x${planoImp.pliegoAlto}cm${maquinaTxt==='Digital (Konica)'?' (con margen de pinza descontado)':''}</div>
-                        <div style="flex-shrink:0; display:flex; gap:15px; align-items:center;">${tacticalDibujarPlanoCorteSVG(planoImp,144)}<div style="font-size:1.73rem; color:#4a5568; max-width:240px; line-height:1.25;">${tacticalPlanoCorteTexto(planoImp)}</div></div>
+                      <div style="display:flex; gap:14px; align-items:center; margin-top:7px; padding-top:7px; border-top:1px dotted #e2e8f0;">
+                        <div style="flex:1; min-width:0; color:#4a5568;">🎨 <strong>Montaje para impresión:</strong> ${planoImp.piezasPorPliego} pieza(s) de ${planoImp.piezaAncho}x${planoImp.piezaAlto}cm en un tamaño de ${planoImp.pliegoAncho}x${planoImp.pliegoAlto}cm${maquinaTxt==='Digital (Konica)'?' (con margen de pinza descontado)':''}</div>
+                        <div style="flex-shrink:0; display:flex; gap:12px; align-items:center;">${tacticalDibujarPlanoCorteSVG(planoImp,140)}<div style="color:#4a5568; max-width:220px; line-height:1.35;">${tacticalPlanoCorteTexto(planoImp)}</div></div>
                       </div>` : ''}
                     </div>`;
                 }).join('');
                 const recsAplicablesFicha = RECOMENDACIONES_PRODUCCION_COT.filter(reg=>reg.aplica(rFresco, pFresco)).map(reg=>reg.texto);
                 const recsHtmlFicha = recsAplicablesFicha.length ? `
-                  <div style="margin-top:9px; padding-top:9px; border-top:1px dashed #e2e8f0;">
-                    ${recsAplicablesFicha.map(txt=>`<div style="background:#fff3cd; color:#7a5b00; border:1px solid #f0d98c; border-radius:4px; padding:9px 20px; font-size:1.73rem; margin-bottom:9px;">⚠️ ${txt}</div>`).join('')}
+                  <div style="margin-top:7px; padding-top:7px; border-top:1px dashed #e2e8f0;">
+                    ${recsAplicablesFicha.map(txt=>`<div style="background:#fff3cd; color:#7a5b00; border:1px solid #f0d98c; border-radius:4px; padding:8px 16px; font-size:${TACTICAL_OP_FONT_SIZE}; margin-bottom:7px;">⚠️ ${txt}</div>`).join('')}
                   </div>` : '';
                 return `
-                  <div style="border:1px solid #d7dee5; border-radius:3px; padding:8px 17px; margin-bottom:20px; break-inside:avoid;">
-                    <div style="font-size:1.97rem; font-weight:bold; line-height:1.2;">${linea.desc||''} <span style="font-weight:normal; color:#718096;">(${pFresco.cantidad||linea.cantidad||'-'} u.)</span></div>
-                    <div style="font-size:1.83rem; color:#4a5568;">Tapa: <strong>${nombresTapaOP[pFresco.tapaTipo]||pFresco.tapaTipo||'-'}</strong> — Encuadernación: <strong>${pFresco.encuadernacionTipo||'-'}${pFresco.anilladoDosSecciones?' (2 secciones)':''}</strong></div>
+                  <div style="border:1px solid #d7dee5; border-radius:3px; padding:7px 14px; margin-bottom:14px; break-inside:avoid; font-size:${TACTICAL_OP_FONT_SIZE};">
+                    <div style="font-weight:bold;">${linea.desc||''} <span style="font-weight:normal; color:#718096;">(${pFresco.cantidad||linea.cantidad||'-'} u.)</span></div>
+                    <div style="color:#4a5568;">Tapa: <strong>${nombresTapaOP[pFresco.tapaTipo]||pFresco.tapaTipo||'-'}</strong> — Encuadernación: <strong>${pFresco.encuadernacionTipo||'-'}${pFresco.anilladoDosSecciones?' (2 secciones)':''}</strong></div>
                     ${subBloques}
                     ${recsHtmlFicha}
                   </div>`;
@@ -2899,37 +2943,37 @@
               planos = [{clave: NOMBRES_LINEA_PRODUCTO[linea.linea]||linea.linea, planoCorte: linea.planoCorte}];
             }
             const planosHtml = planos.map(p => `
-              <div style="display:flex; gap:15px; align-items:center;">
-                ${tacticalDibujarPlanoCorteSVG(p.planoCorte, 144)}
-                <div style="font-size:1.73rem; color:#4a5568; line-height:1.25; max-width:240px;">${planos.length>1?`<strong>${p.clave}</strong><br>`:''}${tacticalPlanoCorteTexto(p.planoCorte)}</div>
+              <div style="display:flex; gap:12px; align-items:center;">
+                ${tacticalDibujarPlanoCorteSVG(p.planoCorte, 140)}
+                <div style="color:#4a5568; line-height:1.35; max-width:220px;">${planos.length>1?`<strong>${p.clave}</strong><br>`:''}${tacticalPlanoCorteTexto(p.planoCorte)}</div>
               </div>`).join('');
             const recsHtmlLinea = (linea.recomendaciones && linea.recomendaciones.length) ? `
-              <div style="margin-top:9px; padding-top:9px; border-top:1px dashed #e2e8f0;">
-                ${linea.recomendaciones.map(txt=>`<div style="background:#fff3cd; color:#7a5b00; border:1px solid #f0d98c; border-radius:4px; padding:9px 20px; font-size:1.73rem; margin-bottom:9px;">⚠️ ${txt}</div>`).join('')}
+              <div style="margin-top:7px; padding-top:7px; border-top:1px dashed #e2e8f0;">
+                ${linea.recomendaciones.map(txt=>`<div style="background:#fff3cd; color:#7a5b00; border:1px solid #f0d98c; border-radius:4px; padding:8px 16px; font-size:${TACTICAL_OP_FONT_SIZE}; margin-bottom:7px;">⚠️ ${txt}</div>`).join('')}
               </div>` : '';
             return `
-              <div style="border:1px solid #d7dee5; border-radius:3px; padding:8px 17px; margin-bottom:20px; break-inside:avoid;">
-                <div style="display:flex; gap:20px; align-items:center;">
+              <div style="border:1px solid #d7dee5; border-radius:3px; padding:7px 14px; margin-bottom:14px; break-inside:avoid; font-size:${TACTICAL_OP_FONT_SIZE};">
+                <div style="display:flex; gap:14px; align-items:center;">
                   <div style="flex:1; min-width:0;">
-                    <div style="font-size:1.97rem; font-weight:bold; line-height:1.2;">${linea.desc||''} <span style="font-weight:normal; color:#718096;">(${linea.cantidad||'-'} u.)</span></div>
-                    <div style="font-size:1.83rem; color:#4a5568;">${linea.maquina?`Máquina: <strong>${linea.maquina}</strong> — `:''}${linea.material?`Material: <strong>${linea.material}</strong> — `:''}${linea.nPliegos?`Pliegos: <strong>${linea.nPliegos}</strong>`:''}</div>
+                    <div style="font-weight:bold;">${linea.desc||''} <span style="font-weight:normal; color:#718096;">(${linea.cantidad||'-'} u.)</span></div>
+                    <div style="color:#4a5568;">${linea.maquina?`Máquina: <strong>${linea.maquina}</strong> — `:''}${linea.material?`Material: <strong>${linea.material}</strong> — `:''}${linea.nPliegos?`Pliegos: <strong>${linea.nPliegos}</strong>`:''}</div>
                   </div>
-                  ${planosHtml || '<div style="font-size:1.68rem; color:#a0aec0;">Sin plano de corte guardado para esta línea (cotización anterior a esta función, o proviene de una comparativa).</div>'}
+                  ${planosHtml || '<div style="color:#a0aec0;">Sin plano de corte guardado para esta línea (cotización anterior a esta función, o proviene de una comparativa).</div>'}
                 </div>
                 ${recsHtmlLinea}
               </div>`;
           }).join('');
 
           const html = `
-            <div class="doc-header" style="padding-bottom:9px; margin-bottom:9px;">
-              <div><img src="${TACTICAL_LOGO_B64}" style="height:77px; margin-bottom:5px; display:block;" alt="Tactical Marketing"><div class="doc-tipo" style="background:var(--secondary); font-size:1.88rem; padding:5px 20px;">ORDEN DE PRODUCCIÓN ${f.ot||''} — USO INTERNO</div></div>
-              <div class="doc-empresa-datos" style="font-size:1.77rem;">${fecha}</div>
+            <div class="doc-header" style="padding-bottom:7px; margin-bottom:7px; font-size:${TACTICAL_OP_FONT_SIZE};">
+              <div><img src="${TACTICAL_LOGO_B64}" style="height:60px; margin-bottom:4px; display:block;" alt="Tactical Marketing"><div class="doc-tipo" style="background:var(--secondary); font-size:${TACTICAL_OP_FONT_SIZE}; padding:4px 14px;">ORDEN DE PRODUCCIÓN ${f.ot||''} — USO INTERNO</div></div>
+              <div class="doc-empresa-datos" style="font-size:${TACTICAL_OP_FONT_SIZE};">${fecha}</div>
             </div>
-            <table class="doc-table" style="font-size:1.88rem; margin-bottom:9px;">
-              <tr><th style="width:15%; padding:5px 12px;">OT</th><td style="font-weight:bold; padding:5px 12px;">${f.ot||'-'}</td><th style="width:15%; padding:5px 12px;">Cliente</th><td style="padding:5px 12px;"><strong>${cli.empresa||cli.nombre||'-'}</strong></td></tr>
-              <tr><th style="padding:5px 12px;">Entrega</th><td colspan="3" style="padding:5px 12px;"><strong>${f.fechaEntrega?kanbanFormatearFecha(f.fechaEntrega):'-'}${f.entrega?' — '+f.entrega:''}</strong></td></tr>
+            <table class="doc-table" style="font-size:${TACTICAL_OP_FONT_SIZE}; margin-bottom:7px;">
+              <tr><th style="width:15%; padding:4px 10px;">OT</th><td style="font-weight:bold; padding:4px 10px;">${f.ot||'-'}</td><th style="width:15%; padding:4px 10px;">Cliente</th><td style="padding:4px 10px;"><strong>${cli.empresa||cli.nombre||'-'}</strong></td></tr>
+              <tr><th style="padding:4px 10px;">Entrega</th><td colspan="3" style="padding:4px 10px;"><strong>${f.fechaEntrega?kanbanFormatearFecha(f.fechaEntrega):'-'}${f.entrega?' — '+f.entrega:''}</strong></td></tr>
             </table>
-            <div class="doc-section-title" style="font-size:1.97rem; padding:8px 17px; margin:9px 0 9px;">Líneas y plano de corte</div>
+            <div class="doc-section-title" style="font-size:${TACTICAL_OP_FONT_SIZE}; padding:6px 14px; margin:7px 0 7px;">Líneas y plano de corte</div>
             ${bloques}
           `;
           document.getElementById('print-area').innerHTML = html;
@@ -5640,28 +5684,28 @@
             // madre, cuántas copias de ESTA pieza caben en el pliego de la máquina de impresión.
             const planoImp = planoImpresionDeLineaCuaderno(linea);
             bloques += `
-              <div style="border:1px solid #d7dee5; border-radius:3px; padding:8px 17px; margin-bottom:20px; break-inside:avoid;">
-                <div style="display:flex; gap:20px; align-items:center;">
+              <div style="border:1px solid #d7dee5; border-radius:3px; padding:7px 14px; margin-bottom:14px; break-inside:avoid; font-size:${TACTICAL_OP_FONT_SIZE};">
+                <div style="display:flex; gap:14px; align-items:center;">
                   <div style="flex:1; min-width:0;">
-                    <div style="font-size:1.97rem; font-weight:bold; line-height:1.2;">${clave}</div>
-                    <div style="font-size:1.83rem; color:#4a5568; line-height:1.3;">Máquina: <strong>${maquina}</strong> — Papel: <strong>${linea.sustrato.nombre} ${linea.sustrato.gramaje}gr</strong> — Pliegos: <strong>${mat.nPliegos}</strong></div>
-                    <div style="font-size:1.83rem; color:#4a5568; line-height:1.3;"><strong>${impresionTxt}</strong></div>
-                    <div style="font-size:1.83rem; color:#4a5568; line-height:1.3;">Corte: <strong>${tamanoCorte}</strong> — Acabados: <strong>${acabadosTxt}</strong></div>
+                    <div style="font-weight:bold;">${clave}</div>
+                    <div style="color:#4a5568; line-height:1.4;">Máquina: <strong>${maquina}</strong> — Papel: <strong>${linea.sustrato.nombre} ${linea.sustrato.gramaje}gr</strong> — Pliegos: <strong>${mat.nPliegos}</strong></div>
+                    <div style="color:#4a5568; line-height:1.4;"><strong>${impresionTxt}</strong></div>
+                    <div style="color:#4a5568; line-height:1.4;">Corte: <strong>${tamanoCorte}</strong> — Acabados: <strong>${acabadosTxt}</strong></div>
                   </div>
-                  ${pc ? `<div style="flex-shrink:0; display:flex; gap:15px; align-items:center;"><div style="font-size:1.5rem; color:#a0aec0; text-align:center;">Corte del pliego</div>${tacticalDibujarPlanoCorteSVG(pc,144)}<div style="font-size:1.73rem; color:#4a5568; max-width:240px; line-height:1.25;">${tacticalPlanoCorteTexto(pc)}</div></div>` : ''}
+                  ${pc ? `<div style="flex-shrink:0; display:flex; gap:12px; align-items:center;"><div style="color:#a0aec0; text-align:center;">Corte del pliego</div>${tacticalDibujarPlanoCorteSVG(pc,140)}<div style="color:#4a5568; max-width:220px; line-height:1.35;">${tacticalPlanoCorteTexto(pc)}</div></div>` : ''}
                 </div>
                 ${planoImp ? `
-                <div style="display:flex; gap:20px; align-items:center; margin-top:9px; padding-top:9px; border-top:1px dotted #e2e8f0;">
-                  <div style="flex:1; min-width:0; font-size:1.83rem; color:#4a5568;">🎨 <strong>Montaje para impresión:</strong> ${planoImp.piezasPorPliego} pieza(s) de ${planoImp.piezaAncho}x${planoImp.piezaAlto}cm en un tamaño de ${planoImp.pliegoAncho}x${planoImp.pliegoAlto}cm${maquina==='Digital (Konica)'?' (con margen de pinza descontado)':''}</div>
-                  <div style="flex-shrink:0; display:flex; gap:15px; align-items:center;">${tacticalDibujarPlanoCorteSVG(planoImp,144)}<div style="font-size:1.73rem; color:#4a5568; max-width:240px; line-height:1.25;">${tacticalPlanoCorteTexto(planoImp)}</div></div>
+                <div style="display:flex; gap:14px; align-items:center; margin-top:7px; padding-top:7px; border-top:1px dotted #e2e8f0;">
+                  <div style="flex:1; min-width:0; color:#4a5568;">🎨 <strong>Montaje para impresión:</strong> ${planoImp.piezasPorPliego} pieza(s) de ${planoImp.piezaAncho}x${planoImp.piezaAlto}cm en un tamaño de ${planoImp.pliegoAncho}x${planoImp.pliegoAlto}cm${maquina==='Digital (Konica)'?' (con margen de pinza descontado)':''}</div>
+                  <div style="flex-shrink:0; display:flex; gap:12px; align-items:center;">${tacticalDibujarPlanoCorteSVG(planoImp,140)}<div style="color:#4a5568; max-width:220px; line-height:1.35;">${tacticalPlanoCorteTexto(planoImp)}</div></div>
                 </div>` : ''}
               </div>`;
           }
 
           const recsAplicablesOP = RECOMENDACIONES_PRODUCCION_COT.filter(reg=>reg.aplica(r,p)).map(reg=>reg.texto);
           const recsHtmlOP = recsAplicablesOP.length ? `
-            <div class="doc-section-title" style="font-size:1.97rem; padding:8px 17px; margin:20px 0 9px;">⚠️ Recomendaciones de Producción</div>
-            ${recsAplicablesOP.map(txt=>`<div style="background:#fff3cd; color:#7a5b00; border:1px solid #f0d98c; border-radius:4px; padding:12px 21px; font-size:1.77rem; margin-bottom:12px;">${txt}</div>`).join('')}
+            <div class="doc-section-title" style="font-size:${TACTICAL_OP_FONT_SIZE}; padding:6px 14px; margin:14px 0 7px;">⚠️ Recomendaciones de Producción</div>
+            ${recsAplicablesOP.map(txt=>`<div style="background:#fff3cd; color:#7a5b00; border:1px solid #f0d98c; border-radius:4px; padding:8px 16px; font-size:${TACTICAL_OP_FONT_SIZE}; margin-bottom:8px;">${txt}</div>`).join('')}
           ` : '';
 
           const nombreClienteOP = (document.getElementById('cot-cli-empresa')||{}).value?.trim() || 'Cliente';
@@ -5669,21 +5713,21 @@
           const fechaEntregaTxtOP = (fechaEntregaInputOP && fechaEntregaInputOP.trim()) ? fechaEntregaInputOP.trim() : 'Por definir';
 
           const html = `
-            <div class="doc-header" style="padding-bottom:9px; margin-bottom:9px;">
-              <div><img src="${TACTICAL_LOGO_B64}" style="height:77px; margin-bottom:5px; display:block;" alt="Tactical Marketing"><div class="doc-tipo" style="background:var(--secondary); font-size:1.88rem; padding:5px 20px;">ORDEN DE PRODUCCIÓN ${ot} — USO INTERNO</div></div>
-              <div class="doc-empresa-datos" style="font-size:1.77rem;">${new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'})}</div>
+            <div class="doc-header" style="padding-bottom:7px; margin-bottom:7px; font-size:${TACTICAL_OP_FONT_SIZE};">
+              <div><img src="${TACTICAL_LOGO_B64}" style="height:60px; margin-bottom:4px; display:block;" alt="Tactical Marketing"><div class="doc-tipo" style="background:var(--secondary); font-size:${TACTICAL_OP_FONT_SIZE}; padding:4px 14px;">ORDEN DE PRODUCCIÓN ${ot} — USO INTERNO</div></div>
+              <div class="doc-empresa-datos" style="font-size:${TACTICAL_OP_FONT_SIZE};">${new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'})}</div>
             </div>
-            <table class="doc-table" style="font-size:1.88rem; margin-bottom:9px;">
-              <tr><th style="padding:5px 12px;">N° de OT</th><td style="font-weight:bold; padding:5px 12px;">${ot}</td><th style="padding:5px 12px;">Cliente</th><td style="padding:5px 12px;"><strong>${nombreClienteOP}</strong></td></tr>
-              <tr><th style="padding:5px 12px;">Producto</th><td style="padding:5px 12px;"><strong>${nombresLinea[p.lineaProducto]}</strong></td><th style="padding:5px 12px;">Cantidad</th><td style="padding:5px 12px;"><strong>${p.cantidad} unidades</strong></td></tr>
-              <tr><th style="padding:5px 12px;">Tamaño</th><td style="padding:5px 12px;"><strong>${p.anchoCm} x ${p.altoCm} cm</strong></td><th style="padding:5px 12px;">Tapa</th><td style="padding:5px 12px;"><strong>${nombresTapa[p.tapaTipo]}</strong></td></tr>
-              <tr><th style="padding:5px 12px;">Encuadernación</th><td style="padding:5px 12px;"><strong>${p.encuadernacionTipo}</strong></td><th style="padding:5px 12px;">Hojas del taco</th><td style="padding:5px 12px;"><strong>${p.tacoHojas}</strong></td></tr>
-              <tr><th style="padding:5px 12px;">Entrega</th><td colspan="3" style="padding:5px 12px;"><strong>${fechaEntregaTxtOP}</strong></td></tr>
+            <table class="doc-table" style="font-size:${TACTICAL_OP_FONT_SIZE}; margin-bottom:7px;">
+              <tr><th style="padding:4px 10px;">N° de OT</th><td style="font-weight:bold; padding:4px 10px;">${ot}</td><th style="padding:4px 10px;">Cliente</th><td style="padding:4px 10px;"><strong>${nombreClienteOP}</strong></td></tr>
+              <tr><th style="padding:4px 10px;">Producto</th><td style="padding:4px 10px;"><strong>${nombresLinea[p.lineaProducto]}</strong></td><th style="padding:4px 10px;">Cantidad</th><td style="padding:4px 10px;"><strong>${p.cantidad} unidades</strong></td></tr>
+              <tr><th style="padding:4px 10px;">Tamaño</th><td style="padding:4px 10px;"><strong>${p.anchoCm} x ${p.altoCm} cm</strong></td><th style="padding:4px 10px;">Tapa</th><td style="padding:4px 10px;"><strong>${nombresTapa[p.tapaTipo]}</strong></td></tr>
+              <tr><th style="padding:4px 10px;">Encuadernación</th><td style="padding:4px 10px;"><strong>${p.encuadernacionTipo}</strong></td><th style="padding:4px 10px;">Hojas del taco</th><td style="padding:4px 10px;"><strong>${p.tacoHojas}</strong></td></tr>
+              <tr><th style="padding:4px 10px;">Entrega</th><td colspan="3" style="padding:4px 10px;"><strong>${fechaEntregaTxtOP}</strong></td></tr>
             </table>
-            <div class="doc-section-title" style="font-size:1.97rem; padding:8px 17px; margin:9px 0 9px;">Insumos, montajes y plano de corte por línea</div>
+            <div class="doc-section-title" style="font-size:${TACTICAL_OP_FONT_SIZE}; padding:6px 14px; margin:7px 0 7px;">Insumos, montajes y plano de corte por línea</div>
             ${bloques}
-            <div class="doc-section-title" style="font-size:1.97rem; padding:8px 17px; margin:9px 0 9px;">Armado / Encuadernación</div>
-            <p style="font-size:1.83rem; margin:5px 0;"><strong>${nombresLinea[p.lineaProducto]} — ${p.encuadernacionTipo}${p.anilladoDosSecciones?' — Anillado en 2 secciones':''}</strong></p>
+            <div class="doc-section-title" style="font-size:${TACTICAL_OP_FONT_SIZE}; padding:6px 14px; margin:7px 0 7px;">Armado / Encuadernación</div>
+            <p style="font-size:${TACTICAL_OP_FONT_SIZE}; margin:4px 0;"><strong>${nombresLinea[p.lineaProducto]} — ${p.encuadernacionTipo}${p.anilladoDosSecciones?' — Anillado en 2 secciones':''}</strong></p>
             ${recsHtmlOP}
           `;
           document.getElementById('print-area').innerHTML = html;
