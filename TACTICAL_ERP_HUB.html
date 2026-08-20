@@ -2845,30 +2845,45 @@
                   const dl = rFresco.detalleLineas[clave];
                   const det = dl.detalleImpresion;
                   let maquinaTxt = 'N/A (sin impresión)';
+                  let conteoTxt = '';
                   if(det){
                     const esDigital = det.via === 'digital';
                     const fraccion = esDigital ? 'digital' : (det.fraccion || 'medio_pliego');
                     maquinaTxt = COT_NOMBRE_MAQUINA[fraccion] || fraccion;
+                    conteoTxt = esDigital
+                      ? ` — <strong>${det.nClics.toLocaleString('es-CO')} clics de impresión</strong>`
+                      : ` — <strong>${det.nPasadas.toLocaleString('es-CO')} tamaños ${OFFSET_FORMATOS_CM[fraccion][0]}x${OFFSET_FORMATOS_CM[fraccion][1]} de impresión</strong>`;
                   }
                   const pc = (dl.detalleMaterial||{}).planoCorte;
+                  // Conde 2026-08-20: "montaje para impresión" -- aparte del plano de corte del
+                  // pliego madre, cuántas copias de ESTA pieza caben en el pliego de la máquina de
+                  // impresión (importante para el diseñador: ahí es donde arma su archivo).
+                  const planoImp = planoImpresionDeLineaCuaderno(dl);
                   return `
-                    <div style="margin-top:6px; padding-top:6px; border-top:1px dashed #e2e8f0; display:flex; gap:13px; align-items:center;">
-                      <div style="flex:1; min-width:0;">
-                        <div style="font-size:1.25rem; font-weight:bold;">${clave}</div>
-                        <div style="font-size:1.22rem; color:#4a5568; line-height:1.3;">Máquina: <strong>${maquinaTxt}</strong> — Papel: <strong>${dl.sustrato.nombre} ${dl.sustrato.gramaje}gr</strong> — Pliegos: <strong>${dl.detalleMaterial.nPliegos}</strong></div>
+                    <div style="margin-top:9px; padding-top:9px; border-top:1px dashed #e2e8f0;">
+                      <div style="display:flex; gap:20px; align-items:center;">
+                        <div style="flex:1; min-width:0;">
+                          <div style="font-size:1.88rem; font-weight:bold;">${clave}</div>
+                          <div style="font-size:1.83rem; color:#4a5568; line-height:1.3;">Máquina: <strong>${maquinaTxt}</strong>${conteoTxt} — Papel: <strong>${dl.sustrato.nombre} ${dl.sustrato.gramaje}gr</strong> — Pliegos: <strong>${dl.detalleMaterial.nPliegos}</strong></div>
+                        </div>
+                        ${pc ? `<div style="flex-shrink:0; display:flex; gap:15px; align-items:center;"><div style="font-size:1.5rem; color:#a0aec0; text-align:center;">Corte del pliego</div>${tacticalDibujarPlanoCorteSVG(pc,144)}<div style="font-size:1.73rem; color:#4a5568; max-width:240px; line-height:1.25;">${tacticalPlanoCorteTexto(pc)}</div></div>` : ''}
                       </div>
-                      ${pc ? `<div style="flex-shrink:0; display:flex; gap:10px; align-items:center;">${tacticalDibujarPlanoCorteSVG(pc,96)}<div style="font-size:1.15rem; color:#4a5568; max-width:160px; line-height:1.25;">${tacticalPlanoCorteTexto(pc)}</div></div>` : ''}
+                      ${planoImp ? `
+                      <div style="display:flex; gap:20px; align-items:center; margin-top:9px; padding-top:9px; border-top:1px dotted #e2e8f0;">
+                        <div style="flex:1; min-width:0; font-size:1.83rem; color:#4a5568;">🎨 <strong>Montaje para impresión:</strong> ${planoImp.piezasPorPliego} pieza(s) de ${planoImp.piezaAncho}x${planoImp.piezaAlto}cm en un tamaño de ${planoImp.pliegoAncho}x${planoImp.pliegoAlto}cm${maquinaTxt==='Digital (Konica)'?' (con margen de pinza descontado)':''}</div>
+                        <div style="flex-shrink:0; display:flex; gap:15px; align-items:center;">${tacticalDibujarPlanoCorteSVG(planoImp,144)}<div style="font-size:1.73rem; color:#4a5568; max-width:240px; line-height:1.25;">${tacticalPlanoCorteTexto(planoImp)}</div></div>
+                      </div>` : ''}
                     </div>`;
                 }).join('');
                 const recsAplicablesFicha = RECOMENDACIONES_PRODUCCION_COT.filter(reg=>reg.aplica(rFresco, pFresco)).map(reg=>reg.texto);
                 const recsHtmlFicha = recsAplicablesFicha.length ? `
-                  <div style="margin-top:6px; padding-top:6px; border-top:1px dashed #e2e8f0;">
-                    ${recsAplicablesFicha.map(txt=>`<div style="background:#fff3cd; color:#7a5b00; border:1px solid #f0d98c; border-radius:4px; padding:6px 13px; font-size:1.15rem; margin-bottom:6px;">⚠️ ${txt}</div>`).join('')}
+                  <div style="margin-top:9px; padding-top:9px; border-top:1px dashed #e2e8f0;">
+                    ${recsAplicablesFicha.map(txt=>`<div style="background:#fff3cd; color:#7a5b00; border:1px solid #f0d98c; border-radius:4px; padding:9px 20px; font-size:1.73rem; margin-bottom:9px;">⚠️ ${txt}</div>`).join('')}
                   </div>` : '';
                 return `
-                  <div style="border:1px solid #d7dee5; border-radius:3px; padding:5px 11px; margin-bottom:13px; break-inside:avoid;">
-                    <div style="font-size:1.31rem; font-weight:bold; line-height:1.2;">${linea.desc||''} <span style="font-weight:normal; color:#718096;">(${pFresco.cantidad||linea.cantidad||'-'} u.)</span></div>
-                    <div style="font-size:1.22rem; color:#4a5568;">Tapa: <strong>${nombresTapaOP[pFresco.tapaTipo]||pFresco.tapaTipo||'-'}</strong> — Encuadernación: <strong>${pFresco.encuadernacionTipo||'-'}${pFresco.anilladoDosSecciones?' (2 secciones)':''}</strong></div>
+                  <div style="border:1px solid #d7dee5; border-radius:3px; padding:8px 17px; margin-bottom:20px; break-inside:avoid;">
+                    <div style="font-size:1.97rem; font-weight:bold; line-height:1.2;">${linea.desc||''} <span style="font-weight:normal; color:#718096;">(${pFresco.cantidad||linea.cantidad||'-'} u.)</span></div>
+                    <div style="font-size:1.83rem; color:#4a5568;">Tapa: <strong>${nombresTapaOP[pFresco.tapaTipo]||pFresco.tapaTipo||'-'}</strong> — Encuadernación: <strong>${pFresco.encuadernacionTipo||'-'}${pFresco.anilladoDosSecciones?' (2 secciones)':''}</strong></div>
                     ${subBloques}
                     ${recsHtmlFicha}
                   </div>`;
@@ -2884,37 +2899,37 @@
               planos = [{clave: NOMBRES_LINEA_PRODUCTO[linea.linea]||linea.linea, planoCorte: linea.planoCorte}];
             }
             const planosHtml = planos.map(p => `
-              <div style="display:flex; gap:10px; align-items:center;">
-                ${tacticalDibujarPlanoCorteSVG(p.planoCorte, 96)}
-                <div style="font-size:1.15rem; color:#4a5568; line-height:1.25; max-width:160px;">${planos.length>1?`<strong>${p.clave}</strong><br>`:''}${tacticalPlanoCorteTexto(p.planoCorte)}</div>
+              <div style="display:flex; gap:15px; align-items:center;">
+                ${tacticalDibujarPlanoCorteSVG(p.planoCorte, 144)}
+                <div style="font-size:1.73rem; color:#4a5568; line-height:1.25; max-width:240px;">${planos.length>1?`<strong>${p.clave}</strong><br>`:''}${tacticalPlanoCorteTexto(p.planoCorte)}</div>
               </div>`).join('');
             const recsHtmlLinea = (linea.recomendaciones && linea.recomendaciones.length) ? `
-              <div style="margin-top:6px; padding-top:6px; border-top:1px dashed #e2e8f0;">
-                ${linea.recomendaciones.map(txt=>`<div style="background:#fff3cd; color:#7a5b00; border:1px solid #f0d98c; border-radius:4px; padding:6px 13px; font-size:1.15rem; margin-bottom:6px;">⚠️ ${txt}</div>`).join('')}
+              <div style="margin-top:9px; padding-top:9px; border-top:1px dashed #e2e8f0;">
+                ${linea.recomendaciones.map(txt=>`<div style="background:#fff3cd; color:#7a5b00; border:1px solid #f0d98c; border-radius:4px; padding:9px 20px; font-size:1.73rem; margin-bottom:9px;">⚠️ ${txt}</div>`).join('')}
               </div>` : '';
             return `
-              <div style="border:1px solid #d7dee5; border-radius:3px; padding:5px 11px; margin-bottom:13px; break-inside:avoid;">
-                <div style="display:flex; gap:13px; align-items:center;">
+              <div style="border:1px solid #d7dee5; border-radius:3px; padding:8px 17px; margin-bottom:20px; break-inside:avoid;">
+                <div style="display:flex; gap:20px; align-items:center;">
                   <div style="flex:1; min-width:0;">
-                    <div style="font-size:1.31rem; font-weight:bold; line-height:1.2;">${linea.desc||''} <span style="font-weight:normal; color:#718096;">(${linea.cantidad||'-'} u.)</span></div>
-                    <div style="font-size:1.22rem; color:#4a5568;">${linea.maquina?`Máquina: <strong>${linea.maquina}</strong> — `:''}${linea.material?`Material: <strong>${linea.material}</strong> — `:''}${linea.nPliegos?`Pliegos: <strong>${linea.nPliegos}</strong>`:''}</div>
+                    <div style="font-size:1.97rem; font-weight:bold; line-height:1.2;">${linea.desc||''} <span style="font-weight:normal; color:#718096;">(${linea.cantidad||'-'} u.)</span></div>
+                    <div style="font-size:1.83rem; color:#4a5568;">${linea.maquina?`Máquina: <strong>${linea.maquina}</strong> — `:''}${linea.material?`Material: <strong>${linea.material}</strong> — `:''}${linea.nPliegos?`Pliegos: <strong>${linea.nPliegos}</strong>`:''}</div>
                   </div>
-                  ${planosHtml || '<div style="font-size:1.12rem; color:#a0aec0;">Sin plano de corte guardado para esta línea (cotización anterior a esta función, o proviene de una comparativa).</div>'}
+                  ${planosHtml || '<div style="font-size:1.68rem; color:#a0aec0;">Sin plano de corte guardado para esta línea (cotización anterior a esta función, o proviene de una comparativa).</div>'}
                 </div>
                 ${recsHtmlLinea}
               </div>`;
           }).join('');
 
           const html = `
-            <div class="doc-header" style="padding-bottom:6px; margin-bottom:6px;">
-              <div><img src="${TACTICAL_LOGO_B64}" style="height:51px; margin-bottom:3px; display:block;" alt="Tactical Marketing"><div class="doc-tipo" style="background:var(--secondary); font-size:1.25rem; padding:3px 13px;">ORDEN DE PRODUCCIÓN ${f.ot||''} — USO INTERNO</div></div>
-              <div class="doc-empresa-datos" style="font-size:1.18rem;">${fecha}</div>
+            <div class="doc-header" style="padding-bottom:9px; margin-bottom:9px;">
+              <div><img src="${TACTICAL_LOGO_B64}" style="height:77px; margin-bottom:5px; display:block;" alt="Tactical Marketing"><div class="doc-tipo" style="background:var(--secondary); font-size:1.88rem; padding:5px 20px;">ORDEN DE PRODUCCIÓN ${f.ot||''} — USO INTERNO</div></div>
+              <div class="doc-empresa-datos" style="font-size:1.77rem;">${fecha}</div>
             </div>
-            <table class="doc-table" style="font-size:1.25rem; margin-bottom:6px;">
-              <tr><th style="width:15%; padding:3px 8px;">OT</th><td style="font-weight:bold; padding:3px 8px;">${f.ot||'-'}</td><th style="width:15%; padding:3px 8px;">Cliente</th><td style="padding:3px 8px;"><strong>${cli.empresa||cli.nombre||'-'}</strong></td></tr>
-              <tr><th style="padding:3px 8px;">Entrega</th><td colspan="3" style="padding:3px 8px;"><strong>${f.fechaEntrega?kanbanFormatearFecha(f.fechaEntrega):'-'}${f.entrega?' — '+f.entrega:''}</strong></td></tr>
+            <table class="doc-table" style="font-size:1.88rem; margin-bottom:9px;">
+              <tr><th style="width:15%; padding:5px 12px;">OT</th><td style="font-weight:bold; padding:5px 12px;">${f.ot||'-'}</td><th style="width:15%; padding:5px 12px;">Cliente</th><td style="padding:5px 12px;"><strong>${cli.empresa||cli.nombre||'-'}</strong></td></tr>
+              <tr><th style="padding:5px 12px;">Entrega</th><td colspan="3" style="padding:5px 12px;"><strong>${f.fechaEntrega?kanbanFormatearFecha(f.fechaEntrega):'-'}${f.entrega?' — '+f.entrega:''}</strong></td></tr>
             </table>
-            <div class="doc-section-title" style="font-size:1.31rem; padding:5px 11px; margin:6px 0 6px;">Líneas y plano de corte</div>
+            <div class="doc-section-title" style="font-size:1.97rem; padding:8px 17px; margin:9px 0 9px;">Líneas y plano de corte</div>
             ${bloques}
           `;
           document.getElementById('print-area').innerHTML = html;
@@ -4461,6 +4476,54 @@
           const planoCorte = {piezaAncho:pa, piezaAlto:pal, pliegoAncho, pliegoAlto, columnas, filas, rotado, piezasPorPliego:nPorPliego};
           return {formato, piezasPorPliego:nPorPliego, nPliegos, precioPliego, costoTotal, planoCorte};
         }
+        // Conde 2026-08-20: plano de impresión para la Orden de Producción -- muestra cómo caben
+        // las piezas DENTRO del pliego de IMPRESIÓN (octavo/cuarto/medio_pliego o el formato
+        // digital), aparte del plano de corte del material (que muestra el pliego madre 60x90/
+        // 70x100). Mismo par de funciones ya usado en las otras 7 calculadoras -- Cuadernos no lo
+        // tenía porque su Orden de Producción vive aparte, directo en el Hub.
+        function planoImpresionDigital(piezaAncho, piezaAlto, clase){
+          const [sheetW, sheetH] = DIGITAL_FORMATOS_CM[clase];
+          const margenCm = DIGITAL_PINZA_MM/10;
+          const pliegoAncho = sheetW, pliegoAlto = sheetH - margenCm;
+          const colsSinRotar = Math.floor(pliegoAncho/piezaAncho), filasSinRotar = Math.floor(pliegoAlto/piezaAlto);
+          const nSinRotar = colsSinRotar*filasSinRotar;
+          const colsRotada = Math.floor(pliegoAncho/piezaAlto), filasRotada = Math.floor(pliegoAlto/piezaAncho);
+          const nRotada = colsRotada*filasRotada;
+          const rotado = nRotada > nSinRotar;
+          if(nSinRotar===0 && nRotada===0){
+            return { piezaAncho, piezaAlto, pliegoAncho, pliegoAlto, columnas:1, filas:1, rotado:false, piezasPorPliego:1 };
+          }
+          return {
+            piezaAncho, piezaAlto, pliegoAncho, pliegoAlto,
+            columnas: rotado?colsRotada:colsSinRotar, filas: rotado?filasRotada:filasSinRotar, rotado,
+            piezasPorPliego: rotado?nRotada:nSinRotar,
+          };
+        }
+        function planoImpresionOffset(piezaAncho, piezaAlto, fraccion){
+          const [pliegoAncho, pliegoAlto] = OFFSET_FORMATOS_CM[fraccion];
+          const colsSinRotar = Math.floor(pliegoAncho/piezaAncho), filasSinRotar = Math.floor(pliegoAlto/piezaAlto);
+          const nSinRotar = colsSinRotar*filasSinRotar;
+          const colsRotada = Math.floor(pliegoAncho/piezaAlto), filasRotada = Math.floor(pliegoAlto/piezaAncho);
+          const nRotada = colsRotada*filasRotada;
+          const rotado = nRotada > nSinRotar;
+          if(nSinRotar===0 && nRotada===0){
+            return { piezaAncho, piezaAlto, pliegoAncho, pliegoAlto, columnas:1, filas:1, rotado:false, piezasPorPliego:1 };
+          }
+          return {
+            piezaAncho, piezaAlto, pliegoAncho, pliegoAlto,
+            columnas: rotado?colsRotada:colsSinRotar, filas: rotado?filasRotada:filasSinRotar, rotado,
+            piezasPorPliego: rotado?nRotada:nSinRotar,
+          };
+        }
+        // Une los datos de un detalleLineas[clave] de Cuadernos con lo de arriba -- null si esa
+        // línea no lleva impresión (ej. guardas en blanco).
+        function planoImpresionDeLineaCuaderno(dl){
+          const det = dl.detalleImpresion;
+          if(!det) return null;
+          return det.via === 'digital'
+            ? planoImpresionDigital(dl.ancho, dl.alto, det.clase)
+            : planoImpresionOffset(dl.ancho, dl.alto, det.fraccion || 'medio_pliego');
+        }
         function areaCm2(a,b){ return a*b; }
         function tamanoCatalogoMasCercano(ancho,alto){
           const areaPedida=areaCm2(ancho,alto);
@@ -5573,22 +5636,32 @@
             const tamanoCorte = clave.toLowerCase().includes('carat') ? `${r.tamanoMaquinaCaratula[0]} x ${r.tamanoMaquinaCaratula[1]} cm (montaje de carátula)` : `${linea.ancho} x ${linea.alto} cm`;
             const acabadosTxt = (linea.acabadosList||[]).map(a=>a.tipo).join(', ') || 'Sin acabados';
             const pc = (mat||{}).planoCorte;
+            // Conde 2026-08-20: "montaje para impresión" -- aparte del plano de corte del pliego
+            // madre, cuántas copias de ESTA pieza caben en el pliego de la máquina de impresión.
+            const planoImp = planoImpresionDeLineaCuaderno(linea);
             bloques += `
-              <div style="border:1px solid #d7dee5; border-radius:3px; padding:5px 11px; margin-bottom:13px; break-inside:avoid; display:flex; gap:13px; align-items:center;">
-                <div style="flex:1; min-width:0;">
-                  <div style="font-size:1.31rem; font-weight:bold; line-height:1.2;">${clave}</div>
-                  <div style="font-size:1.22rem; color:#4a5568; line-height:1.3;">Máquina: <strong>${maquina}</strong> — Papel: <strong>${linea.sustrato.nombre} ${linea.sustrato.gramaje}gr</strong> — Pliegos: <strong>${mat.nPliegos}</strong></div>
-                  <div style="font-size:1.22rem; color:#4a5568; line-height:1.3;"><strong>${impresionTxt}</strong></div>
-                  <div style="font-size:1.22rem; color:#4a5568; line-height:1.3;">Corte: <strong>${tamanoCorte}</strong> — Acabados: <strong>${acabadosTxt}</strong></div>
+              <div style="border:1px solid #d7dee5; border-radius:3px; padding:8px 17px; margin-bottom:20px; break-inside:avoid;">
+                <div style="display:flex; gap:20px; align-items:center;">
+                  <div style="flex:1; min-width:0;">
+                    <div style="font-size:1.97rem; font-weight:bold; line-height:1.2;">${clave}</div>
+                    <div style="font-size:1.83rem; color:#4a5568; line-height:1.3;">Máquina: <strong>${maquina}</strong> — Papel: <strong>${linea.sustrato.nombre} ${linea.sustrato.gramaje}gr</strong> — Pliegos: <strong>${mat.nPliegos}</strong></div>
+                    <div style="font-size:1.83rem; color:#4a5568; line-height:1.3;"><strong>${impresionTxt}</strong></div>
+                    <div style="font-size:1.83rem; color:#4a5568; line-height:1.3;">Corte: <strong>${tamanoCorte}</strong> — Acabados: <strong>${acabadosTxt}</strong></div>
+                  </div>
+                  ${pc ? `<div style="flex-shrink:0; display:flex; gap:15px; align-items:center;"><div style="font-size:1.5rem; color:#a0aec0; text-align:center;">Corte del pliego</div>${tacticalDibujarPlanoCorteSVG(pc,144)}<div style="font-size:1.73rem; color:#4a5568; max-width:240px; line-height:1.25;">${tacticalPlanoCorteTexto(pc)}</div></div>` : ''}
                 </div>
-                ${pc ? `<div style="flex-shrink:0; display:flex; gap:10px; align-items:center;">${tacticalDibujarPlanoCorteSVG(pc,96)}<div style="font-size:1.15rem; color:#4a5568; max-width:160px; line-height:1.25;">${tacticalPlanoCorteTexto(pc)}</div></div>` : ''}
+                ${planoImp ? `
+                <div style="display:flex; gap:20px; align-items:center; margin-top:9px; padding-top:9px; border-top:1px dotted #e2e8f0;">
+                  <div style="flex:1; min-width:0; font-size:1.83rem; color:#4a5568;">🎨 <strong>Montaje para impresión:</strong> ${planoImp.piezasPorPliego} pieza(s) de ${planoImp.piezaAncho}x${planoImp.piezaAlto}cm en un tamaño de ${planoImp.pliegoAncho}x${planoImp.pliegoAlto}cm${maquina==='Digital (Konica)'?' (con margen de pinza descontado)':''}</div>
+                  <div style="flex-shrink:0; display:flex; gap:15px; align-items:center;">${tacticalDibujarPlanoCorteSVG(planoImp,144)}<div style="font-size:1.73rem; color:#4a5568; max-width:240px; line-height:1.25;">${tacticalPlanoCorteTexto(planoImp)}</div></div>
+                </div>` : ''}
               </div>`;
           }
 
           const recsAplicablesOP = RECOMENDACIONES_PRODUCCION_COT.filter(reg=>reg.aplica(r,p)).map(reg=>reg.texto);
           const recsHtmlOP = recsAplicablesOP.length ? `
-            <div class="doc-section-title" style="font-size:1.31rem; padding:5px 11px; margin:13px 0 6px;">⚠️ Recomendaciones de Producción</div>
-            ${recsAplicablesOP.map(txt=>`<div style="background:#fff3cd; color:#7a5b00; border:1px solid #f0d98c; border-radius:4px; padding:8px 14px; font-size:1.18rem; margin-bottom:8px;">${txt}</div>`).join('')}
+            <div class="doc-section-title" style="font-size:1.97rem; padding:8px 17px; margin:20px 0 9px;">⚠️ Recomendaciones de Producción</div>
+            ${recsAplicablesOP.map(txt=>`<div style="background:#fff3cd; color:#7a5b00; border:1px solid #f0d98c; border-radius:4px; padding:12px 21px; font-size:1.77rem; margin-bottom:12px;">${txt}</div>`).join('')}
           ` : '';
 
           const nombreClienteOP = (document.getElementById('cot-cli-empresa')||{}).value?.trim() || 'Cliente';
@@ -5596,21 +5669,21 @@
           const fechaEntregaTxtOP = (fechaEntregaInputOP && fechaEntregaInputOP.trim()) ? fechaEntregaInputOP.trim() : 'Por definir';
 
           const html = `
-            <div class="doc-header" style="padding-bottom:6px; margin-bottom:6px;">
-              <div><img src="${TACTICAL_LOGO_B64}" style="height:51px; margin-bottom:3px; display:block;" alt="Tactical Marketing"><div class="doc-tipo" style="background:var(--secondary); font-size:1.25rem; padding:3px 13px;">ORDEN DE PRODUCCIÓN ${ot} — USO INTERNO</div></div>
-              <div class="doc-empresa-datos" style="font-size:1.18rem;">${new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'})}</div>
+            <div class="doc-header" style="padding-bottom:9px; margin-bottom:9px;">
+              <div><img src="${TACTICAL_LOGO_B64}" style="height:77px; margin-bottom:5px; display:block;" alt="Tactical Marketing"><div class="doc-tipo" style="background:var(--secondary); font-size:1.88rem; padding:5px 20px;">ORDEN DE PRODUCCIÓN ${ot} — USO INTERNO</div></div>
+              <div class="doc-empresa-datos" style="font-size:1.77rem;">${new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'})}</div>
             </div>
-            <table class="doc-table" style="font-size:1.25rem; margin-bottom:6px;">
-              <tr><th style="padding:3px 8px;">N° de OT</th><td style="font-weight:bold; padding:3px 8px;">${ot}</td><th style="padding:3px 8px;">Cliente</th><td style="padding:3px 8px;"><strong>${nombreClienteOP}</strong></td></tr>
-              <tr><th style="padding:3px 8px;">Producto</th><td style="padding:3px 8px;"><strong>${nombresLinea[p.lineaProducto]}</strong></td><th style="padding:3px 8px;">Cantidad</th><td style="padding:3px 8px;"><strong>${p.cantidad} unidades</strong></td></tr>
-              <tr><th style="padding:3px 8px;">Tamaño</th><td style="padding:3px 8px;"><strong>${p.anchoCm} x ${p.altoCm} cm</strong></td><th style="padding:3px 8px;">Tapa</th><td style="padding:3px 8px;"><strong>${nombresTapa[p.tapaTipo]}</strong></td></tr>
-              <tr><th style="padding:3px 8px;">Encuadernación</th><td style="padding:3px 8px;"><strong>${p.encuadernacionTipo}</strong></td><th style="padding:3px 8px;">Hojas del taco</th><td style="padding:3px 8px;"><strong>${p.tacoHojas}</strong></td></tr>
-              <tr><th style="padding:3px 8px;">Entrega</th><td colspan="3" style="padding:3px 8px;"><strong>${fechaEntregaTxtOP}</strong></td></tr>
+            <table class="doc-table" style="font-size:1.88rem; margin-bottom:9px;">
+              <tr><th style="padding:5px 12px;">N° de OT</th><td style="font-weight:bold; padding:5px 12px;">${ot}</td><th style="padding:5px 12px;">Cliente</th><td style="padding:5px 12px;"><strong>${nombreClienteOP}</strong></td></tr>
+              <tr><th style="padding:5px 12px;">Producto</th><td style="padding:5px 12px;"><strong>${nombresLinea[p.lineaProducto]}</strong></td><th style="padding:5px 12px;">Cantidad</th><td style="padding:5px 12px;"><strong>${p.cantidad} unidades</strong></td></tr>
+              <tr><th style="padding:5px 12px;">Tamaño</th><td style="padding:5px 12px;"><strong>${p.anchoCm} x ${p.altoCm} cm</strong></td><th style="padding:5px 12px;">Tapa</th><td style="padding:5px 12px;"><strong>${nombresTapa[p.tapaTipo]}</strong></td></tr>
+              <tr><th style="padding:5px 12px;">Encuadernación</th><td style="padding:5px 12px;"><strong>${p.encuadernacionTipo}</strong></td><th style="padding:5px 12px;">Hojas del taco</th><td style="padding:5px 12px;"><strong>${p.tacoHojas}</strong></td></tr>
+              <tr><th style="padding:5px 12px;">Entrega</th><td colspan="3" style="padding:5px 12px;"><strong>${fechaEntregaTxtOP}</strong></td></tr>
             </table>
-            <div class="doc-section-title" style="font-size:1.31rem; padding:5px 11px; margin:6px 0 6px;">Insumos, montajes y plano de corte por línea</div>
+            <div class="doc-section-title" style="font-size:1.97rem; padding:8px 17px; margin:9px 0 9px;">Insumos, montajes y plano de corte por línea</div>
             ${bloques}
-            <div class="doc-section-title" style="font-size:1.31rem; padding:5px 11px; margin:6px 0 6px;">Armado / Encuadernación</div>
-            <p style="font-size:1.22rem; margin:3px 0;"><strong>${nombresLinea[p.lineaProducto]} — ${p.encuadernacionTipo}${p.anilladoDosSecciones?' — Anillado en 2 secciones':''}</strong></p>
+            <div class="doc-section-title" style="font-size:1.97rem; padding:8px 17px; margin:9px 0 9px;">Armado / Encuadernación</div>
+            <p style="font-size:1.83rem; margin:5px 0;"><strong>${nombresLinea[p.lineaProducto]} — ${p.encuadernacionTipo}${p.anilladoDosSecciones?' — Anillado en 2 secciones':''}</strong></p>
             ${recsHtmlOP}
           `;
           document.getElementById('print-area').innerHTML = html;
