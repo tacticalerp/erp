@@ -579,13 +579,20 @@ async function tacticalSyncCxp(c){
 function tacticalEgresoADb(e){
   return {
     id: e.id, numero: e.numero, fecha: e.fecha, beneficiario: e.beneficiario||'', concepto: e.concepto||'',
-    monto: e.monto||0, categoria: e.categoria||null, medio_pago: e.medioPago||null, referencia_soporte: e.referenciaSoporte||null, cxp_id: e.idCxp||null,
+    monto: e.monto||0, categoria: e.categoria||null, medio_pago: e.medioPago||null, referencia_soporte: e.referenciaSoporte||null,
+    // cxp_id (singular) se mantiene por compatibilidad con egresos viejos de 1 sola factura --
+    // ids_cxp (Conde 2026-08-20: "seleccionar varias facturas del mismo proveedor... en un solo
+    // comprobante") es la lista real que usa el código nuevo, cxp_id queda igual al primero de esa
+    // lista solo como referencia rápida.
+    cxp_id: (e.idsCxp && e.idsCxp[0]) || e.idCxp || null,
+    ids_cxp: e.idsCxp || (e.idCxp ? [e.idCxp] : []),
   };
 }
 function tacticalEgresoDeDb(r){
   return {
     id: r.id, numero: r.numero, fecha: r.fecha, beneficiario: r.beneficiario, concepto: r.concepto,
-    monto: Number(r.monto)||0, categoria: r.categoria, medioPago: r.medio_pago, referenciaSoporte: r.referencia_soporte, idCxp: r.cxp_id,
+    monto: Number(r.monto)||0, categoria: r.categoria, medioPago: r.medio_pago, referenciaSoporte: r.referencia_soporte,
+    idCxp: r.cxp_id, idsCxp: (r.ids_cxp && r.ids_cxp.length) ? r.ids_cxp : (r.cxp_id ? [r.cxp_id] : []),
   };
 }
 async function tacticalEgresosCargar(){

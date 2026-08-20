@@ -1171,9 +1171,9 @@
                             <thead><tr><th>N°</th><th>Cliente</th><th>Tipo</th><th>Saldo Pendiente</th><th>Vencimiento</th><th>Estado</th></tr></thead>
                             <tbody id="cont-tabla-cxc"></tbody>
                         </table></div>
-                        <h4 style="color:var(--dark); border-bottom:2px solid #cbd5e0; padding-bottom:5px; margin-top:20px;">Cuentas por Pagar (Proveedores)</h4>
+                        <h4 style="color:var(--dark); border-bottom:2px solid #cbd5e0; padding-bottom:5px; margin-top:20px;">Cuentas por Pagar (Proveedores) — agrupado por proveedor</h4>
                         <div class="table-responsive"><table>
-                            <thead><tr><th>N°</th><th>Proveedor</th><th>Categoría</th><th>Saldo Pendiente</th><th>Vencimiento</th><th>Estado</th></tr></thead>
+                            <thead><tr><th>N° Factura Proveedor</th><th>Proveedor</th><th>Categoría</th><th>Saldo Pendiente</th><th>Vencimiento</th><th>Estado</th></tr></thead>
                             <tbody id="cont-tabla-cxp"></tbody>
                         </table></div>
                     </div>
@@ -1255,7 +1255,6 @@
                         <div class="form-grid">
                             <div class="form-group"><label>Proveedor:</label><input type="text" id="cxp-proveedor" list="cxp-proveedores-datalist" placeholder="Ej: PAPELES DEL NORTE SAS" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"><datalist id="cxp-proveedores-datalist"></datalist></div>
                             <div class="form-group"><label>N° Factura del Proveedor:</label><input type="text" id="cxp-numFactura"></div>
-                            <div class="form-group"><label>N° Interno CxP:</label><input type="text" id="cxp-numero" placeholder="Ej: CP-0001" oninput="this.dataset.auto=''"></div>
                             <div class="form-group">
                                 <label>Categoría:</label>
                                 <select id="cxp-categoria" onchange="contLlenarSubcategorias()">
@@ -1285,7 +1284,7 @@
                     </div>
                     <div id="cont-egreso" class="accordion-content">
                         <div class="form-grid">
-                            <div class="form-group" style="flex-basis:100%;"><label>Cuenta por Pagar a pagar (opcional):</label><select id="egr-cxp" onchange="contAutocompletarEgresoDesdeCxp()"></select></div>
+                            <div class="form-group" style="flex-basis:100%;"><label>Cuenta(s) por Pagar a pagar (opcional — Ctrl/Cmd+clic para elegir varias del MISMO proveedor):</label><select id="egr-cxp" multiple size="5" onchange="contAutocompletarEgresoDesdeCxp()"></select></div>
                             <div class="form-group"><label>N° de Comprobante:</label><input type="text" id="egr-numero" placeholder="Ej: EG-0001" oninput="this.dataset.auto=''"></div>
                             <div class="form-group"><label>Beneficiario:</label><input type="text" id="egr-beneficiario"></div>
                             <div class="form-group"><label>Concepto:</label><input type="text" id="egr-concepto"></div>
@@ -5917,7 +5916,7 @@
         }
 
         /* ---- ÍTEMS: Cuenta por Pagar (hasta 10 renglones, se suman al Monto de la factura de compra) ----
-           Conde 2026-08-20: mismo criterio que Documento de Venta -- IVA por ítem, 100% manual. */
+           Conde 2026-08-20: IVA por ítem se sugiere solo (19%) pero se puede editar o dejar en 0. */
         let contCxpItemContador = 0;
         function contAgregarItemCxp(descripcion, cantidad, valorUnitario, iva){
             if(document.querySelectorAll('#cxp-items-body tr').length >= 10){ alert('Máximo 10 ítems por factura.'); return; }
@@ -5929,16 +5928,24 @@
                 <td><input type="text" id="${id}_desc" value="${descripcion||''}" placeholder="Descripción del ítem"></td>
                 <td><input type="number" id="${id}_cant" value="${cantidad||1}" min="1" oninput="contRecalcularItemCxp('${id}')"></td>
                 <td><input type="text" inputmode="numeric" id="${id}_valorU" value="${valorUnitario?Number(valorUnitario).toLocaleString('es-CO'):''}" oninput="contFormatearMiles(this); contRecalcularItemCxp('${id}')"></td>
-                <td><input type="text" inputmode="numeric" id="${id}_iva" value="${iva?Number(iva).toLocaleString('es-CO'):'0'}" oninput="contFormatearMiles(this); contRecalcularItemCxp('${id}')"></td>
+                <td><input type="text" inputmode="numeric" id="${id}_iva" value="${iva?Number(iva).toLocaleString('es-CO'):'0'}" oninput="contFormatearMiles(this); this.dataset.editadoManual='1'; contRecalcularItemCxp('${id}')"></td>
                 <td id="${id}_total">$0</td>
                 <td><button type="button" class="btn-action btn-del-row" onclick="contQuitarItemCxp('${id}')">✕</button></td>`;
             document.getElementById('cxp-items-body').appendChild(tr);
             contRecalcularItemCxp(id);
         }
+        // Conde 2026-08-20: el IVA de cada ítem se sugiere solo (19% de Cantidad×Valor Unitario) --
+        // pero en cuanto la persona toca el campo de IVA a mano (aunque sea para dejarlo en 0), deja
+        // de recalcularse solo y respeta lo que haya escrito, aunque después cambie la cantidad o el
+        // valor unitario. `data-editadoManual` es la marca de "ya lo tocaste".
         function contRecalcularItemCxp(id){
             const cant = parseFloat(document.getElementById(id+'_cant').value) || 0;
             const valorU = contNumeroDesdeInput(document.getElementById(id+'_valorU'));
-            const iva = contNumeroDesdeInput(document.getElementById(id+'_iva'));
+            const ivaInput = document.getElementById(id+'_iva');
+            if(ivaInput.dataset.editadoManual !== '1'){
+                ivaInput.value = Math.round(cant*valorU*0.19).toLocaleString('es-CO');
+            }
+            const iva = contNumeroDesdeInput(ivaInput);
             document.getElementById(id+'_total').innerText = cotFormatoCop(cant*valorU + iva);
             contActualizarTotalCxp();
         }
@@ -6220,10 +6227,10 @@
 
             if(!proveedor || items.length===0 || monto<=0){ alert("Debe ingresar el proveedor y agregar al menos un ítem con valor mayor a 0."); return; }
 
-            const campoNumero = document.getElementById('cxp-numero');
-            const esManual = campoNumero.value.trim() && campoNumero.dataset.auto !== 'true';
-            const numero = esManual ? campoNumero.value.trim() : await contSiguienteNumero('cxp', 'CP-');
-            if(esManual) contActualizarContadorDesdeNumero('cxp', numero);
+            // Conde 2026-08-20: ya no se le muestra al usuario ningún "N° Interno CxP" -- se sigue
+            // generando en automático por dentro (la tabla exige un "numero" único), pero ahora el
+            // identificador que la persona realmente usa es el N° de Factura del Proveedor.
+            const numero = await contSiguienteNumero('cxp', 'CP-');
 
             await contObtenerOCrearProveedor(proveedor); // registra el proveedor si es nuevo, o simplemente reutiliza el ya existente por nombre exacto
             const cxp = {
@@ -6235,7 +6242,6 @@
 
             document.getElementById('cxp-proveedor').value=''; document.getElementById('cxp-numFactura').value=''; document.getElementById('cxp-fechaVenc').value='';
             contLimpiarItemsCxp();
-            document.getElementById('cxp-numero').value=''; document.getElementById('cxp-numero').dataset.auto='';
             renderContabilidad();
         }
 
@@ -6256,27 +6262,38 @@
 
             const selEgreso = document.getElementById('egr-cxp');
             if(selEgreso){
-                selEgreso.innerHTML = '<option value="">-- Gasto directo (sin CxP) --</option>';
+                // Sin selección = gasto directo (sin CxP) -- con multiple no hace falta una opción
+                // vacía aparte, ninguna marcada ya significa eso.
+                selEgreso.innerHTML = '';
                 db_cxp.filter(c => c.saldoPendiente>0).forEach(c => {
-                    selEgreso.innerHTML += `<option value="${c.id}">${c.numero} — ${c.proveedor} — saldo ${cotFormatoCop(c.saldoPendiente)}</option>`;
+                    selEgreso.innerHTML += `<option value="${c.id}">${c.numeroFacturaProveedor||c.numero} — ${c.proveedor} — saldo ${cotFormatoCop(c.saldoPendiente)}</option>`;
                 });
             }
         }
 
         /* ---- COMPROBANTE DE EGRESO ---- */
         function contAutocompletarEgresoDesdeCxp(){
-            const idCxp = document.getElementById('egr-cxp').value;
-            const cxp = db_cxp.find(c => c.id === idCxp);
-            if(cxp){
-                document.getElementById('egr-beneficiario').value = cxp.proveedor;
-                document.getElementById('egr-concepto').value = `Abono factura ${cxp.numeroFacturaProveedor||cxp.numero}`;
-                document.getElementById('egr-monto').value = cxp.saldoPendiente.toLocaleString('es-CO');
-                document.getElementById('egr-categoria').value = cxp.categoria;
+            // Conde 2026-08-20: ahora se pueden elegir varias facturas del MISMO proveedor -- se
+            // suma el saldo pendiente de todas para sugerir el Monto, y se avisa si mezcló
+            // proveedores distintos (un comprobante de egreso es para un solo beneficiario).
+            const ids = [...document.getElementById('egr-cxp').selectedOptions].map(o=>o.value).filter(Boolean);
+            const seleccion = ids.map(id => db_cxp.find(c=>c.id===id)).filter(Boolean);
+            if(seleccion.length===0) return;
+            const proveedores = [...new Set(seleccion.map(c=>c.proveedor))];
+            if(proveedores.length>1){
+                alert('Elegiste facturas de proveedores distintos -- un solo comprobante de egreso debe ser para UN solo proveedor. Deja marcadas solo las de un proveedor.');
+                return;
             }
+            const totalSeleccion = seleccion.reduce((s,c)=>s+c.saldoPendiente,0);
+            const numeros = seleccion.map(c=>c.numeroFacturaProveedor||c.numero).join(', ');
+            document.getElementById('egr-beneficiario').value = proveedores[0];
+            document.getElementById('egr-concepto').value = seleccion.length>1 ? `Abono facturas ${numeros}` : `Abono factura ${numeros}`;
+            document.getElementById('egr-monto').value = totalSeleccion.toLocaleString('es-CO');
+            document.getElementById('egr-categoria').value = seleccion[0].categoria;
         }
 
         async function contGuardarEgreso(){
-            const idCxp = document.getElementById('egr-cxp').value || null;
+            const idsCxp = [...document.getElementById('egr-cxp').selectedOptions].map(o=>o.value).filter(Boolean);
             const beneficiario = document.getElementById('egr-beneficiario').value.trim();
             const concepto = document.getElementById('egr-concepto').value.trim();
             const monto = contNumeroDesdeInput(document.getElementById('egr-monto'));
@@ -6293,13 +6310,21 @@
 
             const nuevoEgreso = {
                 id: crypto.randomUUID(), numero, fecha: contHoy(),
-                beneficiario, concepto, monto, categoria, medioPago, referenciaSoporte, idCxp,
+                beneficiario, concepto, monto, categoria, medioPago, referenciaSoporte, idsCxp,
             };
             db_egresos.push(nuevoEgreso);
             tacticalSyncEgreso(nuevoEgreso);
 
-            if(idCxp){
-                const cxp = db_cxp.find(c => c.id === idCxp);
+            // Conde 2026-08-20 (confirmado): al elegir varias CxP para un solo comprobante, TODAS
+            // quedan pagadas por completo (no se reparte el monto entre ellas) -- si solo se eligió
+            // una, se conserva el comportamiento de siempre (permite abono parcial).
+            if(idsCxp.length > 1){
+                idsCxp.forEach(id => {
+                    const cxp = db_cxp.find(c => c.id === id);
+                    if(cxp){ cxp.saldoPendiente = 0; cxp.estado = 'pagado'; cxp.idEgreso = nuevoEgreso.id; tacticalSyncCxp(cxp); }
+                });
+            } else if(idsCxp.length === 1){
+                const cxp = db_cxp.find(c => c.id === idsCxp[0]);
                 if(cxp){
                     cxp.saldoPendiente = Math.max(0, cxp.saldoPendiente - monto);
                     cxp.estado = cxp.saldoPendiente<=0 ? 'pagado' : (cxp.saldoPendiente<cxp.monto ? 'abonado_parcial' : 'pendiente');
@@ -6309,7 +6334,7 @@
             }
 
             document.getElementById('egr-beneficiario').value=''; document.getElementById('egr-concepto').value=''; document.getElementById('egr-monto').value='0'; document.getElementById('egr-referencia').value='';
-            document.getElementById('egr-cxp').value='';
+            [...document.getElementById('egr-cxp').options].forEach(o=>o.selected=false);
             document.getElementById('egr-numero').value=''; document.getElementById('egr-numero').dataset.auto='';
             renderContabilidad();
         }
@@ -6344,11 +6369,26 @@
             }
             const tbodyCxp = document.getElementById('cont-tabla-cxp');
             if(tbodyCxp){
-                let filas = '';
-                db_cxp.filter(c => c.saldoPendiente>0).forEach(c => {
-                    const vencida = c.fechaVencimiento && c.fechaVencimiento < hoy;
-                    filas += `<tr><td>${c.numero}</td><td>${c.proveedor}</td><td>${c.categoria==='fijo'?'Fijo':'Variable'}</td><td>${cotFormatoCop(c.saldoPendiente)}</td><td>${c.fechaVencimiento||'-'}</td><td style="color:${vencida?'var(--peligro)':'inherit'}; font-weight:${vencida?'bold':'normal'};">${vencida?'⚠️ Vencida':c.estado}</td></tr>`;
+                // Conde 2026-08-20: agrupado por proveedor, y dentro de cada proveedor ordenado por
+                // el N° de Factura del Proveedor (el que se digita a mano) -- con total por
+                // proveedor y total general al final.
+                const pendientes = db_cxp.filter(c => c.saldoPendiente>0);
+                const porProveedor = {};
+                pendientes.forEach(c => { (porProveedor[c.proveedor] = porProveedor[c.proveedor]||[]).push(c); });
+                const proveedoresOrdenados = Object.keys(porProveedor).sort((a,b)=>a.localeCompare(b,'es'));
+                let filas = '', totalGeneral = 0;
+                proveedoresOrdenados.forEach(prov => {
+                    const lista = [...porProveedor[prov]].sort((a,b)=>(a.numeroFacturaProveedor||'').localeCompare(b.numeroFacturaProveedor||'', 'es'));
+                    let totalProveedor = 0;
+                    lista.forEach(c => {
+                        const vencida = c.fechaVencimiento && c.fechaVencimiento < hoy;
+                        totalProveedor += c.saldoPendiente;
+                        filas += `<tr><td>${c.numeroFacturaProveedor||'-'}</td><td>${c.proveedor}</td><td>${c.categoria==='fijo'?'Fijo':'Variable'}</td><td>${cotFormatoCop(c.saldoPendiente)}</td><td>${c.fechaVencimiento||'-'}</td><td style="color:${vencida?'var(--peligro)':'inherit'}; font-weight:${vencida?'bold':'normal'};">${vencida?'⚠️ Vencida':c.estado}</td></tr>`;
+                    });
+                    totalGeneral += totalProveedor;
+                    filas += `<tr style="background:#f1f5f9; font-weight:bold;"><td colspan="3">Total ${prov}</td><td colspan="3">${cotFormatoCop(totalProveedor)}</td></tr>`;
                 });
+                if(pendientes.length) filas += `<tr style="background:#e2e8f0; font-weight:bold; font-size:1.02em;"><td colspan="3">TOTAL GENERAL</td><td colspan="3">${cotFormatoCop(totalGeneral)}</td></tr>`;
                 tbodyCxp.innerHTML = filas || '<tr><td colspan="6" style="color:#718096;">Sin cartera por pagar pendiente.</td></tr>';
             }
         }
@@ -6467,7 +6507,6 @@
             renderContTablero();
             contSugerirNumeroDoc();
             contSugerirNumeroSiVacio('ing-numero', 'ingreso', 'IN-');
-            contSugerirNumeroSiVacio('cxp-numero', 'cxp', 'CP-');
             contSugerirNumeroSiVacio('egr-numero', 'egreso', 'EG-');
         }
 

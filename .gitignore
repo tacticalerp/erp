@@ -33,6 +33,13 @@ troquel_templates/
 laser_rect_templates/
 rompecabezas_templates/
 
+# ---- Backups reales de Supabase (datos de clientes) --------------------------
+# Confirmado 2026-08-20: los backups que descarga el botón del Hub NUNCA deben
+# terminar en el repo público. Conde ya los mueve a esta carpeta.
+BACKUP/
+*.json.bak
+tactical-erp-backup-*.json
+
 # ---- Código legado, ya portado/reemplazado -----------------------------------
 motor_cotizacion/
 borrador_rompecabezas_preview.html

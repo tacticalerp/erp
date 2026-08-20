@@ -440,7 +440,9 @@ create table public.egresos (
   categoria text,
   medio_pago text,
   referencia_soporte text,
-  cxp_id uuid, -- sin "references" -- ver nota de guardado optimista
+  cxp_id uuid, -- sin "references" -- ver nota de guardado optimista. Se conserva por compatibilidad
+               -- con egresos viejos de una sola factura -- el código nuevo usa ids_cxp.
+  ids_cxp jsonb not null default '[]'::jsonb, -- Conde 2026-08-20: varias CxP del mismo proveedor en 1 solo egreso
   created_at timestamptz not null default now()
 );
 alter table public.egresos enable row level security;
