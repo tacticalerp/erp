@@ -2926,7 +2926,7 @@
                       </div>
                       ${planoImp ? `
                       <div style="display:flex; gap:9px; align-items:center; margin-top:4px; padding-top:4px; border-top:1px dotted #e2e8f0;">
-                        <div style="flex:1; min-width:0; color:#4a5568;">🎨 <strong>Montaje para impresión:</strong> ${planoImp.piezasPorPliego} pieza(s) de ${planoImp.piezaAncho}x${planoImp.piezaAlto}cm en un tamaño de ${planoImp.pliegoAncho}x${planoImp.pliegoAlto}cm${maquinaTxt==='Digital (Konica)'?' (con margen de pinza descontado)':''}</div>
+                        <div style="flex:1; min-width:0; color:#4a5568;">🎨 <strong>Montaje para impresión:</strong> ${planoImp.piezasPorPliego} pieza(s) de ${planoImp.piezaAncho}x${planoImp.piezaAlto}cm en un tamaño útil de ${planoImp.pliegoAncho}x${planoImp.pliegoAlto}cm (con margen de pinza descontado)${planoImp.sobranteUtilizable?`<br>♻️ <strong>Sobra un pedazo de ${planoImp.sobranteUtilizable.ancho.toFixed(1)}x${planoImp.sobranteUtilizable.alto.toFixed(1)}cm</strong> — se puede guardar para otro trabajo`:''}</div>
                         <div style="flex-shrink:0; display:flex; gap:8px; align-items:center;">${tacticalDibujarPlanoCorteSVG(planoImp,85)}<div style="color:#4a5568; max-width:150px; line-height:1.2;">${tacticalPlanoCorteTexto(planoImp)}</div></div>
                       </div>` : ''}
                     </div>`;
@@ -4552,6 +4552,15 @@
         const OFFSET_TOLERANCIA_MERMA_MILLAR = PRECIOS_OFFSET_TOLERANCIA_MERMA_MILLAR;
         const OFFSET_FORMATOS_CM = {octavo:[25,35], cuarto:[35,50], medio_pliego:[50,70]};
         const PINZA_ENTRADA_MM = 12, PINZA_SALIDA_MM = 5;
+        // Conde 2026-08-21: el ÁREA REAL de impresión (donde sí entra tinta) es más chica que el
+        // tamaño físico del pliego -- cada máquina pierde margen de pinza distinto, confirmado por
+        // Conde con estos números exactos (NO es una fórmula uniforme, Octavo va al revés que
+        // Cuarto/Medio: ahí el lado chico pierde 0.5cm y el grande pierde 1cm, no al contrario).
+        // Esto es SOLO para calcular cuántas piezas caben por pasada (plano de impresión) -- el
+        // material (compra/corte del pliego madre) sigue usando OFFSET_FORMATOS_CM completo arriba.
+        // Mismos valores ya validados y en uso en Volantes/Rompecabezas/Carpetas -- Cuadernos no los
+        // tenía porque su "plano de impresión" se agregó después, copiado sin este ajuste.
+        const OFFSET_FORMATOS_IMPRESION_CM = {medio_pliego:[49,69.5], cuarto:[34,49.5], octavo:[24.5,34]};
         const LINEAS_CON_PLIEGUE = new Set(["escolar","agenda_ejecutiva"]);
         const ENCUADERNACIONES_LIBRETAS_CON_PLIEGUE = new Set(["hotmelt","colbon"]);
         const ESCUDO_BAJOS_MONTOS_UMBRAL = PRECIOS_ESCUDO_BAJOS_MONTOS_UMBRAL, DISENO_COSTO_NORMAL = PRECIOS_DISENO_COSTO_NORMAL, DISENO_COSTO_REDUCIDO = PRECIOS_DISENO_COSTO_REDUCIDO, IVA_PCT = 0.19;
@@ -4652,6 +4661,17 @@
         // digital), aparte del plano de corte del material (que muestra el pliego madre 60x90/
         // 70x100). Mismo par de funciones ya usado en las otras 7 calculadoras -- Cuadernos no lo
         // tenía porque su Orden de Producción vive aparte, directo en el Hub.
+        // Conde 2026-08-21: si sobra una franja de 10cm o más en cualquiera de los 2 lados después
+        // de acomodar las piezas, se puede guardar ese papel para otro trabajo -- menos de 10cm no
+        // es realmente aprovechable, no vale la pena ni mencionarlo.
+        const SOBRANTE_UTILIZABLE_MIN_CM = 10;
+        function calcularSobranteUtilizable(pliegoAncho, pliegoAlto, piezaW, piezaH, columnas, filas){
+          const sobranteAncho = pliegoAncho - columnas*piezaW;
+          const sobranteAlto = pliegoAlto - filas*piezaH;
+          if(sobranteAncho >= SOBRANTE_UTILIZABLE_MIN_CM) return {ancho:sobranteAncho, alto:pliegoAlto};
+          if(sobranteAlto >= SOBRANTE_UTILIZABLE_MIN_CM) return {ancho:pliegoAncho, alto:sobranteAlto};
+          return null;
+        }
         function planoImpresionDigital(piezaAncho, piezaAlto, clase){
           const [sheetW, sheetH] = DIGITAL_FORMATOS_CM[clase];
           const margenCm = DIGITAL_PINZA_MM/10;
@@ -4662,28 +4682,32 @@
           const nRotada = colsRotada*filasRotada;
           const rotado = nRotada > nSinRotar;
           if(nSinRotar===0 && nRotada===0){
-            return { piezaAncho, piezaAlto, pliegoAncho, pliegoAlto, columnas:1, filas:1, rotado:false, piezasPorPliego:1 };
+            return { piezaAncho, piezaAlto, pliegoAncho, pliegoAlto, columnas:1, filas:1, rotado:false, piezasPorPliego:1, sobranteUtilizable:null };
           }
+          const columnas = rotado?colsRotada:colsSinRotar, filas = rotado?filasRotada:filasSinRotar;
+          const piezaW = rotado?piezaAlto:piezaAncho, piezaH = rotado?piezaAncho:piezaAlto;
           return {
-            piezaAncho, piezaAlto, pliegoAncho, pliegoAlto,
-            columnas: rotado?colsRotada:colsSinRotar, filas: rotado?filasRotada:filasSinRotar, rotado,
+            piezaAncho, piezaAlto, pliegoAncho, pliegoAlto, columnas, filas, rotado,
             piezasPorPliego: rotado?nRotada:nSinRotar,
+            sobranteUtilizable: calcularSobranteUtilizable(pliegoAncho, pliegoAlto, piezaW, piezaH, columnas, filas),
           };
         }
         function planoImpresionOffset(piezaAncho, piezaAlto, fraccion){
-          const [pliegoAncho, pliegoAlto] = OFFSET_FORMATOS_CM[fraccion];
+          const [pliegoAncho, pliegoAlto] = OFFSET_FORMATOS_IMPRESION_CM[fraccion];
           const colsSinRotar = Math.floor(pliegoAncho/piezaAncho), filasSinRotar = Math.floor(pliegoAlto/piezaAlto);
           const nSinRotar = colsSinRotar*filasSinRotar;
           const colsRotada = Math.floor(pliegoAncho/piezaAlto), filasRotada = Math.floor(pliegoAlto/piezaAncho);
           const nRotada = colsRotada*filasRotada;
           const rotado = nRotada > nSinRotar;
           if(nSinRotar===0 && nRotada===0){
-            return { piezaAncho, piezaAlto, pliegoAncho, pliegoAlto, columnas:1, filas:1, rotado:false, piezasPorPliego:1 };
+            return { piezaAncho, piezaAlto, pliegoAncho, pliegoAlto, columnas:1, filas:1, rotado:false, piezasPorPliego:1, sobranteUtilizable:null };
           }
+          const columnas = rotado?colsRotada:colsSinRotar, filas = rotado?filasRotada:filasSinRotar;
+          const piezaW = rotado?piezaAlto:piezaAncho, piezaH = rotado?piezaAncho:piezaAlto;
           return {
-            piezaAncho, piezaAlto, pliegoAncho, pliegoAlto,
-            columnas: rotado?colsRotada:colsSinRotar, filas: rotado?filasRotada:filasSinRotar, rotado,
+            piezaAncho, piezaAlto, pliegoAncho, pliegoAlto, columnas, filas, rotado,
             piezasPorPliego: rotado?nRotada:nSinRotar,
+            sobranteUtilizable: calcularSobranteUtilizable(pliegoAncho, pliegoAlto, piezaW, piezaH, columnas, filas),
           };
         }
         // Une los datos de un detalleLineas[clave] de Cuadernos con lo de arriba -- null si esa
@@ -5894,7 +5918,7 @@
                 </div>
                 ${planoImp ? `
                 <div style="display:flex; gap:9px; align-items:center; margin-top:4px; padding-top:4px; border-top:1px dotted #e2e8f0;">
-                  <div style="flex:1; min-width:0; color:#4a5568;">🎨 <strong>Montaje para impresión:</strong> ${planoImp.piezasPorPliego} pieza(s) de ${planoImp.piezaAncho}x${planoImp.piezaAlto}cm en un tamaño de ${planoImp.pliegoAncho}x${planoImp.pliegoAlto}cm${maquina==='Digital (Konica)'?' (con margen de pinza descontado)':''}</div>
+                  <div style="flex:1; min-width:0; color:#4a5568;">🎨 <strong>Montaje para impresión:</strong> ${planoImp.piezasPorPliego} pieza(s) de ${planoImp.piezaAncho}x${planoImp.piezaAlto}cm en un tamaño útil de ${planoImp.pliegoAncho}x${planoImp.pliegoAlto}cm (con margen de pinza descontado)${planoImp.sobranteUtilizable?`<br>♻️ <strong>Sobra un pedazo de ${planoImp.sobranteUtilizable.ancho.toFixed(1)}x${planoImp.sobranteUtilizable.alto.toFixed(1)}cm</strong> — se puede guardar para otro trabajo`:''}</div>
                   <div style="flex-shrink:0; display:flex; gap:8px; align-items:center;">${tacticalDibujarPlanoCorteSVG(planoImp,85)}<div style="color:#4a5568; max-width:150px; line-height:1.2;">${tacticalPlanoCorteTexto(planoImp)}</div></div>
                 </div>` : ''}
               </div>`;
