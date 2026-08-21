@@ -319,20 +319,9 @@
             </div>
 
             <div class="hub-grid">
-                <!-- Conde 2026-08-22: "programa recomendaciones... llámalo y recuérdale, algo similar"
-                     -- cruza CRM/Contabilidad/Reprocesos en frases simples con una acción sugerida,
-                     en vez de tableros con términos contables. Primera tarjeta a propósito, para que
-                     sea lo primero que se vea al entrar. -->
-                <div class="hub-card active-card" onclick="showView('radar')" style="border:2px solid var(--primary);">
-                    <div>
-                        <div class="card-header">
-                            <h3 class="card-title">🎯 Radar de Negocio</h3>
-                            <span class="badge badge-active">Nuevo</span>
-                        </div>
-                    </div>
-                    <div class="card-footer">Ver recomendaciones de hoy ➔</div>
-                </div>
-
+                <!-- Conde 2026-08-22: orden pedido explícitamente -- 1 Tareas, 2 Calculadora,
+                     3 Montajes Rompecabezas, 4 Kanban, 5 Reprocesos, 6 CRM, Radar de Negocio,
+                     Reportes, Contabilidad, Panel de Precios, Fototeca, Bot. -->
                 <!-- MÓDULO 1: TAREAS -->
                 <div class="hub-card active-card" onclick="showView('tareas')">
                     <div>
@@ -344,29 +333,7 @@
                     <div class="card-footer">Ingresar al Módulo ➔</div>
                 </div>
 
-                <!-- MÓDULO 2: REPROCESOS -->
-                <div class="hub-card active-card" onclick="showView('reprocesos')">
-                    <div>
-                        <div class="card-header">
-                            <h3 class="card-title">⚠️ Control de Reprocesos</h3>
-                            <span class="badge badge-active">Activo</span>
-                        </div>
-                    </div>
-                    <div class="card-footer">Ingresar al Módulo ➔</div>
-                </div>
-
-                <!-- MÓDULO 3: CRM -->
-                <div class="hub-card active-card" onclick="showView('crm')">
-                    <div>
-                        <div class="card-header">
-                            <h3 class="card-title">👥 CRM & Clientes B2B</h3>
-                            <span class="badge badge-active">Activo</span>
-                        </div>
-                    </div>
-                    <div class="card-footer">Ingresar al Módulo ➔</div>
-                </div>
-
-                <!-- MÓDULO 4: CALCULADORA DE COSTOS -->
+                <!-- MÓDULO 2: CALCULADORA DE COSTOS -->
                 <div class="hub-card active-card" onclick="showView('calculadoras')">
                     <div>
                         <div class="card-header">
@@ -377,29 +344,18 @@
                     <div class="card-footer">Ingresar al Módulo ➔</div>
                 </div>
 
-                <!-- MÓDULO 5: REPORTES -->
-                <div class="hub-card active-card" onclick="showView('reportes')">
+                <!-- MÓDULO 3: MONTAJES ROMPECABEZAS B2C -->
+                <div class="hub-card active-card" onclick="location.href='modulo_montajes_rompecabezas.html'">
                     <div>
                         <div class="card-header">
-                            <h3 class="card-title">📈 Reportes</h3>
-                            <span class="badge badge-active">Activo</span>
+                            <h3 class="card-title">🖼️ Montajes Rompecabezas (B2C)</h3>
+                            <span class="badge badge-active">Beta</span>
                         </div>
                     </div>
-                    <div class="card-footer">Ingresar al Módulo ➔</div>
+                    <div class="card-footer">Abrir módulo ➔</div>
                 </div>
 
-                <!-- MÓDULO 6: CONTABILIDAD -->
-                <div class="hub-card active-card" onclick="showView('contabilidad')">
-                    <div>
-                        <div class="card-header">
-                            <h3 class="card-title">💵 Contabilidad</h3>
-                            <span class="badge badge-active">Activo</span>
-                        </div>
-                    </div>
-                    <div class="card-footer">Ingresar al Módulo ➔</div>
-                </div>
-
-                <!-- MÓDULO 7: KANBAN DE PRODUCCIÓN -->
+                <!-- MÓDULO 4: KANBAN DE PRODUCCIÓN -->
                 <div class="hub-card active-card" onclick="showView('kanban')">
                     <div>
                         <div class="card-header">
@@ -410,15 +366,58 @@
                     <div class="card-footer">Ingresar al Módulo ➔</div>
                 </div>
 
-                <!-- MÓDULO 8: MONTAJES ROMPECABEZAS B2C -->
-                <div class="hub-card active-card" onclick="location.href='modulo_montajes_rompecabezas.html'">
+                <!-- MÓDULO 5: REPROCESOS -->
+                <div class="hub-card active-card" onclick="showView('reprocesos')">
                     <div>
                         <div class="card-header">
-                            <h3 class="card-title">🖼️ Montajes Rompecabezas (B2C)</h3>
-                            <span class="badge badge-active">Beta</span>
+                            <h3 class="card-title">⚠️ Control de Reprocesos</h3>
+                            <span class="badge badge-active">Activo</span>
                         </div>
                     </div>
-                    <div class="card-footer">Abrir módulo ➔</div>
+                    <div class="card-footer">Ingresar al Módulo ➔</div>
+                </div>
+
+                <!-- MÓDULO 6: CRM -->
+                <div class="hub-card active-card" onclick="showView('crm')">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title">👥 CRM & Clientes B2B</h3>
+                            <span class="badge badge-active">Activo</span>
+                        </div>
+                    </div>
+                    <div class="card-footer">Ingresar al Módulo ➔</div>
+                </div>
+
+                <div class="hub-card active-card" onclick="showView('radar')" style="border:2px solid var(--primary);">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title">🎯 Radar de Negocio</h3>
+                            <span class="badge badge-active">Nuevo</span>
+                        </div>
+                    </div>
+                    <div class="card-footer">Ver recomendaciones de hoy ➔</div>
+                </div>
+
+                <!-- MÓDULO 7: REPORTES -->
+                <div class="hub-card active-card" onclick="showView('reportes')">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title">📈 Reportes</h3>
+                            <span class="badge badge-active">Activo</span>
+                        </div>
+                    </div>
+                    <div class="card-footer">Ingresar al Módulo ➔</div>
+                </div>
+
+                <!-- MÓDULO 8: CONTABILIDAD -->
+                <div class="hub-card active-card" onclick="showView('contabilidad')">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title">💵 Contabilidad</h3>
+                            <span class="badge badge-active">Activo</span>
+                        </div>
+                    </div>
+                    <div class="card-footer">Ingresar al Módulo ➔</div>
                 </div>
 
                 <!-- MÓDULO 9: PANEL DE PRECIOS -->
