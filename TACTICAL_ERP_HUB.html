@@ -4597,22 +4597,19 @@
             const [pw,ph]=PLIEGOS_CM[formato];
             const precioPliego = precioMap[formato];
             if(precioPliego==null) continue;
-            const colsSinRotar = Math.floor(pw/pa), filasSinRotar = Math.floor(ph/pal);
-            const nSinRotar = colsSinRotar*filasSinRotar;
-            const colsRotada = Math.floor(pw/pal), filasRotada = Math.floor(ph/pa);
-            const nRotada = colsRotada*filasRotada;
-            const rotado = nRotada > nSinRotar;
-            const nPorPliego = rotado ? nRotada : nSinRotar;
-            const columnas = rotado ? colsRotada : colsSinRotar;
-            const filas = rotado ? filasRotada : filasSinRotar;
+            // Conde 2026-08-21: probar también layouts mezclando corte horizontal y vertical en
+            // el mismo pliego (2 franjas), no solo una sola orientación -- puede sacar más piezas
+            // del mismo pliego (ver tacticalMejorLayoutPliego en precios_tactical.js).
+            const layout = tacticalMejorLayoutPliego(pa,pal,pw,ph);
+            const nPorPliego = layout.total;
             if(nPorPliego===0) continue;
             const nPliegos = Math.ceil(piezasTotales/nPorPliego);
-            mejores.push([nPliegos*precioPliego, formato, nPorPliego, nPliegos, precioPliego, columnas, filas, rotado, pw, ph]);
+            mejores.push([nPliegos*precioPliego, formato, nPorPliego, nPliegos, precioPliego, layout, pw, ph]);
           }
           if(mejores.length===0) throw new Error(`La pieza ${pa}x${pal}cm no cabe en ningún pliego disponible para ${sustratoNombre} ${gramaje}g`);
           mejores.sort((x,y)=>x[0]-y[0]);
-          const [costoTotal, formato, nPorPliego, nPliegos, precioPliego, columnas, filas, rotado, pliegoAncho, pliegoAlto] = mejores[0];
-          const planoCorte = {piezaAncho:pa, piezaAlto:pal, pliegoAncho, pliegoAlto, columnas, filas, rotado, piezasPorPliego:nPorPliego};
+          const [costoTotal, formato, nPorPliego, nPliegos, precioPliego, layout, pliegoAncho, pliegoAlto] = mejores[0];
+          const planoCorte = {piezaAncho:pa, piezaAlto:pal, pliegoAncho, pliegoAlto, columnas:layout.principal.columnas, filas:layout.principal.filas, rotado:layout.principal.rotado, piezasPorPliego:nPorPliego, secundaria:layout.secundaria};
           return {formato, piezasPorPliego:nPorPliego, nPliegos, precioPliego, costoTotal, planoCorte};
         }
         // Conde 2026-08-20: plano de impresión para la Orden de Producción -- muestra cómo caben

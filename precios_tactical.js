@@ -425,19 +425,68 @@ function tacticalBuscarAyuda(pregunta){
 // ese mismo pliego). Antes ambos usaban el mismo color oscuro y no se distinguían.
 const TACTICAL_COLOR_CORTE_PLIEGO = '#c0392b';
 const TACTICAL_COLOR_MONTAJE_PIEZAS = '#1e5fa8';
+// Conde 2026-08-21: revisando una cotización real notó que se armaba TODO el pliego en una sola
+// orientación (ej. pieza 42x28cm en un pliego 100x70cm daba 4 piezas), cuando mezclando corte
+// horizontal y vertical en el mismo pliego caben más (5 en ese mismo ejemplo -- confirmado que es
+// exactamente lo que ilustraba la calculadora de pliegos que mandó). tacticalMejorLayoutPliego()
+// prueba una sola orientación Y 4 variantes de "franja principal + sobrante en la otra
+// orientación" (por ancho o por alto, empezando sin rotar o rotado), y devuelve la que más piezas
+// saque. El resultado ya no es un solo grid -- puede tener una "secundaria" (la franja sobrante).
+function tacticalMejorLayoutPliego(pa, pal, pw, ph){
+  function grid(pw_, ph_, x, y, boxW, boxH, rotado){
+    const cols = Math.floor(boxW/pw_), filas = Math.floor(boxH/ph_);
+    return { x, y, piezaAncho:pa, piezaAlto:pal, columnas:cols, filas, rotado, piezas:cols*filas };
+  }
+  const candidatos = [];
+  // Sin mezclar: toda la hoja en una sola orientación (como antes).
+  candidatos.push({ total: grid(pa,pal,0,0,pw,ph,false).piezas, principal: grid(pa,pal,0,0,pw,ph,false), secundaria: null });
+  candidatos.push({ total: grid(pal,pa,0,0,pw,ph,true).piezas, principal: grid(pal,pa,0,0,pw,ph,true), secundaria: null });
+  // Mezclando: franja principal ocupa cols*ancho (o filas*alto), el sobrante se llena con la
+  // pieza en la OTRA orientación.
+  [[pa,pal,false],[pal,pa,true]].forEach(([bw,bh,rot])=>{
+    const principal = grid(bw,bh,0,0,pw,ph,rot);
+    const usadoAncho = principal.columnas*bw;
+    const sobranteAncho = pw - usadoAncho;
+    const otroW = rot?pa:pal, otroH = rot?pal:pa;
+    const secundaria = grid(otroW,otroH,usadoAncho,0,sobranteAncho,ph,!rot);
+    candidatos.push({ total: principal.piezas+secundaria.piezas, principal, secundaria: secundaria.piezas>0?secundaria:null });
+
+    const principal2 = grid(bw,bh,0,0,pw,ph,rot);
+    const usadoAlto = principal2.filas*bh;
+    const sobranteAlto = ph - usadoAlto;
+    const secundaria2 = grid(otroW,otroH,0,usadoAlto,pw,sobranteAlto,!rot);
+    candidatos.push({ total: principal2.piezas+secundaria2.piezas, principal: principal2, secundaria: secundaria2.piezas>0?secundaria2:null });
+  });
+  candidatos.sort((x,y)=>y.total-x.total);
+  return candidatos[0];
+}
+// planoCorte = {piezaAncho, piezaAlto, pliegoAncho, pliegoAlto, columnas, filas, rotado,
+// piezasPorPliego, secundaria?:{x,y,piezaAncho,piezaAlto,columnas,filas,rotado}} -- "secundaria"
+// es opcional (solo aparece cuando mezclar orientaciones sacó más piezas que una sola).
 function tacticalDibujarPlanoCorteSVG(pc, maxAnchoPx){
   if(!pc || !pc.pliegoAncho || !pc.pliegoAlto || !pc.columnas || !pc.filas) return '';
   maxAnchoPx = maxAnchoPx || 170;
   const escala = maxAnchoPx / Math.max(pc.pliegoAncho, pc.pliegoAlto);
   const w = pc.pliegoAncho*escala, h = pc.pliegoAlto*escala;
-  const piezaW = (pc.rotado ? pc.piezaAlto : pc.piezaAncho)*escala;
-  const piezaH = (pc.rotado ? pc.piezaAncho : pc.piezaAlto)*escala;
-  let rects = '';
-  for(let fila=0; fila<pc.filas; fila++){
-    for(let col=0; col<pc.columnas; col++){
-      const x = col*piezaW, y = fila*piezaH;
-      rects += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(piezaW-1.2,0.5).toFixed(1)}" height="${Math.max(piezaH-1.2,0.5).toFixed(1)}" fill="#eef2f7" stroke="${TACTICAL_COLOR_MONTAJE_PIEZAS}" stroke-width="1"/>`;
+  function dibujarGrid(piezaAncho, piezaAlto, columnas, filas, rotado, offX, offY){
+    const piezaW = (rotado ? piezaAlto : piezaAncho)*escala;
+    const piezaH = (rotado ? piezaAncho : piezaAlto)*escala;
+    let rects = '';
+    for(let fila=0; fila<filas; fila++){
+      for(let col=0; col<columnas; col++){
+        const x = offX + col*piezaW, y = offY + fila*piezaH;
+        rects += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(piezaW-1.2,0.5).toFixed(1)}" height="${Math.max(piezaH-1.2,0.5).toFixed(1)}" fill="#eef2f7" stroke="${TACTICAL_COLOR_MONTAJE_PIEZAS}" stroke-width="1"/>`;
+      }
     }
+    return rects;
+  }
+  let rects = dibujarGrid(pc.piezaAncho, pc.piezaAlto, pc.columnas, pc.filas, pc.rotado, 0, 0);
+  if(pc.secundaria){
+    const s = pc.secundaria;
+    rects += dibujarGrid(s.piezaAncho, s.piezaAlto, s.columnas, s.filas, s.rotado, s.x*escala, s.y*escala);
+    // Línea punteada marcando dónde se divide el pliego entre las 2 franjas mezcladas.
+    if(s.x>0) rects += `<line x1="${(s.x*escala).toFixed(1)}" y1="0" x2="${(s.x*escala).toFixed(1)}" y2="${h.toFixed(1)}" stroke="${TACTICAL_COLOR_MONTAJE_PIEZAS}" stroke-width="0.8" stroke-dasharray="2,1.5"/>`;
+    if(s.y>0) rects += `<line x1="0" y1="${(s.y*escala).toFixed(1)}" x2="${w.toFixed(1)}" y2="${(s.y*escala).toFixed(1)}" stroke="${TACTICAL_COLOR_MONTAJE_PIEZAS}" stroke-width="0.8" stroke-dasharray="2,1.5"/>`;
   }
   // El contorno del pliego (corte) se dibuja al final, encima de la cuadrícula, para que se vea
   // claro incluso donde coincide con el borde de las piezas de las orillas.
@@ -446,7 +495,10 @@ function tacticalDibujarPlanoCorteSVG(pc, maxAnchoPx){
 }
 function tacticalPlanoCorteTexto(pc){
   if(!pc) return '';
-  return `<span style="color:${TACTICAL_COLOR_CORTE_PLIEGO}; font-weight:bold;">■</span> Corte del pliego: ${pc.pliegoAncho}x${pc.pliegoAlto}cm<br><span style="color:${TACTICAL_COLOR_MONTAJE_PIEZAS}; font-weight:bold;">■</span> Montaje: ${pc.piezasPorPliego} pieza(s) de ${pc.piezaAncho}x${pc.piezaAlto}cm (${pc.columnas}x${pc.filas}${pc.rotado?', rotado':''})`;
+  const franjaTxt = pc.secundaria
+    ? ` — franja 1: ${pc.columnas}x${pc.filas}${pc.rotado?' rotado':''}, franja 2: ${pc.secundaria.columnas}x${pc.secundaria.filas}${pc.secundaria.rotado?' rotado':''} (mezclando corte horizontal y vertical)`
+    : ` (${pc.columnas}x${pc.filas}${pc.rotado?', rotado':''})`;
+  return `<span style="color:${TACTICAL_COLOR_CORTE_PLIEGO}; font-weight:bold;">■</span> Corte del pliego: ${pc.pliegoAncho}x${pc.pliegoAlto}cm<br><span style="color:${TACTICAL_COLOR_MONTAJE_PIEZAS}; font-weight:bold;">■</span> Montaje: ${pc.piezasPorPliego} pieza(s) de ${pc.piezaAncho}x${pc.piezaAlto}cm${franjaTxt}`;
 }
 
 /* ==========================================
