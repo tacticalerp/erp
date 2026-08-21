@@ -718,12 +718,6 @@
                             <div><button class="btn-submit" style="width:auto; background:var(--ganado);" onclick="confirmarSeleccionLineasGanado()">✅ Continuar con lo seleccionado</button></div>
                         </div>
 
-                        <div id="modal-fecha-ganado" style="display:none; background:#f0fff4; border:1px solid #9ae6b4; padding:15px; border-radius:6px; margin-top:10px;">
-                            <label style="font-weight:bold; color:#276749; display:block; margin-bottom:8px;">📅 ¿Para qué fecha se compromete la entrega? (queda como fecha de entrega en el Kanban)</label>
-                            <input type="date" id="ganado-fecha-entrega" style="margin-bottom:10px;">
-                            <div><button class="btn-submit" style="width:auto; background:var(--ganado);" onclick="confirmarFechaYGanado()">✅ Confirmar y crear ficha en Kanban</button></div>
-                        </div>
-
                         <div id="modal-perdida">
                             <label style="font-weight:bold; color:var(--peligro); display:block; margin-bottom:5px;">¿Por qué se perdió este negocio?</label>
                             <select id="motivo-perdida" style="margin-bottom:10px;" onchange="if(this.value==='Otra') document.getElementById('motivo-otra').style.display='block'; else document.getElementById('motivo-otra').style.display='none';">
@@ -2657,26 +2651,18 @@
             document.getElementById('modal-seleccion-lineas-ganado').style.display = 'none';
             pedirFechaEntregaYGanado(idOpp, null);
         }
-        // Conde 2026-08-19: al aprobar (marcar Ganado) se pide la fecha de entrega comprometida
-        // con un <input type="date"> (día/mes/año) en vez de un prompt de texto libre, para que
-        // quede directo como fechaEntrega de la ficha nueva del Kanban.
-        let pendienteGanado = null;
-        function pedirFechaEntregaYGanado(idOpp, opcionElegida){
-            pendienteGanado = { idOpp, opcionElegida };
-            document.getElementById('ganado-fecha-entrega').value = '';
-            document.getElementById('modal-fecha-ganado').style.display = 'block';
-            document.getElementById('modal-fecha-ganado').scrollIntoView();
-        }
-        function confirmarFechaYGanado(){
-            if(!pendienteGanado) return;
-            const fecha = document.getElementById('ganado-fecha-entrega').value;
-            if(!fecha){ alert('Elige el día, mes y año de entrega comprometida.'); return; }
-            const { idOpp, opcionElegida } = pendienteGanado;
+        // Conde 2026-08-22: "que salga la ventana flotante solicitando la fecha de entrega y no
+        // permita avanzar... que tenga la opcion de cancelar" -- antes era una caja fija dentro del
+        // formulario, sin botón de cancelar (si se abría no había forma clara de abandonar). Ahora
+        // usa la misma ventana flotante de tacticalPedirFechaFlotante() que ya usa la Orden de
+        // Producción en las 9 herramientas -- bloquea "Confirmar" sin fecha y sí tiene "Cancelar"
+        // (resuelve null, no se aprueba nada, no queda ninguna ficha a medias).
+        async function pedirFechaEntregaYGanado(idOpp, opcionElegida){
+            const fecha = await tacticalPedirFechaFlotante('¿Para qué fecha se compromete la entrega?');
+            if(!fecha) return;
             const opp = db_opps.find(o => o.id === idOpp);
             const ot = opp ? opp.ot : null;
-            document.getElementById('modal-fecha-ganado').style.display = 'none';
             cerrarNegocio(idOpp, 'ganado', '', opcionElegida, fecha);
-            pendienteGanado = null;
             if(opcionElegida){
               // Deja lista la Orden de Producción de la opción elegida, lista para que Conde solo
               // presione el botón en el cotizador de Cuadernos (misma OT de la comparativa, no una nueva).
