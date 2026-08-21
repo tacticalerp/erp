@@ -5926,8 +5926,10 @@
           ` : '';
 
           const nombreClienteOP = (document.getElementById('cot-cli-empresa')||{}).value?.trim() || 'Cliente';
-          const fechaEntregaInputOP = prompt('Fecha de entrega para esta Orden de Producción:', '');
-          const fechaEntregaTxtOP = (fechaEntregaInputOP && fechaEntregaInputOP.trim()) ? fechaEntregaInputOP.trim() : 'Por definir';
+          // Conde 2026-08-21: ventana flotante obligatoria -- sin fecha no se genera la OP.
+          const fechaEntregaInputOP = await tacticalPedirFechaFlotante('Fecha de entrega para esta Orden de Producción');
+          if(!fechaEntregaInputOP) return;
+          const fechaEntregaTxtOP = new Date(fechaEntregaInputOP+'T00:00:00').toLocaleDateString('es-CO', {day:'numeric', month:'long', year:'numeric'});
 
           const html = `
             <div class="doc-header" style="padding-bottom:4px; margin-bottom:4px; font-size:${TACTICAL_OP_FONT_SIZE};">

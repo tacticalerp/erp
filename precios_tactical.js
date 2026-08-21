@@ -1,4 +1,39 @@
 // ==========================================
+// Conde 2026-08-21: "se están aprobando y se omite la fecha" -- el prompt() de texto libre para la
+// fecha de entrega de la Orden de Producción se podía cancelar o dejar vacío sin darse cuenta
+// (quedaba "Por definir" en silencio). Ventana FLOTANTE obligatoria: sin click afuera para cerrar,
+// sin tecla Escape, "Confirmar" no deja pasar sin una fecha válida -- la única salida es "Cancelar"
+// (que aborta TODA la acción, no genera nada sin fecha). Se usa en las 8 calculadoras + el Hub
+// porque este archivo se carga en todas. Devuelve una Promesa: la fecha "AAAA-MM-DD" elegida, o
+// null si se canceló (quien llama debe entonces detenerse, no seguir con un valor vacío).
+function tacticalPedirFechaFlotante(titulo){
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed; inset:0; background:rgba(26,32,44,0.6); z-index:99999; display:flex; align-items:center; justify-content:center; padding:20px;';
+    overlay.innerHTML = `
+      <div style="background:#fff; border-radius:10px; padding:24px; max-width:360px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,0.35); text-align:center; font-family:'Segoe UI', Tahoma, sans-serif;">
+        <div style="font-size:2rem; margin-bottom:4px;">📅</div>
+        <div style="font-weight:800; font-size:1.05rem; color:#1a202c; margin-bottom:4px;">${titulo}</div>
+        <div style="font-size:0.85rem; color:#718096; margin-bottom:16px;">Dato obligatorio — sin fecha no se genera el documento.</div>
+        <input type="date" id="tactical-fecha-flotante-input" style="width:100%; box-sizing:border-box; font-size:1.1rem; padding:10px; border:2px solid #cbd5e0; border-radius:6px; margin-bottom:6px;">
+        <div id="tactical-fecha-flotante-error" style="color:#c0392b; font-size:0.8rem; min-height:1.2em; margin-bottom:10px;"></div>
+        <div style="display:flex; gap:8px;">
+          <button type="button" id="tactical-fecha-flotante-cancelar" style="flex:1; padding:10px; border:1px solid #cbd5e0; background:#fff; color:#4a5568; border-radius:6px; font-weight:700; cursor:pointer;">Cancelar</button>
+          <button type="button" id="tactical-fecha-flotante-confirmar" style="flex:1; padding:10px; border:none; background:#cc0000; color:#fff; border-radius:6px; font-weight:700; cursor:pointer;">Confirmar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    const input = overlay.querySelector('#tactical-fecha-flotante-input');
+    const errorEl = overlay.querySelector('#tactical-fecha-flotante-error');
+    setTimeout(() => input.focus(), 0);
+    function cerrar(valor){ overlay.remove(); resolve(valor); }
+    overlay.querySelector('#tactical-fecha-flotante-cancelar').onclick = () => cerrar(null);
+    overlay.querySelector('#tactical-fecha-flotante-confirmar').onclick = () => {
+      if(!input.value){ errorEl.textContent = 'Elige el día, mes y año antes de continuar.'; return; }
+      cerrar(input.value);
+    };
+  });
+}
 // precios_tactical.js
 // Fuente única de precios de insumos compartidos entre las 8 herramientas de Tactical ERP.
 // Se carga con <script src="precios_tactical.js"></script> ANTES del script principal de

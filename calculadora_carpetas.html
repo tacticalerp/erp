@@ -977,7 +977,10 @@ async function generarOrdenProduccion(){
   const [nombreSus, gramajeSus] = (p.sustrato||'__').split('__');
   const caras = p.tintasRetiro>0 ? `${p.tintasTiro}x${p.tintasRetiro}` : `${p.tintasTiro}x0`;
   const nombreClienteOP = (document.getElementById('in-cli-empresa')||{}).value?.trim() || 'Cliente';
-  const fechaEntregaOP = prompt('Fecha de entrega para esta Orden de Producción:', '');
+  // Conde 2026-08-21: ventana flotante obligatoria -- sin fecha no se genera la OP (antes se
+  // podía cancelar/dejar vacío el prompt() y seguía igual con "Por definir").
+  const fechaEntregaOP = await tacticalPedirFechaFlotante('Fecha de entrega para esta Orden de Producción');
+  if(!fechaEntregaOP) return;
   const recomendaciones = RECOMENDACIONES_PRODUCCION.filter(reg=>reg.aplica(r)).map(reg=>typeof reg.texto==='function'?reg.texto(r):reg.texto);
   // Conde 2026-08-20: plano de impresión aparte del plano de corte del material -- cómo caben las
   // carpetas DENTRO del pliego de impresión, no del pliego madre.
@@ -1007,7 +1010,7 @@ async function generarOrdenProduccion(){
   }
   const html = tacticalOPDocumentoHtml({
     logoB64: TACTICAL_LOGO_B64, ot: ultimoOT, cliente: nombreClienteOP,
-    fechaEntrega: (fechaEntregaOP && fechaEntregaOP.trim()) ? fechaEntregaOP.trim() : 'Por definir',
+    fechaEntrega: new Date(fechaEntregaOP+'T00:00:00').toLocaleDateString('es-CO', {day:'numeric', month:'long', year:'numeric'}),
     filasTabla: [
       ['Troquel', r.troquel.id], ['Cantidad', `${p.cantidad} unidades`],
       ['Montaje (con pinza)', `${r.anchoMontaje} x ${r.altoMontaje} cm`], ['Bolsillos', r.troquel.bolsillos||'-'],

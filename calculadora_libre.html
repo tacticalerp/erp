@@ -409,10 +409,13 @@ async function generarOrdenProduccion(){
   const r = ultimoResultado, p = ultimoParams;
   if(!ultimoOT) ultimoOT = await siguienteOT();
   const nombreClienteOP = (document.getElementById('in-cli-empresa')||{}).value?.trim() || 'Cliente';
-  const fechaEntregaOP = prompt('Fecha de entrega para esta Orden de Producción:', '');
+  // Conde 2026-08-21: ventana flotante obligatoria -- sin fecha no se genera la OP (antes se
+  // podía cancelar/dejar vacío el prompt() y seguía igual con "Por definir").
+  const fechaEntregaOP = await tacticalPedirFechaFlotante('Fecha de entrega para esta Orden de Producción');
+  if(!fechaEntregaOP) return;
   const html = tacticalOPDocumentoHtml({
     logoB64: TACTICAL_LOGO_B64, ot: ultimoOT, cliente: nombreClienteOP,
-    fechaEntrega: (fechaEntregaOP && fechaEntregaOP.trim()) ? fechaEntregaOP.trim() : 'Por definir',
+    fechaEntrega: new Date(fechaEntregaOP+'T00:00:00').toLocaleDateString('es-CO', {day:'numeric', month:'long', year:'numeric'}),
     filasTabla: [['Cantidad', `${p.cantidad} unidades`]],
     bloques: [{
       titulo: 'Producto Libre',
