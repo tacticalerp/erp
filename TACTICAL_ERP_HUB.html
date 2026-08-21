@@ -3716,10 +3716,12 @@
         function renderKanban(){
           // db_kanban ahora vive en memoria, cargado de Supabase al iniciar sesión y actualizado
           // en cada cambio local -- ya no se relee de localStorage aquí (2026-08-18).
-          // PENDIENTE: modulo_montajes_rompecabezas.html (el módulo B2C) todavía escribe fichas
-          // nuevas directo a localStorage al aprobar un pedido -- hasta que también se migre ese
-          // archivo, esas fichas NO aparecen aquí automáticamente (antes sí, porque ambos leían el
-          // mismo localStorage). Falta esa migración para cerrar el círculo completo.
+          // Conde 2026-08-22: comentario viejo corregido -- modulo_montajes_rompecabezas.html (B2C)
+          // YA fue migrado (2026-08-20) y sincroniza sus fichas directo a Supabase
+          // (tacticalSyncFichaKanban), igual que el resto del Hub. Entran en la columna "Diseño"
+          // (no "Cotización Aprobada", porque el pedido B2C ya llega aprobado) -- si una ficha B2C
+          // "no aparece", casi siempre es que se está mirando en la columna equivocada, o que este
+          // Kanban no se ha vuelto a abrir/refrescar desde que se aprobó el pedido en la otra pestaña.
           const dl = document.getElementById('kb-cliente-datalist');
           if(dl) dl.innerHTML = db_clientes.map(c=>`<option value="${c.empresa}"></option>`).join('');
 
