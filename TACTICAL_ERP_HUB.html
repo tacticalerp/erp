@@ -1033,7 +1033,8 @@
                     <div id="cot-resultado" class="accordion-content active">
                         <button class="btn-submit" onclick="cotCalcular()">🧮 Calcular Cotización</button>
                         <div id="cot-resultado-contenido" style="margin-top:15px;"></div>
-                        <div class="form-group" style="margin-top:10px;"><label>Descripción para el cliente (editable — útil para distinguir varios cuadernos parecidos dentro de un mismo pedido):</label><input type="text" id="cot-descCliente" style="width:100%; box-sizing:border-box;"></div>
+                        <div class="form-group" style="margin-top:10px;"><label>Descripción para el cliente (editable — útil para distinguir varios cuadernos parecidos dentro de un mismo pedido). Tip: escribe <strong>**así**</strong> para resaltar en negrilla en el PDF:</label><textarea id="cot-descCliente" rows="1" style="width:100%; box-sizing:border-box; resize:vertical; overflow:hidden; font-family:inherit; font-size:inherit; padding:8px; line-height:1.4;" oninput="this.style.height='auto'; this.style.height=(this.scrollHeight+2)+'px';"></textarea></div>
+                        <div class="form-group" style="margin-top:10px;"><label>Foto para el PDF/comparativa:</label><select id="cot-fotoElegida"></select></div>
                         <div id="card-recomendaciones-cot" style="display:none; margin-top:12px;">
                             <div style="font-weight:bold; color:var(--dark); margin-bottom:6px;">⚠️ Recomendaciones de Producción</div>
                             <div id="recomendaciones-contenido-cot"></div>
@@ -2383,6 +2384,7 @@
           if(document.getElementById('view-fototeca') && document.getElementById('view-fototeca').classList.contains('active-view')){
             renderFototeca();
           }
+          cotPoblarSelectFoto();
           db_personal = await tacticalPersonalCargar();
           poblarSelectResponsableReproceso();
           if(document.getElementById('personal') && document.getElementById('personal').classList.contains('active')){
@@ -3133,6 +3135,7 @@
           tacticalSyncFototecaItem(item);
         }
         function renderFototeca(){
+          if(typeof cotPoblarSelectFoto === 'function') cotPoblarSelectFoto();
           const customFichas = db_fototeca.filter(x=>x.esCustom).map(x=>({clave:x.clave, label:x.label, lineaBase:x.lineaBase}));
           const todasLasFichas = [...FOTOTECA_LINEAS, ...customFichas];
           const el = document.getElementById('fototeca-grid');
@@ -5375,6 +5378,7 @@
 
           cotOnLineaProductoChange();
           cotOnTapaTipoChange();
+          cotPoblarSelectFoto();
           cotRefrescarBannerPedido();
           cotRefrescarBannerComparacion();
         }
@@ -5441,7 +5445,7 @@
             const r = cotizarCuaderno(p);
             cotUltimoResultado = r; cotUltimoParams = p;
             cotUltimoOT = null;
-            document.getElementById('cot-descCliente').value = cotDescripcionProducto(p);
+            { const dc = document.getElementById('cot-descCliente'); dc.value = cotDescripcionProducto(p); dc.style.height='auto'; dc.style.height=(dc.scrollHeight+2)+'px'; }
             const notaOt = document.getElementById('cot-ot-nota');
             if(notaOt) notaOt.style.display = 'none';
             cotRenderResultado(r, p);
@@ -5561,6 +5565,14 @@
           const largo = (textoLargo||'').trim();
           return (largo && largo !== corto) ? `${corto} — ${largo}` : corto;
         }
+        // Conde 2026-08-22: "poder poner en negrilla algunas cosas de la descripcion para resaltar
+        // puntos importantes para el cliente" -- sin editor de texto enriquecido, la convención es
+        // escribir **así** en la Descripción y esto lo convierte a negrilla real en el PDF. Escapa
+        // HTML primero (por si el texto trae < > &) para no romper el documento.
+        function cotTextoConNegrilla(txt){
+          const esc = (txt||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          return esc.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        }
 
         function compartirWhatsApp(telefono, ot, monto, nombreCli){
           const mensaje = `Hola${nombreCli?' '+nombreCli:''}! Te comparto la cotización *${ot}* de Tactical Marketing por un valor de ${cotFormatoCop(monto)}. En un momento te envío el PDF con el detalle completo. Cualquier duda me avisas.`;
@@ -5585,6 +5597,35 @@
           const empresa = document.getElementById('cot-cli-empresa').value.trim() || 'Cliente Particular';
           const monto = cotUltimoResultado ? Math.round(cotUltimoResultado.precioFinalTotal) : 0;
           compartirWhatsApp(telefono, cotUltimoOT, monto, empresa);
+        }
+        // Conde 2026-08-22: "escoger que foto anexar pues en ocasiones no anexa ninguna" -- antes
+        // el PDF/comparativa siempre pedía LA ÚNICA foto fija de la ficha base 'cuadernos' en
+        // Fototeca (tacticalObtenerFotoProducto), ignorando cualquier ficha personalizada que Conde
+        // ya hubiera subido para variantes de Cuadernos (ej. "Cuaderno con inserto") -- si esa foto
+        // base puntual estaba vacía, no salía ninguna aunque hubiera otras disponibles. Ahora hay un
+        // selector en el formulario (#cot-fotoElegida): por defecto usa la automática de siempre,
+        // pero se puede cambiar a cualquier ficha de Fototeca marcada para la línea Cuadernos.
+        function cotPoblarSelectFoto(){
+          const sel = document.getElementById('cot-fotoElegida');
+          if(!sel) return;
+          const actual = sel.value;
+          const fichas = db_fototeca.filter(x => x.lineaBase==='cuadernos' && x.clave!=='cuadernos');
+          let opciones = '<option value="">📷 Automática (foto base de Cuadernos)</option>';
+          fichas.forEach(f => { opciones += `<option value="${f.clave}">${f.foto?'📷':'🚫 (sin foto)'} ${f.label||f.clave}</option>`; });
+          sel.innerHTML = opciones;
+          if([...sel.options].some(o=>o.value===actual)) sel.value = actual;
+        }
+        function cotFotoElegidaUrl(){
+          const sel = document.getElementById('cot-fotoElegida');
+          const clave = sel ? sel.value : '';
+          if(clave){ const item = fototecaItem(clave); if(item && item.foto) return item.foto; }
+          return tacticalObtenerFotoProducto('cuadernos');
+        }
+        function cotVideoElegidoUrl(){
+          const sel = document.getElementById('cot-fotoElegida');
+          const clave = sel ? sel.value : '';
+          if(clave){ const item = fototecaItem(clave); if(item && item.video) return item.video; }
+          return tacticalObtenerVideoProducto('cuadernos');
         }
         async function cotGuardarYGenerarPDF(){
           if(!cotUltimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
@@ -5634,6 +5675,7 @@
             ot, id: opp.id, idOpp: opp.id, idCli: cli.id, fecha: new Date().toISOString(),
             cliente: {empresa, encargado, telefono, correo}, vendedor, desc, params: p, resultado: r,
             plazoEntrega, validezOferta, observaciones, condicionesComerciales,
+            fotoUrl: cotFotoElegidaUrl(), videoUrl: cotVideoElegidoUrl(),
           };
           db_cotizaciones.push(cotizacion);
           tacticalSyncCotizacion(cotizacion);
@@ -5692,7 +5734,7 @@
           const r = cotUltimoResultado, p = cotUltimoParams;
           const desc = cotTituloCorto(p, document.getElementById('cot-descCliente').value);
           const planoCorteLineas = Object.keys(r.detalleLineas).map(clave => ({clave, planoCorte: (r.detalleLineas[clave].detalleMaterial||{}).planoCorte || null})).filter(pc=>pc.planoCorte);
-          pd.lineas.push({ linea:'cuadernos', desc, cantidad: p.cantidad, monto: Math.round(r.precioFinalTotal), precioUnitario: r.precioVentaUnitario, maquina: null, material: null, nPliegos: null, planoCorteLineas, fotoUrl: tacticalObtenerFotoProducto('cuadernos'), videoUrl: tacticalObtenerVideoProducto('cuadernos') });
+          pd.lineas.push({ linea:'cuadernos', desc, cantidad: p.cantidad, monto: Math.round(r.precioFinalTotal), precioUnitario: r.precioVentaUnitario, maquina: null, material: null, nPliegos: null, planoCorteLineas, fotoUrl: cotFotoElegidaUrl(), videoUrl: cotVideoElegidoUrl() });
           window.tacticalPedidoBorradorCache = pd; tacticalGuardarPedidoBorrador(pd);
           cotRefrescarBannerPedido();
           alert(`Agregado al pedido ${pd.ot}. Ahora tiene ${pd.lineas.length} producto(s).`);
@@ -5773,7 +5815,7 @@
 
           const r = cotUltimoResultado, p = cotUltimoParams;
           const titulo = cotTituloCorto(p, document.getElementById('cot-descCliente').value);
-          comp.opciones.push({ titulo, params: p, resultado: r, fotoUrl: tacticalObtenerFotoProducto('cuadernos'), videoUrl: tacticalObtenerVideoProducto('cuadernos') });
+          comp.opciones.push({ titulo, params: p, resultado: r, fotoUrl: cotFotoElegidaUrl(), videoUrl: cotVideoElegidoUrl() });
           window.tacticalComparacionBorradorCache = comp; tacticalGuardarComparacionBorrador(comp);
           cotRefrescarBannerComparacion();
           alert(`Agregada como opción ${comp.opciones.length} de la comparación ${comp.ot}.`);
@@ -5877,15 +5919,16 @@
 
             <div class="doc-section-title">Cotización</div>
             <div style="display:flex; gap:14px; align-items:flex-start; border-left:3px solid var(--rojo,#cc0000); padding-left:12px;">
-              ${tacticalObtenerFotoProducto('cuadernos') ? `<div style="flex:0 0 auto; text-align:center;">
-                <img src="${tacticalObtenerFotoProducto('cuadernos')}" style="width:140px; height:140px; object-fit:contain; border:1px solid #d7dee5; border-radius:4px; display:block;">
-                ${tacticalObtenerVideoProducto('cuadernos') ? `<a href="${tacticalObtenerVideoProducto('cuadernos')}" style="display:inline-block; margin-top:4px; color:#cc0000; text-decoration:none; font-size:0.75rem; font-weight:bold;">▶ Ver video del producto</a>` : ''}
+              ${(cot.fotoUrl||tacticalObtenerFotoProducto('cuadernos')) ? `<div style="flex:0 0 auto; text-align:center;">
+                <img src="${cot.fotoUrl||tacticalObtenerFotoProducto('cuadernos')}" style="width:140px; height:140px; object-fit:contain; border:1px solid #d7dee5; border-radius:4px; display:block;">
+                ${(cot.videoUrl||tacticalObtenerVideoProducto('cuadernos')) ? `<a href="${cot.videoUrl||tacticalObtenerVideoProducto('cuadernos')}" style="display:inline-block; margin-top:4px; color:#cc0000; text-decoration:none; font-size:0.75rem; font-weight:bold;">▶ Ver video del producto</a>` : ''}
               </div>` : ''}
               <table class="doc-table" style="flex:1; margin:0;">
                 <tr><th>Producto</th><td>${nombresLinea[p.lineaProducto]}</td><th>Cantidad</th><td>${p.cantidad} unidades</td></tr>
                 <tr><th>Tamaño</th><td>${p.anchoCm} x ${p.altoCm} cm</td><th>Tapa</th><td>${nombresTapa[p.tapaTipo]}</td></tr>
                 <tr><th>Precio unitario</th><td>${cotFormatoCop(r.precioVentaUnitario)}</td><th>Subtotal</th><td>${cotFormatoCop(r.precioVentaTotal)}</td></tr>
                 <tr><th>IVA (19%)</th><td colspan="3">${cotFormatoCop(r.ivaTotal)}</td></tr>
+                ${cot.desc ? `<tr><th>Descripción</th><td colspan="3">${cotTextoConNegrilla(cot.desc)}</td></tr>` : ''}
               </table>
             </div>
             <div class="doc-total-box">TOTAL: ${cotFormatoCop(r.precioFinalTotal)} COP</div>
