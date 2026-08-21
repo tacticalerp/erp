@@ -2931,6 +2931,24 @@
                       </div>` : ''}
                     </div>`;
                 }).join('');
+                // Conde 2026-08-21: "hace falta el dato del cartón a comprar" -- el cálculo ya
+                // existía pero nunca se mostraba en la Orden de Producción. El cartón no se imprime
+                // ni tiene terminado, así que aquí sí aplica el corte mezclado sin restricción
+                // directo a la pieza final.
+                const cartonHtml = rFresco.detalleTapaCarton ? (() => {
+                  const dt = rFresco.detalleTapaCarton;
+                  return `
+                    <div style="margin-top:4px; padding-top:4px; border-top:1px dashed #e2e8f0; font-size:${TACTICAL_OP_FONT_SIZE};">
+                      <div style="display:flex; gap:9px; align-items:center;">
+                        <div style="flex:1; min-width:0;">
+                          <div style="font-weight:bold;">Cartón (tapa dura)</div>
+                          <div style="color:#4a5568; line-height:1.25;">Calibre: <strong>${dt.calibreMm}mm</strong> — Pliegos: <strong>${dt.nPliegos}</strong> — Sin impresión ni terminado</div>
+                          <div style="color:#4a5568; line-height:1.25;">Corte: <strong>${dt.planoCorte.piezaAncho} x ${dt.planoCorte.piezaAlto} cm</strong> — 2 por libro (tapa y contratapa)</div>
+                        </div>
+                        <div style="flex-shrink:0; display:flex; gap:8px; align-items:center;">${tacticalDibujarPlanoCorteSVG(dt.planoCorte,85)}<div style="color:#4a5568; max-width:150px; line-height:1.2;">${tacticalPlanoCorteTexto(dt.planoCorte)}</div></div>
+                      </div>
+                    </div>`;
+                })() : '';
                 const recsAplicablesFicha = RECOMENDACIONES_PRODUCCION_COT.filter(reg=>reg.aplica(rFresco, pFresco)).map(reg=>reg.texto);
                 const recsHtmlFicha = recsAplicablesFicha.length ? `
                   <div style="margin-top:4px; padding-top:4px; border-top:1px dashed #e2e8f0;">
@@ -2941,6 +2959,7 @@
                     <div style="font-weight:bold;">${linea.desc||''} <span style="font-weight:normal; color:#718096;">(${pFresco.cantidad||linea.cantidad||'-'} u.)</span></div>
                     <div style="color:#4a5568;">Tapa: <strong>${nombresTapaOP[pFresco.tapaTipo]||pFresco.tapaTipo||'-'}</strong> — Encuadernación: <strong>${pFresco.encuadernacionTipo||'-'}${pFresco.anilladoDosSecciones?' (2 secciones)':''}</strong></div>
                     ${subBloques}
+                    ${cartonHtml}
                     ${recsHtmlFicha}
                   </div>`;
               } catch(e){
@@ -4793,7 +4812,7 @@
           const detalleNormal={
             total:costoNormal, via:`offset (${fraccion})${viaExtra}`, fraccion,
             nPlanchas:nPlanchasNormal, costoCtpUnitario:OFFSET_CTP_COP[fraccion],
-            costoPlanchas:costoCtpNormal, nMillares:millares,
+            costoPlanchas:costoCtpNormal, nMillares:millares, nPasadas,
             costoMillarUnitario:tarifaMillarNormal, costoMillares:costoMillarNormal,
           };
           if(recargoRetiro) detalleNormal.recargoRetiro=recargoRetiro;
@@ -4805,7 +4824,7 @@
           const costoMillarCuadricula=RECARGO_TINTA_CUADRICULA_MILLAR_COP*millaresMp;
           return {
             total:costoCtpCuadricula+costoMillarCuadricula, via:"offset (medio pliego, cuadrícula)", fraccion:"medio_pliego",
-            nPlanchas:1, costoCtpUnitario:OFFSET_CTP_COP.medio_pliego,
+            nPlanchas:1, costoCtpUnitario:OFFSET_CTP_COP.medio_pliego, nPasadas:nPasadasMp,
             costoPlanchas:costoCtpCuadricula, nMillares:millaresMp,
             costoMillarUnitario:RECARGO_TINTA_CUADRICULA_MILLAR_COP, costoMillares:costoMillarCuadricula,
           };
@@ -4823,7 +4842,7 @@
           const costoMillares=nMillares*millarRate;
           return {
             total:costoPlanchas+costoMillares, via:`offset (medio pliego, ${nPlanchas} planchas, único)`, fraccion:"medio_pliego", nPlanchas,
-            costoCtpUnitario:OFFSET_CTP_COP.medio_pliego, costoPlanchas,
+            costoCtpUnitario:OFFSET_CTP_COP.medio_pliego, costoPlanchas, nPasadas:nPlanchas*impresionesPorPlancha,
             nMillares, costoMillarUnitario:millarRate, costoMillares,
           };
         }
@@ -4886,15 +4905,21 @@
           const caras=tintasRetiro>0?2:1;
           const esColor=tintasTiro>=2||tintasRetiro>=2;
           const cantTintas=Math.max(tintasTiro,tintasRetiro,1);
-          const mermaMaterial=(tintasTiro>0||tintasRetiro>0) ? mermaOffsetHojas(nPiezasFisicas,cantTintas) : 0;
-          const rMat=costoMaterialPliegos(ancho,alto,sustrato.nombre,sustrato.gramaje,nPiezasFisicas,mermaMaterial);
-          resultado.costoMaterial=rMat.costoTotal;
-          resultado.detalleMaterial=rMat;
           const fondoPleno=acabados.some(a=>a.tipo==="fondo_pleno");
-          if(tintasTiro===0 && tintasRetiro===0){
-            resultado.costoImpresion=0; resultado.detalleImpresion=null;
-          } else {
-            let det;
+
+          // Conde 2026-08-21: si la línea SÍ se imprime, lo que realmente se corta del pliego madre
+          // es el tamaño de MONTAJE (octavo/cuarto/medio_pliego/digital) -- una hoja no sale del
+          // pliego directo a su tamaño final, primero se corta en pedazos de máquina, se imprime, y
+          // RECIÉN AHÍ se corta a la pieza final. Calcular el rendimiento del pliego con la pieza
+          // final (como se hacía antes) ignora esa restricción y sobreestima cuántas piezas rinde
+          // cada pliego (ej. Taco 21x14cm: 23 con corte mezclado sin restricción, pero solo caben 2
+          // montajes de medio pliego 50x70cm por pliego madre, con 10 piezas cada uno = 20 reales).
+          // Si NO se imprime (Guardas en blanco, o el cartón de tapa dura que se resuelve aparte),
+          // el "montaje" ES la pieza final -- ahí sí aplica directo el corte mezclado sin
+          // restricción, tal cual Conde confirmó para el cartón ("correcto para el caso del cartón
+          // que se usa el tamaño individual sin necesidad de impresión").
+          let det = null;
+          if(tintasTiro>0 || tintasRetiro>0){
             if(fondoPleno){
               const fraccion=fraccionPliegoOffset(ancho,alto,esColor);
               const mermaO=mermaOffsetHojas(nPiezasFisicas,cantTintas);
@@ -4921,18 +4946,54 @@
               }
             }
             resultado.costoImpresion=det.total; resultado.detalleImpresion=det;
+          } else {
+            resultado.costoImpresion=0; resultado.detalleImpresion=null;
           }
+
+          // Material: al tamaño de MONTAJE si la línea se imprime, a la pieza final si no.
+          // Excepción: la Carátula ya llega aquí con su "ancho,alto" pre-redondeado al tamaño de
+          // máquina real (tamanoMaquinaCaratula/CARATULA_TAMANOS_MAQUINA_CM, calculado ANTES de
+          // llamar a esta función) -- ese catálogo es más preciso que el genérico
+          // OFFSET_FORMATOS_CM/DIGITAL_FORMATOS_CM (incluye tamaños intermedios como 33x50 o 42x28
+          // que no existen ahí), así que para Carátula el "montaje" YA es ancho,alto tal cual -- no
+          // hay que volver a sustituirlo.
+          let anchoMaterial=ancho, altoMaterial=alto, piezasMaterialNecesarias=nPiezasFisicas, esMontaje=false;
+          const mermaMaterial=(tintasTiro>0||tintasRetiro>0) ? mermaOffsetHojas(nPiezasFisicas,cantTintas) : 0;
+          if(det && linea.rol!=='caratula'){
+            if(det.via==='digital'){
+              const mermaD=mermaDigitalHojas(esColor);
+              [anchoMaterial,altoMaterial]=DIGITAL_FORMATOS_CM[det.clase];
+              piezasMaterialNecesarias=Math.ceil((nPiezasFisicas+mermaD)/det.piezasPorClic);
+              esMontaje=true;
+            } else if(det.fraccion){
+              [anchoMaterial,altoMaterial]=OFFSET_FORMATOS_CM[det.fraccion];
+              piezasMaterialNecesarias=det.nPasadas;
+              esMontaje=true;
+            }
+          }
+          // La merma de ajuste de máquina ya quedó incluida en piezasMaterialNecesarias (viene del
+          // nPasadas/piezasPorClic de la impresión, que ya sumó su propia merma) -- pasarla de
+          // nuevo aquí la contaría doble.
+          const rMat=costoMaterialPliegos(anchoMaterial,altoMaterial,sustrato.nombre,sustrato.gramaje,piezasMaterialNecesarias,esMontaje?0:mermaMaterial);
+          resultado.costoMaterial=rMat.costoTotal;
+          resultado.detalleMaterial=rMat;
+
           let costoAcabados=0;
           const areaTotalM2=(areaCm2(ancho,alto)*hojas*cantidadCuadernos)/10000;
+          // Plastificado/UV/colaminado se aplican sobre la hoja GRANDE (el montaje) antes de
+          // cortarla a tamaño final cuando la línea se imprime -- mismo criterio ya usado en
+          // Volantes ("se imprime en grande y se plastifica/colamina en pequeño"). Sin impresión,
+          // se sigue calculando sobre el área de la pieza final como siempre.
+          const areaAcabadoM2 = esMontaje ? (areaCm2(anchoMaterial,altoMaterial)*piezasMaterialNecesarias)/10000 : areaTotalM2;
           const piezasTotales=hojas*cantidadCuadernos;
           const tieneUv=acabados.some(a=>a.tipo==="uv_parcial");
           for(const acab of acabados){
             const tipo=acab.tipo;
-            if(tipo==="plastificado"){ if(tieneUv) continue; costoAcabados+=Math.max(areaTotalM2*PLASTIFICADO_COP_M2,PLASTIFICADO_PISO_COP); }
-            else if(tipo==="uv_parcial"){ costoAcabados+=Math.max(areaTotalM2*UV_PARCIAL_COP_M2,UV_PARCIAL_PISO_COP); }
+            if(tipo==="plastificado"){ if(tieneUv) continue; costoAcabados+=Math.max(areaAcabadoM2*PLASTIFICADO_COP_M2,PLASTIFICADO_PISO_COP); }
+            else if(tipo==="uv_parcial"){ costoAcabados+=Math.max(areaAcabadoM2*UV_PARCIAL_COP_M2,UV_PARCIAL_PISO_COP); }
             else if(tipo==="troquelado"){ costoAcabados+=Math.ceil(piezasTotales/1000)*TROQUEL_TAPA_COP_POR_MILLAR; }
             else if(tipo==="estampado"){ costoAcabados+=Math.max(piezasTotales*ESTAMPADO_COP_POR_GOLPE+ESTAMPADO_ARRANQUE_COP,ESTAMPADO_MINIMO_COP); }
-            else if(tipo==="colaminado"){ costoAcabados+=areaTotalM2*COLAMINADO_COP_M2; }
+            else if(tipo==="colaminado"){ costoAcabados+=areaAcabadoM2*COLAMINADO_COP_M2; }
             else if(tipo==="otro"){ costoAcabados+=(acab.costoManual||0)*cantidadCuadernos; }
           }
           resultado.costoAcabados=costoAcabados;
@@ -4974,15 +5035,35 @@
           desglose["levante"]=costoLevante;
           const lineaCaratula=lineasImpresion.find(l=>l.rol==="caratula")||null;
           let costoTapaArmado=0, costoTapaCarton=0;
+          // Conde 2026-08-21: el cartón de tapa dura NO se imprime ni tiene terminado -- se corta
+          // directo del pliego madre a su tamaño final (2 por libro: tapa y contratapa), así que sí
+          // aplica de lleno el corte mezclado horizontal+vertical (a diferencia de Taco/Carátula/
+          // Insertos, que si se imprimen deben respetar el tamaño de máquina). Se guarda
+          // detalleTapaCarton con el mismo formato de planoCorte que usan las demás líneas, para
+          // poder mostrarlo como bloque propio en la Orden de Producción -- antes este cálculo solo
+          // alimentaba el costo, nunca se veía en el documento impreso.
+          let detalleTapaCarton=null;
           if(p.tapaTipo==="dura"){
             if(p.lineaProducto!=="agenda_ejecutiva") costoTapaArmado=ARMADO_FORRADO_TAPA_DURA_COP[catClave]*factorEscala*p.cantidad;
             const cartonPrecio=p.cartonCalibreMm===1.5?CARTON_1_5MM_COP:CARTON_2_0MM_COP;
-            const nTapasPorPliego=piezasPorPliego(p.anchoCm,p.altoCm,70,100);
+            const layoutCarton=tacticalMejorLayoutPliego(p.anchoCm,p.altoCm,70,100);
+            const nTapasPorPliego=layoutCarton.total;
             costoTapaCarton=(cartonPrecio/Math.max(nTapasPorPliego,1))*2*p.cantidad;
+            const piezasCartonNecesarias=2*p.cantidad;
+            detalleTapaCarton={
+              calibreMm: p.cartonCalibreMm||2.0, precioPliego: cartonPrecio,
+              nPliegos: Math.ceil(piezasCartonNecesarias/Math.max(nTapasPorPliego,1)),
+              planoCorte: {
+                piezaAncho:p.anchoCm, piezaAlto:p.altoCm, pliegoAncho:70, pliegoAlto:100,
+                columnas:layoutCarton.principal.columnas, filas:layoutCarton.principal.filas,
+                rotado:layoutCarton.principal.rotado, piezasPorPliego:nTapasPorPliego,
+                secundaria:layoutCarton.secundaria,
+              },
+            };
             if(p.lineaProducto==="agenda_ejecutiva"){
               const largoLomo=Math.max(p.anchoCm,p.altoCm);
               const espesorLomo=espesorLomoCm(p.tacoHojas);
-              const nLomosPorPliego=piezasPorPliego(largoLomo,espesorLomo,70,100);
+              const nLomosPorPliego=tacticalMejorLayoutPliego(largoLomo,espesorLomo,70,100).total;
               costoTapaCarton+=(cartonPrecio/Math.max(nLomosPorPliego,1))*p.cantidad;
             }
           }
@@ -5062,7 +5143,7 @@
             desgloseDirecto:desglose, detalleLineas, costoDirectoTotal:costoDirecto, costoDirectoUnitario:costoDirecto/p.cantidad,
             disenoCop, fondoSeguridadCop, fondoSeguridadPct, empaqueCop, sherpaCop, transporteCop, subtotal,
             utilidadPct:p.utilidadPct, ventasPct:p.ventasPct, precioVentaTotal:precioVenta, precioVentaUnitario,
-            ivaTotal:iva, precioFinalTotal:precioFinal, catClave, tamanoMaquinaCaratula,
+            ivaTotal:iva, precioFinalTotal:precioFinal, catClave, tamanoMaquinaCaratula, detalleTapaCarton,
             gananciaTotal, gananciaUnitaria,
           };
         }
@@ -5816,6 +5897,25 @@
                   <div style="flex:1; min-width:0; color:#4a5568;">🎨 <strong>Montaje para impresión:</strong> ${planoImp.piezasPorPliego} pieza(s) de ${planoImp.piezaAncho}x${planoImp.piezaAlto}cm en un tamaño de ${planoImp.pliegoAncho}x${planoImp.pliegoAlto}cm${maquina==='Digital (Konica)'?' (con margen de pinza descontado)':''}</div>
                   <div style="flex-shrink:0; display:flex; gap:8px; align-items:center;">${tacticalDibujarPlanoCorteSVG(planoImp,85)}<div style="color:#4a5568; max-width:150px; line-height:1.2;">${tacticalPlanoCorteTexto(planoImp)}</div></div>
                 </div>` : ''}
+              </div>`;
+          }
+          // Conde 2026-08-21: "hace falta el dato del cartón a comprar" -- el cálculo ya existía
+          // (costoTapaCarton) pero nunca se mostraba en la Orden de Producción, solo alimentaba el
+          // precio. El cartón no se imprime ni tiene terminado, así que aquí SÍ aplica el corte
+          // mezclado sin restricción directo a la pieza final (a diferencia de las líneas impresas
+          // de arriba).
+          if(r.detalleTapaCarton){
+            const dt = r.detalleTapaCarton;
+            bloques += `
+              <div style="border:1px solid #d7dee5; border-radius:3px; padding:4px 9px; margin-bottom:6px; break-inside:avoid; font-size:${TACTICAL_OP_FONT_SIZE};">
+                <div style="display:flex; gap:9px; align-items:center;">
+                  <div style="flex:1; min-width:0;">
+                    <div style="font-weight:bold;">Cartón (tapa dura)</div>
+                    <div style="color:#4a5568; line-height:1.25;">Calibre: <strong>${dt.calibreMm}mm</strong> — Pliegos: <strong>${dt.nPliegos}</strong> — Sin impresión ni terminado</div>
+                    <div style="color:#4a5568; line-height:1.25;">Corte: <strong>${dt.planoCorte.piezaAncho} x ${dt.planoCorte.piezaAlto} cm</strong> — 2 por libro (tapa y contratapa)</div>
+                  </div>
+                  <div style="flex-shrink:0; display:flex; gap:8px; align-items:center;">${tacticalDibujarPlanoCorteSVG(dt.planoCorte,85)}<div style="color:#4a5568; max-width:150px; line-height:1.2;">${tacticalPlanoCorteTexto(dt.planoCorte)}</div></div>
+                </div>
               </div>`;
           }
 
