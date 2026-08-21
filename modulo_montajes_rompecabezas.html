@@ -1045,7 +1045,7 @@ function tacticalSumarDiasHabilesColombia(fechaInicio, n){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
-function aprobarPedido(id){
+async function aprobarPedido(id){
   const pedido = db_ventas_b2c.find(p=>p.id===id);
   if(!pedido) return;
   pedido.estado = 'aprobado';
@@ -1096,12 +1096,19 @@ function aprobarPedido(id){
     checklist: checklistBase, urgente:false, fechaEntrega, entrega: pedido.entrega||'',
     fechaCreacion: new Date().toISOString(), responsable:'', origen:'b2c',
   };
-  tacticalSyncFichaKanban(ficha);
+  // Conde 2026-08-22: antes se avisaba "Pedido aprobado" sin esperar a que la ficha realmente
+  // quedara guardada en Supabase -- si el guardado fallaba (sin conexión, sesión vencida, etc.)
+  // el mensaje decía éxito igual y la ficha nunca aparecía en el Kanban del Hub, sin ningún aviso.
+  const guardadoOk = await tacticalSyncFichaKanban(ficha);
 
   pedido.idKanban = ficha.id;
   tacticalSyncB2CPedido(pedido);
   renderBusqueda();
-  alert(`Pedido aprobado. Se creó la ficha de producción en el Kanban del Hub (columna Diseño, entrega estimada ${fechaEntrega}) y se registró la venta.`);
+  if(guardadoOk){
+    alert(`Pedido aprobado. Se creó la ficha de producción en el Kanban del Hub (columna Diseño, entrega estimada ${fechaEntrega}) y se registró la venta.`);
+  } else {
+    alert(`⚠️ El pedido quedó marcado como aprobado, pero la ficha de producción NO se pudo guardar en el Kanban del Hub (revisa tu conexión a internet o vuelve a intentar). Avísale a soporte si esto se repite.`);
+  }
 }
 
 /* =====================  REPORTES / DESCARGA CSV  ===================== */

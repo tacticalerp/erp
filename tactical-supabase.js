@@ -293,20 +293,26 @@ async function tacticalFichasKanbanCargar(){
     fotos.filter(p=>p.ficha_id===f.id).map(p=>({url:p.url, etiqueta:p.etiqueta})),
   ));
 }
+// Conde 2026-08-22: devuelve true/false (antes no devolvía nada) -- el módulo de Montajes de
+// Rompecabezas (B2C) llamaba esto sin esperar el resultado y mostraba "Pedido aprobado" siempre,
+// aunque el guardado real fallara (ej. sin conexión, o la sesión ya no era válida) -- el usuario
+// nunca se enteraba. Ahora quien llame puede `await` y reaccionar si de verdad falló.
 async function tacticalSyncFichaKanban(f){
   const { error: errF } = await tacticalSupabase.from('kanban_fichas').upsert(tacticalFichaKanbanADb(f));
-  if(errF){ console.error('Error guardando ficha kanban:', errF); return; }
+  if(errF){ console.error('Error guardando ficha kanban:', errF); return false; }
   await tacticalSupabase.from('kanban_lineas').delete().eq('ficha_id', f.id);
   await tacticalSupabase.from('kanban_checklist').delete().eq('ficha_id', f.id);
+  let ok = true;
   if(f.lineas && f.lineas.length){
     const { error } = await tacticalSupabase.from('kanban_lineas').insert(f.lineas.map(l=>tacticalLineaKanbanADb(f.id, l)));
-    if(error) console.error('Error guardando líneas de ficha kanban:', error);
+    if(error){ console.error('Error guardando líneas de ficha kanban:', error); ok = false; }
   }
   if(f.checklist && f.checklist.length){
     const filas = f.checklist.map((c,i)=>({ ficha_id: f.id, texto: c.texto, hecho: !!c.hecho, riel: c.riel||null, orden: i }));
     const { error } = await tacticalSupabase.from('kanban_checklist').insert(filas);
-    if(error) console.error('Error guardando checklist de ficha kanban:', error);
+    if(error){ console.error('Error guardando checklist de ficha kanban:', error); ok = false; }
   }
+  return ok;
 }
 async function tacticalEliminarFichaKanbanRemoto(id){
   const { error } = await tacticalSupabase.from('kanban_fichas').delete().eq('id', id);
