@@ -632,6 +632,17 @@ async function tacticalEliminarGastoFijoRemoto(id){
   const { error } = await tacticalSupabase.from('gastos_fijos_config').delete().eq('id', id);
   if(error) console.error('Error eliminando gasto fijo en Supabase:', error);
 }
+// Conde 2026-08-21: "necesito editar y borrar" documentos de venta y cuentas por pagar --
+// documentos_venta_items/cuentas_por_pagar_items tienen "on delete cascade", así que borrar el
+// documento padre ya se lleva sus ítems solo, no hace falta borrarlos aparte.
+async function tacticalEliminarDocVentaRemoto(id){
+  const { error } = await tacticalSupabase.from('documentos_venta').delete().eq('id', id);
+  if(error) console.error('Error eliminando documento de venta en Supabase:', error);
+}
+async function tacticalEliminarCxpRemoto(id){
+  const { error } = await tacticalSupabase.from('cuentas_por_pagar').delete().eq('id', id);
+  if(error) console.error('Error eliminando cuenta por pagar en Supabase:', error);
+}
 
 // ============ CONTROL DE REPROCESOS ============
 function tacticalReprocesoADb(inc){

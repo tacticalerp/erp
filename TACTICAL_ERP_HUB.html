@@ -1204,7 +1204,7 @@
                                 <select id="doc-cliente" onchange="contAutocompletarTipoDoc()"></select></div>
                             <div class="form-group">
                                 <label>Tipo de Documento:</label>
-                                <select id="doc-tipoDoc" onchange="contSugerirNumeroDoc(); contActualizarTotalDoc();"
+                                <select id="doc-tipoDoc" onchange="contSugerirNumeroDoc(); contActualizarTotalDoc();">
                                     <option value="cuenta_cobro">Cuenta de Cobro (se imprime desde el ERP)</option>
                                     <option value="factura">Factura (ya facturada por fuera — DIAN)</option>
                                 </select>
@@ -1232,7 +1232,10 @@
                         <button class="btn-add-item" type="button" onclick="contAgregarItemDoc()">+ Agregar ítem</button>
                         <div class="metric-total" id="doc-valorBruto-total" style="margin-top:10px;">Valor Bruto Total: $0</div>
                         <div class="metric-total" id="doc-iva-total" style="margin-top:4px; color:#718096; font-weight:normal;">IVA total (suma de los ítems): $0</div>
-                        <button class="btn-submit" style="margin-top:12px;" onclick="contGuardarDocVenta()">+ Registrar Documento de Venta</button>
+                        <div style="display:flex; gap:8px; margin-top:12px;">
+                            <button class="btn-submit" id="doc-btn-guardar" style="margin-top:0; flex:1;" onclick="contGuardarDocVenta()">+ Registrar Documento de Venta</button>
+                            <button class="btn-action" id="doc-btn-cancelar-edicion" style="display:none;" onclick="cancelarEdicionDocVenta()">Cancelar edición</button>
+                        </div>
                         <div class="card-grid" id="lista-docventa"></div>
                     </div>
                 </div>
@@ -1286,7 +1289,10 @@
                         <button class="btn-add-item" type="button" onclick="contAgregarItemCxp()">+ Agregar ítem</button>
                         <div class="metric-total" id="cxp-monto-total" style="margin-top:10px;">Monto Total: $0</div>
                         <div class="metric-total" id="cxp-iva-total" style="margin-top:4px; color:#718096; font-weight:normal;">IVA total (suma de los ítems): $0</div>
-                        <button class="btn-submit" style="margin-top:12px;" onclick="contGuardarCxp()">+ Registrar Cuenta por Pagar</button>
+                        <div style="display:flex; gap:8px; margin-top:12px;">
+                            <button class="btn-submit" id="cxp-btn-guardar" style="margin-top:0; flex:1;" onclick="contGuardarCxp()">+ Registrar Cuenta por Pagar</button>
+                            <button class="btn-action" id="cxp-btn-cancelar-edicion" style="display:none;" onclick="cancelarEdicionCxp()">Cancelar edición</button>
+                        </div>
                         <div class="card-grid" id="lista-cxp"></div>
                     </div>
                 </div>
@@ -6288,6 +6294,9 @@
         }
 
         /* ---- DOCUMENTOS DE VENTA ---- */
+        // Conde 2026-08-21: "quiero que me permitas editar y borrar las facturas de los clientes"
+        // -- docVentaEditandoId guarda el id del documento en edición (null = crear nuevo, de siempre).
+        let docVentaEditandoId = null;
         async function contGuardarDocVenta(){
             const idCli = document.getElementById('doc-cliente').value;
             const cli = db_clientes.find(c => c.id === idCli);
@@ -6304,15 +6313,6 @@
 
             if(!cli || items.length===0 || valorBruto<=0){ alert("Debe seleccionar cliente y agregar al menos un ítem con valor mayor a 0."); return; }
 
-            const tipoContador = tipoDoc==='factura'?'fv':'cc';
-            const prefijo = tipoDoc==='factura'?'FV-':'CC-';
-            const campoNumero = document.getElementById('doc-numero');
-            const esManual = campoNumero.value.trim() && campoNumero.dataset.auto !== 'true';
-            // Si el número sigue siendo la sugerencia automática, se consume el contador de verdad
-            // recién aquí (no antes) -- así nunca se gasta un número si el usuario no llega a guardar.
-            const numero = esManual ? campoNumero.value.trim() : await contSiguienteNumero(tipoContador, prefijo);
-            if(esManual) contActualizarContadorDesdeNumero(tipoContador, numero);
-
             // El IVA ya no se calcula automático -- es la suma del IVA que se escribió en cada ítem
             // (Conde 2026-08-20, columna IVA por ítem, 100% manual).
             const iva = items.reduce((s,i)=>s+i.iva,0);
@@ -6321,14 +6321,41 @@
             const totalCobrar = totalDocumento + valorEnvio;
             const fechaVencimiento = condicionPago === 'credito30' ? contSumarDias(contHoy(),30) : (condicionPago === 'contado' ? contHoy() : '');
 
-            const doc = {
-                id: crypto.randomUUID(), numero,
-                tipoDoc, fecha: contHoy(), idCli, idCot: null, idOpp: null, descripcion, items,
-                valorBruto, iva, reteiva, valorEnvio, totalDocumento, totalCobrar,
-                condicionPago, fechaVencimiento, saldoPendiente: totalCobrar, estado: 'pendiente', vendedor,
-            };
-            db_docventa.push(doc);
-            tacticalSyncDocVenta(doc);
+            if(docVentaEditandoId){
+                const idx = db_docventa.findIndex(d => d.id === docVentaEditandoId);
+                if(idx===-1){ alert("Este documento ya no existe (puede que se haya eliminado)."); cancelarEdicionDocVenta(); return; }
+                const anterior = db_docventa[idx];
+                // Igual que en CxP: conserva lo ya cobrado en vez de reiniciar el saldo pendiente.
+                const yaCobrado = anterior.totalCobrar - anterior.saldoPendiente;
+                const nuevoSaldoPendiente = Math.max(0, totalCobrar - yaCobrado);
+                const docActualizado = {
+                    ...anterior, tipoDoc, idCli, descripcion, items, valorBruto, iva, reteiva, valorEnvio,
+                    totalDocumento, totalCobrar, condicionPago, fechaVencimiento, vendedor,
+                    saldoPendiente: nuevoSaldoPendiente,
+                    estado: nuevoSaldoPendiente<=0 ? 'pagada' : (nuevoSaldoPendiente<totalCobrar ? 'abonado_parcial' : 'pendiente'),
+                };
+                db_docventa[idx] = docActualizado;
+                tacticalSyncDocVenta(docActualizado);
+                cancelarEdicionDocVenta();
+            } else {
+                const tipoContador = tipoDoc==='factura'?'fv':'cc';
+                const prefijo = tipoDoc==='factura'?'FV-':'CC-';
+                const campoNumero = document.getElementById('doc-numero');
+                const esManual = campoNumero.value.trim() && campoNumero.dataset.auto !== 'true';
+                // Si el número sigue siendo la sugerencia automática, se consume el contador de
+                // verdad recién aquí (no antes) -- así nunca se gasta un número si no llega a guardar.
+                const numero = esManual ? campoNumero.value.trim() : await contSiguienteNumero(tipoContador, prefijo);
+                if(esManual) contActualizarContadorDesdeNumero(tipoContador, numero);
+
+                const doc = {
+                    id: crypto.randomUUID(), numero,
+                    tipoDoc, fecha: contHoy(), idCli, idCot: null, idOpp: null, descripcion, items,
+                    valorBruto, iva, reteiva, valorEnvio, totalDocumento, totalCobrar,
+                    condicionPago, fechaVencimiento, saldoPendiente: totalCobrar, estado: 'pendiente', vendedor,
+                };
+                db_docventa.push(doc);
+                tacticalSyncDocVenta(doc);
+            }
 
             contLimpiarItemsDoc();
             document.getElementById('doc-valorEnvio').value = '0';
@@ -6371,6 +6398,40 @@
             setTimeout(() => { window.print(); document.getElementById('print-area').style.display = 'none'; }, 100);
         }
 
+        function editarDocVenta(id){
+            const doc = db_docventa.find(d=>d.id===id);
+            if(!doc) return;
+            docVentaEditandoId = id;
+            document.getElementById('doc-cliente-filtro').value = '';
+            contLlenarSelectClienteDoc();
+            document.getElementById('doc-cliente').value = doc.idCli;
+            document.getElementById('doc-tipoDoc').value = doc.tipoDoc;
+            document.getElementById('doc-valorEnvio').value = (doc.valorEnvio||0).toLocaleString('es-CO');
+            document.getElementById('doc-condicionPago').value = doc.condicionPago;
+            document.getElementById('doc-aplicaReteiva').checked = !!doc.reteiva;
+            document.getElementById('doc-vendedor').value = doc.vendedor || '';
+            contLimpiarItemsDoc();
+            (doc.items||[]).forEach(it => contAgregarItemDoc(it.descripcion, it.cantidad, it.valorUnitario, it.iva));
+            document.getElementById('doc-btn-guardar').textContent = '💾 Guardar cambios del Documento de Venta';
+            document.getElementById('doc-btn-cancelar-edicion').style.display = 'block';
+            document.getElementById('doc-cliente').scrollIntoView({behavior:'smooth', block:'center'});
+        }
+        function cancelarEdicionDocVenta(){
+            docVentaEditandoId = null;
+            contLimpiarItemsDoc();
+            document.getElementById('doc-valorEnvio').value = '0';
+            document.getElementById('doc-btn-guardar').textContent = '+ Registrar Documento de Venta';
+            document.getElementById('doc-btn-cancelar-edicion').style.display = 'none';
+        }
+        function eliminarDocVenta(id){
+            const doc = db_docventa.find(d=>d.id===id);
+            if(!doc) return;
+            if(!confirm(`¿Eliminar el documento "${doc.numero}"?\n\nEsta acción no se puede deshacer.`)) return;
+            tacticalEliminarDocVentaRemoto(id);
+            db_docventa = db_docventa.filter(d=>d.id!==id);
+            if(docVentaEditandoId===id) cancelarEdicionDocVenta();
+            renderContabilidad();
+        }
         function renderDocVenta(){
             const container = document.getElementById('lista-docventa');
             if(!container) return;
@@ -6378,17 +6439,29 @@
             [...db_docventa].reverse().forEach(doc => {
                 const cli = db_clientes.find(c => c.id === doc.idCli);
                 const badgeTipo = doc.tipoDoc==='factura' ? '🏢 Factura (DIAN externa)' : '🎨 Cuenta de Cobro';
+                // Conde 2026-08-21: "en la descripción quiero solo el encabezado y ver detalle sea
+                // opcional para que la ficha no tenga tanta información" -- los pedidos
+                // multi-producto guardan una descripción larguísima (todas las líneas concatenadas)
+                // que antes se mostraba siempre completa. Ahora solo se ve el conteo de ítems, y el
+                // texto completo queda oculto detrás de un "Ver detalle" opcional.
                 container.innerHTML += `
                     <div class="data-card">
                         <span class="tag" style="float:right; background:${doc.estado==='pagada'?'var(--ganado)':(doc.estado==='abonado_parcial'?'var(--proceso)':'var(--pendiente)')}; color:${doc.estado==='pendiente'?'#744210':'white'};">${doc.estado.toUpperCase()}</span>
                         <div class="card-title">${doc.numero} — ${cli?cli.empresa:'Cliente eliminado'}</div>
-                        <div class="card-subtitle">${badgeTipo} — ${(doc.items||[]).length} ítem(s): ${doc.descripcion}</div>
+                        <div class="card-subtitle">${badgeTipo} — ${(doc.items||[]).length} ítem(s)
+                            <span style="color:var(--info); cursor:pointer; text-decoration:underline; font-size:0.82rem;" onclick="const d=this.nextElementSibling; const abrir=d.style.display==='none'; d.style.display=abrir?'block':'none'; this.textContent=abrir?'Ocultar detalle ▴':'Ver detalle ▾';">Ver detalle ▾</span>
+                            <div style="display:none; margin-top:4px; font-size:0.85rem; color:#4a5568; line-height:1.4;">${doc.descripcion}</div>
+                        </div>
                         <div style="font-size:0.9rem; line-height:1.5;">
                             Total a cobrar: <strong>${cotFormatoCop(doc.totalCobrar)}</strong><br>
                             Saldo pendiente: <strong style="color:var(--primary);">${cotFormatoCop(doc.saldoPendiente)}</strong><br>
                             Vencimiento: <strong>${doc.fechaVencimiento||'-'}</strong>
                         </div>
-                        ${doc.tipoDoc==='cuenta_cobro'?`<div class="action-row"><button class="btn-stage btn-avanzar" style="flex:none; padding:8px 14px;" onclick="contImprimirCuentaCobro('${doc.id}')">🖨️ Imprimir</button></div>`:''}
+                        <div class="action-row">
+                            ${doc.tipoDoc==='cuenta_cobro'?`<button class="btn-stage btn-avanzar" style="flex:none; padding:8px 14px;" onclick="contImprimirCuentaCobro('${doc.id}')">🖨️ Imprimir</button>`:''}
+                            <button class="btn-action" onclick="editarDocVenta('${doc.id}')">✏️ Editar</button>
+                            <button class="btn-action" style="color:var(--peligro); border-color:var(--peligro);" onclick="eliminarDocVenta('${doc.id}')">🗑️ Eliminar</button>
+                        </div>
                     </div>`;
             });
             if(db_docventa.length===0) container.innerHTML = '<p style="color:#718096; grid-column: 1/-1;">No hay documentos de venta todavía.</p>';
@@ -6452,6 +6525,10 @@
         }
 
         /* ---- CUENTAS POR PAGAR (CxP) ---- */
+        // Conde 2026-08-21: "necesito la opción de eliminar y editar el documento factura de
+        // proveedor en caso de equivocaciones" -- cxpEditandoId guarda el id de la CxP en edición
+        // (null = formulario en modo "crear nueva", como siempre).
+        let cxpEditandoId = null;
         async function contGuardarCxp(){
             const proveedor = document.getElementById('cxp-proveedor').value.trim().toUpperCase();
             const numeroFacturaProveedor = document.getElementById('cxp-numFactura').value.trim();
@@ -6464,21 +6541,84 @@
 
             if(!proveedor || items.length===0 || monto<=0){ alert("Debe ingresar el proveedor y agregar al menos un ítem con valor mayor a 0."); return; }
 
-            // Conde 2026-08-20: ya no se le muestra al usuario ningún "N° Interno CxP" -- se sigue
-            // generando en automático por dentro (la tabla exige un "numero" único), pero ahora el
-            // identificador que la persona realmente usa es el N° de Factura del Proveedor.
-            const numero = await contSiguienteNumero('cxp', 'CP-');
-
             await contObtenerOCrearProveedor(proveedor); // registra el proveedor si es nuevo, o simplemente reutiliza el ya existente por nombre exacto
-            const cxp = {
-                id: crypto.randomUUID(), numero, fecha: contHoy(),
-                proveedor, numeroFacturaProveedor, categoria, subcategoria, iva, items, monto, saldoPendiente: monto, fechaVencimiento, estado: 'pendiente', idEgreso: null,
-            };
-            db_cxp.push(cxp);
-            tacticalSyncCxp(cxp);
+
+            if(cxpEditandoId){
+                const idx = db_cxp.findIndex(c => c.id === cxpEditandoId);
+                if(idx===-1){ alert("Esta cuenta por pagar ya no existe (puede que se haya eliminado)."); cancelarEdicionCxp(); return; }
+                const anterior = db_cxp[idx];
+                // Conserva lo ya abonado: si antes tenía saldo pendiente 300 de un monto de 1000
+                // (o sea ya se pagaron 700), y al editar el monto sube a 1200, el saldo pendiente
+                // pasa a 500 (1200-700) -- no se reinicia a "monto completo otra vez".
+                const yaPagado = anterior.monto - anterior.saldoPendiente;
+                const nuevoSaldoPendiente = Math.max(0, monto - yaPagado);
+                const cxpActualizada = {
+                    ...anterior, proveedor, numeroFacturaProveedor, categoria, subcategoria, iva, items, monto,
+                    saldoPendiente: nuevoSaldoPendiente, fechaVencimiento,
+                    estado: nuevoSaldoPendiente<=0 ? 'pagado' : (nuevoSaldoPendiente<monto ? 'abonado_parcial' : 'pendiente'),
+                };
+                db_cxp[idx] = cxpActualizada;
+                tacticalSyncCxp(cxpActualizada);
+                cancelarEdicionCxp();
+            } else {
+                // Conde 2026-08-20: ya no se le muestra al usuario ningún "N° Interno CxP" -- se
+                // sigue generando en automático por dentro (la tabla exige un "numero" único), pero
+                // el identificador que la persona realmente usa es el N° de Factura del Proveedor.
+                const numero = await contSiguienteNumero('cxp', 'CP-');
+                const cxp = {
+                    id: crypto.randomUUID(), numero, fecha: contHoy(),
+                    proveedor, numeroFacturaProveedor, categoria, subcategoria, iva, items, monto, saldoPendiente: monto, fechaVencimiento, estado: 'pendiente', idEgreso: null,
+                };
+                db_cxp.push(cxp);
+                tacticalSyncCxp(cxp);
+            }
 
             document.getElementById('cxp-proveedor').value=''; document.getElementById('cxp-numFactura').value=''; document.getElementById('cxp-fechaVenc').value='';
             contLimpiarItemsCxp();
+            renderContabilidad();
+        }
+        function editarCxp(id){
+            const c = db_cxp.find(x=>x.id===id);
+            if(!c) return;
+            cxpEditandoId = id;
+            document.getElementById('cxp-proveedor').value = c.proveedor;
+            document.getElementById('cxp-numFactura').value = c.numeroFacturaProveedor || '';
+            document.getElementById('cxp-categoria').value = c.categoria;
+            contLlenarSubcategorias();
+            document.getElementById('cxp-subcategoria').value = c.subcategoria || '';
+            document.getElementById('cxp-fechaVenc').value = c.fechaVencimiento || '';
+            contLimpiarItemsCxp();
+            (c.items||[]).forEach(it => {
+                contAgregarItemCxp(it.descripcion, it.cantidad, it.valorUnitario, it.iva);
+                // contAgregarItemCxp ya recalculó el IVA solo a 19% al crear la fila (antes de que
+                // se pudiera marcar "editadoManual") -- eso pisaba el IVA guardado real con uno
+                // auto-calculado apenas se abría a editar, aunque nadie hubiera tocado nada. Se
+                // restaura el valor guardado y RECIÉN AHÍ se marca como manual, para que quede
+                // fiel a lo que había y no se recalcule si luego se cambia cantidad/valor unitario.
+                const idFila = document.querySelector('#cxp-items-body tr:last-child').id;
+                const ivaInput = document.getElementById(idFila+'_iva');
+                ivaInput.value = (it.iva||0).toLocaleString('es-CO');
+                ivaInput.dataset.editadoManual = '1';
+                contRecalcularItemCxp(idFila);
+            });
+            document.getElementById('cxp-btn-guardar').textContent = '💾 Guardar cambios de la Cuenta por Pagar';
+            document.getElementById('cxp-btn-cancelar-edicion').style.display = 'block';
+            document.getElementById('cxp-proveedor').scrollIntoView({behavior:'smooth', block:'center'});
+        }
+        function cancelarEdicionCxp(){
+            cxpEditandoId = null;
+            document.getElementById('cxp-proveedor').value=''; document.getElementById('cxp-numFactura').value=''; document.getElementById('cxp-fechaVenc').value='';
+            contLimpiarItemsCxp();
+            document.getElementById('cxp-btn-guardar').textContent = '+ Registrar Cuenta por Pagar';
+            document.getElementById('cxp-btn-cancelar-edicion').style.display = 'none';
+        }
+        function eliminarCxp(id){
+            const c = db_cxp.find(x=>x.id===id);
+            if(!c) return;
+            if(!confirm(`¿Eliminar la Cuenta por Pagar "${c.numeroFacturaProveedor||c.numero} — ${c.proveedor}"?\n\nEsta acción no se puede deshacer.`)) return;
+            tacticalEliminarCxpRemoto(id);
+            db_cxp = db_cxp.filter(x=>x.id!==id);
+            if(cxpEditandoId===id) cancelarEdicionCxp();
             renderContabilidad();
         }
 
@@ -6490,9 +6630,13 @@
                 container.innerHTML += `
                     <div class="data-card">
                         <span class="tag" style="float:right; background:${c.estado==='pagado'?'var(--ganado)':(c.estado==='abonado_parcial'?'var(--proceso)':'var(--pendiente)')}; color:${c.estado==='pendiente'?'#744210':'white'};">${c.estado.toUpperCase()}</span>
-                        <div class="card-title">${c.numero} — ${c.proveedor}</div>
+                        <div class="card-title">${c.numeroFacturaProveedor||c.numero} — ${c.proveedor}</div>
                         <div class="card-subtitle">${c.categoria==='fijo'?'Gasto Fijo':'Gasto Variable'} — ${c.subcategoria||''}</div>
                         <div style="font-size:0.9rem;">Monto factura: <strong>${cotFormatoCop(c.monto)}</strong>${c.iva?` (incl. IVA ${cotFormatoCop(c.iva)})`:''}<br>Saldo pendiente: <strong style="color:var(--primary);">${cotFormatoCop(c.saldoPendiente)}</strong> — Vence: <strong>${c.fechaVencimiento||'-'}</strong></div>
+                        <div class="action-row">
+                            <button class="btn-action" onclick="editarCxp('${c.id}')">✏️ Editar</button>
+                            <button class="btn-action" style="color:var(--peligro); border-color:var(--peligro);" onclick="eliminarCxp('${c.id}')">🗑️ Eliminar</button>
+                        </div>
                     </div>`;
             });
             if(db_cxp.length===0) container.innerHTML = '<p style="color:#718096; grid-column: 1/-1;">No hay cuentas por pagar registradas.</p>';
