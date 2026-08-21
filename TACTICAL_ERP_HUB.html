@@ -5570,8 +5570,17 @@
           const url = conIndicativo ? `whatsapp://send?phone=${conIndicativo}&text=${encodeURIComponent(mensaje)}` : `whatsapp://send?text=${encodeURIComponent(mensaje)}`;
           window.location.href = url;
         }
-        function cotCompartirWhatsAppClick(){
-          if(!cotUltimoOT){ alert("Primero presiona 'Guardar y Generar PDF Cliente' (o cierra el pedido) para tener un OT."); return; }
+        // Conde 2026-08-22: "quiero que al dar enviar por whap guarde automaticamente y no tener
+        // que hacer 2 clic" -- si todavía no se ha guardado esta cotización (no hay OT), un solo
+        // clic en "Enviar por WhatsApp" ahora dispara el guardado completo primero (mismo flujo que
+        // el botón "Guardar y Generar PDF Cliente", incluye su propio diálogo de imprimir/guardar
+        // PDF) y RECIÉN AHÍ abre WhatsApp -- ya no hace falta darle a los 2 botones por separado.
+        async function cotCompartirWhatsAppClick(){
+          if(!cotUltimoOT){
+            if(!cotUltimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
+            await cotGuardarYGenerarPDF();
+            if(!cotUltimoOT) return; // cotGuardarYGenerarPDF ya mostró su propia alerta si algo faltaba
+          }
           const telefono = document.getElementById('cot-cli-telefono').value.trim();
           const empresa = document.getElementById('cot-cli-empresa').value.trim() || 'Cliente Particular';
           const monto = cotUltimoResultado ? Math.round(cotUltimoResultado.precioFinalTotal) : 0;
