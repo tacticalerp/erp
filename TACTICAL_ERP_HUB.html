@@ -319,6 +319,20 @@
             </div>
 
             <div class="hub-grid">
+                <!-- Conde 2026-08-22: "programa recomendaciones... llámalo y recuérdale, algo similar"
+                     -- cruza CRM/Contabilidad/Reprocesos en frases simples con una acción sugerida,
+                     en vez de tableros con términos contables. Primera tarjeta a propósito, para que
+                     sea lo primero que se vea al entrar. -->
+                <div class="hub-card active-card" onclick="showView('radar')" style="border:2px solid var(--primary);">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title">🎯 Radar de Negocio</h3>
+                            <span class="badge badge-active">Nuevo</span>
+                        </div>
+                    </div>
+                    <div class="card-footer">Ver recomendaciones de hoy ➔</div>
+                </div>
+
                 <!-- MÓDULO 1: TAREAS -->
                 <div class="hub-card active-card" onclick="showView('tareas')">
                     <div>
@@ -439,6 +453,17 @@
                     </div>
                     <div class="card-footer">Ingresar al Módulo ➔</div>
                 </div>
+            </div>
+        </div>
+
+        <!-- VISTA: RADAR DE NEGOCIO -->
+        <div id="view-radar" class="app-view">
+            <div style="padding:15px; max-width:760px; margin:0 auto;">
+                <p style="color:#718096; font-size:0.9rem; margin:0 0 18px;">Cruces de CRM, Contabilidad y Reprocesos, traducidos a frases simples con una acción sugerida — no hace falta saber de contabilidad para leerlo.</p>
+                <div style="font-size:0.8rem; color:#a0aec0; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px;">Esta semana</div>
+                <div id="radar-urgente" style="display:flex; flex-direction:column; gap:10px; margin-bottom:26px;"></div>
+                <div style="font-size:0.8rem; color:#a0aec0; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px;">Para tener en cuenta</div>
+                <div id="radar-informativo" style="display:flex; flex-direction:column; gap:10px;"></div>
             </div>
         </div>
 
@@ -1512,6 +1537,7 @@
         // usa este showView() ni tiene todavía su propio login por rol -- pendiente, no cubierto
         // por este cambio.
         const TACTICAL_ROLES_POR_VISTA = {
+            radar: ['administrador', 'comercial', 'contabilidad'],
             crm: ['administrador', 'comercial', 'contabilidad'],
             calculadoras: ['administrador', 'comercial'],
             cotizador: ['administrador', 'comercial'],
@@ -1621,6 +1647,11 @@
                 navContainer.style.display = 'none';
                 mainTitle.innerText = "TACTICAL MARKETING ERP";
                 subTitle.innerText = "Planta de Producción & MIS (2026)";
+            } else if (viewId === 'radar') {
+                navContainer.style.display = 'block';
+                mainTitle.innerText = "RADAR DE NEGOCIO";
+                subTitle.innerText = "Recomendaciones de hoy, en palabras simples (2026)";
+                if (typeof renderRadar === 'function') renderRadar();
             } else if (viewId === 'tareas') {
                 navContainer.style.display = 'block';
                 mainTitle.innerText = "PLAN DE TAREAS TACTICAL";
@@ -6075,6 +6106,156 @@
           cajas:"Cajas Blandas", promocionales:"Promocionales (Merchandising)",
           manual:"Producto libre (fuera de catálogo)", otro:"Sin clasificar",
         };
+
+        /* ==========================================
+           RADAR DE NEGOCIO -- Conde 2026-08-22: "programa recomendaciones... este cliente lo
+           ultimo que compro fue 300 cuaderno y siempre pide a principio de mes, llamalo y
+           recuerdale, algo similar" -- cruza datos que hoy viven separados en CRM/Contabilidad/
+           Reprocesos (todos ya comparten `ot`, `idCli` en cada opp/cierre) y los traduce a frases
+           simples con una acción sugerida, agrupadas por URGENCIA (no por módulo del ERP), para
+           que se puedan leer sin saber de contabilidad. Nace del análisis "Radar de Cruces".
+           ========================================== */
+        function radarCardHtml(color, badge, texto, accionLabel, accionOnclick){
+          return `<div class="data-card" style="border-left:4px solid ${color}; margin:0;">
+            <span class="tag" style="background:${color}; color:white; font-size:0.7rem;">${badge}</span>
+            <p style="margin:8px 0 ${accionLabel?'10px':'0'}; font-size:0.92rem; color:var(--dark); line-height:1.4;">${texto}</p>
+            ${accionLabel ? `<button class="btn-action" onclick="${accionOnclick}">${accionLabel}</button>` : ''}
+          </div>`;
+        }
+        function radarIrACliente(idCli){
+          const cli = db_clientes.find(c=>c.id===idCli);
+          showView('crm');
+          const buscador = document.getElementById('search-cli');
+          if(buscador && cli){ buscador.value = cli.empresa; renderClientes(); }
+        }
+        function radarIrAReproceso(ot){
+          showView('reprocesos');
+          const buscador = document.getElementById('search-reproceso');
+          if(buscador){ buscador.value = ot; if(typeof renderAllReprocesos==='function') renderAllReprocesos(); }
+        }
+        // Compara la fecha del último cierre "ganado" de cada cliente contra su propio ritmo
+        // histórico de compra (promedio de días entre pedidos ganados) -- solo avisa si el cliente
+        // ya se demoró notablemente más de lo normal PARA ÉL MISMO, no contra un umbral genérico.
+        function radarClientesEnRiesgo(){
+          const cierresPorCliente = {};
+          db_historial_cierres.filter(h=>h.estado==='ganado' && h.idCli).forEach(h=>{
+            (cierresPorCliente[h.idCli] = cierresPorCliente[h.idCli]||[]).push(h.fechaCierre);
+          });
+          const hoyMs = Date.now();
+          const resultados = [];
+          Object.keys(cierresPorCliente).forEach(idCli=>{
+            const fechas = cierresPorCliente[idCli].map(f=>new Date(f).getTime()).filter(t=>!isNaN(t)).sort((a,b)=>a-b);
+            if(fechas.length < 2) return;
+            let suma = 0;
+            for(let i=1;i<fechas.length;i++) suma += (fechas[i]-fechas[i-1]);
+            const intervaloProm = suma / (fechas.length-1) / 86400000;
+            const diasDesdeUltima = (hoyMs - fechas[fechas.length-1]) / 86400000;
+            if(intervaloProm <= 90 && diasDesdeUltima > Math.max(intervaloProm*1.5, 10)){
+              const cli = db_clientes.find(c=>c.id===idCli);
+              if(cli) resultados.push({cli, dias: Math.round(diasDesdeUltima), ritmo: Math.round(intervaloProm)});
+            }
+          });
+          return resultados.sort((a,b)=>b.dias-a.dias).slice(0,4);
+        }
+        function radarFlujoCaja(){
+          const hoy = contHoy(), limite = contSumarDias(hoy, 15);
+          const porCobrar = db_docventa.filter(d=>d.saldoPendiente>0 && d.fechaVencimiento && d.fechaVencimiento>=hoy && d.fechaVencimiento<=limite).reduce((s,d)=>s+d.saldoPendiente,0);
+          const porPagar = db_cxp.filter(c=>c.saldoPendiente>0 && c.fechaVencimiento && c.fechaVencimiento>=hoy && c.fechaVencimiento<=limite).reduce((s,c)=>s+c.saldoPendiente,0);
+          return {porCobrar, porPagar};
+        }
+        function radarReprocesosRecientes(){
+          const otInfo = {};
+          db_opps.forEach(o=>{ if(o.ot && o.idCli) otInfo[o.ot] = o.idCli; });
+          db_historial_cierres.forEach(o=>{ if(o.ot && o.idCli) otInfo[o.ot] = o.idCli; });
+          // db_reprocesos no guarda su propia fecha -- se carga ordenado por created_at, así que
+          // los últimos del arreglo son los más recientes (aproximación razonable sin campo fecha).
+          return db_reprocesos.slice(-20)
+            .filter(r=>otInfo[r.ot] && r.costoTotal>0)
+            .map(r=>({...r, cli: db_clientes.find(c=>c.id===otInfo[r.ot])}))
+            .filter(r=>r.cli)
+            .sort((a,b)=>b.costoTotal-a.costoTotal)
+            .slice(0,2);
+        }
+        function radarRentabilidadClientes(){
+          const otInfo = {};
+          db_opps.forEach(o=>{ if(o.ot && o.idCli) otInfo[o.ot] = o.idCli; });
+          db_historial_cierres.forEach(o=>{ if(o.ot && o.idCli) otInfo[o.ot] = o.idCli; });
+          const costoPorCliente = {};
+          db_reprocesos.forEach(r=>{
+            const idCli = otInfo[r.ot];
+            if(!idCli) return;
+            costoPorCliente[idCli] = (costoPorCliente[idCli]||0) + r.costoTotal;
+          });
+          const resultados = [];
+          db_clientes.forEach(cli=>{
+            const costo = costoPorCliente[cli.id];
+            if(!costo || !cli.ltv || cli.ltv<=0) return;
+            const pct = costo/cli.ltv;
+            if(pct >= 0.08) resultados.push({cli, costo, pct});
+          });
+          return resultados.sort((a,b)=>b.pct-a.pct).slice(0,2);
+        }
+        function radarMejorVendedor(){
+          const hace30 = contSumarDias(contHoy(), -30);
+          const porVendedor = {};
+          db_historial_cierres.filter(h=>h.vendedor && h.fechaCierre && h.fechaCierre.slice(0,10)>=hace30).forEach(h=>{
+            const v = porVendedor[h.vendedor] = porVendedor[h.vendedor] || {ganadas:0, total:0};
+            v.total++;
+            if(h.estado==='ganado') v.ganadas++;
+          });
+          let mejor = null;
+          Object.keys(porVendedor).forEach(v=>{
+            const d = porVendedor[v];
+            if(d.total < 3) return;
+            const tasa = d.ganadas/d.total;
+            if(!mejor || tasa > mejor.tasa) mejor = {vendedor:v, tasa, ganadas:d.ganadas, total:d.total};
+          });
+          return mejor;
+        }
+        function radarCostoCalidadResponsable(){
+          const porResponsable = {};
+          db_reprocesos.forEach(r=>{ if(!r.responsable) return; porResponsable[r.responsable] = (porResponsable[r.responsable]||0) + r.costoTotal; });
+          const totalGeneral = Object.values(porResponsable).reduce((s,v)=>s+v,0);
+          if(totalGeneral<=0) return null;
+          const top = Object.keys(porResponsable).sort((a,b)=>porResponsable[b]-porResponsable[a])[0];
+          return { responsable: top, costo: porResponsable[top], pct: Math.round((porResponsable[top]/totalGeneral)*100) };
+        }
+        function renderRadar(){
+          const urgenteEl = document.getElementById('radar-urgente');
+          const infoEl = document.getElementById('radar-informativo');
+          if(!urgenteEl || !infoEl) return;
+          let urgente = '', info = '';
+
+          radarClientesEnRiesgo().forEach(r=>{
+            urgente += radarCardHtml('var(--peligro)', 'Llamar', `<strong>${r.cli.empresa}</strong> no pide desde hace ${r.dias} días. Antes compraba cada ${r.ritmo} días aprox.`, 'Ver cliente', `radarIrACliente('${r.cli.id}')`);
+          });
+
+          const caja = radarFlujoCaja();
+          if(caja.porPagar > caja.porCobrar && caja.porPagar > 0){
+            urgente += radarCardHtml('var(--peligro)', 'Revisar caja', `En los próximos 15 días debes pagar <strong>${cotFormatoCop(caja.porPagar)}</strong>, pero solo te van a entrar <strong>${cotFormatoCop(caja.porCobrar)}</strong>.`, 'Ver Contabilidad', `showView('contabilidad')`);
+          }
+
+          radarReprocesosRecientes().forEach(r=>{
+            urgente += radarCardHtml('var(--pendiente)', 'Revisar calidad', `El pedido ${r.ot} de <strong>${r.cli.empresa}</strong> tuvo un reproceso de ${cotFormatoCop(r.costoTotal)}. Vale la pena mirar qué pasó antes de cotizarle de nuevo.`, 'Ver el incidente', `radarIrAReproceso('${r.ot}')`);
+          });
+
+          radarRentabilidadClientes().forEach(r=>{
+            info += radarCardHtml('var(--info)', 'Dato', `<strong>${r.cli.empresa}</strong> te ha comprado ${cotFormatoCop(r.cli.ltv)} en total, pero ${cotFormatoCop(r.costo)} de eso se fue en reprocesos (${Math.round(r.pct*100)}%).`, null, null);
+          });
+
+          const mejorV = radarMejorVendedor();
+          if(mejorV){
+            info += radarCardHtml('var(--ganado)', 'Buen ritmo', `<strong>${mejorV.vendedor}</strong> cerró ${mejorV.ganadas} de ${mejorV.total} negocios en los últimos 30 días, el mejor resultado del equipo.`, null, null);
+          }
+
+          const calidadResp = radarCostoCalidadResponsable();
+          if(calidadResp && calidadResp.pct >= 30){
+            info += radarCardHtml('var(--secondary)', 'Dato', `<strong>${calidadResp.responsable}</strong> concentra el ${calidadResp.pct}% del costo de reprocesos registrado (${cotFormatoCop(calidadResp.costo)}). Vale la pena revisar el proceso.`, null, null);
+          }
+
+          urgenteEl.innerHTML = urgente || '<p style="color:#a0aec0; font-style:italic;">Todo tranquilo por ahora -- no hay nada urgente que atender.</p>';
+          infoEl.innerHTML = info || '<p style="color:#a0aec0; font-style:italic;">Todavía no hay suficientes datos para mostrar algo aquí.</p>';
+        }
         let repPeriodoTipo = 'mensual', repPeriodoOffset = 0;
         function repCambiarTipo(v){ repPeriodoTipo = v; repPeriodoOffset = 0; renderReportes(); }
         function repActualizarControlesPeriodo(){
