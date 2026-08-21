@@ -657,48 +657,10 @@
         <div id="view-crm" class="app-view">
             <div style="padding:10px;">
                 <div class="accordion-item">
-                    <div class="accordion-header active" onclick="toggleSection('directorio')" id="head-directorio">
-                        <span>👥 1. Directorio de Clientes B2B</span><span class="arrow" id="arrow-directorio">▼</span>
+                    <div class="accordion-header active" onclick="toggleSection('pipeline')" id="head-pipeline">
+                        <span>💰 1. Embudo de Negocios Activos (Automático con Cotizador)</span><span class="arrow" id="arrow-pipeline">▼</span>
                     </div>
-                    <div id="directorio" class="accordion-content active">
-                        <div class="form-grid">
-                            <div class="form-group"><label>Nombre de la Empresa / Cliente:</label><input type="text" id="cli-empresa" list="cot-clientes-datalist" placeholder="Ej: GRÁFICAS JP S.A.S." style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
-                            <div class="form-group"><label>Contacto Principal (Persona):</label><input type="text" id="cli-nombre" placeholder="Ej: JUAN PÉREZ" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
-                            <div class="form-group"><label>WhatsApp de Negocios:</label><input type="text" id="cli-wp" placeholder="Ej: 3001234567"></div>
-                            <div class="form-group"><label>Correo Electrónico:</label><input type="text" id="cli-correo" placeholder="Ej: compras@graficasjp.com"></div>
-                            <div class="form-group">
-                                <label>Clasificación Comercial:</label>
-                                <select id="cli-clase">
-                                    <option value="nuevo">Nuevo</option>
-                                    <option value="ocasional">Ocasional</option>
-                                    <option value="recurrente">Recurrente</option>
-                                    <option value="vip">VIP (Top 20%)</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Tipo de Cliente (para Contabilidad):</label>
-                                <select id="cli-tipo">
-                                    <option value="">-- Sin definir --</option>
-                                    <option value="corporativo">Corporativo (Factura electrónica)</option>
-                                    <option value="personalizado">Personalizado (Cuenta de Cobro)</option>
-                                </select>
-                            </div>
-                            <div class="form-group"><label>Identificación (NIT / CC):</label><input type="text" id="cli-identificacion" placeholder="Ej: 900.123.456-7"></div>
-                            <div class="form-group" style="display:flex; align-items:flex-end;">
-                                <button class="btn-submit" onclick="guardarCliente()">+ Registrar Cliente B2B</button>
-                            </div>
-                        </div>
-
-                        <input type="text" id="search-cli" placeholder="🔍 Buscar por Empresa, Contacto, Correo o WhatsApp..." style="margin-bottom:12px; width:100%; box-sizing:border-box; padding:10px; border:1px solid #cbd5e0; border-radius:4px; font-size:0.95rem;" oninput="renderClientes()">
-                        <div class="card-grid" id="lista-clientes"></div>
-                    </div>
-                </div>
-
-                <div class="accordion-item">
-                    <div class="accordion-header" onclick="toggleSection('pipeline')" id="head-pipeline">
-                        <span>💰 2. Embudo de Negocios Activos (Automático con Cotizador)</span><span class="arrow" id="arrow-pipeline">►</span>
-                    </div>
-                    <div id="pipeline" class="accordion-content">
+                    <div id="pipeline" class="accordion-content active">
                         <div class="form-grid">
                             <div class="form-group"><label>Seleccionar Cliente:</label>
                                 <input type="text" id="opp-cliente-filtro" placeholder="Escribe para buscar..." oninput="tacticalFiltrarSelectClientes('opp-cliente-filtro','opp-cliente')" style="margin-bottom:4px;">
@@ -756,6 +718,22 @@
                 </div>
 
                 <div class="accordion-item">
+                    <div class="accordion-header" onclick="toggleSection('buscadorCot'); renderBuscadorCotizaciones();" id="head-buscadorCot">
+                        <span>📜 2. Todas las Cotizaciones (Buscador)</span><span class="arrow" id="arrow-buscadorCot">►</span>
+                    </div>
+                    <div id="buscadorCot" class="accordion-content">
+                        <div id="buscador-nota-periodo" style="font-size:0.82rem; color:#64748b; margin-bottom:8px;">📅 Mostrando solo el período activo arriba en "Inteligencia de Ventas" — escribe algo para buscar en todo el histórico.</div>
+                        <input type="text" id="search-cotizaciones" class="search-input" placeholder="🔍 Buscar por cliente, OT o producto..." style="margin-bottom:12px; width:100%; box-sizing:border-box; padding:10px; border:1px solid #cbd5e0; border-radius:4px; font-size:0.95rem;" oninput="renderBuscadorCotizaciones()">
+                        <div class="table-responsive">
+                            <table>
+                                <thead><tr><th>OT</th><th>Fecha</th><th>Cliente</th><th>Producto(s)</th><th>Valor</th><th>Estado</th><th></th></tr></thead>
+                                <tbody id="tabla-buscador-cotizaciones"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
                     <div class="accordion-header header-special" onclick="toggleSection('dashboard'); renderDashboard();" id="head-dashboard">
                         <span>📊 3. Inteligencia de Ventas (Dashboard)</span><span class="arrow" id="arrow-dashboard">►</span>
                     </div>
@@ -782,18 +760,40 @@
                 </div>
 
                 <div class="accordion-item">
-                    <div class="accordion-header" onclick="toggleSection('buscadorCot'); renderBuscadorCotizaciones();" id="head-buscadorCot">
-                        <span>📜 4. Todas las Cotizaciones (Buscador)</span><span class="arrow" id="arrow-buscadorCot">►</span>
+                    <div class="accordion-header" onclick="toggleSection('directorio')" id="head-directorio">
+                        <span>👥 4. Directorio de Clientes B2B</span><span class="arrow" id="arrow-directorio">►</span>
                     </div>
-                    <div id="buscadorCot" class="accordion-content">
-                        <div id="buscador-nota-periodo" style="font-size:0.82rem; color:#64748b; margin-bottom:8px;">📅 Mostrando solo el período activo arriba en "Inteligencia de Ventas" — escribe algo para buscar en todo el histórico.</div>
-                        <input type="text" id="search-cotizaciones" class="search-input" placeholder="🔍 Buscar por cliente, OT o producto..." style="margin-bottom:12px; width:100%; box-sizing:border-box; padding:10px; border:1px solid #cbd5e0; border-radius:4px; font-size:0.95rem;" oninput="renderBuscadorCotizaciones()">
-                        <div class="table-responsive">
-                            <table>
-                                <thead><tr><th>OT</th><th>Fecha</th><th>Cliente</th><th>Producto(s)</th><th>Valor</th><th>Estado</th><th></th></tr></thead>
-                                <tbody id="tabla-buscador-cotizaciones"></tbody>
-                            </table>
+                    <div id="directorio" class="accordion-content">
+                        <div class="form-grid">
+                            <div class="form-group"><label>Nombre de la Empresa / Cliente:</label><input type="text" id="cli-empresa" list="cot-clientes-datalist" placeholder="Ej: GRÁFICAS JP S.A.S." style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
+                            <div class="form-group"><label>Contacto Principal (Persona):</label><input type="text" id="cli-nombre" placeholder="Ej: JUAN PÉREZ" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
+                            <div class="form-group"><label>WhatsApp de Negocios:</label><input type="text" id="cli-wp" placeholder="Ej: 3001234567"></div>
+                            <div class="form-group"><label>Correo Electrónico:</label><input type="text" id="cli-correo" placeholder="Ej: compras@graficasjp.com"></div>
+                            <div class="form-group">
+                                <label>Clasificación Comercial:</label>
+                                <select id="cli-clase">
+                                    <option value="nuevo">Nuevo</option>
+                                    <option value="ocasional">Ocasional</option>
+                                    <option value="recurrente">Recurrente</option>
+                                    <option value="vip">VIP (Top 20%)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Tipo de Cliente (para Contabilidad):</label>
+                                <select id="cli-tipo">
+                                    <option value="">-- Sin definir --</option>
+                                    <option value="corporativo">Corporativo (Factura electrónica)</option>
+                                    <option value="personalizado">Personalizado (Cuenta de Cobro)</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label>Identificación (NIT / CC):</label><input type="text" id="cli-identificacion" placeholder="Ej: 900.123.456-7"></div>
+                            <div class="form-group" style="display:flex; align-items:flex-end;">
+                                <button class="btn-submit" onclick="guardarCliente()">+ Registrar Cliente B2B</button>
+                            </div>
                         </div>
+
+                        <input type="text" id="search-cli" placeholder="🔍 Buscar por Empresa, Contacto, Correo o WhatsApp..." style="margin-bottom:12px; width:100%; box-sizing:border-box; padding:10px; border:1px solid #cbd5e0; border-radius:4px; font-size:0.95rem;" oninput="renderClientes()">
+                        <div class="card-grid" id="lista-clientes"></div>
                     </div>
                 </div>
             </div>
