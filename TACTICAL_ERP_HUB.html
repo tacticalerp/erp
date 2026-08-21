@@ -1200,7 +1200,7 @@
                         <p style="font-size:0.85rem; color:#718096; margin-top:0;">Los negocios marcados "Ganado" en el CRM generan este documento automáticamente. Use este formulario solo para ventas que no vienen de una cotización/oportunidad.</p>
                         <div class="form-grid">
                             <div class="form-group"><label>Cliente:</label>
-                                <input type="text" id="doc-cliente-filtro" placeholder="Escribe para buscar..." oninput="tacticalFiltrarSelectClientes('doc-cliente-filtro','doc-cliente')" style="margin-bottom:4px;">
+                                <input type="text" id="doc-cliente-filtro" placeholder="Escribe para buscar..." oninput="tacticalFiltrarSelectClientes('doc-cliente-filtro','doc-cliente',true)" style="margin-bottom:4px;">
                                 <select id="doc-cliente" onchange="contAutocompletarTipoDoc()"></select></div>
                             <div class="form-group">
                                 <label>Tipo de Documento:</label>
@@ -1209,7 +1209,7 @@
                                     <option value="factura">Factura (ya facturada por fuera — DIAN)</option>
                                 </select>
                             </div>
-                            <div class="form-group"><label>N° de Documento:</label><input type="text" id="doc-numero" placeholder="Ej: FV-0001 / CC-0001" oninput="this.dataset.auto=''"></div>
+                            <div class="form-group"><label>N° de Documento:</label><input type="text" id="doc-numero" placeholder="Ej: FV-0001 / CC-0001" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase(); this.dataset.auto=''"></div>
                             <div class="form-group"><label>Valor Envío (no es ingreso, pass-through transportadora):</label><input type="text" inputmode="numeric" id="doc-valorEnvio" value="0" oninput="contFormatearMiles(this)"></div>
                             <div class="form-group">
                                 <label>Condición de Pago:</label>
@@ -1233,6 +1233,7 @@
                         <button class="btn-add-item" type="button" onclick="contAgregarItemDoc()">+ Agregar ítem</button>
                         <div class="metric-total" id="doc-valorBruto-total" style="margin-top:10px;">Valor Bruto Total: $0</div>
                         <div class="metric-total" id="doc-iva-total" style="margin-top:4px; color:#718096; font-weight:normal;">IVA total (suma de los ítems): $0</div>
+                        <div class="metric-total" id="doc-reteiva-total" style="margin-top:4px; color:var(--primary); font-weight:bold; display:none;"></div>
                         <div style="display:flex; gap:8px; margin-top:12px;">
                             <button class="btn-submit" id="doc-btn-guardar" style="margin-top:0; flex:1;" onclick="contGuardarDocVenta()">+ Registrar Documento de Venta</button>
                             <button class="btn-action" id="doc-btn-cancelar-edicion" style="display:none;" onclick="cancelarEdicionDocVenta()">Cancelar edición</button>
@@ -1248,16 +1249,17 @@
                     <div id="cont-ingreso" class="accordion-content">
                         <div class="form-grid">
                             <div class="form-group" style="flex-basis:100%;"><label>Documento(s) de Venta a cobrar (Ctrl/Cmd+clic para elegir varios del MISMO cliente):</label><select id="ing-docventa" multiple size="5" onchange="contAutocompletarIngresoDesdeDocs()"></select></div>
-                            <div class="form-group"><label>N° de Comprobante:</label><input type="text" id="ing-numero" placeholder="Ej: IN-0001" oninput="this.dataset.auto=''"></div>
+                            <div class="form-group"><label>N° de Comprobante:</label><input type="text" id="ing-numero" placeholder="Ej: IN-0001" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase(); this.dataset.auto=''"></div>
                             <div class="form-group"><label>Valor Recibido:</label><input type="text" inputmode="numeric" id="ing-valor" value="0" oninput="contFormatearMiles(this)"></div>
                             <div class="form-group">
                                 <label>Medio de Pago:</label>
                                 <select id="ing-medioPago"><option value="banco">Banco / Transferencia</option><option value="efectivo">Efectivo</option></select>
                             </div>
-                            <div class="form-group"><label>Concepto:</label><input type="text" id="ing-concepto" placeholder="Ej: Pago factura CC-0004"></div>
-                            <div class="form-group"><label>Referencia del soporte (banco al que ingresó el dinero):</label><input type="text" id="ing-referencia" placeholder="Ej: Bancolombia #123456"></div>
-                            <div class="form-group" style="display:flex; align-items:flex-end;">
-                                <button class="btn-submit" onclick="contGuardarIngreso()">+ Registrar Comprobante de Ingreso</button>
+                            <div class="form-group"><label>Concepto:</label><input type="text" id="ing-concepto" placeholder="Ej: Pago factura CC-0004" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
+                            <div class="form-group"><label>Referencia del soporte (banco al que ingresó el dinero):</label><input type="text" id="ing-referencia" placeholder="Ej: Bancolombia #123456" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
+                            <div style="display:flex; gap:8px; margin-top:12px;">
+                                <button class="btn-submit" id="ing-btn-guardar" style="margin-top:0; flex:1;" onclick="contGuardarIngreso()">+ Registrar Comprobante de Ingreso</button>
+                                <button class="btn-action" id="ing-btn-cancelar-edicion" style="display:none;" onclick="cancelarEdicionIngreso()">Cancelar edición</button>
                             </div>
                         </div>
                         <div class="card-grid" id="lista-ingresos"></div>
@@ -1271,7 +1273,7 @@
                     <div id="cont-cxp" class="accordion-content">
                         <div class="form-grid">
                             <div class="form-group"><label>Proveedor:</label><input type="text" id="cxp-proveedor" list="cxp-proveedores-datalist" placeholder="Ej: PAPELES DEL NORTE SAS" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"><datalist id="cxp-proveedores-datalist"></datalist></div>
-                            <div class="form-group"><label>N° Factura del Proveedor:</label><input type="text" id="cxp-numFactura"></div>
+                            <div class="form-group"><label>N° Factura del Proveedor:</label><input type="text" id="cxp-numFactura" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
                             <div class="form-group">
                                 <label>Categoría:</label>
                                 <select id="cxp-categoria" onchange="contLlenarSubcategorias()">
@@ -1305,9 +1307,9 @@
                     <div id="cont-egreso" class="accordion-content">
                         <div class="form-grid">
                             <div class="form-group" style="flex-basis:100%;"><label>Cuenta(s) por Pagar a pagar (opcional — Ctrl/Cmd+clic para elegir varias del MISMO proveedor):</label><select id="egr-cxp" multiple size="5" onchange="contAutocompletarEgresoDesdeCxp()"></select></div>
-                            <div class="form-group"><label>N° de Comprobante:</label><input type="text" id="egr-numero" placeholder="Ej: EG-0001" oninput="this.dataset.auto=''"></div>
-                            <div class="form-group"><label>Beneficiario:</label><input type="text" id="egr-beneficiario"></div>
-                            <div class="form-group"><label>Concepto:</label><input type="text" id="egr-concepto"></div>
+                            <div class="form-group"><label>N° de Comprobante:</label><input type="text" id="egr-numero" placeholder="Ej: EG-0001" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase(); this.dataset.auto=''"></div>
+                            <div class="form-group"><label>Beneficiario:</label><input type="text" id="egr-beneficiario" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
+                            <div class="form-group"><label>Concepto:</label><input type="text" id="egr-concepto" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
                             <div class="form-group"><label>Monto:</label><input type="text" inputmode="numeric" id="egr-monto" value="0" oninput="contFormatearMiles(this)"></div>
                             <div class="form-group">
                                 <label>Categoría:</label>
@@ -1317,9 +1319,10 @@
                                 <label>Medio de Pago:</label>
                                 <select id="egr-medioPago"><option value="banco">Banco / Transferencia</option><option value="efectivo">Efectivo</option></select>
                             </div>
-                            <div class="form-group"><label>Referencia del soporte:</label><input type="text" id="egr-referencia" placeholder="Ej: Copia factura proveedor + comprobante banco"></div>
-                            <div class="form-group" style="display:flex; align-items:flex-end;">
-                                <button class="btn-submit" onclick="contGuardarEgreso()">+ Registrar Comprobante de Egreso</button>
+                            <div class="form-group"><label>Referencia del soporte:</label><input type="text" id="egr-referencia" placeholder="Ej: Copia factura proveedor + comprobante banco" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
+                            <div style="display:flex; gap:8px; margin-top:12px;">
+                                <button class="btn-submit" id="egr-btn-guardar" style="margin-top:0; flex:1;" onclick="contGuardarEgreso()">+ Registrar Comprobante de Egreso</button>
+                                <button class="btn-action" id="egr-btn-cancelar-edicion" style="display:none;" onclick="cancelarEdicionEgreso()">Cancelar edición</button>
                             </div>
                         </div>
                         <div class="card-grid" id="lista-egresos"></div>
@@ -2501,17 +2504,26 @@
         // escrita), así que se le agregó un campito de texto encima que reconstruye las <option>
         // filtradas mientras se escribe, en vez de cambiar el <select> por un <input> + datalist
         // (eso hubiera roto todo el código que lee el id del cliente directo del .value del select).
-        function tacticalPoblarSelectClientes(selectId, filtroTexto){
+        // Conde 2026-08-22: "en la factura de venta al buscar el cliente... al digitar f
+        // automaticamente deje los que inician por f" -- modoPrefijo=true busca solo por las
+        // PRIMERAS letras (empresa o nombre), en vez de por cualquier parte del texto (substring,
+        // el comportamiento de siempre para el buscador de Negocios en el CRM, que se deja igual).
+        // "tambien ordena los clientes por orden alfabetico" -- el resultado ya sale ordenado por
+        // empresa en los 2 modos.
+        function tacticalPoblarSelectClientes(selectId, filtroTexto, modoPrefijo){
             const sel = document.getElementById(selectId);
             if(!sel) return;
             const actual = sel.value;
             const filtro = (filtroTexto||'').trim().toLowerCase();
-            const lista = filtro ? db_clientes.filter(c => `${c.empresa} ${c.nombre}`.toLowerCase().includes(filtro)) : db_clientes;
+            let lista = !filtro ? db_clientes
+                : modoPrefijo ? db_clientes.filter(c => c.empresa.toLowerCase().startsWith(filtro) || c.nombre.toLowerCase().startsWith(filtro))
+                : db_clientes.filter(c => `${c.empresa} ${c.nombre}`.toLowerCase().includes(filtro));
+            lista = [...lista].sort((a,b)=>a.empresa.localeCompare(b.empresa,'es'));
             sel.innerHTML = '<option value="">-- Seleccione un Cliente --</option>' + lista.map(c => `<option value="${c.id}">${c.empresa} (${c.nombre})</option>`).join('');
             if(lista.some(c=>c.id===actual)) sel.value = actual;
         }
-        function tacticalFiltrarSelectClientes(filtroInputId, selectId){
-            tacticalPoblarSelectClientes(selectId, document.getElementById(filtroInputId).value);
+        function tacticalFiltrarSelectClientes(filtroInputId, selectId, modoPrefijo){
+            tacticalPoblarSelectClientes(selectId, document.getElementById(filtroInputId).value, modoPrefijo);
         }
         function llenarSelectClientes() {
             tacticalPoblarSelectClientes('opp-cliente', (document.getElementById('opp-cliente-filtro')||{}).value);
@@ -6257,7 +6269,7 @@
             const tr = document.createElement('tr');
             tr.id = id;
             tr.innerHTML = `
-                <td><input type="text" id="${id}_desc" value="${descripcion||''}" placeholder="Descripción del ítem"></td>
+                <td><input type="text" id="${id}_desc" value="${descripcion||''}" placeholder="Descripción del ítem" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></td>
                 <td><input type="number" id="${id}_cant" value="${cantidad||1}" min="1" oninput="contRecalcularItemDoc('${id}')"></td>
                 <td><input type="text" inputmode="numeric" id="${id}_valorU" value="${valorUnitario?Number(valorUnitario).toLocaleString('es-CO'):''}" oninput="contFormatearMiles(this); contRecalcularItemDoc('${id}')"></td>
                 <td><input type="text" inputmode="numeric" id="${id}_iva" value="${iva?Number(iva).toLocaleString('es-CO'):'0'}" oninput="contFormatearMiles(this); this.dataset.editadoManual='1'; contRecalcularItemDoc('${id}')"></td>
@@ -6300,6 +6312,16 @@
             const ivaTotal = items.reduce((s,i)=>s+i.iva,0);
             document.getElementById('doc-valorBruto-total').innerText = 'Valor Bruto Total (sin IVA): ' + cotFormatoCop(valorBruto);
             document.getElementById('doc-iva-total').innerText = `IVA total (suma de los ítems): ${cotFormatoCop(ivaTotal)} — Total con IVA: ${cotFormatoCop(valorBruto+ivaTotal)}`;
+            // Conde 2026-08-22: "al calcular el reteiva mostrar el valor neto a pagar".
+            const reteivaDiv = document.getElementById('doc-reteiva-total');
+            if(document.getElementById('doc-aplicaReteiva').checked){
+                const reteivaTotal = Math.round(ivaTotal*0.15);
+                const netoAPagar = valorBruto + ivaTotal - reteivaTotal;
+                reteivaDiv.style.display = 'block';
+                reteivaDiv.innerText = `ReteIVA (15% del IVA): -${cotFormatoCop(reteivaTotal)} — Valor NETO a pagar: ${cotFormatoCop(netoAPagar)}`;
+            } else {
+                reteivaDiv.style.display = 'none';
+            }
             return valorBruto;
         }
         function contObtenerItemsDoc(){
@@ -6328,7 +6350,7 @@
             const tr = document.createElement('tr');
             tr.id = id;
             tr.innerHTML = `
-                <td><input type="text" id="${id}_desc" value="${descripcion||''}" placeholder="Descripción del ítem"></td>
+                <td><input type="text" id="${id}_desc" value="${descripcion||''}" placeholder="Descripción del ítem" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></td>
                 <td><input type="number" id="${id}_cant" value="${cantidad||1}" min="1" oninput="contRecalcularItemCxp('${id}')"></td>
                 <td><input type="text" inputmode="numeric" id="${id}_valorU" value="${valorUnitario?Number(valorUnitario).toLocaleString('es-CO'):''}" oninput="contFormatearMiles(this); contRecalcularItemCxp('${id}')"></td>
                 <td><input type="text" inputmode="numeric" id="${id}_iva" value="${iva?Number(iva).toLocaleString('es-CO'):'0'}" oninput="contFormatearMiles(this); this.dataset.editadoManual='1'; contRecalcularItemCxp('${id}')"></td>
@@ -6416,7 +6438,7 @@
 
         /* ---- SELECTS COMPARTIDOS ---- */
         function contLlenarSelectClienteDoc(){
-            tacticalPoblarSelectClientes('doc-cliente', (document.getElementById('doc-cliente-filtro')||{}).value);
+            tacticalPoblarSelectClientes('doc-cliente', (document.getElementById('doc-cliente-filtro')||{}).value, true);
         }
         function contAutocompletarTipoDoc(){
             const cli = db_clientes.find(c => c.id === document.getElementById('doc-cliente').value);
@@ -6561,6 +6583,9 @@
         function editarDocVenta(id){
             const doc = db_docventa.find(d=>d.id===id);
             if(!doc) return;
+            // Conde 2026-08-21: "de cliente ya pagadas no las deje eliminar ni editar" -- mismo
+            // candado que CxP.
+            if(doc.estado==='pagada'){ alert('Este documento ya está pagado -- no se puede editar, por seguridad de la información contable.'); return; }
             docVentaEditandoId = id;
             document.getElementById('doc-cliente-filtro').value = '';
             contLlenarSelectClienteDoc();
@@ -6601,6 +6626,7 @@
         function eliminarDocVenta(id){
             const doc = db_docventa.find(d=>d.id===id);
             if(!doc) return;
+            if(doc.estado==='pagada'){ alert('Este documento ya está pagado -- no se puede eliminar, por seguridad de la información contable.'); return; }
             if(!confirm(`¿Eliminar el documento "${doc.numero}"?\n\nEsta acción no se puede deshacer.`)) return;
             tacticalEliminarDocVentaRemoto(id);
             db_docventa = db_docventa.filter(d=>d.id!==id);
@@ -6634,8 +6660,7 @@
                         </div>
                         <div class="action-row">
                             ${doc.tipoDoc==='cuenta_cobro'?`<button class="btn-stage btn-avanzar" style="flex:none; padding:8px 14px;" onclick="contImprimirCuentaCobro('${doc.id}')">🖨️ Imprimir</button>`:''}
-                            <button class="btn-action" onclick="editarDocVenta('${doc.id}')">✏️ Editar</button>
-                            <button class="btn-action" style="color:var(--peligro); border-color:var(--peligro);" onclick="eliminarDocVenta('${doc.id}')">🗑️ Eliminar</button>
+                            ${doc.estado!=='pagada'?`<button class="btn-action" onclick="editarDocVenta('${doc.id}')">✏️ Editar</button><button class="btn-action" style="color:var(--peligro); border-color:var(--peligro);" onclick="eliminarDocVenta('${doc.id}')">🗑️ Eliminar</button>`:'<span style="font-size:0.82rem; color:#718096;">🔒 Pagado — bloqueado para editar/eliminar</span>'}
                         </div>
                     </div>`;
             });
@@ -6671,6 +6696,36 @@
             document.getElementById('ing-valor').value = totalSeleccion.toLocaleString('es-CO');
             document.getElementById('ing-concepto').value = seleccion.length>1 ? `Pago facturas ${numeros}` : `Pago factura ${numeros}`;
         }
+        // Conde 2026-08-21: "en comprobantes de egresos e ingresos permita editar y eliminar" --
+        // mismo patrón de revertir/aplicar ya usado en Egreso, aplicado ahora a Ingreso/Documento de
+        // Venta.
+        function contRevertirEfectoIngreso(ingreso){
+            const idsDoc = (ingreso.idsDocVenta && ingreso.idsDocVenta.length) ? ingreso.idsDocVenta : (ingreso.idDocVenta ? [ingreso.idDocVenta] : []);
+            if(idsDoc.length > 1){
+                idsDoc.forEach(id => {
+                    const doc = db_docventa.find(d=>d.id===id);
+                    if(doc){ doc.saldoPendiente = doc.totalCobrar; doc.estado = 'pendiente'; tacticalSyncDocVenta(doc); }
+                });
+            } else if(idsDoc.length === 1){
+                const doc = db_docventa.find(d=>d.id===idsDoc[0]);
+                if(doc){
+                    doc.saldoPendiente = Math.min(doc.totalCobrar, doc.saldoPendiente + ingreso.valor);
+                    doc.estado = doc.saldoPendiente<=0 ? 'pagada' : (doc.saldoPendiente<doc.totalCobrar ? 'abonado_parcial' : 'pendiente');
+                    tacticalSyncDocVenta(doc);
+                }
+            }
+        }
+        function contAplicarEfectoIngreso(docs, valor){
+            if(docs.length > 1){
+                docs.forEach(doc => { doc.saldoPendiente = 0; doc.estado = 'pagada'; tacticalSyncDocVenta(doc); });
+            } else {
+                const doc = docs[0];
+                doc.saldoPendiente = Math.max(0, doc.saldoPendiente - valor);
+                doc.estado = doc.saldoPendiente<=0 ? 'pagada' : (doc.saldoPendiente<doc.totalCobrar ? 'abonado_parcial' : 'pendiente');
+                tacticalSyncDocVenta(doc);
+            }
+        }
+        let ingresoEditandoId = null;
         async function contGuardarIngreso(){
             const idsDocVenta = [...document.getElementById('ing-docventa').selectedOptions].map(o=>o.value).filter(Boolean);
             const docs = idsDocVenta.map(id => db_docventa.find(d => d.id === id)).filter(Boolean);
@@ -6681,39 +6736,87 @@
 
             if(docs.length===0 || valor<=0){ alert("Debe seleccionar al menos un documento de venta y un valor mayor a 0."); return; }
 
-            const campoNumero = document.getElementById('ing-numero');
-            const esManual = campoNumero.value.trim() && campoNumero.dataset.auto !== 'true';
-            const numero = esManual ? campoNumero.value.trim() : await contSiguienteNumero('ingreso', 'IN-');
-            if(esManual) contActualizarContadorDesdeNumero('ingreso', numero);
-
             const numerosTxt = docs.map(d=>d.numero).join(', ');
-            const ingreso = {
-                id: crypto.randomUUID(), numero, fecha: contHoy(),
-                idCli: docs[0].idCli, idDocVenta: docs[0].id, idsDocVenta, valor,
-                concepto: concepto || (docs.length>1 ? `Pago facturas ${numerosTxt}` : `Pago factura ${numerosTxt}`),
-                medioPago, referenciaSoporte,
-            };
-            db_ingresos.push(ingreso);
-            tacticalSyncIngreso(ingreso);
 
-            // Mismo patrón confirmado en Egreso/CxP: si se eligieron varios documentos para un solo
-            // comprobante, TODOS quedan cobrados por completo (no se reparte el monto entre ellos);
-            // si solo se eligió uno, se conserva el comportamiento de siempre (permite abono parcial).
-            if(docs.length > 1){
-                docs.forEach(doc => {
-                    doc.saldoPendiente = 0; doc.estado = 'pagada';
-                    tacticalSyncDocVenta(doc);
-                });
+            if(ingresoEditandoId){
+                const idx = db_ingresos.findIndex(x => x.id === ingresoEditandoId);
+                if(idx===-1){ alert("Este comprobante ya no existe (puede que se haya eliminado)."); cancelarEdicionIngreso(); return; }
+                const anterior = db_ingresos[idx];
+                contRevertirEfectoIngreso(anterior);
+                const ingresoActualizado = {
+                    ...anterior, idCli: docs[0].idCli, idDocVenta: docs[0].id, idsDocVenta, valor,
+                    concepto: concepto || (docs.length>1 ? `Pago facturas ${numerosTxt}` : `Pago factura ${numerosTxt}`),
+                    medioPago, referenciaSoporte,
+                };
+                contAplicarEfectoIngreso(docs, valor);
+                db_ingresos[idx] = ingresoActualizado;
+                tacticalSyncIngreso(ingresoActualizado);
+                cancelarEdicionIngreso();
             } else {
-                const doc = docs[0];
-                doc.saldoPendiente = Math.max(0, doc.saldoPendiente - valor);
-                doc.estado = doc.saldoPendiente<=0 ? 'pagada' : (doc.saldoPendiente<doc.totalCobrar ? 'abonado_parcial' : 'pendiente');
-                tacticalSyncDocVenta(doc);
-            }
+                const campoNumero = document.getElementById('ing-numero');
+                const esManual = campoNumero.value.trim() && campoNumero.dataset.auto !== 'true';
+                const numero = esManual ? campoNumero.value.trim() : await contSiguienteNumero('ingreso', 'IN-');
+                if(esManual) contActualizarContadorDesdeNumero('ingreso', numero);
 
+                const ingreso = {
+                    id: crypto.randomUUID(), numero, fecha: contHoy(),
+                    idCli: docs[0].idCli, idDocVenta: docs[0].id, idsDocVenta, valor,
+                    concepto: concepto || (docs.length>1 ? `Pago facturas ${numerosTxt}` : `Pago factura ${numerosTxt}`),
+                    medioPago, referenciaSoporte,
+                };
+                db_ingresos.push(ingreso);
+                contAplicarEfectoIngreso(docs, valor);
+                tacticalSyncIngreso(ingreso);
+
+                document.getElementById('ing-valor').value = '0'; document.getElementById('ing-concepto').value = ''; document.getElementById('ing-referencia').value = '';
+                document.getElementById('ing-numero').value = ''; document.getElementById('ing-numero').dataset.auto = '';
+                [...document.getElementById('ing-docventa').options].forEach(o=>o.selected=false);
+            }
+            renderContabilidad();
+        }
+        function editarIngreso(id){
+            const i = db_ingresos.find(x=>x.id===id);
+            if(!i) return;
+            ingresoEditandoId = id;
+            const idsDoc = (i.idsDocVenta && i.idsDocVenta.length) ? i.idsDocVenta : (i.idDocVenta ? [i.idDocVenta] : []);
+            const sel = document.getElementById('ing-docventa');
+            // Los documentos que este ingreso ya dejó en $0 no aparecen en el select (solo lista
+            // saldo pendiente > 0) -- se agregan aparte para poder seguir viéndolos/deseleccionarlos
+            // sin revertir nada todavía (eso solo pasa al guardar, no al abrir a editar).
+            idsDoc.forEach(idDoc => {
+                if(![...sel.options].some(o=>o.value===idDoc)){
+                    const doc = db_docventa.find(d=>d.id===idDoc);
+                    const cli = doc ? db_clientes.find(c=>c.id===doc.idCli) : null;
+                    const label = doc ? `${doc.numero} — ${cli?cli.empresa:'-'} (ya cobrada por este ingreso)` : `Documento eliminado`;
+                    sel.innerHTML += `<option value="${idDoc}">${label}</option>`;
+                }
+            });
+            [...sel.options].forEach(o => o.selected = idsDoc.includes(o.value));
+            document.getElementById('ing-numero').value = i.numero; document.getElementById('ing-numero').dataset.auto = '';
+            document.getElementById('ing-valor').value = (i.valor||0).toLocaleString('es-CO');
+            document.getElementById('ing-medioPago').value = i.medioPago;
+            document.getElementById('ing-concepto').value = i.concepto;
+            document.getElementById('ing-referencia').value = i.referenciaSoporte || '';
+            document.getElementById('ing-btn-guardar').textContent = '💾 Guardar cambios del Comprobante de Ingreso';
+            document.getElementById('ing-btn-cancelar-edicion').style.display = 'block';
+            sel.scrollIntoView({behavior:'smooth', block:'center'});
+        }
+        function cancelarEdicionIngreso(){
+            ingresoEditandoId = null;
             document.getElementById('ing-valor').value = '0'; document.getElementById('ing-concepto').value = ''; document.getElementById('ing-referencia').value = '';
             document.getElementById('ing-numero').value = ''; document.getElementById('ing-numero').dataset.auto = '';
-            [...document.getElementById('ing-docventa').options].forEach(o=>o.selected=false);
+            document.getElementById('ing-btn-guardar').textContent = '+ Registrar Comprobante de Ingreso';
+            document.getElementById('ing-btn-cancelar-edicion').style.display = 'none';
+            renderContabilidad(); // repuebla ing-docventa limpio (quita la opción temporal "ya cobrada por este ingreso")
+        }
+        function eliminarIngreso(id){
+            const i = db_ingresos.find(x=>x.id===id);
+            if(!i) return;
+            if(!confirm(`¿Eliminar el Comprobante de Ingreso "${i.numero}"?\n\nEsto restaura el saldo pendiente del/los documento(s) que cobraba.\n\nEsta acción no se puede deshacer.`)) return;
+            contRevertirEfectoIngreso(i);
+            tacticalEliminarIngresoRemoto(id);
+            db_ingresos = db_ingresos.filter(x=>x.id!==id);
+            if(ingresoEditandoId===id) cancelarEdicionIngreso();
             renderContabilidad();
         }
 
@@ -6728,6 +6831,10 @@
                         <div class="card-title">${i.numero} — ${cotFormatoCop(i.valor)}</div>
                         <div class="card-subtitle">${cli?cli.empresa:'-'} — ${i.fecha}</div>
                         <div style="font-size:0.85rem; color:#4a5568;">${i.concepto}<br>💳 ${i.medioPago==='banco'?'Banco':'Efectivo'} ${i.referenciaSoporte?'— '+i.referenciaSoporte:''}</div>
+                        <div class="action-row">
+                            <button class="btn-action" onclick="editarIngreso('${i.id}')">✏️ Editar</button>
+                            <button class="btn-action" style="color:var(--peligro); border-color:var(--peligro);" onclick="eliminarIngreso('${i.id}')">🗑️ Eliminar</button>
+                        </div>
                     </div>`;
             });
             if(db_ingresos.length===0) container.innerHTML = '<p style="color:#718096; grid-column: 1/-1;">No hay comprobantes de ingreso todavía.</p>';
@@ -6789,6 +6896,9 @@
         function editarCxp(id){
             const c = db_cxp.find(x=>x.id===id);
             if(!c) return;
+            // Conde 2026-08-21: "facturas de proveedor pagadas no las deje editar" -- mismo candado
+            // que ya tenía Eliminar, ahora también en Editar.
+            if(c.estado==='pagado'){ alert('Esta factura ya está pagada -- no se puede editar, por seguridad de la información contable.'); return; }
             cxpEditandoId = id;
             document.getElementById('cxp-proveedor').value = c.proveedor;
             document.getElementById('cxp-numFactura').value = c.numeroFacturaProveedor || '';
@@ -6847,8 +6957,7 @@
                         <div class="card-subtitle">${c.categoria==='fijo'?'Gasto Fijo':'Gasto Variable'} — ${c.subcategoria||''}</div>
                         <div style="font-size:0.9rem;">Monto factura: <strong>${cotFormatoCop(c.monto)}</strong>${c.iva?` (incl. IVA ${cotFormatoCop(c.iva)})`:''}<br>Saldo pendiente: <strong style="color:var(--primary);">${cotFormatoCop(c.saldoPendiente)}</strong> — Vence: <strong>${c.fechaVencimiento||'-'}</strong></div>
                         <div class="action-row">
-                            <button class="btn-action" onclick="editarCxp('${c.id}')">✏️ Editar</button>
-                            ${c.estado!=='pagado'?`<button class="btn-action" style="color:var(--peligro); border-color:var(--peligro);" onclick="eliminarCxp('${c.id}')">🗑️ Eliminar</button>`:''}
+                            ${c.estado!=='pagado'?`<button class="btn-action" onclick="editarCxp('${c.id}')">✏️ Editar</button><button class="btn-action" style="color:var(--peligro); border-color:var(--peligro);" onclick="eliminarCxp('${c.id}')">🗑️ Eliminar</button>`:'<span style="font-size:0.82rem; color:#718096;">🔒 Pagada — bloqueada para editar/eliminar</span>'}
                         </div>
                     </div>`;
             });
@@ -6886,6 +6995,48 @@
             document.getElementById('egr-categoria').value = seleccion[0].categoria;
         }
 
+        // Conde 2026-08-21: "en comprobantes de egresos e ingresos permita editar y eliminar" --
+        // como un Egreso mueve el saldo pendiente de la(s) CxP que paga, editar/eliminar necesita
+        // primero DESHACER el efecto que tenía el egreso anterior sobre esas CxP antes de aplicar el
+        // nuevo (o de borrarlo sin más). contRevertirEfectoEgreso/contAplicarEfectoEgreso separan esa
+        // lógica para poder reusarla en crear, editar y eliminar sin repetirla 3 veces.
+        function contRevertirEfectoEgreso(egreso){
+            const idsCxp = (egreso.idsCxp && egreso.idsCxp.length) ? egreso.idsCxp : (egreso.idCxp ? [egreso.idCxp] : []);
+            if(idsCxp.length > 1){
+                idsCxp.forEach(id => {
+                    const cxp = db_cxp.find(c => c.id === id);
+                    if(cxp){ cxp.saldoPendiente = cxp.monto; cxp.estado = 'pendiente'; if(cxp.idEgreso===egreso.id) cxp.idEgreso = null; tacticalSyncCxp(cxp); }
+                });
+            } else if(idsCxp.length === 1){
+                const cxp = db_cxp.find(c => c.id === idsCxp[0]);
+                if(cxp){
+                    cxp.saldoPendiente = Math.min(cxp.monto, cxp.saldoPendiente + egreso.monto);
+                    cxp.estado = cxp.saldoPendiente<=0 ? 'pagado' : (cxp.saldoPendiente<cxp.monto ? 'abonado_parcial' : 'pendiente');
+                    if(cxp.idEgreso===egreso.id) cxp.idEgreso = null;
+                    tacticalSyncCxp(cxp);
+                }
+            }
+        }
+        function contAplicarEfectoEgreso(egreso, idsCxp, monto){
+            // Conde 2026-08-20 (confirmado): al elegir varias CxP para un solo comprobante, TODAS
+            // quedan pagadas por completo (no se reparte el monto entre ellas) -- si solo se eligió
+            // una, se conserva el comportamiento de siempre (permite abono parcial).
+            if(idsCxp.length > 1){
+                idsCxp.forEach(id => {
+                    const cxp = db_cxp.find(c => c.id === id);
+                    if(cxp){ cxp.saldoPendiente = 0; cxp.estado = 'pagado'; cxp.idEgreso = egreso.id; tacticalSyncCxp(cxp); }
+                });
+            } else if(idsCxp.length === 1){
+                const cxp = db_cxp.find(c => c.id === idsCxp[0]);
+                if(cxp){
+                    cxp.saldoPendiente = Math.max(0, cxp.saldoPendiente - monto);
+                    cxp.estado = cxp.saldoPendiente<=0 ? 'pagado' : (cxp.saldoPendiente<cxp.monto ? 'abonado_parcial' : 'pendiente');
+                    cxp.idEgreso = egreso.id;
+                    tacticalSyncCxp(cxp);
+                }
+            }
+        }
+        let egresoEditandoId = null;
         async function contGuardarEgreso(){
             const idsCxp = [...document.getElementById('egr-cxp').selectedOptions].map(o=>o.value).filter(Boolean);
             const beneficiario = document.getElementById('egr-beneficiario').value.trim();
@@ -6897,39 +7048,80 @@
 
             if(!beneficiario || monto<=0){ alert("Debe ingresar el beneficiario y un monto mayor a 0."); return; }
 
-            const campoNumero = document.getElementById('egr-numero');
-            const esManual = campoNumero.value.trim() && campoNumero.dataset.auto !== 'true';
-            const numero = esManual ? campoNumero.value.trim() : await contSiguienteNumero('egreso', 'EG-');
-            if(esManual) contActualizarContadorDesdeNumero('egreso', numero);
+            if(egresoEditandoId){
+                const idx = db_egresos.findIndex(x => x.id === egresoEditandoId);
+                if(idx===-1){ alert("Este comprobante ya no existe (puede que se haya eliminado)."); cancelarEdicionEgreso(); return; }
+                const anterior = db_egresos[idx];
+                contRevertirEfectoEgreso(anterior);
+                const egresoActualizado = { ...anterior, beneficiario, concepto, monto, categoria, medioPago, referenciaSoporte, idsCxp };
+                contAplicarEfectoEgreso(egresoActualizado, idsCxp, monto);
+                db_egresos[idx] = egresoActualizado;
+                tacticalSyncEgreso(egresoActualizado);
+                cancelarEdicionEgreso();
+            } else {
+                const campoNumero = document.getElementById('egr-numero');
+                const esManual = campoNumero.value.trim() && campoNumero.dataset.auto !== 'true';
+                const numero = esManual ? campoNumero.value.trim() : await contSiguienteNumero('egreso', 'EG-');
+                if(esManual) contActualizarContadorDesdeNumero('egreso', numero);
 
-            const nuevoEgreso = {
-                id: crypto.randomUUID(), numero, fecha: contHoy(),
-                beneficiario, concepto, monto, categoria, medioPago, referenciaSoporte, idsCxp,
-            };
-            db_egresos.push(nuevoEgreso);
-            tacticalSyncEgreso(nuevoEgreso);
+                const nuevoEgreso = {
+                    id: crypto.randomUUID(), numero, fecha: contHoy(),
+                    beneficiario, concepto, monto, categoria, medioPago, referenciaSoporte, idsCxp,
+                };
+                db_egresos.push(nuevoEgreso);
+                contAplicarEfectoEgreso(nuevoEgreso, idsCxp, monto);
+                tacticalSyncEgreso(nuevoEgreso);
 
-            // Conde 2026-08-20 (confirmado): al elegir varias CxP para un solo comprobante, TODAS
-            // quedan pagadas por completo (no se reparte el monto entre ellas) -- si solo se eligió
-            // una, se conserva el comportamiento de siempre (permite abono parcial).
-            if(idsCxp.length > 1){
-                idsCxp.forEach(id => {
-                    const cxp = db_cxp.find(c => c.id === id);
-                    if(cxp){ cxp.saldoPendiente = 0; cxp.estado = 'pagado'; cxp.idEgreso = nuevoEgreso.id; tacticalSyncCxp(cxp); }
-                });
-            } else if(idsCxp.length === 1){
-                const cxp = db_cxp.find(c => c.id === idsCxp[0]);
-                if(cxp){
-                    cxp.saldoPendiente = Math.max(0, cxp.saldoPendiente - monto);
-                    cxp.estado = cxp.saldoPendiente<=0 ? 'pagado' : (cxp.saldoPendiente<cxp.monto ? 'abonado_parcial' : 'pendiente');
-                    cxp.idEgreso = nuevoEgreso.id;
-                    tacticalSyncCxp(cxp);
-                }
+                document.getElementById('egr-beneficiario').value=''; document.getElementById('egr-concepto').value=''; document.getElementById('egr-monto').value='0'; document.getElementById('egr-referencia').value='';
+                [...document.getElementById('egr-cxp').options].forEach(o=>o.selected=false);
+                document.getElementById('egr-numero').value=''; document.getElementById('egr-numero').dataset.auto='';
             }
-
+            renderContabilidad();
+        }
+        function editarEgreso(id){
+            const e = db_egresos.find(x=>x.id===id);
+            if(!e) return;
+            egresoEditandoId = id;
+            const idsCxp = (e.idsCxp && e.idsCxp.length) ? e.idsCxp : (e.idCxp ? [e.idCxp] : []);
+            const sel = document.getElementById('egr-cxp');
+            // Las CxP que este egreso ya dejó en $0 no aparecen en el select (solo lista saldo
+            // pendiente > 0) -- se agregan aparte para poder seguir viéndolas/deseleccionarlas sin
+            // tener que revertir nada todavía (eso solo pasa al guardar, no al abrir a editar).
+            idsCxp.forEach(idCxp => {
+                if(![...sel.options].some(o=>o.value===idCxp)){
+                    const cxp = db_cxp.find(c=>c.id===idCxp);
+                    const label = cxp ? `${cxp.numeroFacturaProveedor||cxp.numero} — ${cxp.proveedor} (ya pagada por este egreso)` : `Factura eliminada`;
+                    sel.innerHTML += `<option value="${idCxp}">${label}</option>`;
+                }
+            });
+            [...sel.options].forEach(o => o.selected = idsCxp.includes(o.value));
+            document.getElementById('egr-numero').value = e.numero; document.getElementById('egr-numero').dataset.auto = '';
+            document.getElementById('egr-beneficiario').value = e.beneficiario;
+            document.getElementById('egr-concepto').value = e.concepto;
+            document.getElementById('egr-monto').value = (e.monto||0).toLocaleString('es-CO');
+            document.getElementById('egr-categoria').value = e.categoria;
+            document.getElementById('egr-medioPago').value = e.medioPago;
+            document.getElementById('egr-referencia').value = e.referenciaSoporte || '';
+            document.getElementById('egr-btn-guardar').textContent = '💾 Guardar cambios del Comprobante de Egreso';
+            document.getElementById('egr-btn-cancelar-edicion').style.display = 'block';
+            sel.scrollIntoView({behavior:'smooth', block:'center'});
+        }
+        function cancelarEdicionEgreso(){
+            egresoEditandoId = null;
             document.getElementById('egr-beneficiario').value=''; document.getElementById('egr-concepto').value=''; document.getElementById('egr-monto').value='0'; document.getElementById('egr-referencia').value='';
-            [...document.getElementById('egr-cxp').options].forEach(o=>o.selected=false);
             document.getElementById('egr-numero').value=''; document.getElementById('egr-numero').dataset.auto='';
+            document.getElementById('egr-btn-guardar').textContent = '+ Registrar Comprobante de Egreso';
+            document.getElementById('egr-btn-cancelar-edicion').style.display = 'none';
+            renderContabilidad(); // repuebla egr-cxp limpio (quita la opción temporal "ya pagada por este egreso")
+        }
+        function eliminarEgreso(id){
+            const e = db_egresos.find(x=>x.id===id);
+            if(!e) return;
+            if(!confirm(`¿Eliminar el Comprobante de Egreso "${e.numero}"?\n\nEsto restaura el saldo pendiente de la(s) factura(s) que pagaba.\n\nEsta acción no se puede deshacer.`)) return;
+            contRevertirEfectoEgreso(e);
+            tacticalEliminarEgresoRemoto(id);
+            db_egresos = db_egresos.filter(x=>x.id!==id);
+            if(egresoEditandoId===id) cancelarEdicionEgreso();
             renderContabilidad();
         }
 
@@ -6943,6 +7135,10 @@
                         <div class="card-title">${e.numero} — ${cotFormatoCop(e.monto)}</div>
                         <div class="card-subtitle">${e.beneficiario} — ${e.categoria==='fijo'?'Fijo':'Variable'} — ${e.fecha}</div>
                         <div style="font-size:0.85rem; color:#4a5568;">${e.concepto}<br>💳 ${e.medioPago==='banco'?'Banco':'Efectivo'} ${e.referenciaSoporte?'— '+e.referenciaSoporte:''}</div>
+                        <div class="action-row">
+                            <button class="btn-action" onclick="editarEgreso('${e.id}')">✏️ Editar</button>
+                            <button class="btn-action" style="color:var(--peligro); border-color:var(--peligro);" onclick="eliminarEgreso('${e.id}')">🗑️ Eliminar</button>
+                        </div>
                     </div>`;
             });
             if(db_egresos.length===0) container.innerHTML = '<p style="color:#718096; grid-column: 1/-1;">No hay comprobantes de egreso todavía.</p>';
@@ -6953,12 +7149,30 @@
             const hoy = contHoy();
             const tbodyCxc = document.getElementById('cont-tabla-cxc');
             if(tbodyCxc){
-                let filas = '';
-                db_docventa.filter(d => d.saldoPendiente>0).forEach(d => {
+                // Conde 2026-08-22: "en el informe de cuentas por cobrar tenga un total general y
+                // tambien por cliente" -- mismo patrón ya usado abajo para Cuentas por Pagar
+                // (agrupado por proveedor con total por proveedor + total general).
+                const pendientesCxc = db_docventa.filter(d => d.saldoPendiente>0);
+                const porCliente = {};
+                pendientesCxc.forEach(d => {
                     const cli = db_clientes.find(c => c.id === d.idCli);
-                    const vencida = d.fechaVencimiento && d.fechaVencimiento < hoy;
-                    filas += `<tr><td>${d.numero}</td><td>${cli?cli.empresa:'-'}</td><td>${d.tipoDoc==='factura'?'Factura':'Cta. Cobro'}</td><td>${cotFormatoCop(d.saldoPendiente)}</td><td>${d.fechaVencimiento||'-'}</td><td style="color:${vencida?'var(--peligro)':'inherit'}; font-weight:${vencida?'bold':'normal'};">${vencida?'⚠️ Vencida':d.estado}</td></tr>`;
+                    const nombre = cli ? cli.empresa : 'Cliente eliminado';
+                    (porCliente[nombre] = porCliente[nombre]||[]).push(d);
                 });
+                const clientesOrdenados = Object.keys(porCliente).sort((a,b)=>a.localeCompare(b,'es'));
+                let filas = '', totalGeneralCxc = 0;
+                clientesOrdenados.forEach(nombreCli => {
+                    const lista = [...porCliente[nombreCli]].sort((a,b)=>(a.numero||'').localeCompare(b.numero||'', 'es'));
+                    let totalCliente = 0;
+                    lista.forEach(d => {
+                        const vencida = d.fechaVencimiento && d.fechaVencimiento < hoy;
+                        totalCliente += d.saldoPendiente;
+                        filas += `<tr><td>${d.numero}</td><td>${nombreCli}</td><td>${d.tipoDoc==='factura'?'Factura':'Cta. Cobro'}</td><td>${cotFormatoCop(d.saldoPendiente)}</td><td>${d.fechaVencimiento||'-'}</td><td style="color:${vencida?'var(--peligro)':'inherit'}; font-weight:${vencida?'bold':'normal'};">${vencida?'⚠️ Vencida':d.estado}</td></tr>`;
+                    });
+                    totalGeneralCxc += totalCliente;
+                    filas += `<tr style="background:#f1f5f9; font-weight:bold;"><td colspan="3">Total ${nombreCli}</td><td colspan="3">${cotFormatoCop(totalCliente)}</td></tr>`;
+                });
+                if(pendientesCxc.length) filas += `<tr style="background:#e2e8f0; font-weight:bold; font-size:1.02em;"><td colspan="3">TOTAL GENERAL</td><td colspan="3">${cotFormatoCop(totalGeneralCxc)}</td></tr>`;
                 tbodyCxc.innerHTML = filas || '<tr><td colspan="6" style="color:#718096;">Sin cartera por cobrar pendiente.</td></tr>';
             }
             const tbodyCxp = document.getElementById('cont-tabla-cxp');

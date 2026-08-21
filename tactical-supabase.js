@@ -643,6 +643,15 @@ async function tacticalEliminarCxpRemoto(id){
   const { error } = await tacticalSupabase.from('cuentas_por_pagar').delete().eq('id', id);
   if(error) console.error('Error eliminando cuenta por pagar en Supabase:', error);
 }
+// Conde 2026-08-21: "en comprobantes de egresos e ingresos permita editar y eliminar".
+async function tacticalEliminarEgresoRemoto(id){
+  const { error } = await tacticalSupabase.from('egresos').delete().eq('id', id);
+  if(error) console.error('Error eliminando egreso en Supabase:', error);
+}
+async function tacticalEliminarIngresoRemoto(id){
+  const { error } = await tacticalSupabase.from('ingresos').delete().eq('id', id);
+  if(error) console.error('Error eliminando ingreso en Supabase:', error);
+}
 
 // ============ CONTROL DE REPROCESOS ============
 function tacticalReprocesoADb(inc){
