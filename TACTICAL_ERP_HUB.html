@@ -1215,18 +1215,19 @@
                                 <label>Condición de Pago:</label>
                                 <select id="doc-condicionPago">
                                     <option value="contado">Contado</option>
+                                    <option value="credito1">Crédito 1 día</option>
                                     <option value="credito30">Crédito 30 días</option>
                                     <option value="anticipo50">Anticipo 50%</option>
                                 </select>
                             </div>
                             <div class="form-group" style="display:flex; align-items:flex-end;">
-                                <div class="checkbox-row"><input type="checkbox" id="doc-aplicaReteiva"><label for="doc-aplicaReteiva" style="font-weight:normal; margin:0;">Cliente aplica RETEIVA 15% (agente retenedor)</label></div>
+                                <div class="checkbox-row"><input type="checkbox" id="doc-aplicaReteiva" onchange="contToggleReteivaCol()"><label for="doc-aplicaReteiva" style="font-weight:normal; margin:0;">Cliente aplica RETEIVA 15% (agente retenedor)</label></div>
                             </div>
                             <div class="form-group"><label>Vendedor:</label><select id="doc-vendedor"></select></div>
                         </div>
                         <label style="display:block; font-weight:bold; margin-bottom:5px; font-size:0.88rem; color:var(--secondary);">Ítems del documento (hasta 10):</label>
                         <div class="table-responsive"><table>
-                            <thead><tr><th>Descripción</th><th style="width:90px;">Cantidad</th><th style="width:140px;">Valor Unitario</th><th style="width:120px;">IVA</th><th style="width:150px;">Valor Total</th><th></th></tr></thead>
+                            <thead><tr><th>Descripción</th><th style="width:90px;">Cantidad</th><th style="width:140px;">Valor Unitario</th><th style="width:120px;">IVA</th><th class="col-reteiva" id="doc-th-reteiva" style="width:110px; display:none;">ReteIVA 15%</th><th style="width:150px;">Valor Total</th><th></th></tr></thead>
                             <tbody id="doc-items-body"></tbody>
                         </table></div>
                         <button class="btn-add-item" type="button" onclick="contAgregarItemDoc()">+ Agregar ítem</button>
@@ -1246,14 +1247,14 @@
                     </div>
                     <div id="cont-ingreso" class="accordion-content">
                         <div class="form-grid">
-                            <div class="form-group" style="flex-basis:100%;"><label>Documento de Venta a abonar:</label><select id="ing-docventa"></select></div>
+                            <div class="form-group" style="flex-basis:100%;"><label>Documento(s) de Venta a cobrar (Ctrl/Cmd+clic para elegir varios del MISMO cliente):</label><select id="ing-docventa" multiple size="5" onchange="contAutocompletarIngresoDesdeDocs()"></select></div>
                             <div class="form-group"><label>N° de Comprobante:</label><input type="text" id="ing-numero" placeholder="Ej: IN-0001" oninput="this.dataset.auto=''"></div>
                             <div class="form-group"><label>Valor Recibido:</label><input type="text" inputmode="numeric" id="ing-valor" value="0" oninput="contFormatearMiles(this)"></div>
                             <div class="form-group">
                                 <label>Medio de Pago:</label>
                                 <select id="ing-medioPago"><option value="banco">Banco / Transferencia</option><option value="efectivo">Efectivo</option></select>
                             </div>
-                            <div class="form-group"><label>Concepto:</label><input type="text" id="ing-concepto" placeholder="Ej: Abono factura CC-0004"></div>
+                            <div class="form-group"><label>Concepto:</label><input type="text" id="ing-concepto" placeholder="Ej: Pago factura CC-0004"></div>
                             <div class="form-group"><label>Referencia del soporte (banco al que ingresó el dinero):</label><input type="text" id="ing-referencia" placeholder="Ej: Bancolombia #123456"></div>
                             <div class="form-group" style="display:flex; align-items:flex-end;">
                                 <button class="btn-submit" onclick="contGuardarIngreso()">+ Registrar Comprobante de Ingreso</button>
@@ -5037,6 +5038,20 @@
           for(const l of lineasImpresion){
             if(l.rol==="caratula"){ l.anchoCm=tamanoMaquinaCaratula[0]; l.altoCm=tamanoMaquinaCaratula[1]; l.hojasPorCuaderno=1; }
           }
+          // Conde 2026-08-21: en encuadernación anillada (anillo doble O) el taco real es MÁS CHICO
+          // que la tapa -- 0,5cm menos de ancho y 0,5cm menos de alto -- porque la tapa necesita
+          // quedar un poco más grande para proteger los bordes del taco al cerrar el anillado.
+          // Confirmado por Conde con 2 ejemplos exactos: cuaderno 21x14 → taco real 20,5x13,5;
+          // cuaderno 24x17 → taco real 23,5x16,5. Sin este ajuste el motor calculaba el plano de
+          // impresión del Taco con el tamaño nominal del cuaderno (más grande de lo real), rindiendo
+          // menos piezas por montaje de las que en realidad caben (ej. Taco 21x14 al tamaño nominal
+          // rinde 9 piezas por medio pliego con margen de pinza descontado, pero al tamaño real
+          // 20,5x13,5 rinden 10 -- la reducción del taco compensa exactamente lo que resta la pinza).
+          // Solo aplica a encuadernación anillada (Cuaderno Anillado y Libretas con Anillo Doble O) --
+          // Escolar (grapa/hilo) y Agenda Ejecutiva (costura) no tienen este mecanismo.
+          if(p.encuadernacionTipo==="anillo_doble_o"){
+            for(const l of lineasImpresion){ if(l.rol==="taco"){ l.anchoCm=p.anchoCm-0.5; l.altoCm=p.altoCm-0.5; } }
+          }
           const desglose={}, detalleLineas={};
           for(const l of lineasImpresion){
             const r=procesarLineaImpresion(l,p.anchoCm,p.altoCm,p.cantidad);
@@ -6227,22 +6242,26 @@
         }
 
         /* ---- ÍTEMS: Documento de Venta (hasta 10 renglones, se suman a Valor Bruto) ----
-           Conde 2026-08-20: el IVA es una columna más por ítem (Descripción-Cantidad-Valor
-           Unitario-IVA-Valor Total), 100% manual (arranca en $0, sin sugerencia automática) --
-           reemplaza el cálculo único que había antes a nivel de documento. Valor Total de cada
-           ítem = Cantidad×Valor Unitario + IVA de ese ítem. */
+           Conde 2026-08-21: el IVA de cada ítem se sugiere solo (19% de Cantidad×Valor Unitario)
+           pero se puede editar o dejar en 0 -- mismo patrón "editadoManual" ya usado en CxP (antes
+           era 100% manual, arrancaba en $0 sin sugerencia). Valor Total de cada ítem =
+           Cantidad×Valor Unitario + IVA de ese ítem. Si "Cliente aplica RETEIVA 15%" está marcado,
+           se muestra además una columna informativa ReteIVA 15% = 15% del IVA de esa línea (no
+           resta del Valor Total del ítem, el ReteIVA se descuenta a nivel de documento). */
         let contDocItemContador = 0;
         function contAgregarItemDoc(descripcion, cantidad, valorUnitario, iva){
             if(document.querySelectorAll('#doc-items-body tr').length >= 10){ alert('Máximo 10 ítems por documento.'); return; }
             contDocItemContador++;
             const id = 'docitem_'+contDocItemContador;
+            const mostrarReteiva = document.getElementById('doc-aplicaReteiva').checked;
             const tr = document.createElement('tr');
             tr.id = id;
             tr.innerHTML = `
                 <td><input type="text" id="${id}_desc" value="${descripcion||''}" placeholder="Descripción del ítem"></td>
                 <td><input type="number" id="${id}_cant" value="${cantidad||1}" min="1" oninput="contRecalcularItemDoc('${id}')"></td>
                 <td><input type="text" inputmode="numeric" id="${id}_valorU" value="${valorUnitario?Number(valorUnitario).toLocaleString('es-CO'):''}" oninput="contFormatearMiles(this); contRecalcularItemDoc('${id}')"></td>
-                <td><input type="text" inputmode="numeric" id="${id}_iva" value="${iva?Number(iva).toLocaleString('es-CO'):'0'}" oninput="contFormatearMiles(this); contRecalcularItemDoc('${id}')"></td>
+                <td><input type="text" inputmode="numeric" id="${id}_iva" value="${iva?Number(iva).toLocaleString('es-CO'):'0'}" oninput="contFormatearMiles(this); this.dataset.editadoManual='1'; contRecalcularItemDoc('${id}')"></td>
+                <td class="col-reteiva" id="${id}_reteiva" style="display:${mostrarReteiva?'':'none'};">$0</td>
                 <td id="${id}_total">$0</td>
                 <td><button type="button" class="btn-action btn-del-row" onclick="contQuitarItemDoc('${id}')">✕</button></td>`;
             document.getElementById('doc-items-body').appendChild(tr);
@@ -6251,9 +6270,24 @@
         function contRecalcularItemDoc(id){
             const cant = parseFloat(document.getElementById(id+'_cant').value) || 0;
             const valorU = contNumeroDesdeInput(document.getElementById(id+'_valorU'));
-            const iva = contNumeroDesdeInput(document.getElementById(id+'_iva'));
+            const ivaInput = document.getElementById(id+'_iva');
+            if(ivaInput.dataset.editadoManual !== '1'){
+                ivaInput.value = Math.round(cant*valorU*0.19).toLocaleString('es-CO');
+            }
+            const iva = contNumeroDesdeInput(ivaInput);
+            const reteivaTd = document.getElementById(id+'_reteiva');
+            if(reteivaTd) reteivaTd.innerText = cotFormatoCop(document.getElementById('doc-aplicaReteiva').checked ? Math.round(iva*0.15) : 0);
             document.getElementById(id+'_total').innerText = cotFormatoCop(cant*valorU + iva);
             contActualizarTotalDoc();
+        }
+        // Conde 2026-08-21: al activar/desactivar "Cliente aplica RETEIVA 15%" se muestra/oculta la
+        // columna ReteIVA 15% (encabezado + celdas de todas las filas) y se recalcula cada fila.
+        function contToggleReteivaCol(){
+            const aplica = document.getElementById('doc-aplicaReteiva').checked;
+            const th = document.getElementById('doc-th-reteiva');
+            if(th) th.style.display = aplica ? '' : 'none';
+            document.querySelectorAll('#doc-items-body .col-reteiva').forEach(td => td.style.display = aplica ? '' : 'none');
+            document.querySelectorAll('#doc-items-body tr').forEach(tr => contRecalcularItemDoc(tr.id));
         }
         function contQuitarItemDoc(id){
             const el = document.getElementById(id);
@@ -6445,7 +6479,7 @@
             const reteiva = (tipoDoc === 'factura' && aplicaReteiva) ? Math.round(iva*0.15) : 0;
             const totalDocumento = valorBruto + iva - reteiva;
             const totalCobrar = totalDocumento + valorEnvio;
-            const fechaVencimiento = condicionPago === 'credito30' ? contSumarDias(contHoy(),30) : (condicionPago === 'contado' ? contHoy() : '');
+            const fechaVencimiento = condicionPago === 'credito30' ? contSumarDias(contHoy(),30) : (condicionPago === 'credito1' ? contSumarDias(contHoy(),1) : (condicionPago === 'contado' ? contHoy() : ''));
 
             if(docVentaEditandoId){
                 const idx = db_docventa.findIndex(d => d.id === docVentaEditandoId);
@@ -6535,9 +6569,24 @@
             document.getElementById('doc-valorEnvio').value = (doc.valorEnvio||0).toLocaleString('es-CO');
             document.getElementById('doc-condicionPago').value = doc.condicionPago;
             document.getElementById('doc-aplicaReteiva').checked = !!doc.reteiva;
+            // Poner .checked por código no dispara el onchange del checkbox -- hay que mostrar/
+            // ocultar el encabezado de la columna ReteIVA a mano (las celdas de cada fila se
+            // resuelven solas dentro de contAgregarItemDoc, que sí lee el checkbox directo).
+            document.getElementById('doc-th-reteiva').style.display = doc.reteiva ? '' : 'none';
             document.getElementById('doc-vendedor').value = doc.vendedor || '';
             contLimpiarItemsDoc();
-            (doc.items||[]).forEach(it => contAgregarItemDoc(it.descripcion, it.cantidad, it.valorUnitario, it.iva));
+            (doc.items||[]).forEach(it => {
+                contAgregarItemDoc(it.descripcion, it.cantidad, it.valorUnitario, it.iva);
+                // Mismo cuidado que editarCxp: contAgregarItemDoc ya recalculó el IVA solo a 19% al
+                // crear la fila (antes de poder marcarla "editadoManual") -- se restaura el valor
+                // guardado y RECIÉN AHÍ se marca manual, para no pisar un IVA distinto que se haya
+                // guardado a mano.
+                const idFila = document.querySelector('#doc-items-body tr:last-child').id;
+                const ivaInput = document.getElementById(idFila+'_iva');
+                ivaInput.value = (it.iva||0).toLocaleString('es-CO');
+                ivaInput.dataset.editadoManual = '1';
+                contRecalcularItemDoc(idFila);
+            });
             document.getElementById('doc-btn-guardar').textContent = '💾 Guardar cambios del Documento de Venta';
             document.getElementById('doc-btn-cancelar-edicion').style.display = 'block';
             document.getElementById('doc-cliente').scrollIntoView({behavior:'smooth', block:'center'});
@@ -6594,7 +6643,8 @@
 
             const selIngreso = document.getElementById('ing-docventa');
             if(selIngreso){
-                selIngreso.innerHTML = '<option value="">-- Seleccione un documento con saldo pendiente --</option>';
+                // Con multiple no hace falta una opción vacía aparte -- ninguna marcada ya significa eso.
+                selIngreso.innerHTML = '';
                 db_docventa.filter(d => d.saldoPendiente>0).forEach(d => {
                     const cli = db_clientes.find(c => c.id === d.idCli);
                     selIngreso.innerHTML += `<option value="${d.id}">${d.numero} — ${cli?cli.empresa:'-'} — saldo ${cotFormatoCop(d.saldoPendiente)}</option>`;
@@ -6603,34 +6653,67 @@
         }
 
         /* ---- COMPROBANTE DE INGRESO ---- */
+        // Conde 2026-08-21: "permita seleccionar varias facturas para el caso que el cliente pague
+        // mas de 1 factura a la vez" -- mismo patrón ya usado en Egreso/CxP (2026-08-20): al elegir
+        // varios documentos para un solo comprobante, autocompleta Concepto ("Pago facturas ...") y
+        // Valor Recibido (suma de los saldos pendientes de todos los seleccionados).
+        function contAutocompletarIngresoDesdeDocs(){
+            const ids = [...document.getElementById('ing-docventa').selectedOptions].map(o=>o.value).filter(Boolean);
+            const seleccion = ids.map(id => db_docventa.find(d=>d.id===id)).filter(Boolean);
+            if(seleccion.length===0) return;
+            const clientes = [...new Set(seleccion.map(d=>d.idCli))];
+            if(clientes.length>1){
+                alert('Elegiste facturas de clientes distintos -- un solo comprobante de ingreso debe ser para UN solo cliente. Deja marcadas solo las de un cliente.');
+                return;
+            }
+            const totalSeleccion = seleccion.reduce((s,d)=>s+d.saldoPendiente,0);
+            const numeros = seleccion.map(d=>d.numero).join(', ');
+            document.getElementById('ing-valor').value = totalSeleccion.toLocaleString('es-CO');
+            document.getElementById('ing-concepto').value = seleccion.length>1 ? `Pago facturas ${numeros}` : `Pago factura ${numeros}`;
+        }
         async function contGuardarIngreso(){
-            const idDocVenta = document.getElementById('ing-docventa').value;
-            const doc = db_docventa.find(d => d.id === idDocVenta);
+            const idsDocVenta = [...document.getElementById('ing-docventa').selectedOptions].map(o=>o.value).filter(Boolean);
+            const docs = idsDocVenta.map(id => db_docventa.find(d => d.id === id)).filter(Boolean);
             const valor = contNumeroDesdeInput(document.getElementById('ing-valor'));
             const medioPago = document.getElementById('ing-medioPago').value;
             const concepto = document.getElementById('ing-concepto').value.trim();
             const referenciaSoporte = document.getElementById('ing-referencia').value.trim();
 
-            if(!doc || valor<=0){ alert("Debe seleccionar un documento de venta y un valor mayor a 0."); return; }
+            if(docs.length===0 || valor<=0){ alert("Debe seleccionar al menos un documento de venta y un valor mayor a 0."); return; }
 
             const campoNumero = document.getElementById('ing-numero');
             const esManual = campoNumero.value.trim() && campoNumero.dataset.auto !== 'true';
             const numero = esManual ? campoNumero.value.trim() : await contSiguienteNumero('ingreso', 'IN-');
             if(esManual) contActualizarContadorDesdeNumero('ingreso', numero);
 
+            const numerosTxt = docs.map(d=>d.numero).join(', ');
             const ingreso = {
                 id: crypto.randomUUID(), numero, fecha: contHoy(),
-                idCli: doc.idCli, idDocVenta, valor, concepto: concepto || `Abono a ${doc.numero}`, medioPago, referenciaSoporte,
+                idCli: docs[0].idCli, idDocVenta: docs[0].id, idsDocVenta, valor,
+                concepto: concepto || (docs.length>1 ? `Pago facturas ${numerosTxt}` : `Pago factura ${numerosTxt}`),
+                medioPago, referenciaSoporte,
             };
             db_ingresos.push(ingreso);
             tacticalSyncIngreso(ingreso);
 
-            doc.saldoPendiente = Math.max(0, doc.saldoPendiente - valor);
-            doc.estado = doc.saldoPendiente<=0 ? 'pagada' : (doc.saldoPendiente<doc.totalCobrar ? 'abonado_parcial' : 'pendiente');
-            tacticalSyncDocVenta(doc);
+            // Mismo patrón confirmado en Egreso/CxP: si se eligieron varios documentos para un solo
+            // comprobante, TODOS quedan cobrados por completo (no se reparte el monto entre ellos);
+            // si solo se eligió uno, se conserva el comportamiento de siempre (permite abono parcial).
+            if(docs.length > 1){
+                docs.forEach(doc => {
+                    doc.saldoPendiente = 0; doc.estado = 'pagada';
+                    tacticalSyncDocVenta(doc);
+                });
+            } else {
+                const doc = docs[0];
+                doc.saldoPendiente = Math.max(0, doc.saldoPendiente - valor);
+                doc.estado = doc.saldoPendiente<=0 ? 'pagada' : (doc.saldoPendiente<doc.totalCobrar ? 'abonado_parcial' : 'pendiente');
+                tacticalSyncDocVenta(doc);
+            }
 
             document.getElementById('ing-valor').value = '0'; document.getElementById('ing-concepto').value = ''; document.getElementById('ing-referencia').value = '';
             document.getElementById('ing-numero').value = ''; document.getElementById('ing-numero').dataset.auto = '';
+            [...document.getElementById('ing-docventa').options].forEach(o=>o.selected=false);
             renderContabilidad();
         }
 
@@ -6741,6 +6824,10 @@
         function eliminarCxp(id){
             const c = db_cxp.find(x=>x.id===id);
             if(!c) return;
+            // Conde 2026-08-21: "para la factura proveedor que ya esta pagada quita la opcion de
+            // eliminar por seguridad de la informacion" -- el botón ya no aparece en la tarjeta (ver
+            // renderCxp), esto es el candado de respaldo por si se llama directo.
+            if(c.estado==='pagado'){ alert('Esta factura ya está pagada -- no se puede eliminar, por seguridad de la información contable.'); return; }
             if(!confirm(`¿Eliminar la Cuenta por Pagar "${c.numeroFacturaProveedor||c.numero} — ${c.proveedor}"?\n\nEsta acción no se puede deshacer.`)) return;
             tacticalEliminarCxpRemoto(id);
             db_cxp = db_cxp.filter(x=>x.id!==id);
@@ -6761,7 +6848,7 @@
                         <div style="font-size:0.9rem;">Monto factura: <strong>${cotFormatoCop(c.monto)}</strong>${c.iva?` (incl. IVA ${cotFormatoCop(c.iva)})`:''}<br>Saldo pendiente: <strong style="color:var(--primary);">${cotFormatoCop(c.saldoPendiente)}</strong> — Vence: <strong>${c.fechaVencimiento||'-'}</strong></div>
                         <div class="action-row">
                             <button class="btn-action" onclick="editarCxp('${c.id}')">✏️ Editar</button>
-                            <button class="btn-action" style="color:var(--peligro); border-color:var(--peligro);" onclick="eliminarCxp('${c.id}')">🗑️ Eliminar</button>
+                            ${c.estado!=='pagado'?`<button class="btn-action" style="color:var(--peligro); border-color:var(--peligro);" onclick="eliminarCxp('${c.id}')">🗑️ Eliminar</button>`:''}
                         </div>
                     </div>`;
             });
@@ -6794,7 +6881,7 @@
             const totalSeleccion = seleccion.reduce((s,c)=>s+c.saldoPendiente,0);
             const numeros = seleccion.map(c=>c.numeroFacturaProveedor||c.numero).join(', ');
             document.getElementById('egr-beneficiario').value = proveedores[0];
-            document.getElementById('egr-concepto').value = seleccion.length>1 ? `Abono facturas ${numeros}` : `Abono factura ${numeros}`;
+            document.getElementById('egr-concepto').value = seleccion.length>1 ? `Pago facturas ${numeros}` : `Pago factura ${numeros}`;
             document.getElementById('egr-monto').value = totalSeleccion.toLocaleString('es-CO');
             document.getElementById('egr-categoria').value = seleccion[0].categoria;
         }
