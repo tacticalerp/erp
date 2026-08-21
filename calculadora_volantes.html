@@ -1850,7 +1850,15 @@ function generarPDFComparativo(){
   const fecha = new Date().toLocaleDateString('es-CO', {year:'numeric', month:'long', day:'numeric'});
   const validoHasta = fechaMasDias(new Date(), 30);
 
-  const bloquesOpciones = comp.opciones.map((op,i) => `
+  // Conde 2026-08-21: no repetir la misma foto/video en cada opción de la comparativa si es el
+  // mismo producto (ej. varias opciones que solo cambian la cantidad) -- solo la primera aparición.
+  const fotosYaMostradasComp = new Set(), videosYaMostradosComp = new Set();
+  const bloquesOpciones = comp.opciones.map((op,i) => {
+    const mostrarFoto = op.fotoUrl && !fotosYaMostradasComp.has(op.fotoUrl);
+    if(op.fotoUrl) fotosYaMostradasComp.add(op.fotoUrl);
+    const mostrarVideo = op.videoUrl && !videosYaMostradosComp.has(op.videoUrl);
+    if(op.videoUrl) videosYaMostradosComp.add(op.videoUrl);
+    return `
     <div class="doc-section-title">Opción ${i+1}: ${op.titulo}</div>
     <table class="doc-table">
       <tr><td>Cantidad</td><td style="text-align:right;">${op.params.cantidad}</td></tr>
@@ -1858,9 +1866,10 @@ function generarPDFComparativo(){
       <tr><td>Subtotal</td><td style="text-align:right;">${cop(op.resultado.precioVentaTotal)}</td></tr>
       <tr><td>IVA (19%)</td><td style="text-align:right;">${cop(op.resultado.ivaTotal)}</td></tr>
     </table>
-    ${op.fotoUrl ? `<img src="${op.fotoUrl}" style="max-width:140px; max-height:140px; margin-bottom:4px; border:1px solid #d7dee5; border-radius:4px;">` : ''}
-    ${op.videoUrl ? `<div style="margin-bottom:4px;"><a href="${op.videoUrl}" style="display:inline-block; background:#cc0000; color:#fff; text-decoration:none; padding:4px 10px; border-radius:4px; font-size:0.72rem; font-weight:bold;">▶ Ver video del producto</a></div>` : ''}
-    <div class="doc-total-box">TOTAL Opción ${i+1}: ${cop(op.resultado.precioFinalTotal)} COP</div>`).join('');
+    ${mostrarFoto ? `<img src="${op.fotoUrl}" style="max-width:140px; max-height:140px; margin-bottom:4px; border:1px solid #d7dee5; border-radius:4px;">` : ''}
+    ${mostrarVideo ? `<div style="margin-bottom:4px;"><a href="${op.videoUrl}" style="display:inline-block; background:#cc0000; color:#fff; text-decoration:none; padding:4px 10px; border-radius:4px; font-size:0.72rem; font-weight:bold;">▶ Ver video del producto</a></div>` : ''}
+    <div class="doc-total-box">TOTAL Opción ${i+1}: ${cop(op.resultado.precioFinalTotal)} COP</div>`;
+  }).join('');
 
   const html = `
     <div class="doc-header">

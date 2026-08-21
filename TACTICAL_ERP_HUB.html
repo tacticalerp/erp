@@ -129,7 +129,13 @@
         .kpi-value { font-size: 2.2rem; font-weight: bold; margin: 10px 0; }
 
         .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; margin-top: 15px; }
-        .data-card { background: white; border: 1px solid #cbd5e0; border-radius: 8px; padding: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); position: relative; border-left: 5px solid var(--secondary); }
+        /* min-width:0 es necesario porque .card-title.desc-clamp usa white-space:nowrap -- sin esto,
+           una descripción larga fuerza el ancho "auto" del track del grid a estirarse para caber el
+           texto completo SIN cortar (el text-overflow:ellipsis nunca llega a activarse), y la tarjeta
+           termina saliéndose de la pantalla en vez de recortar el texto (Conde 2026-08-21: "la ficha
+           se sale de la pantalla del celular" -- confirmado midiendo 885px de tarjeta en un viewport
+           de 375px, corregido a los 325px reales solo con este min-width). */
+        .data-card { background: white; border: 1px solid #cbd5e0; border-radius: 8px; padding: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); position: relative; border-left: 5px solid var(--secondary); min-width: 0; }
         .card-title { font-size: 1.15rem; font-weight: bold; color: var(--dark); margin: 0 0 4px 0; }
         .card-subtitle { font-size: 0.88rem; color: #4a5568; margin-bottom: 8px; }
         .client-stats-box { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #cbd5e0; font-size: 0.88rem; line-height: 1.5; background: #faf5ff; padding: 8px 10px; border-radius: 4px; border: 1px solid #f3e8ff; }
@@ -3373,11 +3379,11 @@
         function kanbanDragLeaveFicha(ev){
           ev.currentTarget.classList.remove('drag-over-ficha');
         }
-        function kanbanDropSobreFicha(ev, idDestino){
-          ev.preventDefault();
-          ev.stopPropagation();
-          ev.currentTarget.classList.remove('drag-over-ficha');
-          const idOrigen = ev.dataTransfer.getData('text/plain');
+        // Conde 2026-08-21: lógica de "soltar sobre otra ficha" separada del evento nativo de drag
+        // (ev.dataTransfer) para poder reutilizarla también desde el drag por TOUCH (celular) --
+        // ver kanbanTouchEnd más abajo, el HTML5 drag-and-drop nativo no dispara en pantallas
+        // táctiles, así que no hay dataTransfer que leer ahí.
+        function kanbanMoverFichaSobreFicha(idOrigen, idDestino){
           if(!idOrigen || idOrigen === idDestino) return;
           const iOrigen = db_kanban.findIndex(x=>x.id===idOrigen);
           if(iOrigen===-1) return;
@@ -3391,6 +3397,12 @@
           tacticalSyncFichaKanban(ficha);
           renderKanban();
         }
+        function kanbanDropSobreFicha(ev, idDestino){
+          ev.preventDefault();
+          ev.stopPropagation();
+          ev.currentTarget.classList.remove('drag-over-ficha');
+          kanbanMoverFichaSobreFicha(ev.dataTransfer.getData('text/plain'), idDestino);
+        }
         // Conde 2026-08-20: al pasar una ficha de "Terminados y Revisión" a "Para Entregar", se crea
         // sola una tarea de Comercial para facturar -- así no depende de que alguien se acuerde.
         function avisarSiPasaAEntregar(f, columnaAnterior, columnaNueva){
@@ -3398,10 +3410,7 @@
             crearTareaAutomatica('comercial', `Facturar a "${f.nombreCli}" "${f.titulo}"`);
           }
         }
-        function kanbanDrop(ev, columnaDestino){
-          ev.preventDefault();
-          ev.currentTarget.classList.remove('drag-over');
-          const id = ev.dataTransfer.getData('text/plain');
+        function kanbanMoverFichaAColumna(id, columnaDestino){
           const f = db_kanban.find(x=>x.id===id);
           if(!f) return;
           const columnaAnterior = f.columna;
@@ -3409,6 +3418,83 @@
           avisarSiPasaAEntregar(f, columnaAnterior, columnaDestino);
           tacticalSyncFichaKanban(f);
           renderKanban();
+        }
+        function kanbanDrop(ev, columnaDestino){
+          ev.preventDefault();
+          ev.currentTarget.classList.remove('drag-over');
+          kanbanMoverFichaAColumna(ev.dataTransfer.getData('text/plain'), columnaDestino);
+        }
+        // ==== Drag por TOUCH (celular) ====
+        // Conde 2026-08-21: "cuando se arrastra una ficha del kanban... no guarda el movimiento,
+        // solo se activa al usar las flechas" -- el drag-and-drop nativo de HTML5 (draggable="true"
+        // + eventos ondrag*) NUNCA dispara en pantallas táctiles, solo en mouse. Como el celular es
+        // el dispositivo principal para ver el Kanban en planta, se agrega esta implementación
+        // manual con eventos touch que llama a las MISMAS funciones de arriba
+        // (kanbanMoverFichaAColumna / kanbanMoverFichaSobreFicha), así que el guardado en Supabase
+        // es idéntico sin importar si vino de mouse o de dedo.
+        let kanbanTouch = null;
+        const KANBAN_TOUCH_LONGPRESS_MS = 300;
+        const KANBAN_TOUCH_UMBRAL_PX = 10;
+        function kanbanTouchStart(ev, id){
+          if(ev.touches.length !== 1) return;
+          const t = ev.touches[0];
+          const cardEl = ev.currentTarget;
+          kanbanTouch = { id, startX:t.clientX, startY:t.clientY, dragging:false, cardEl, timer:null };
+          kanbanTouch.timer = setTimeout(() => {
+            if(!kanbanTouch) return;
+            kanbanTouch.dragging = true;
+            kanbanTouch.cardEl.classList.add('dragging');
+            if(navigator.vibrate) navigator.vibrate(15);
+          }, KANBAN_TOUCH_LONGPRESS_MS);
+        }
+        function kanbanTouchLimpiarResaltado(){
+          document.querySelectorAll('.kanban-col.drag-over, .kanban-card.drag-over-ficha').forEach(el=>el.classList.remove('drag-over','drag-over-ficha'));
+        }
+        function kanbanTouchMove(ev){
+          if(!kanbanTouch) return;
+          const t = ev.touches[0];
+          const dx = t.clientX - kanbanTouch.startX, dy = t.clientY - kanbanTouch.startY;
+          if(!kanbanTouch.dragging){
+            // Se movió antes de que se cumpliera el long-press -> es un scroll normal de la
+            // página/columna, no una intención de arrastrar. Se cancela el intento sin bloquear
+            // el scroll (no se llama preventDefault en este caso).
+            if(Math.abs(dx) > KANBAN_TOUCH_UMBRAL_PX || Math.abs(dy) > KANBAN_TOUCH_UMBRAL_PX){
+              clearTimeout(kanbanTouch.timer);
+              kanbanTouch = null;
+            }
+            return;
+          }
+          ev.preventDefault();
+          kanbanTouchLimpiarResaltado();
+          const el = document.elementFromPoint(t.clientX, t.clientY);
+          const cardTarget = el ? el.closest('.kanban-card') : null;
+          const colTarget = el ? el.closest('.kanban-col') : null;
+          if(cardTarget && cardTarget !== kanbanTouch.cardEl) cardTarget.classList.add('drag-over-ficha');
+          else if(colTarget) colTarget.classList.add('drag-over');
+        }
+        function kanbanTouchEnd(ev){
+          if(!kanbanTouch) return;
+          clearTimeout(kanbanTouch.timer);
+          const { id, dragging, cardEl } = kanbanTouch;
+          cardEl.classList.remove('dragging');
+          kanbanTouchLimpiarResaltado();
+          if(dragging){
+            // Evita que el "click" fantasma que el navegador dispara después del touch termine
+            // abriendo/cerrando la ficha (toggleExpandirFicha) justo después de soltarla.
+            ev.preventDefault();
+            const t = ev.changedTouches[0];
+            const el = document.elementFromPoint(t.clientX, t.clientY);
+            const cardTarget = el ? el.closest('.kanban-card') : null;
+            const idDestinoCard = cardTarget ? cardTarget.dataset.fichaId : null;
+            if(idDestinoCard && idDestinoCard !== id){
+              kanbanMoverFichaSobreFicha(id, idDestinoCard);
+            } else {
+              const colTarget = el ? el.closest('.kanban-col') : null;
+              const columnaDestino = colTarget ? colTarget.dataset.columna : null;
+              if(columnaDestino) kanbanMoverFichaAColumna(id, columnaDestino);
+            }
+          }
+          kanbanTouch = null;
         }
         function renderFichaKanbanHtml(f){
           const idx = KANBAN_COLUMNAS.indexOf(f.columna);
@@ -3446,7 +3532,7 @@
             ${dueHtml}
             <div style="clear:both;"></div>`;
           if(!expandida){
-            return `<div class="kanban-card ${f.urgente?'urgente':''}" style="cursor:pointer;" draggable="true" ondragstart="kanbanDragStart(event,'${f.id}')" ondragend="kanbanDragEnd(event)" ondragover="kanbanDragOverFicha(event)" ondragleave="kanbanDragLeaveFicha(event)" ondrop="kanbanDropSobreFicha(event,'${f.id}')" onclick="toggleExpandirFicha('${f.id}')" title="Arrastra para mover de columna o reordenar, o clic para ver checklist y opciones">
+            return `<div class="kanban-card ${f.urgente?'urgente':''}" style="cursor:pointer;" draggable="true" data-ficha-id="${f.id}" ondragstart="kanbanDragStart(event,'${f.id}')" ondragend="kanbanDragEnd(event)" ondragover="kanbanDragOverFicha(event)" ondragleave="kanbanDragLeaveFicha(event)" ondrop="kanbanDropSobreFicha(event,'${f.id}')" ontouchstart="kanbanTouchStart(event,'${f.id}')" ontouchmove="kanbanTouchMove(event)" ontouchend="kanbanTouchEnd(event)" onclick="toggleExpandirFicha('${f.id}')" title="Mantén presionado y arrastra para mover de columna o reordenar, o toca para ver checklist y opciones">
               ${cabeceraHtml}
               <div style="font-size:0.72rem; color:var(--info); font-weight:bold;">▼ Ver detalle (${f.checklist.filter(c=>c.hecho).length}/${f.checklist.length})</div>
             </div>`;
@@ -3498,8 +3584,8 @@
                 <button class="btn-action" style="flex:1;" onclick="toggleEditarFicha('${f.id}')">Cancelar</button>
               </div>
             </div>` : '';
-          return `<div class="kanban-card ${f.urgente?'urgente':''}" draggable="true" ondragstart="kanbanDragStart(event,'${f.id}')" ondragend="kanbanDragEnd(event)" ondragover="kanbanDragOverFicha(event)" ondragleave="kanbanDragLeaveFicha(event)" ondrop="kanbanDropSobreFicha(event,'${f.id}')">
-            <div style="cursor:pointer;" onclick="toggleExpandirFicha('${f.id}')" title="Arrastra la tarjeta para mover de columna, o clic aquí para colapsar">
+          return `<div class="kanban-card ${f.urgente?'urgente':''}" draggable="true" data-ficha-id="${f.id}" ondragstart="kanbanDragStart(event,'${f.id}')" ondragend="kanbanDragEnd(event)" ondragover="kanbanDragOverFicha(event)" ondragleave="kanbanDragLeaveFicha(event)" ondrop="kanbanDropSobreFicha(event,'${f.id}')" ontouchstart="kanbanTouchStart(event,'${f.id}')" ontouchmove="kanbanTouchMove(event)" ontouchend="kanbanTouchEnd(event)">
+            <div style="cursor:pointer;" onclick="toggleExpandirFicha('${f.id}')" title="Mantén presionado y arrastra la tarjeta para mover de columna, o toca aquí para colapsar">
               ${cabeceraHtml}
               <div style="font-size:0.72rem; color:var(--info); font-weight:bold;">▲ Ocultar detalle</div>
             </div>
@@ -3578,7 +3664,7 @@
             fichas = fichas.filter(f => kanbanFichaCoincide(f, textoBusqueda));
             if(filtroLinea) fichas = fichas.filter(f => (f.lineas||[]).some(l=>l.linea===filtroLinea));
             const cardsHtml = fichas.length ? fichas.map(renderFichaKanbanHtml).join('') : '<div style="color:#a0aec0; font-size:0.8rem; padding:10px 0;">Sin fichas.</div>';
-            return `<div class="kanban-col" ondragover="kanbanDragOver(event)" ondragleave="kanbanDragLeave(event)" ondrop="kanbanDrop(event,'${col}')">
+            return `<div class="kanban-col" data-columna="${col}" ondragover="kanbanDragOver(event)" ondragleave="kanbanDragLeave(event)" ondrop="kanbanDrop(event,'${col}')">
               <div class="kanban-col-header"><span>${KANBAN_COLUMNA_ICONO[col]||''} ${KANBAN_COLUMNA_NOMBRE[col]}</span><span class="kanban-col-count">${fichas.length}</span></div>
               <div class="kanban-col-cards">${cardsHtml}</div>
             </div>`;
@@ -4273,7 +4359,15 @@
           const fecha = fechaDeRegistro(opp) || new Date();
           const fechaStr = fecha.toLocaleDateString('es-CO', {year:'numeric', month:'long', day:'numeric'});
           const validoHasta = fechaMasDias(fecha, 30);
-          const bloquesOpciones = opp.opcionesComparativa.map((op,i) => `
+          // Conde 2026-08-21: no repetir la misma foto/video en cada opción si son el mismo producto
+          // (ej. 4 opciones de cuadernos que solo cambian la cantidad) -- solo la primera aparición.
+          const fotosYaMostradasGuardado = new Set(), videosYaMostradosGuardado = new Set();
+          const bloquesOpciones = opp.opcionesComparativa.map((op,i) => {
+            const mostrarFoto = op.fotoUrl && !fotosYaMostradasGuardado.has(op.fotoUrl);
+            if(op.fotoUrl) fotosYaMostradasGuardado.add(op.fotoUrl);
+            const mostrarVideo = op.videoUrl && !videosYaMostradosGuardado.has(op.videoUrl);
+            if(op.videoUrl) videosYaMostradosGuardado.add(op.videoUrl);
+            return `
             <div class="doc-section-title">Opción ${i+1}: ${op.titulo}</div>
             <table class="doc-table">
               <tr><td>Cantidad</td><td style="text-align:right;">${op.params.cantidad}</td></tr>
@@ -4281,9 +4375,10 @@
               <tr><td>Subtotal</td><td style="text-align:right;">${cotFormatoCop(op.resultado.precioVentaTotal)}</td></tr>
               <tr><td>IVA (19%)</td><td style="text-align:right;">${cotFormatoCop(op.resultado.ivaTotal)}</td></tr>
             </table>
-            ${op.fotoUrl ? `<img src="${op.fotoUrl}" style="max-width:140px; max-height:140px; margin-bottom:4px; border:1px solid #d7dee5; border-radius:4px;">` : ''}
-            ${op.videoUrl ? `<div style="margin-bottom:4px;"><a href="${op.videoUrl}" style="display:inline-block; background:#cc0000; color:#fff; text-decoration:none; padding:4px 10px; border-radius:4px; font-size:0.72rem; font-weight:bold;">▶ Ver video del producto</a></div>` : ''}
-            <div class="doc-total-box">TOTAL Opción ${i+1}: ${cotFormatoCop(op.resultado.precioFinalTotal)} COP</div>`).join('');
+            ${mostrarFoto ? `<img src="${op.fotoUrl}" style="max-width:140px; max-height:140px; margin-bottom:4px; border:1px solid #d7dee5; border-radius:4px;">` : ''}
+            ${mostrarVideo ? `<div style="margin-bottom:4px;"><a href="${op.videoUrl}" style="display:inline-block; background:#cc0000; color:#fff; text-decoration:none; padding:4px 10px; border-radius:4px; font-size:0.72rem; font-weight:bold;">▶ Ver video del producto</a></div>` : ''}
+            <div class="doc-total-box">TOTAL Opción ${i+1}: ${cotFormatoCop(op.resultado.precioFinalTotal)} COP</div>`;
+          }).join('');
           const html = `
             <div class="doc-header">
               <div><img src="${TACTICAL_LOGO_B64}" style="height:68px; margin-bottom:8px; display:block;" alt="Tactical Marketing"><div class="doc-tipo">COTIZACIÓN COMPARATIVA ${opp.ot||''}</div></div>
@@ -5546,8 +5641,17 @@
           const validoHasta = fechaMasDias(new Date(), 30);
           const observaciones = document.getElementById('cot-observaciones').value.trim();
 
+          // Conde 2026-08-21: si varias opciones son el mismo producto (ej. 4 opciones de cuadernos
+          // que solo cambian la cantidad), la foto/video es literalmente la misma imagen estática
+          // por línea (tacticalObtenerFotoProducto) -- mostrarla en cada opción la repite sin
+          // aportar nada. Ahora solo se muestra la primera vez que aparece esa URL exacta.
+          const fotosYaMostradasComp = new Set(), videosYaMostradosComp = new Set();
           const bloquesOpciones = comp.opciones.map((op,i) => {
             const p = op.params, r = op.resultado;
+            const mostrarFoto = op.fotoUrl && !fotosYaMostradasComp.has(op.fotoUrl);
+            if(op.fotoUrl) fotosYaMostradasComp.add(op.fotoUrl);
+            const mostrarVideo = op.videoUrl && !videosYaMostradosComp.has(op.videoUrl);
+            if(op.videoUrl) videosYaMostradosComp.add(op.videoUrl);
             return `
               <div class="doc-section-title">Opción ${i+1}: ${op.titulo}</div>
               <table class="doc-table">
@@ -5556,8 +5660,8 @@
                 <tr><th>Precio unitario</th><td>${cotFormatoCop(r.precioVentaUnitario)}</td><th>Subtotal</th><td>${cotFormatoCop(r.precioVentaTotal)}</td></tr>
                 <tr><th>IVA (19%)</th><td colspan="3">${cotFormatoCop(r.ivaTotal)}</td></tr>
               </table>
-              ${op.fotoUrl ? `<img src="${op.fotoUrl}" style="max-width:140px; max-height:140px; margin-bottom:4px; border:1px solid #d7dee5; border-radius:4px;">` : ''}
-              ${op.videoUrl ? `<div style="margin-bottom:4px;"><a href="${op.videoUrl}" style="display:inline-block; background:#cc0000; color:#fff; text-decoration:none; padding:4px 10px; border-radius:4px; font-size:0.72rem; font-weight:bold;">▶ Ver video del producto</a></div>` : ''}
+              ${mostrarFoto ? `<img src="${op.fotoUrl}" style="max-width:140px; max-height:140px; margin-bottom:4px; border:1px solid #d7dee5; border-radius:4px;">` : ''}
+              ${mostrarVideo ? `<div style="margin-bottom:4px;"><a href="${op.videoUrl}" style="display:inline-block; background:#cc0000; color:#fff; text-decoration:none; padding:4px 10px; border-radius:4px; font-size:0.72rem; font-weight:bold;">▶ Ver video del producto</a></div>` : ''}
               <div class="doc-total-box">TOTAL Opción ${i+1}: ${cotFormatoCop(r.precioFinalTotal)} COP</div>`;
           }).join('');
 
