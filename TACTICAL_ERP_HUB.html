@@ -1269,6 +1269,9 @@
                     <div id="cont-ingreso" class="accordion-content">
                         <div class="form-grid">
                             <div class="form-group" style="flex-basis:100%;"><label>Documento(s) de Venta a cobrar (Ctrl/Cmd+clic para elegir varios del MISMO cliente):</label><select id="ing-docventa" multiple size="5" onchange="contAutocompletarIngresoDesdeDocs()"></select></div>
+                            <div class="form-group" style="flex-basis:100%;"><label>Cliente (solo si este abono NO tiene factura asociada — deja los documentos de arriba sin marcar):</label>
+                                <input type="text" id="ing-cliente-filtro" placeholder="Escribe para buscar..." oninput="tacticalFiltrarSelectClientes('ing-cliente-filtro','ing-cliente',true)" style="margin-bottom:4px;">
+                                <select id="ing-cliente"></select></div>
                             <div class="form-group"><label>N° de Comprobante:</label><input type="text" id="ing-numero" placeholder="Ej: IN-0001" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase(); this.dataset.auto=''"></div>
                             <div class="form-group"><label>Valor Recibido:</label><input type="text" inputmode="numeric" id="ing-valor" value="0" oninput="contFormatearMiles(this)"></div>
                             <div class="form-group">
@@ -1531,7 +1534,7 @@
         // usa este showView() ni tiene todavía su propio login por rol -- pendiente, no cubierto
         // por este cambio.
         const TACTICAL_ROLES_POR_VISTA = {
-            radar: ['administrador', 'comercial', 'contabilidad'],
+            radar: ['administrador'],
             crm: ['administrador', 'comercial', 'contabilidad'],
             calculadoras: ['administrador', 'comercial'],
             cotizador: ['administrador', 'comercial'],
@@ -6892,11 +6895,17 @@
             if(selIngreso){
                 // Con multiple no hace falta una opción vacía aparte -- ninguna marcada ya significa eso.
                 selIngreso.innerHTML = '';
-                db_docventa.filter(d => d.saldoPendiente>0).forEach(d => {
-                    const cli = db_clientes.find(c => c.id === d.idCli);
-                    selIngreso.innerHTML += `<option value="${d.id}">${d.numero} — ${cli?cli.empresa:'-'} — saldo ${cotFormatoCop(d.saldoPendiente)}</option>`;
-                });
+                // Conde 2026-08-22: ordenado alfabéticamente por nombre del cliente.
+                db_docventa.filter(d => d.saldoPendiente>0)
+                    .map(d => ({d, cli: db_clientes.find(c => c.id === d.idCli)}))
+                    .sort((a,b) => (a.cli?a.cli.empresa:'').localeCompare(b.cli?b.cli.empresa:'', 'es'))
+                    .forEach(({d, cli}) => {
+                        selIngreso.innerHTML += `<option value="${d.id}">${d.numero} — ${cli?cli.empresa:'-'} — saldo ${cotFormatoCop(d.saldoPendiente)}</option>`;
+                    });
             }
+            // Conde 2026-08-22: "hay clientes que abonan sin factura" -- selector de cliente aparte,
+            // para un Comprobante de Ingreso sin ningún Documento de Venta marcado.
+            tacticalPoblarSelectClientes('ing-cliente', (document.getElementById('ing-cliente-filtro')||{}).value, true);
         }
 
         /* ---- COMPROBANTE DE INGRESO ---- */
@@ -6937,10 +6946,12 @@
                 }
             }
         }
+        // Conde 2026-08-22: si no hay ningún documento marcado (abono sin factura), no hay saldo
+        // de qué descontar -- el comprobante queda solo, sin tocar ningún Documento de Venta.
         function contAplicarEfectoIngreso(docs, valor){
             if(docs.length > 1){
                 docs.forEach(doc => { doc.saldoPendiente = 0; doc.estado = 'pagada'; tacticalSyncDocVenta(doc); });
-            } else {
+            } else if(docs.length === 1){
                 const doc = docs[0];
                 doc.saldoPendiente = Math.max(0, doc.saldoPendiente - valor);
                 doc.estado = doc.saldoPendiente<=0 ? 'pagada' : (doc.saldoPendiente<doc.totalCobrar ? 'abonado_parcial' : 'pendiente');
@@ -6951,13 +6962,20 @@
         async function contGuardarIngreso(){
             const idsDocVenta = [...document.getElementById('ing-docventa').selectedOptions].map(o=>o.value).filter(Boolean);
             const docs = idsDocVenta.map(id => db_docventa.find(d => d.id === id)).filter(Boolean);
+            // Conde 2026-08-22: "debe permitir elaborarlo sin que exista una factura pues hay
+            // clientes que abonan sin factura" -- si no se marcó ningún documento, el cliente sale
+            // del selector aparte "Cliente (solo si este abono NO tiene factura asociada)".
+            const idClienteManual = document.getElementById('ing-cliente').value;
             const valor = contNumeroDesdeInput(document.getElementById('ing-valor'));
             const medioPago = document.getElementById('ing-medioPago').value;
             const concepto = document.getElementById('ing-concepto').value.trim();
             const referenciaSoporte = document.getElementById('ing-referencia').value.trim();
 
-            if(docs.length===0 || valor<=0){ alert("Debe seleccionar al menos un documento de venta y un valor mayor a 0."); return; }
+            if(valor<=0){ alert("Debe ingresar un valor mayor a 0."); return; }
+            if(docs.length===0 && !idClienteManual){ alert("Selecciona un documento de venta, o un cliente si este abono no tiene factura."); return; }
+            if(docs.length===0 && !concepto){ alert("Escribe un concepto para este abono sin factura."); return; }
 
+            const idCli = docs.length ? docs[0].idCli : idClienteManual;
             const numerosTxt = docs.map(d=>d.numero).join(', ');
 
             if(ingresoEditandoId){
@@ -6966,7 +6984,7 @@
                 const anterior = db_ingresos[idx];
                 contRevertirEfectoIngreso(anterior);
                 const ingresoActualizado = {
-                    ...anterior, idCli: docs[0].idCli, idDocVenta: docs[0].id, idsDocVenta, valor,
+                    ...anterior, idCli, idDocVenta: docs.length ? docs[0].id : null, idsDocVenta, valor,
                     concepto: concepto || (docs.length>1 ? `Pago facturas ${numerosTxt}` : `Pago factura ${numerosTxt}`),
                     medioPago, referenciaSoporte,
                 };
@@ -6982,7 +7000,7 @@
 
                 const ingreso = {
                     id: crypto.randomUUID(), numero, fecha: contHoy(),
-                    idCli: docs[0].idCli, idDocVenta: docs[0].id, idsDocVenta, valor,
+                    idCli, idDocVenta: docs.length ? docs[0].id : null, idsDocVenta, valor,
                     concepto: concepto || (docs.length>1 ? `Pago facturas ${numerosTxt}` : `Pago factura ${numerosTxt}`),
                     medioPago, referenciaSoporte,
                 };
@@ -6992,6 +7010,8 @@
 
                 document.getElementById('ing-valor').value = '0'; document.getElementById('ing-concepto').value = ''; document.getElementById('ing-referencia').value = '';
                 document.getElementById('ing-numero').value = ''; document.getElementById('ing-numero').dataset.auto = '';
+                document.getElementById('ing-cliente-filtro').value = '';
+                document.getElementById('ing-cliente').value = '';
                 [...document.getElementById('ing-docventa').options].forEach(o=>o.selected=false);
             }
             renderContabilidad();
@@ -7014,6 +7034,10 @@
                 }
             });
             [...sel.options].forEach(o => o.selected = idsDoc.includes(o.value));
+            // Abono sin factura -- muestra el cliente en el selector aparte.
+            document.getElementById('ing-cliente-filtro').value = '';
+            tacticalPoblarSelectClientes('ing-cliente', '', true);
+            document.getElementById('ing-cliente').value = idsDoc.length===0 ? (i.idCli||'') : '';
             document.getElementById('ing-numero').value = i.numero; document.getElementById('ing-numero').dataset.auto = '';
             document.getElementById('ing-valor').value = (i.valor||0).toLocaleString('es-CO');
             document.getElementById('ing-medioPago').value = i.medioPago;
@@ -7027,6 +7051,7 @@
             ingresoEditandoId = null;
             document.getElementById('ing-valor').value = '0'; document.getElementById('ing-concepto').value = ''; document.getElementById('ing-referencia').value = '';
             document.getElementById('ing-numero').value = ''; document.getElementById('ing-numero').dataset.auto = '';
+            document.getElementById('ing-cliente-filtro').value = ''; document.getElementById('ing-cliente').value = '';
             document.getElementById('ing-btn-guardar').textContent = '+ Registrar Comprobante de Ingreso';
             document.getElementById('ing-btn-cancelar-edicion').style.display = 'none';
             renderContabilidad(); // repuebla ing-docventa limpio (quita la opción temporal "ya cobrada por este ingreso")
@@ -7190,9 +7215,12 @@
                 // Sin selección = gasto directo (sin CxP) -- con multiple no hace falta una opción
                 // vacía aparte, ninguna marcada ya significa eso.
                 selEgreso.innerHTML = '';
-                db_cxp.filter(c => c.saldoPendiente>0).forEach(c => {
-                    selEgreso.innerHTML += `<option value="${c.id}">${c.numeroFacturaProveedor||c.numero} — ${c.proveedor} — saldo ${cotFormatoCop(c.saldoPendiente)}</option>`;
-                });
+                // Conde 2026-08-22: ordenado alfabéticamente por nombre del proveedor.
+                [...db_cxp].filter(c => c.saldoPendiente>0)
+                    .sort((a,b) => (a.proveedor||'').localeCompare(b.proveedor||'', 'es'))
+                    .forEach(c => {
+                        selEgreso.innerHTML += `<option value="${c.id}">${c.numeroFacturaProveedor||c.numero} — ${c.proveedor} — saldo ${cotFormatoCop(c.saldoPendiente)}</option>`;
+                    });
             }
         }
 
