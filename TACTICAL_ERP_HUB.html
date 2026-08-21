@@ -3532,8 +3532,18 @@
             ${dueHtml}
             <div style="clear:both;"></div>`;
           if(!expandida){
-            return `<div class="kanban-card ${f.urgente?'urgente':''}" style="cursor:pointer;" draggable="true" data-ficha-id="${f.id}" ondragstart="kanbanDragStart(event,'${f.id}')" ondragend="kanbanDragEnd(event)" ondragover="kanbanDragOverFicha(event)" ondragleave="kanbanDragLeaveFicha(event)" ondrop="kanbanDropSobreFicha(event,'${f.id}')" ontouchstart="kanbanTouchStart(event,'${f.id}')" ontouchmove="kanbanTouchMove(event)" ontouchend="kanbanTouchEnd(event)" onclick="toggleExpandirFicha('${f.id}')" title="Mantén presionado y arrastra para mover de columna o reordenar, o toca para ver checklist y opciones">
+            // Conde 2026-08-21: en el celular arrastrar es incómodo -- las flechas de
+            // avanzar/atrás quedan visibles también en la tarjeta cerrada (antes solo
+            // aparecían al entrar al detalle), con stopPropagation para que tocarlas no abra
+            // el detalle de paso.
+            const flechasHtml = (puedeAtras || puedeAdelante) ? `
+              <div class="kanban-card-actions" onclick="event.stopPropagation();">
+                ${puedeAtras?`<button class="btn-action" ontouchstart="event.stopPropagation();" onclick="moverFicha('${f.id}',-1)">◀ Atrás</button>`:''}
+                ${puedeAdelante?`<button class="btn-action" ontouchstart="event.stopPropagation();" onclick="moverFicha('${f.id}',1)">Avanzar ▶</button>`:''}
+              </div>` : '';
+            return `<div class="kanban-card ${f.urgente?'urgente':''}" style="cursor:pointer;" draggable="true" data-ficha-id="${f.id}" ondragstart="kanbanDragStart(event,'${f.id}')" ondragend="kanbanDragEnd(event)" ondragover="kanbanDragOverFicha(event)" ondragleave="kanbanDragLeaveFicha(event)" ondrop="kanbanDropSobreFicha(event,'${f.id}')" ontouchstart="kanbanTouchStart(event,'${f.id}')" ontouchmove="kanbanTouchMove(event)" ontouchend="kanbanTouchEnd(event)" onclick="toggleExpandirFicha('${f.id}')" title="Toca ◀/▶ para mover de columna, mantén presionado y arrastra para reordenar, o toca el resto de la tarjeta para ver checklist y opciones">
               ${cabeceraHtml}
+              ${flechasHtml}
               <div style="font-size:0.72rem; color:var(--info); font-weight:bold;">▼ Ver detalle (${f.checklist.filter(c=>c.hecho).length}/${f.checklist.length})</div>
             </div>`;
           }
