@@ -148,7 +148,10 @@
 
         /* MÓDULO 7: KANBAN DE PRODUCCIÓN */
         .kanban-board { display:flex; gap:14px; overflow-x:auto; padding:6px 2px 20px; align-items:flex-start; scroll-behavior:smooth; }
-        .kanban-col { flex:0 0 300px; background:var(--light-gray); border-radius:8px; padding:10px; min-height:120px; }
+        /* Conde 2026-08-23: "asi funcionaba trello... no es muy claro la division de una columna a
+           otra... fondo de kanban en un gris mas oscuro" -- antes usaba --light-gray (#f7fafc, casi
+           blanco, igual que el fondo de la página), por eso las columnas se perdían contra el fondo. */
+        .kanban-col { flex:0 0 300px; background:#d8dee5; border-radius:8px; padding:10px; min-height:120px; }
         .kanban-col-header { font-weight:800; color:var(--dark); padding:6px 8px 12px; display:flex; justify-content:space-between; align-items:center; font-size:1.12rem; border-bottom:2px solid #cbd5e0; margin-bottom:8px; }
         .kanban-col-cards { max-height:65vh; overflow-y:auto; padding-right:4px; }
         .kanban-scroll-row { display:flex; align-items:center; gap:10px; margin:10px 0; }
@@ -165,6 +168,9 @@
         .fototeca-paste-zone img { max-width:100%; max-height:160px; border-radius:6px; }
         .kanban-card { background:white; border:1px solid #e2e8f0; border-radius:6px; padding:10px 12px; margin-bottom:10px; box-shadow:0 1px 3px rgba(0,0,0,0.06); border-left:4px solid var(--secondary); cursor:grab; }
         .kanban-card.urgente { border-left-color:var(--peligro); }
+        /* Tarjeta cerrada (colapsada) -- info reducida, un poco menos de aire que la abierta para
+           que quepan ~3 en pantalla sin perder la foto. */
+        .kanban-card-compacta { padding:8px 10px; margin-bottom:8px; }
         .kanban-card.dragging { opacity:0.4; }
         .kanban-col.drag-over { background:#dbeafe; outline:2px dashed var(--info); outline-offset:-2px; }
         .kanban-card.drag-over-ficha { border-top:3px solid var(--info); }
@@ -3660,6 +3666,34 @@
             ${aprobacionHtml}
             ${dueHtml}
             <div style="clear:both;"></div>`;
+          // Conde 2026-08-23: "asi funcionaba trello... quiero que se simplifique la informacion
+          // que se visualiza, sin quitar la foto... que podamos ver quiza 3 fichas en cada
+          // pantalla" -- versión reducida SOLO para la tarjeta cerrada (la abierta sigue mostrando
+          // todo, foto+título+cliente+fecha+notas+checklist, sin cambios). Foto más chica, un
+          // título más corto (igual se puede tocar la tarjeta entera para ver el resto), sin la
+          // etiqueta "Descripción", sin notas/entrega/aprobación -- y la fecha de entrega en una
+          // pastilla corta ("📅 4d" en vez de la fecha completa) para que no se vaya a 2 líneas.
+          const fotoCompactaHtml = primeraFoto ? `<img src="${primeraFoto}" alt="${f.nombreCli}" title="${f.nombreCli}" style="width:56px; height:56px; object-fit:cover; border-radius:6px; float:left; margin:0 8px 4px 0; border:1px solid #e2e8f0;">` : '';
+          const tituloCortoCompacto = tituloTexto.length > 26 ? tituloTexto.slice(0,26).trim() + '…' : tituloTexto;
+          let dueCompactoHtml;
+          if(f.fechaEntrega){
+            const dias = kanbanDiasHasta(f.fechaEntrega);
+            let clsCompacto, txtCompacto;
+            if(dias<0){ clsCompacto='kanban-due-vencido'; txtCompacto=`Vencida ${Math.abs(dias)}d`; }
+            else if(dias===0){ clsCompacto='kanban-due-vencido'; txtCompacto='HOY'; }
+            else if(dias<=7){ clsCompacto = dias<=3?'kanban-due-vencido':'kanban-due-pronto'; txtCompacto=`${dias}d`; }
+            else { clsCompacto='kanban-due-ok'; txtCompacto=`${dias}d`; }
+            dueCompactoHtml = `<span class="kanban-due ${clsCompacto}" style="font-size:0.68rem; padding:1px 6px;">📅 ${txtCompacto}</span>`;
+          } else {
+            dueCompactoHtml = '<span style="font-size:0.68rem; color:#a0aec0;">Sin fecha</span>';
+          }
+          const cabeceraCompactaHtml = `
+            ${fotoCompactaHtml}
+            ${f.urgente?'<div style="font-size:0.68rem; font-weight:900; color:#fff; background:var(--peligro); padding:2px 6px; border-radius:4px; margin-bottom:3px; display:inline-block;">🚨 URGENTE</div>':''}
+            <div class="kanban-card-title" style="font-size:0.85rem; margin-bottom:2px;">${dotsHtml}${tituloCortoCompacto}</div>
+            <div class="kanban-card-meta" style="margin-bottom:3px;">👤 ${f.nombreCli}</div>
+            ${dueCompactoHtml}
+            <div style="clear:both;"></div>`;
           if(!expandida){
             // Conde 2026-08-21: en el celular arrastrar es incómodo -- las flechas de
             // avanzar/atrás quedan visibles también en la tarjeta cerrada (antes solo
@@ -3670,10 +3704,10 @@
                 ${puedeAtras?`<button class="btn-action" ontouchstart="event.stopPropagation();" onclick="moverFicha('${f.id}',-1)">◀ Atrás</button>`:''}
                 ${puedeAdelante?`<button class="btn-action" ontouchstart="event.stopPropagation();" onclick="moverFicha('${f.id}',1)">Avanzar ▶</button>`:''}
               </div>` : '';
-            return `<div class="kanban-card ${f.urgente?'urgente':''}" style="cursor:pointer;" draggable="true" data-ficha-id="${f.id}" ondragstart="kanbanDragStart(event,'${f.id}')" ondragend="kanbanDragEnd(event)" ondragover="kanbanDragOverFicha(event)" ondragleave="kanbanDragLeaveFicha(event)" ondrop="kanbanDropSobreFicha(event,'${f.id}')" ontouchstart="kanbanTouchStart(event,'${f.id}')" ontouchmove="kanbanTouchMove(event)" ontouchend="kanbanTouchEnd(event)" onclick="toggleExpandirFicha('${f.id}')" title="Toca ◀/▶ para mover de columna, mantén presionado y arrastra para reordenar, o toca el resto de la tarjeta para ver checklist y opciones">
-              ${cabeceraHtml}
+            return `<div class="kanban-card kanban-card-compacta ${f.urgente?'urgente':''}" style="cursor:pointer;" draggable="true" data-ficha-id="${f.id}" ondragstart="kanbanDragStart(event,'${f.id}')" ondragend="kanbanDragEnd(event)" ondragover="kanbanDragOverFicha(event)" ondragleave="kanbanDragLeaveFicha(event)" ondrop="kanbanDropSobreFicha(event,'${f.id}')" ontouchstart="kanbanTouchStart(event,'${f.id}')" ontouchmove="kanbanTouchMove(event)" ontouchend="kanbanTouchEnd(event)" onclick="toggleExpandirFicha('${f.id}')" title="Toca ◀/▶ para mover de columna, mantén presionado y arrastra para reordenar, o toca el resto de la tarjeta para ver checklist y opciones">
+              ${cabeceraCompactaHtml}
               ${flechasHtml}
-              <div style="font-size:0.72rem; color:var(--info); font-weight:bold;">▼ Ver detalle (${f.checklist.filter(c=>c.hecho).length}/${f.checklist.length})</div>
+              <div style="font-size:0.68rem; color:var(--info); font-weight:bold;">▼ Ver detalle (${f.checklist.filter(c=>c.hecho).length}/${f.checklist.length})</div>
             </div>`;
           }
           const rielAOk = !f.checklist.some(c=>c.riel==='A' && !c.hecho);
