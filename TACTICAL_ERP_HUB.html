@@ -7623,7 +7623,37 @@
                     margenPorLinea[linea] = (margenPorLinea[linea]||0) + margen;
                 }
             });
-            const margenContribPct = sumaVentas>0 ? (sumaMargen/sumaVentas) : 0.2284;
+            // Margen real de Cuadernos (única línea que guarda costo/subtotal histórico) -- se sigue
+            // usando tal cual para Cuadernos. Para las otras 7 líneas no hay costo histórico guardado,
+            // así que se aproxima con el %Utilidad+%Ventas por defecto de cada calculadora (Conde
+            // 2026-08-23: "usar los % actuales del motor" en vez de construir un registro de costo
+            // real por venta). precioVenta = subtotal*(1+utilidad)*(1+ventas) => margen% = 1-1/((1+u)(1+v)).
+            const margenContribPctCuadernos = sumaVentas>0 ? (sumaMargen/sumaVentas) : 0.2284;
+            const PUNTO_EQUILIBRIO_MARGEN_DEFAULT_LINEA = {
+                carpetas: 1-1/(1.40*1.03), cajas: 1-1/(1.40*1.03), bolsas: 1-1/(1.40*1.03), volantes: 1-1/(1.40*1.03),
+                cubo_rubik: 1-1/(1.45*1.03), rompecabezas: 1-1/(1.45*1.03),
+                // promocionales usa un modelo de descuento por monto, no %Utilidad/%Ventas -- sin
+                // fórmula equivalente confiable todavía, así que cae al respaldo (margen real de Cuadernos).
+            };
+            // Ventas ganadas por línea, TODAS las 9 líneas del ERP (no solo Cuadernos) -- se usa ingreso
+            // (opp.monto), no margen, porque las otras 8 líneas no guardan desglose de costo. Se calcula
+            // aquí (antes iba más abajo) porque ahora también sirve para ponderar el margen del punto de
+            // equilibrio por la mezcla real de ventas, no solo por Cuadernos.
+            const ventasPorLinea = {};
+            db_historial_cierres.filter(h=>h.estado==='ganado').forEach(h=>{
+                if(h.lineas && h.lineas.length){
+                    h.lineas.forEach(l=>{ const ln=l.linea||'otro'; ventasPorLinea[ln]=(ventasPorLinea[ln]||0)+(l.monto||0); });
+                } else {
+                    const ln = h.linea||'otro'; ventasPorLinea[ln]=(ventasPorLinea[ln]||0)+(h.monto||0);
+                }
+            });
+            let sumaVentasMix=0, sumaMargenMix=0;
+            Object.keys(ventasPorLinea).forEach(l => {
+                const v = ventasPorLinea[l];
+                const margenL = l==='cuadernos' ? margenContribPctCuadernos : (PUNTO_EQUILIBRIO_MARGEN_DEFAULT_LINEA[l] != null ? PUNTO_EQUILIBRIO_MARGEN_DEFAULT_LINEA[l] : margenContribPctCuadernos);
+                sumaVentasMix += v; sumaMargenMix += v*margenL;
+            });
+            const margenContribPct = sumaVentasMix>0 ? (sumaMargenMix/sumaVentasMix) : margenContribPctCuadernos;
             const gastosFijosTotalConfig = db_gastosFijos.reduce((s,g)=>s+g.monto,0);
             const puntoEquilibrio = margenContribPct>0 ? (gastosFijosTotalConfig/margenContribPct) : 0;
             const cumplimientoPct = puntoEquilibrio>0 ? Math.round((ventasFacturadasMes/puntoEquilibrio)*100) : 0;
@@ -7652,18 +7682,8 @@
             const rankingLinea = Object.keys(margenPorLinea).sort((a,b)=>margenPorLinea[b]-margenPorLinea[a]);
             document.getElementById('cont-producto-rentable').innerHTML = rankingLinea.length ? rankingLinea.map(l=>`• ${nombresLinea[l]||l}: <strong>${cotFormatoCop(margenPorLinea[l])}</strong> margen acumulado`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin negocios ganados con cotización todavía.</span>';
 
-            // Ventas ganadas por línea, TODAS las 9 líneas del ERP (no solo Cuadernos) — se usa
-            // ingreso (opp.monto), no margen, porque las otras 8 líneas no guardan desglose de
-            // costo como Cuadernos (ver tarjeta de la izquierda). Pedidos multi-producto
-            // (linea:'multi') se desglosan por su array "lineas", igual que en Reportes.
-            const ventasPorLinea = {};
-            db_historial_cierres.filter(h=>h.estado==='ganado').forEach(h=>{
-                if(h.lineas && h.lineas.length){
-                    h.lineas.forEach(l=>{ const ln=l.linea||'otro'; ventasPorLinea[ln]=(ventasPorLinea[ln]||0)+(l.monto||0); });
-                } else {
-                    const ln = h.linea||'otro'; ventasPorLinea[ln]=(ventasPorLinea[ln]||0)+(h.monto||0);
-                }
-            });
+            // ventasPorLinea ya se calculó más arriba (se reutiliza aquí para el ranking; también
+            // sirve para ponderar el margen del punto de equilibrio por la mezcla real de ventas).
             const rankingVentas = Object.keys(ventasPorLinea).sort((a,b)=>ventasPorLinea[b]-ventasPorLinea[a]);
             document.getElementById('cont-ventas-por-linea').innerHTML = rankingVentas.length ? rankingVentas.map(l=>`• ${NOMBRES_LINEA_PRODUCTO[l]||l}: <strong>${cotFormatoCop(ventasPorLinea[l])}</strong>`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin negocios ganados todavía.</span>';
         }
