@@ -208,40 +208,51 @@
             .detail-row-grid { grid-template-columns: 1fr; gap: 8px; border: 1px dashed #cbd5e0; padding: 12px; border-radius: 6px; background: white; }
             td:last-child { display: flex !important; flex-direction: row !important; justify-content: space-between !important; gap: 6px !important; margin-top: 10px !important; border-top: 1px dashed #cbd5e0 !important; padding-top: 8px !important; }
 
-            /* Conde 2026-08-23: "que se vean varias tareas, quiza 6 u 8, en la misma pantalla" --
-               antes cada tarea ocupaba casi toda la pantalla del celular (6 campos apilados en
-               bloques de 44px). Nada se quita: los mismos 6 campos siguen ahí y siguen editables,
-               solo se reacomodan en 3-4 líneas angostas en vez de 6 bloques altos. Probado en una
-               maqueta aparte: ~7 tareas visibles por pantalla en un mobile de 375x812.
-               Estas reglas son MÁS específicas que las genéricas de arriba (llevan #view-tareas),
-               así que ganan sin importar el orden. */
+            /* Conde 2026-08-23 (2da vuelta): "solo veremos tarea y responsable, si queremos mas
+               informacion se da clic y se despliega" -- la primera versión (mostrar todo, solo más
+               apretado) tenía 2 bugs reales: el <thead> se veía (una regla más específica de arriba
+               le ganaba al thead{display:none} genérico) y el texto de la tarea no se leía bien.
+               Ahora es un colapsar/desplegar real: td.td-tarea y td.td-responsable (ver addTask())
+               quedan siempre visibles; td.td-detalle (notas, estado, fecha, botones) empieza oculto
+               y solo aparece si la fila tiene la clase "tarea-expandida" (la pone taskToggleExpandir
+               al hacer clic en la flecha ▶/▼). Validado en una maqueta aparte: las 8 tareas de
+               prueba caben completas en un mobile de 375x812, con la flecha desplegando bien cada
+               una por separado. */
+            #view-tareas thead { display: none !important; }
             #view-tareas tr {
                 display: flex !important; flex-flow: row wrap !important; align-items: center !important;
                 gap: 2px 5px !important; background: #fff !important; border: 1px solid #cbd5e0 !important;
                 border-radius: 6px !important; padding: 5px 7px !important; margin-bottom: 4px !important;
             }
             #view-tareas td { display: block !important; padding: 0 !important; border: none !important; box-sizing: border-box; }
-            #view-tareas input[type="text"], #view-tareas select { width: 100%; box-sizing: border-box; }
-            /* td1: descripción -- su propia línea, siempre completa */
-            #view-tareas td:nth-child(1) { order: 1; flex: 1 1 100%; display: flex !important; align-items: center !important; gap: 5px; }
-            #view-tareas .task-desc { font-weight: 600 !important; font-size: 12px !important; border: 1px solid transparent !important; padding: 1px 2px !important; height: auto !important; margin: 0 !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+            #view-tareas input[type="text"], #view-tareas select { width: 100%; box-sizing: border-box; color: #1a202c; }
+
+            #view-tareas td.td-tarea { order: 1; flex: 1 1 100%; display: flex !important; align-items: center !important; gap: 5px; min-width: 0; }
+            #view-tareas .task-toggle { width: 22px; height: 22px; font-size: 11px; padding: 0; flex-shrink: 0; border: 1px solid #cbd5e0; background: #edf2f7; border-radius: 4px; }
+            #view-tareas .task-desc {
+                font-weight: 600 !important; font-size: 13px !important; border: 1px solid transparent !important;
+                padding: 2px 3px !important; height: 24px !important; margin: 0 !important; min-width: 0;
+                white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto;
+            }
             #view-tareas .badge-delay { font-size: 9px !important; padding: 1px 5px !important; margin: 0 !important; flex-shrink: 0; }
-            #view-tareas .input-aclaracion { flex: 1 1 100%; order: 1; font-size: 10px !important; height: 18px !important; color: #c53030; padding: 1px 4px !important; margin: 0 !important; }
-            /* td2: espec/notas -- su propia línea chica, texto gris discreto */
-            #view-tareas td:nth-child(2) { order: 4; flex: 1 1 100%; }
-            #view-tareas .task-espec { font-size: 10px !important; height: 18px !important; padding: 1px 4px !important; margin: 0 !important; color: #718096 !important; }
-            /* td3: responsables -- chips chicos + selector angosto */
-            #view-tareas td:nth-child(3) { order: 2; flex: 1 1 58%; display: flex !important; align-items: center !important; gap: 3px; flex-wrap: wrap; min-height: 20px; }
+            /* motivo del retraso -- oculto salvo expandida, aunque haya retraso (el badge rojo de
+               arriba ya avisa sin necesidad de desplegar). */
+            #view-tareas .input-aclaracion { display: none !important; font-size: 10.5px !important; height: 20px !important; color: #c53030; padding: 2px 4px !important; margin: 4px 0 0 !important; width: 100%; }
+            #view-tareas tr.tarea-expandida .input-aclaracion { display: block !important; }
+
+            #view-tareas td.td-responsable { order: 2; flex: 1 1 100%; display: flex !important; align-items: center !important; gap: 3px; flex-wrap: wrap; min-height: 20px; padding-left: 27px !important; }
             #view-tareas .task-emp-list { display: flex; flex-wrap: wrap; gap: 2px; }
-            #view-tareas .task-emp-add { font-size: 9.5px !important; height: 20px !important; padding: 0 2px !important; margin: 0 !important; width: auto !important; max-width: 100px; }
+            #view-tareas .task-emp-add { font-size: 9.5px !important; height: 20px !important; padding: 0 2px !important; margin: 0 !important; width: auto !important; max-width: 110px; }
             #view-tareas .emp-chip { font-size: 9.5px !important; padding: 1px 5px !important; }
-            /* td4: estado -- angosto, junto a responsables */
-            #view-tareas td:nth-child(4) { order: 3; flex: 0 0 auto; }
-            #view-tareas .status-select { font-size: 9.5px !important; padding: 2px 3px !important; height: 20px !important; margin: 0 !important; width: auto !important; }
-            /* td5 (fecha) + td6 (acciones) -- última línea, juntas */
-            #view-tareas td:nth-child(5) { order: 5; flex: 1 1 auto; font-size: 9px !important; color: #a0aec0 !important; white-space: nowrap; }
-            #view-tareas td:nth-child(6) { order: 6; flex: 0 0 auto; display: flex !important; gap: 3px; }
-            #view-tareas .btn-action { padding: 1px 5px !important; font-size: 10.5px !important; line-height: 1.6; }
+
+            /* Todo lo demás -- notas/impresión, estado, fecha, botones -- oculto salvo expandida */
+            #view-tareas td.td-detalle { display: none !important; order: 3; }
+            #view-tareas tr.tarea-expandida td.td-detalle { display: block !important; }
+            #view-tareas .task-espec { font-size: 10.5px !important; height: 20px !important; padding: 2px 4px !important; margin: 2px 0 !important; color: #718096 !important; }
+            #view-tareas .status-select { font-size: 10.5px !important; padding: 2px 4px !important; height: 22px !important; margin: 2px 0 !important; width: auto !important; }
+            #view-tareas .task-origin { font-size: 10px !important; color: #a0aec0 !important; white-space: nowrap; margin: 2px 0; }
+            #view-tareas tr.tarea-expandida td.td-detalle[style*="text-align:center"] { display: flex !important; gap: 4px; margin: 2px 0; }
+            #view-tareas .btn-action { padding: 2px 6px !important; font-size: 11px !important; }
 
             /* La regla "td { display:block }" de arriba es global y tambien
                rompia las tablas del PDF/Orden de Produccion en pantallas
@@ -1903,18 +1914,25 @@
             let displayAclaracion = (diasRetraso > 0 || status === 'externo') ? 'block' : 'none';
             let inputPlaceholder = area === 'diseno' ? 'Cant. y tipo de impresión...' : (area === 'produccion' ? 'Dirección proveedor...' : 'Notas...');
 
+            // Conde 2026-08-23: "solo veremos tarea y responsable, si queremos mas informacion se
+            // da clic y se despliega" -- td-tarea y td-responsable quedan siempre visibles en
+            // móvil; el resto (motivo de retraso, notas, estado, fecha, botones) se envuelve en
+            // td-detalle, oculto salvo que la fila tenga la clase "tarea-expandida" (la flecha la
+            // pone taskToggleExpandir). En pantallas grandes esto no cambia nada -- las reglas que
+            // ocultan/expanden viven dentro del @media(max-width:768px) de #view-tareas.
             tr.innerHTML = `
-                <td>
+                <td class="td-tarea">
                     ${delayBadge}
+                    <button type="button" class="task-toggle" onclick="taskToggleExpandir(this)" title="Ver más detalles">▶</button>
                     <input type="text" style="width:95%; font-weight:bold;" placeholder="Escriba la tarea..." value="${tacticalEscAttr(desc)}" class="task-desc" onchange="guardarFila(this.closest('tr'))">
-                    <input type="text" class="input-aclaracion" style="display: ${displayAclaracion};" placeholder="💡 Motivo del retraso externo..." value="${tacticalEscAttr(aclaracion)}" onchange="guardarFila(this.closest('tr'))">
+                    <input type="text" class="input-aclaracion td-detalle" style="display: ${displayAclaracion};" placeholder="💡 Motivo del retraso externo..." value="${tacticalEscAttr(aclaracion)}" onchange="guardarFila(this.closest('tr'))">
                 </td>
-                <td><input type="text" class="task-espec" placeholder="${inputPlaceholder}" value="${tacticalEscAttr(espec)}" onchange="guardarFila(this.closest('tr'))"></td>
-                <td>
+                <td class="td-detalle"><input type="text" class="task-espec" placeholder="${inputPlaceholder}" value="${tacticalEscAttr(espec)}" onchange="guardarFila(this.closest('tr'))"></td>
+                <td class="td-responsable">
                     <div class="task-emp-list" data-emp='${JSON.stringify(assignedList)}'></div>
                     <select class="task-emp-add" onchange="taskAgregarResponsable(this)"></select>
                 </td>
-                <td>
+                <td class="td-detalle">
                     <select class="status-select status-${status}" onchange="evaluarEstadoFila(this)">
                         <option value="pendiente" ${status === 'pendiente' ? 'selected' : ''}>⏳ Pendiente</option>
                         <option value="proceso" ${status === 'proceso' ? 'selected' : ''}>🔄 En Proceso</option>
@@ -1923,8 +1941,8 @@
                         <option value="finalizado" ${status === 'finalizado' ? 'selected' : ''}>🏁 Finalizado</option>
                     </select>
                 </td>
-                <td class="task-origin">${dateStr}</td>
-                <td style="text-align:center;">
+                <td class="td-detalle task-origin">${dateStr}</td>
+                <td class="td-detalle" style="text-align:center;">
                     <button class="btn-action" onclick="moveRowUp(this)" title="Subir prioridad">🔼</button>
                     <button class="btn-action" onclick="moveRowDown(this)" title="Bajar prioridad">🔽</button>
                     <button class="btn-action btn-del-row" onclick="taskEliminarFila(this)" title="Eliminar">🗑️</button>
@@ -1934,6 +1952,13 @@
             taskRenderChips(tr.querySelector('.task-emp-list'), area);
         }
 
+        // Conde 2026-08-23: flecha para desplegar el resto de la tarea en móvil (ver arriba, en
+        // addTask, por qué td-detalle empieza oculto).
+        function taskToggleExpandir(btn){
+            const tr = btn.closest('tr');
+            const expandida = tr.classList.toggle('tarea-expandida');
+            btn.textContent = expandida ? '▼' : '▶';
+        }
         function taskEliminarFila(btn){
             if(!tacticalRequiereAdministrador()) return;
             const tr = btn.closest('tr');
