@@ -35,6 +35,10 @@
         .hub-card.disabled-card:hover { transform: none; border-color: #cbd5e0; box-shadow: none; }
 
         .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+        /* Los botones ▶ de colapsar (Clientes/Seguimiento/Cotizaciones) solo existen para ahorrar
+           espacio en pantallas angostas -- en escritorio ya hay sitio de sobra, así que se ocultan
+           por defecto y solo se muestran dentro del @media(max-width:768px) de más abajo. */
+        .card-flecha-toggle, .cot-toggle { display: none; }
         .desc-clamp { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; max-width: 100%; }
         .desc-clamp.expandido { white-space: normal; overflow: visible; text-overflow: clip; }
         .kanban-card-title { cursor: default; }
@@ -281,6 +285,28 @@
                angostas - se restaura el layout de tabla normal ahi. */
             #print-area td, #print-area th { display: table-cell !important; border: 1px solid #cbd5e0 !important; padding: 6px 10px !important; }
             #print-area tr { background: transparent !important; border: none !important; padding: 0 !important; margin-bottom: 0 !important; }
+
+            /* Conde 2026-08-24: "para clientes, cotizaciones y seguimiento solo dejes visible los
+               titulos... con flecha para desplegar, ocupa mucho espacio" -- mismo patrón ya usado en
+               Tareas/Kanban (ver arriba y renderFichaKanbanHtml): título + flecha siempre visibles,
+               el resto oculto salvo que la tarjeta/fila tenga la clase "expandido". Scopeado a
+               #view-crm para no afectar tarjetas de otras vistas que usan .data-card. */
+            #view-crm .card-collapsible .card-detalle { display: none; }
+            #view-crm .card-collapsible.expandido .card-detalle { display: block; margin-top: 8px; }
+            #view-crm .card-collapsible.expandido .card-title.desc-clamp { white-space: normal; overflow: visible; text-overflow: clip; }
+            .card-flecha-toggle { display: inline-block; cursor: pointer; background: #edf2f7; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.8rem; color: #4a5568; padding: 3px 9px; line-height: 1.4; flex-shrink: 0; }
+
+            /* Mismo patrón, pero sobre filas de tabla (el buscador de Cotizaciones dentro de
+               Seguimiento) -- se sigue exactamente el molde de #view-tareas de arriba: solo la
+               primera celda (OT + producto + flecha) queda visible, el resto oculto salvo
+               "cot-expandida". Ya venía con "período activo" por defecto (renderBuscadorCotizaciones,
+               sin tocar) -- esto solo reduce cuánto espacio ocupa cada fila individual. */
+            #buscadorCot tr { display: flex !important; flex-flow: row wrap !important; align-items: center !important; gap: 2px 5px !important; background: #fff !important; border: 1px solid #cbd5e0 !important; border-radius: 6px !important; padding: 6px 8px !important; margin-bottom: 6px !important; }
+            #buscadorCot td { display: block !important; padding: 0 !important; border: none !important; box-sizing: border-box; }
+            #buscadorCot td.cot-td-titulo { order: 1; flex: 1 1 100%; display: flex !important; align-items: center !important; gap: 6px; min-width: 0; font-weight: 600; font-size: 0.83rem; }
+            #buscadorCot td.cot-td-detalle { display: none !important; order: 2; flex: 1 1 100%; font-size: 0.8rem; padding: 3px 0 !important; }
+            #buscadorCot tr.cot-expandida td.cot-td-detalle { display: block !important; }
+            .cot-toggle { display: inline-block; width: 22px; height: 22px; font-size: 11px; padding: 0; flex-shrink: 0; border: 1px solid #cbd5e0; background: #edf2f7; border-radius: 4px; }
         }
 
         /* IMPRESIÓN (PDF Cliente / Orden de Producción) */
@@ -1986,6 +2012,19 @@
             const expandida = tr.classList.toggle('tarea-expandida');
             btn.textContent = expandida ? '▼' : '▶';
         }
+        // Conde 2026-08-24: mismo patrón de arriba, para tarjetas (.data-card) en vez de filas de
+        // tabla -- Clientes y Seguimiento (renderClientes/renderOportunidades) en el CRM.
+        function tacticalToggleCardDetalle(btn){
+            const card = btn.closest('.card-collapsible');
+            const expandida = card.classList.toggle('expandido');
+            btn.textContent = expandida ? '▼' : '▶';
+        }
+        // Igual, pero para filas de tabla del buscador de Cotizaciones (renderBuscadorCotizaciones).
+        function tacticalToggleFilaCot(btn){
+            const tr = btn.closest('tr');
+            const expandida = tr.classList.toggle('cot-expandida');
+            btn.textContent = expandida ? '▼' : '▶';
+        }
         function taskEliminarFila(btn){
             if(!tacticalRequiereAdministrador()) return;
             const tr = btn.closest('tr');
@@ -2597,20 +2636,27 @@
 
                 const tipoLbl = c.tipo === 'corporativo' ? '🏢 Corporativo' : (c.tipo === 'personalizado' ? '🎨 Personalizado' : '');
                 container.innerHTML += `
-                    <div class="data-card" style="border-left-color: ${borderCls}; position:relative;">
-                        <button onclick="eliminarCliente('${c.id}')" title="Eliminar cliente" style="position:absolute; top:8px; right:8px; background:none; border:none; color:var(--peligro); font-size:1rem; cursor:pointer; padding:2px 6px;">🗑️</button>
-                        <span class="tag ${tags_clase[c.clase]}" style="float:right; margin-right:26px;">${c.clase.toUpperCase()}</span>
-                        <div class="card-title">${c.empresa}</div>
-                        <div class="card-subtitle">👤 Contacto: <strong>${c.nombre}</strong></div>
-                        <div style="font-size:0.85rem; color:#4a5568; line-height:1.4;">
-                            📱 WA: <strong>${c.wp || 'No registrado'}</strong><br>
-                            ✉️ Email: <strong>${c.correo || 'No registrado'}</strong><br>
-                            ${tipoLbl ? tipoLbl + '<br>' : ''}${c.identificacion ? '🆔 ' + c.identificacion + '<br>' : ''}
+                    <div class="data-card card-collapsible" style="border-left-color: ${borderCls};">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:6px;">
+                            <div class="card-title" style="margin:0;">${c.empresa}</div>
+                            <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+                                <span class="tag ${tags_clase[c.clase]}">${c.clase.toUpperCase()}</span>
+                                <button onclick="eliminarCliente('${c.id}')" title="Eliminar cliente" style="background:none; border:none; color:var(--peligro); font-size:1rem; cursor:pointer; padding:2px 4px;">🗑️</button>
+                                <button class="card-flecha-toggle" onclick="tacticalToggleCardDetalle(this)">▶</button>
+                            </div>
                         </div>
-                        <div class="client-stats-box">
-                            📋 Total Cotizaciones/Solicitudes: <strong>${totalCotizaciones}</strong><br>
-                            🎯 Negocios Ganados: <strong style="color:var(--ganado);">${ganadasCount}</strong><br>
-                            💲 Compras Acumuladas (LTV): <strong style="color:var(--primary); font-size:1rem;">$${c.ltv.toLocaleString()} COP</strong>
+                        <div class="card-detalle">
+                            <div class="card-subtitle">👤 Contacto: <strong>${c.nombre}</strong></div>
+                            <div style="font-size:0.85rem; color:#4a5568; line-height:1.4;">
+                                📱 WA: <strong>${c.wp || 'No registrado'}</strong><br>
+                                ✉️ Email: <strong>${c.correo || 'No registrado'}</strong><br>
+                                ${tipoLbl ? tipoLbl + '<br>' : ''}${c.identificacion ? '🆔 ' + c.identificacion + '<br>' : ''}
+                            </div>
+                            <div class="client-stats-box">
+                                📋 Total Cotizaciones/Solicitudes: <strong>${totalCotizaciones}</strong><br>
+                                🎯 Negocios Ganados: <strong style="color:var(--ganado);">${ganadasCount}</strong><br>
+                                💲 Compras Acumuladas (LTV): <strong style="color:var(--primary); font-size:1rem;">$${c.ltv.toLocaleString()} COP</strong>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -2687,15 +2733,22 @@
                 if(opp.etapa === 'cot') btnAvanzar = `<button class="btn-stage btn-avanzar" onclick="avanzarEtapa('${opp.id}', 'neg')">A Seguimiento ➔</button>`;
 
                 container.innerHTML += `
-                    <div class="data-card">
-                        <span class="tag ${tags_etapa[opp.etapa].cls}" style="float:right;">${tags_etapa[opp.etapa].lbl}</span>
-                        <div class="card-title desc-clamp" title="Clic para ver completo" onclick="this.classList.toggle('expandido')">${opp.desc}</div>
-                        <div class="card-subtitle">👤 Cliente: <strong>${opp.nombreCli}</strong></div>
-                        <div style="font-size:1.3rem; font-weight:bold; color:var(--dark);">$${opp.monto.toLocaleString()} COP</div>
-                        <div class="action-row">
-                            ${btnAvanzar}
-                            <button class="btn-stage btn-ganado" onclick="intentarMarcarGanado('${opp.id}')">💲 Ganado</button>
-                            <button class="btn-stage btn-perdido" onclick="abrirModalPerdida('${opp.id}')">❌ Perdido</button>
+                    <div class="data-card card-collapsible">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:6px;">
+                            <div class="card-title desc-clamp" style="margin:0; flex:1; min-width:0;">${opp.desc}</div>
+                            <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+                                <span class="tag ${tags_etapa[opp.etapa].cls}">${tags_etapa[opp.etapa].lbl}</span>
+                                <button class="card-flecha-toggle" onclick="tacticalToggleCardDetalle(this)">▶</button>
+                            </div>
+                        </div>
+                        <div class="card-detalle">
+                            <div class="card-subtitle">👤 Cliente: <strong>${opp.nombreCli}</strong></div>
+                            <div style="font-size:1.3rem; font-weight:bold; color:var(--dark);">$${opp.monto.toLocaleString()} COP</div>
+                            <div class="action-row">
+                                ${btnAvanzar}
+                                <button class="btn-stage btn-ganado" onclick="intentarMarcarGanado('${opp.id}')">💲 Ganado</button>
+                                <button class="btn-stage btn-perdido" onclick="abrirModalPerdida('${opp.id}')">❌ Perdido</button>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -3507,6 +3560,11 @@
         // lista de checklist+botones de todas a la vez es imposible de escanear) — se expande cada
         // una con un clic. Estado solo en memoria (no se guarda), vuelve a colapsar al recargar.
         let kanbanExpandidas = new Set();
+        // Conde 2026-08-24: "postventa" acumula fichas para siempre (nunca se vuelve a mover de
+        // ahí) -- con más de 15 se vuelve una lista interminable. Por columna, si supera 15 y no se
+        // está buscando/filtrando nada puntual, se muestran solo las 15 más recientes (por OT) con
+        // un botón para ver el resto -- ver uso en renderKanban().
+        let kanbanColumnasExpandidas = new Set();
         function toggleExpandirFicha(id){
           if(kanbanExpandidas.has(id)) kanbanExpandidas.delete(id); else kanbanExpandidas.add(id);
           renderKanban();
@@ -3883,9 +3941,15 @@
             let fichas = db_kanban.filter(f=>f.columna===col);
             fichas = fichas.filter(f => kanbanFichaCoincide(f, textoBusqueda));
             if(filtroLinea) fichas = fichas.filter(f => (f.lineas||[]).some(l=>l.linea===filtroLinea));
-            const cardsHtml = fichas.length ? fichas.map(renderFichaKanbanHtml).join('') : '<div style="color:#a0aec0; font-size:0.8rem; padding:10px 0;">Sin fichas.</div>';
+            const totalReal = fichas.length;
+            let notaOcultas = '';
+            if(col==='postventa' && !textoBusqueda && !filtroLinea && totalReal>15 && !kanbanColumnasExpandidas.has(col)){
+              fichas = [...fichas].sort((a,b)=>(b.ot||'').localeCompare(a.ot||'')).slice(0,15);
+              notaOcultas = `<div style="text-align:center; padding:8px 0;"><button class="btn-action" style="font-size:0.72rem; padding:5px 10px;" onclick="kanbanColumnasExpandidas.add('${col}'); renderKanban();">Ver las ${totalReal} fichas ▾</button></div>`;
+            }
+            const cardsHtml = (fichas.length ? fichas.map(renderFichaKanbanHtml).join('') : '<div style="color:#a0aec0; font-size:0.8rem; padding:10px 0;">Sin fichas.</div>') + notaOcultas;
             return `<div class="kanban-col" data-columna="${col}" ondragover="kanbanDragOver(event)" ondragleave="kanbanDragLeave(event)" ondrop="kanbanDrop(event,'${col}')">
-              <div class="kanban-col-header"><span>${KANBAN_COLUMNA_ICONO[col]||''} ${KANBAN_COLUMNA_NOMBRE[col]}</span><span class="kanban-col-count">${fichas.length}</span></div>
+              <div class="kanban-col-header"><span>${KANBAN_COLUMNA_ICONO[col]||''} ${KANBAN_COLUMNA_NOMBRE[col]}</span><span class="kanban-col-count">${totalReal}</span></div>
               <div class="kanban-col-cards">${cardsHtml}</div>
             </div>`;
           }).join('');
@@ -4532,14 +4596,19 @@
           tbody.innerHTML = todas.length ? todas.map(o => {
             const fecha = fechaDeRegistro(o);
             const fechaTxt = fecha ? fecha.toLocaleDateString('es-CO', {year:'numeric', month:'short', day:'numeric'}) : '-';
+            // Conde 2026-08-24: en móvil, las celdas "cot-td-titulo" (OT y Producto, con la flecha
+            // en la de OT) quedan siempre visibles -- el resto (fecha/cliente/valor/estado/acciones)
+            // vive en "cot-td-detalle", oculto salvo que la fila tenga "cot-expandida" (ver CSS de
+            // #buscadorCot en el @media(max-width:768px) de arriba). Mismas 7 celdas de siempre (para
+            // no desalinear las 7 columnas del <thead> en escritorio), solo con clases nuevas.
             return `<tr>
-              <td>${o.ot||'-'}</td>
-              <td>${fechaTxt}</td>
-              <td>${o.nombreCli}</td>
-              <td style="max-width:280px;"><div class="desc-clamp" title="Clic para ver completo" onclick="this.classList.toggle('expandido')">${o.desc}</div></td>
-              <td>${cotFormatoCop(o.monto)}</td>
-              <td>${o.estadoTxt||'-'}</td>
-              <td>
+              <td class="cot-td-titulo"><button type="button" class="cot-toggle" onclick="tacticalToggleFilaCot(this)">▶</button> ${o.ot||'-'}</td>
+              <td class="cot-td-detalle">${fechaTxt}</td>
+              <td class="cot-td-detalle">${o.nombreCli}</td>
+              <td class="cot-td-titulo" style="max-width:280px;"><div class="desc-clamp" title="Clic para ver completo" onclick="this.classList.toggle('expandido')">${o.desc}</div></td>
+              <td class="cot-td-detalle">${cotFormatoCop(o.monto)}</td>
+              <td class="cot-td-detalle">${o.estadoTxt||'-'}</td>
+              <td class="cot-td-detalle">
                 <button class="btn-action" onclick="verPDFCotizacionGuardada('${o.id}')">🖨️ Ver PDF</button>
                 <button class="btn-action" style="color:var(--peligro); border-color:var(--peligro);" onclick="eliminarCotizacionRegistro('${o.id}')">🗑️</button>
               </td>

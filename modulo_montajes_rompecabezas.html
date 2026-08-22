@@ -219,6 +219,7 @@
 <div class="view" id="view-buscar">
   <div class="panel" style="max-width:1000px;">
     <h2 style="margin-top:0;">Buscar pedidos guardados</h2>
+    <div id="buscar-nota-periodo" style="font-size:0.82rem; color:var(--muted); margin-bottom:6px;">📅 Mostrando solo los últimos 45 días — escribe algo arriba para buscar en todo el histórico.</div>
     <input type="text" id="buscarInput" placeholder="Buscar por nombre, celular o correo...">
     <div style="overflow-x:auto;margin-top:12px;">
       <table class="searchtbl" id="tablaBusqueda">
@@ -983,9 +984,20 @@ document.getElementById('buscarInput').addEventListener('input', renderBusqueda)
 function renderBusqueda(){
   const q = document.getElementById('buscarInput').value.toLowerCase();
   const db = dbVentas();
-  const filtrados = db.filter(p =>
+  let filtrados = db.filter(p =>
     p.nombre.toLowerCase().includes(q) || p.cel.toLowerCase().includes(q) || (p.correo||'').toLowerCase().includes(q)
   ).sort((a,b)=> new Date(b.fecha) - new Date(a.fecha));
+
+  // Conde 2026-08-24: "tener una lista de 100 registros es poco práctico" -- mismo criterio que ya
+  // usa el buscador de Cotizaciones del Hub (ver renderBuscadorCotizaciones): sin texto de búsqueda
+  // se limita a los últimos 45 días (si no, la tabla crece sin fin con los meses); en cuanto se
+  // escribe algo, busca en TODO el histórico sin importar la fecha.
+  const notaPeriodo = document.getElementById('buscar-nota-periodo');
+  if(notaPeriodo) notaPeriodo.style.display = q ? 'none' : 'block';
+  if(!q){
+    const limite = new Date(); limite.setDate(limite.getDate()-45);
+    filtrados = filtrados.filter(p => new Date(p.fecha) >= limite);
+  }
 
   const body = document.getElementById('tablaBusquedaBody');
   body.innerHTML = filtrados.map(p=>{
