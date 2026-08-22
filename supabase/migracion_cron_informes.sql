@@ -27,11 +27,16 @@ declare
   roles text[] := array['contabilidad','comercial','diseno','produccion','administrador'];
   r text;
 begin
-  -- DIARIO -- todos los días a las 12:20 UTC (7:20am Bogotá)
+  -- DIARIO -- lunes a viernes (Conde 2026-08-24: "de lunes a viernes, excepto festivos") a las
+  -- 12:20 UTC (7:20am Bogotá). El "1-5" en el campo de día de la semana es lo que excluye
+  -- sábado/domingo -- los festivos NO se pueden resolver con una expresión de cron (cambian cada
+  -- año, Semana Santa se mueve, Ley Emiliani corre varios al lunes siguiente), así que ese chequeo
+  -- vive DENTRO de la Edge Function (esFestivoColombiaHoy() en index.ts) -- el cron sigue
+  -- disparando todos los días hábiles, pero la función responde sin enviar nada si es festivo.
   foreach r in array roles loop
     perform cron.schedule(
       'informe-diario-' || r,
-      '20 12 * * *',
+      '20 12 * * 1-5',
       format(
         $c$select net.http_post(
           url := %L,
@@ -43,7 +48,8 @@ begin
     );
   end loop;
 
-  -- SEMANAL -- todos los viernes a las 12:20 UTC (7:20am Bogotá)
+  -- SEMANAL -- todos los viernes a las 12:20 UTC (7:20am Bogotá). Si un viernes cae festivo, la
+  -- Edge Function lo detecta sola (esFestivoColombiaHoy()) y no manda nada ese día.
   foreach r in array roles loop
     perform cron.schedule(
       'informe-semanal-' || r,
@@ -59,7 +65,10 @@ begin
     );
   end loop;
 
-  -- MENSUAL -- el día 1 de cada mes a las 12:20 UTC (7:20am Bogotá)
+  -- MENSUAL -- el día 1 de cada mes a las 12:20 UTC (7:20am Bogotá). Igual que el semanal, si el
+  -- día 1 cae festivo (o fin de semana), la Edge Function no manda nada ese día -- para el mensual
+  -- no se reprograma al siguiente día hábil (se pidió "no enviar", no "enviar el día siguiente");
+  -- avisar si Conde prefiere que sí se corra al siguiente hábil en vez de saltarse el mes.
   foreach r in array roles loop
     perform cron.schedule(
       'informe-mensual-' || r,

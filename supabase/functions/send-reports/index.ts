@@ -67,6 +67,49 @@ function diasDesde(fechaISO: string): number {
   return Math.floor((Date.now() - new Date(fechaISO).getTime()) / 86400000);
 }
 
+// ---- Festivos de Colombia (Ley Emiliani) -- Conde 2026-08-24: "los días festivos en Colombia no
+// se debe enviar informes". Mismo algoritmo que ya usa modulo_montajes_rompecabezas.html
+// (tacticalFestivosColombia/tacticalPascua, para calcular fechas de entrega) -- portado aquí
+// porque una Edge Function no puede importar ese archivo HTML, tiene que ser autocontenida.
+// La función corre en UTC; el cron dispara a las 12:20 UTC = 7:20am Bogotá (Colombia es UTC-5 fijo,
+// sin horario de verano), hora en la que el día calendario en UTC y en Bogotá ya coinciden -- por
+// eso no hace falta convertir zona horaria para este chequeo.
+function pascua(anio: number): Date {
+  const a = anio % 19, b = Math.floor(anio / 100), c = anio % 100;
+  const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const mes = Math.floor((h + l - 7 * m + 114) / 31);
+  const dia = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(anio, mes - 1, dia);
+}
+function siguienteLunes(fecha: Date): Date {
+  const d = new Date(fecha);
+  const dow = d.getDay();
+  if (dow !== 1) d.setDate(d.getDate() + ((8 - dow) % 7 || 7));
+  return d;
+}
+function masDias(fecha: Date, n: number): Date {
+  const d = new Date(fecha); d.setDate(d.getDate() + n); return d;
+}
+function festivosColombia(anio: number): Set<string> {
+  const p = pascua(anio);
+  const fechas = [
+    new Date(anio, 0, 1), siguienteLunes(new Date(anio, 0, 6)), siguienteLunes(new Date(anio, 2, 19)),
+    masDias(p, -3), masDias(p, -2), new Date(anio, 4, 1),
+    siguienteLunes(masDias(p, 39)), siguienteLunes(masDias(p, 60)), siguienteLunes(masDias(p, 68)),
+    siguienteLunes(new Date(anio, 5, 29)), new Date(anio, 6, 20), new Date(anio, 7, 7),
+    siguienteLunes(new Date(anio, 7, 15)), siguienteLunes(new Date(anio, 9, 12)), siguienteLunes(new Date(anio, 10, 1)),
+    siguienteLunes(new Date(anio, 10, 11)), new Date(anio, 11, 8), new Date(anio, 11, 25),
+  ];
+  return new Set(fechas.map((f) => `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}-${String(f.getDate()).padStart(2, "0")}`));
+}
+function esFestivoColombiaHoy(): boolean {
+  const hoy = new Date();
+  const clave = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
+  return festivosColombia(hoy.getFullYear()).has(clave);
+}
+
 // Plantilla mínima -- cada informe arma sus "secciones" (título + filas de texto ya formateadas).
 function plantilla(titulo: string, secciones: { titulo: string; filas: string[] }[]): string {
   const cuerpo = secciones.map((sec) => {
@@ -448,6 +491,12 @@ const INFORMES: Record<string, Record<string, () => Promise<{ asunto: string; se
 };
 
 Deno.serve(async (req: Request) => {
+  if (esFestivoColombiaHoy()) {
+    return new Response(JSON.stringify({ ok: true, skip: "Hoy es festivo en Colombia -- no se envían informes." }), {
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   let body: { rol?: string; cadencia?: string } = {};
   try { body = await req.json(); } catch (_e) { /* body vacío -- se valida abajo */ }
   const { rol, cadencia } = body;
