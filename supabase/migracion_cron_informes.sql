@@ -65,14 +65,16 @@ begin
     );
   end loop;
 
-  -- MENSUAL -- el día 1 de cada mes a las 12:20 UTC (7:20am Bogotá). Igual que el semanal, si el
-  -- día 1 cae festivo (o fin de semana), la Edge Function no manda nada ese día -- para el mensual
-  -- no se reprograma al siguiente día hábil (se pidió "no enviar", no "enviar el día siguiente");
-  -- avisar si Conde prefiere que sí se corra al siguiente hábil en vez de saltarse el mes.
+  -- MENSUAL -- Conde 2026-08-24: si el día 1 cae festivo o fin de semana, prefiere que se corra al
+  -- SIGUIENTE día hábil en vez de perderse el mes completo. El cron no se puede "reprogramar solo",
+  -- así que en vez de disparar una sola vez el día 1, dispara los días 1 a 5 de cada mes a las
+  -- 12:20 UTC (7:20am Bogotá) -- suficiente margen para cubrir un fin de semana + un festivo
+  -- pegado. esPrimerDiaHabilDelMes() en la Edge Function decide cuál de esos días es el correcto
+  -- y solo manda el correo ese día (los demás responden sin enviar nada).
   foreach r in array roles loop
     perform cron.schedule(
       'informe-mensual-' || r,
-      '20 12 1 * *',
+      '20 12 1-5 * *',
       format(
         $c$select net.http_post(
           url := %L,

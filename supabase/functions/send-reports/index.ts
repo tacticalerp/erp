@@ -104,10 +104,31 @@ function festivosColombia(anio: number): Set<string> {
   ];
   return new Set(fechas.map((f) => `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}-${String(f.getDate()).padStart(2, "0")}`));
 }
-function esFestivoColombiaHoy(): boolean {
-  const hoy = new Date();
-  const clave = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
-  return festivosColombia(hoy.getFullYear()).has(clave);
+function claveFecha(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function esFestivoColombia(d: Date): boolean {
+  return festivosColombia(d.getFullYear()).has(claveFecha(d));
+}
+function esDiaHabilColombia(d: Date): boolean {
+  const dow = d.getDay();
+  if (dow === 0 || dow === 6) return false; // domingo, sábado
+  return !esFestivoColombia(d);
+}
+// Conde 2026-08-24: el informe MENSUAL se manda el día 1, pero si ese día cae festivo o fin de
+// semana, prefiere que se corra al SIGUIENTE día hábil en vez de perderse el mes completo (a
+// diferencia de diario/semanal, donde saltarse un día no pierde nada -- mañana o el próximo
+// viernes sale normal). Como el cron no puede "reprogramarse solo", en vez de disparar una sola
+// vez el día 1 dispara todos los días 1-5 de cada mes (ver migracion_cron_informes.sql) y esta
+// función decide cuál de esos días es el correcto: el primero de ellos que sea hábil.
+function esPrimerDiaHabilDelMes(hoy: Date): boolean {
+  if (!esDiaHabilColombia(hoy)) return false;
+  const d = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  while (d.getDate() < hoy.getDate()) {
+    if (esDiaHabilColombia(d)) return false; // ya hubo un día hábil antes -- "hoy" no es el primero
+    d.setDate(d.getDate() + 1);
+  }
+  return true;
 }
 
 // Plantilla mínima -- cada informe arma sus "secciones" (título + filas de texto ya formateadas).
@@ -491,12 +512,6 @@ const INFORMES: Record<string, Record<string, () => Promise<{ asunto: string; se
 };
 
 Deno.serve(async (req: Request) => {
-  if (esFestivoColombiaHoy()) {
-    return new Response(JSON.stringify({ ok: true, skip: "Hoy es festivo en Colombia -- no se envían informes." }), {
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
   let body: { rol?: string; cadencia?: string } = {};
   try { body = await req.json(); } catch (_e) { /* body vacío -- se valida abajo */ }
   const { rol, cadencia } = body;
@@ -506,6 +521,21 @@ Deno.serve(async (req: Request) => {
   if (!destinatarios || !informe) {
     return new Response(JSON.stringify({ ok: false, error: `rol/cadencia inválidos: ${rol}/${cadencia}` }), {
       status: 400, headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const hoy = new Date();
+  if (esFestivoColombia(hoy)) {
+    return new Response(JSON.stringify({ ok: true, rol, cadencia, skip: "Hoy es festivo en Colombia -- no se envían informes." }), {
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  // El mensual dispara todos los días 1-5 del mes (ver migracion_cron_informes.sql) para poder
+  // correrse solo al primer día hábil si el 1 cae festivo/fin de semana -- si hoy no es ESE día
+  // exacto, no se manda (evita mandarlo varias veces esos días).
+  if (cadencia === "mensual" && !esPrimerDiaHabilDelMes(hoy)) {
+    return new Response(JSON.stringify({ ok: true, rol, cadencia, skip: "Todavía no es el primer día hábil del mes." }), {
+      headers: { "Content-Type": "application/json" },
     });
   }
 
