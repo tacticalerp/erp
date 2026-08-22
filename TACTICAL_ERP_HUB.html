@@ -1541,6 +1541,11 @@
                     <p style="color:#94a3b8; font-size:0.85rem; margin:6px 0 0;">Cada técnica está colapsada por defecto — ábrela para editar. "Mínima" es el mínimo cobrado por el proveedor sin importar cantidad; el resto son precios por unidad, por tramo de cantidad.</p>
                     <div id="precios-promo-grupos" style="margin-top:10px;"></div>
                 </div>
+                <div class="data-card" style="margin-bottom:14px;">
+                    <div class="card-title">🧹 Mantenimiento de Storage (fotos)</div>
+                    <p style="color:#94a3b8; font-size:0.85rem; margin:6px 0 0;">Borra SOLO la foto de fichas de Kanban ya entregadas y pedidos B2C de Rompecabezas ya aprobados, con más de 4 meses -- el resto del registro (cliente, producto, precio, fecha, OT) no se toca. Nunca borra fotos de la Fototeca. Esto ya corre solo una vez al día cuando entras como administrador; este botón es solo para verlo pasar en el momento.</p>
+                    <button class="btn-action" style="margin-top:10px;" onclick="manualLimpiezaFotos(this)">🧹 Ejecutar limpieza ahora</button>
+                </div>
                 <div style="display:flex; gap:10px; margin:20px 0; position:sticky; bottom:10px; background:#f1f5f9; padding:14px; border-radius:8px; border:1px solid #e2e8f0; z-index:5;">
                     <button class="btn-submit" onclick="guardarPanelPrecios()">💾 Guardar cambios (recarga la página)</button>
                     <button class="btn-action" onclick="restaurarTodoPanelPrecios()">↩️ Restaurar TODO a valores de fábrica</button>
@@ -2520,6 +2525,12 @@
           if(document.getElementById('view-contabilidad') && document.getElementById('view-contabilidad').classList.contains('active-view')){
             renderContabilidad();
           }
+          // Conde 2026-08-23: limpieza de fotos antiguas (Kanban entregado + B2C aprobado, +4
+          // meses) -- solo administrador, máximo 1 vez cada 24h (ver tacticalPurgaFotosSiToca en
+          // tactical-supabase.js). No bloquea el login, corre en segundo plano.
+          if(window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol === 'administrador'){
+            tacticalPurgaFotosSiToca();
+          }
         };
 
         const tags_clase = { 'nuevo': 'tag-nuevo', 'ocasional': 'tag-ocasional', 'recurrente': 'tag-recurrente', 'vip': 'tag-vip' };
@@ -3173,12 +3184,17 @@
             const reader = new FileReader();
             reader.onload = function(e){
                 const img = new Image();
-                img.onload = function(){
+                // Conde 2026-08-23: la foto ya no se guarda como base64 en la fila -- se sube una
+                // vez a Supabase Storage y solo se guarda la URL corta (ver tacticalSubirFoto en
+                // tactical-supabase.js). Requiere haber corrido migracion_storage_fotos.sql.
+                img.onload = async function(){
                     const dataUrl = tacticalComprimirImagen(img);
+                    const url = await tacticalSubirFoto(dataUrl, `kanban/${fichaId}/${Date.now()}.jpg`);
+                    if(!url){ alert('No se pudo subir la foto. Intenta de nuevo.'); return; }
                     const ficha = db_kanban.find(x=>x.id===fichaId);
                     if(!ficha) return;
                     if(!ficha.fotos) ficha.fotos = [];
-                    const nuevaFoto = {url: dataUrl, etiqueta};
+                    const nuevaFoto = {url, etiqueta};
                     ficha.fotos.push(nuevaFoto);
                     tacticalAgregarFotoFichaRemoto(fichaId, nuevaFoto);
                     renderKanban();
@@ -3193,6 +3209,7 @@
             const foto = ficha.fotos[idx];
             if(!confirm(`¿Quitar la imagen "${foto.etiqueta||'sin nombre'}"?`)) return;
             tacticalEliminarFotoFichaRemoto(fichaId, foto.url);
+            tacticalEliminarFotosStorage([foto.url]);
             ficha.fotos.splice(idx,1);
             renderKanban();
         }
@@ -3234,6 +3251,8 @@
         }
         function fototecaEliminarFicha(clave){
           if(!confirm('¿Eliminar esta ficha de la Fototeca (foto y video incluidos)? Esta acción no se puede deshacer.')) return;
+          const item = fototecaItem(clave);
+          if(item && item.foto) tacticalEliminarFotosStorage([item.foto]);
           tacticalEliminarFototecaItemRemoto(clave);
           db_fototeca = db_fototeca.filter(x=>x.clave!==clave);
           renderFototeca();
@@ -3283,10 +3302,17 @@
           const reader = new FileReader();
           reader.onload = function(e){
             const img = new Image();
-            img.onload = function(){
+            // Conde 2026-08-23: sube a Storage en vez de guardar base64 -- una sola vez por clave
+            // (upsert sobre la misma ruta), y toda cotización/ficha/pedido que use esta foto
+            // guarda esa MISMA URL corta en vez de copiar la imagen completa cada vez que se
+            // elige -- así una foto usada en 30 cotizaciones pesa 1 vez, no 30 (ver
+            // tacticalSubirFoto en tactical-supabase.js).
+            img.onload = async function(){
               const dataUrl = tacticalComprimirImagen(img);
+              const url = await tacticalSubirFoto(dataUrl, `fototeca/${clave}.jpg`);
+              if(!url){ alert('No se pudo subir la foto. Intenta de nuevo.'); return; }
               const item = fototecaObtenerOCrearItem(clave, clave.startsWith('custom_'));
-              item.foto = dataUrl;
+              item.foto = url;
               tacticalSyncFototecaItem(item);
               renderFototeca();
             };
@@ -3311,7 +3337,10 @@
         function fototecaQuitar(clave){
           if(!confirm('¿Quitar esta foto de referencia?')) return;
           const item = fototecaItem(clave);
-          if(item){ item.foto = null; tacticalSyncFototecaItem(item); }
+          if(item){
+            if(item.foto) tacticalEliminarFotosStorage([item.foto]);
+            item.foto = null; tacticalSyncFototecaItem(item);
+          }
           renderFototeca();
         }
         // ==========================================
@@ -4341,6 +4370,19 @@
           location.reload();
         }
 
+        async function manualLimpiezaFotos(btn){
+          if(!tacticalRequiereAdministrador()) return;
+          if(btn){ btn.disabled = true; btn.textContent = 'Limpiando...'; }
+          try{
+            const n = await tacticalEjecutarLimpiezaFotos();
+            alert(n ? `Listo: se liberaron ${n} foto(s) de fichas/pedidos con más de 4 meses. La información de esos registros sigue intacta.` : 'No había fotos de más de 4 meses para liberar todavía.');
+          } catch(e){
+            console.error('Error en limpieza manual de fotos:', e);
+            alert('Ocurrió un error al ejecutar la limpieza. Revisa la consola.');
+          } finally {
+            if(btn){ btn.disabled = false; btn.textContent = '🧹 Ejecutar limpieza ahora'; }
+          }
+        }
         async function restaurarTodoPanelPrecios(){
           if(!tacticalRequiereAdministrador()) return;
           const ok = confirm('Esto borra TODOS tus ajustes de precio (incluida la marcación de Promocionales) para TODO el equipo y vuelve a los valores base de fábrica en las 9 herramientas. ¿Continuar?');

@@ -786,7 +786,9 @@ function textoResumenPedido(){
 
   if(otrosItems.length){
     const itemsTodos = [...otrosItems];
-    if(itemActivo) itemsTodos.push(itemActualComoLinea());
+    // No se usa itemActualComoLinea() aquí a propósito -- es async (sube la foto a Storage) y este
+    // resumen de texto no necesita la foto, solo cantidad/medida/total (que "r" ya trae).
+    if(itemActivo) itemsTodos.push({ fichas: itemActivo.fichas, medida: `${itemActivo.w}x${itemActivo.h}`, cantidad: r.cant, total: r.total });
     const totalTodos = itemsTodos.reduce((s,it)=>s+(it.total||0),0);
     const cantidadTotal = itemsTodos.reduce((s,it)=>s+(it.cantidad||0),0);
     const detalle = itemsTodos.map(it => `- ${it.cantidad}x Rompecabezas de ${it.fichas} fichas de ${it.medida.replace('x',' × ')} cm`).join('\n');
@@ -865,7 +867,11 @@ function pedidoItems(pedido){
 // muchos pedidos pendientes acumulados). Se genera aquí, al guardar el pedido -- no al aprobar,
 // porque para cuando se aprueba (desde la pestaña "Buscar/Aprobar") la foto ya no está cargada
 // en pantalla, puede ser otro día u otra persona aprobando.
-function generarMiniaturaFoto(){
+// Conde 2026-08-23: la miniatura ya no se guarda como base64 en la fila -- se sube una vez a
+// Supabase Storage y solo se guarda la URL corta (ver tacticalSubirFoto en tactical-supabase.js).
+// Requiere haber corrido supabase/migracion_storage_fotos.sql. Nombre de archivo aleatorio porque
+// en este punto todavía no existe el id del pedido (el carrito se arma antes de guardar).
+async function generarMiniaturaFoto(){
   if(!img.natW || !photoImg.complete || !photoImg.naturalWidth) return null;
   const THUMB = 220;
   const c = document.createElement('canvas');
@@ -879,7 +885,8 @@ function generarMiniaturaFoto(){
   cx.scale(img.scale*escalaThumb, img.scale*escalaThumb);
   cx.drawImage(photoImg, 0, 0, img.natW, img.natH);
   cx.restore();
-  return c.toDataURL('image/jpeg', 0.6);
+  const dataUrl = c.toDataURL('image/jpeg', 0.6);
+  return await tacticalSubirFoto(dataUrl, `b2c/${crypto.randomUUID()}.jpg`);
 }
 
 // Carrito del pedido en curso (Conde 2026-08-13): permite juntar varios rompecabezas de tamaños/
@@ -890,14 +897,14 @@ function generarMiniaturaFoto(){
 // window.tacticalOnLogin (mismo patrón ya usado para Pedido Activo/Comparación Activa) porque se
 // lee de forma síncrona en varios sitios de este archivo mientras se arma el pedido.
 function carritoActivo(){ return window.tacticalB2CCarritoCache || null; }
-function itemActualComoLinea(){
+async function itemActualComoLinea(){
   const r = calcularPrecioTotal();
   return {
     linea, forma: linea==='laser' ? forma : null,
     fichas: itemActivo.fichas, medida: `${itemActivo.w}x${itemActivo.h}`,
     cantidad: r.cant, precioUnitario: r.precioUnit, total: r.total,
     marcoMadera: !!(itemActivo && itemActivo.marcoMadera),
-    fotoThumb: generarMiniaturaFoto(),
+    fotoThumb: await generarMiniaturaFoto(),
   };
 }
 function refrescarBannerCarrito(){
@@ -911,11 +918,11 @@ function refrescarBannerCarrito(){
     <span style="color:var(--muted); font-size:12px;">Configura el siguiente tamaño/forma arriba y agrégalo, o guarda el pedido completo cuando termines.</span><br>
     <button type="button" class="btn" style="width:auto; margin-top:6px; background:var(--danger); color:#fff;" onclick="cancelarCarrito()">✕ Cancelar y empezar de nuevo</button>`;
 }
-document.getElementById('btnAgregarOtro').addEventListener('click', ()=>{
+document.getElementById('btnAgregarOtro').addEventListener('click', async ()=>{
   if(!itemActivo){ alert('Selecciona una medida del catálogo primero.'); return; }
   let car = carritoActivo();
   if(!car) car = { items: [] };
-  car.items.push(itemActualComoLinea());
+  car.items.push(await itemActualComoLinea());
   window.tacticalB2CCarritoCache = car;
   tacticalGuardarB2CCarrito(car);
   refrescarBannerCarrito();
@@ -928,7 +935,7 @@ function cancelarCarrito(){
   refrescarBannerCarrito();
 }
 
-document.getElementById('btnGuardarPedido').addEventListener('click', ()=>{
+document.getElementById('btnGuardarPedido').addEventListener('click', async ()=>{
   const nombre = document.getElementById('cliNombre').value.trim();
   const cel = document.getElementById('cliCel').value.trim();
   const correo = document.getElementById('cliCorreo').value.trim();
@@ -937,7 +944,7 @@ document.getElementById('btnGuardarPedido').addEventListener('click', ()=>{
 
   const car = carritoActivo();
   const items = (car && car.items.length) ? [...car.items] : [];
-  if(itemActivo) items.push(itemActualComoLinea());
+  if(itemActivo) items.push(await itemActualComoLinea());
   if(items.length===0){ alert('Selecciona una medida del catálogo, o agrega al menos un rompecabezas al pedido.'); return; }
 
   const total = items.reduce((s,it)=>s+(it.total||0),0);

@@ -28,6 +28,107 @@ function tacticalNombreCliente(cli){
   return `${empresa} - ${nombre}`;
 }
 
+// ============ STORAGE DE FOTOS (Kanban, Fototeca, B2C Rompecabezas) ============
+// Conde 2026-08-23: antes toda foto se guardaba como texto base64 incrustado en la fila de la
+// tabla -- competía por los 500MB de la base de datos, y se duplicaba cada vez que la misma foto
+// de Fototeca se copiaba en varias cotizaciones (30 cotizaciones con la misma foto = 30 copias).
+// Ahora se sube UNA vez al bucket de Storage (espacio aparte de 1GB) y las tablas solo guardan la
+// URL corta -- mismos campos de texto de siempre (kanban_fotos.url, fototeca_items.foto_url,
+// b2c_pedido_items.foto_thumb_url), sin migración de columnas. Requiere haber corrido
+// supabase/migracion_storage_fotos.sql primero (crea el bucket + permisos).
+const TACTICAL_STORAGE_BUCKET = 'tactical-fotos';
+
+async function tacticalSubirFoto(dataUrl, ruta){
+  try{
+    const blob = await (await fetch(dataUrl)).blob();
+    const { error } = await tacticalSupabase.storage.from(TACTICAL_STORAGE_BUCKET).upload(ruta, blob, { upsert: true, contentType: blob.type || 'image/jpeg' });
+    if(error){ console.error('Error subiendo foto a Storage:', error); return null; }
+    const { data } = tacticalSupabase.storage.from(TACTICAL_STORAGE_BUCKET).getPublicUrl(ruta);
+    return data.publicUrl;
+  } catch(e){ console.error('Error subiendo foto a Storage:', e); return null; }
+}
+// Las tablas solo guardan la URL pública -- para borrar hace falta la ruta interna del bucket, que
+// se saca de la misma URL (siempre trae "/object/public/tactical-fotos/" antes de la ruta real) en
+// vez de guardar una columna aparte solo para eso.
+function tacticalRutaDesdeUrlStorage(url){
+  if(!url) return null;
+  const marca = `/object/public/${TACTICAL_STORAGE_BUCKET}/`;
+  const i = url.indexOf(marca);
+  return i === -1 ? null : decodeURIComponent(url.slice(i + marca.length));
+}
+async function tacticalEliminarFotosStorage(urls){
+  const rutas = (urls||[]).map(tacticalRutaDesdeUrlStorage).filter(Boolean);
+  if(!rutas.length) return;
+  const { error } = await tacticalSupabase.storage.from(TACTICAL_STORAGE_BUCKET).remove(rutas);
+  if(error) console.error('Error eliminando fotos de Storage:', error);
+}
+function tacticalFechaHaceMeses(meses){
+  const d = new Date();
+  d.setMonth(d.getMonth() - meses);
+  return d.toISOString();
+}
+
+// Limpieza real (Conde 2026-08-23): borra SOLO la foto de fichas de Kanban ya entregadas (columna
+// 'postventa') y de pedidos B2C ya aprobados, ambos con más de 4 meses -- para no llenar el 1GB de
+// Storage con fotos de producción que ya cumplieron su función (verificar que se hizo bien el
+// trabajo). Todo lo demás del registro (cliente, producto, precio, fecha, OT) NO se toca, solo la
+// foto. Nunca borra nada de Fototeca (catálogo reusado, sin fecha de vencimiento) ni de
+// Contabilidad (retención legal de 10 años, y ahí no hay fotos de todos modos).
+async function tacticalEjecutarLimpiezaFotos(){
+  const limite = tacticalFechaHaceMeses(4);
+  let fotosEliminadas = 0;
+
+  const { data: fichasViejas, error: errF } = await tacticalSupabase
+    .from('kanban_fichas').select('id, fecha_entrega, created_at').eq('columna', 'postventa');
+  if(errF){ console.error('Limpieza de fotos -- error consultando fichas:', errF); }
+  else {
+    const idsViejas = (fichasViejas||[]).filter(f => (f.fecha_entrega || f.created_at) < limite).map(f => f.id);
+    if(idsViejas.length){
+      const { data: fotos, error: errP } = await tacticalSupabase
+        .from('kanban_fotos').select('id, url').in('ficha_id', idsViejas);
+      if(errP){ console.error('Limpieza de fotos -- error consultando fotos kanban:', errP); }
+      else if(fotos && fotos.length){
+        await tacticalEliminarFotosStorage(fotos.map(f=>f.url));
+        const { error: errDel } = await tacticalSupabase.from('kanban_fotos').delete().in('id', fotos.map(f=>f.id));
+        if(errDel) console.error('Limpieza de fotos -- error borrando filas kanban_fotos:', errDel);
+        else fotosEliminadas += fotos.length;
+      }
+    }
+  }
+
+  const { data: pedidosViejos, error: errB } = await tacticalSupabase
+    .from('b2c_pedidos').select('id, fecha_aprobado, fecha').eq('estado', 'aprobado');
+  if(errB){ console.error('Limpieza de fotos -- error consultando pedidos B2C:', errB); }
+  else {
+    const idsViejos = (pedidosViejos||[]).filter(p => (p.fecha_aprobado || p.fecha) < limite).map(p => p.id);
+    if(idsViejos.length){
+      const { data: items, error: errI } = await tacticalSupabase
+        .from('b2c_pedido_items').select('id, foto_thumb_url').in('pedido_id', idsViejos).not('foto_thumb_url', 'is', null);
+      if(errI){ console.error('Limpieza de fotos -- error consultando items B2C:', errI); }
+      else if(items && items.length){
+        await tacticalEliminarFotosStorage(items.map(i=>i.foto_thumb_url));
+        const { error: errUpd } = await tacticalSupabase.from('b2c_pedido_items').update({foto_thumb_url: null}).in('id', items.map(i=>i.id));
+        if(errUpd) console.error('Limpieza de fotos -- error limpiando items B2C:', errUpd);
+        else fotosEliminadas += items.length;
+      }
+    }
+  }
+
+  localStorage.setItem('tactical_purga_fotos_ultima_v1', new Date().toISOString());
+  return fotosEliminadas;
+}
+// Se llama en window.tacticalOnLogin del Hub (solo administrador) -- corre como máximo 1 vez cada
+// 24h por navegador (no hace falta más seguido, hay 4 meses de margen) para no repetir la consulta
+// cada vez que el administrador entra al Hub el mismo día.
+async function tacticalPurgaFotosSiToca(){
+  const ultima = localStorage.getItem('tactical_purga_fotos_ultima_v1');
+  if(ultima && (Date.now() - new Date(ultima).getTime()) < 24*60*60*1000) return;
+  try{
+    const n = await tacticalEjecutarLimpiezaFotos();
+    if(n) console.log(`Limpieza de fotos: ${n} foto(s) antigua(s) eliminada(s) de Storage.`);
+  } catch(e){ console.error('Error en limpieza automática de fotos:', e); }
+}
+
 async function tacticalSesionActual(){
   const { data: { session } } = await tacticalSupabase.auth.getSession();
   return session;
