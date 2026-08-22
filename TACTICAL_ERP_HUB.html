@@ -65,6 +65,12 @@
         .accordion-header.active { border-left: 5px solid var(--primary); background: #2d3748; }
         .header-special { background: var(--secondary); }
         .accordion-content { display: none; padding: 10px; background: white; border: 1px solid #e2e8f0; border-top: none; }
+        /* Conde 2026-08-23: "en las calculadoras tenga mas contraste los recuadros a llenar...
+           asi como hiciste en el kanban" -- mismo criterio: el panel del formulario un poco más
+           oscuro, los recuadros de cada campo bien blancos y con borde más visible encima. Scopeado
+           solo al cotizador (no a Contabilidad/CRM/etc, que no se pidió tocar). */
+        #view-cotizador .accordion-content { background: #dde3ea; }
+        #view-cotizador input[type="text"], #view-cotizador input[type="number"], #view-cotizador select, #view-cotizador textarea { border: 1.5px solid #94a3b8; background: #fff; }
         .accordion-content.active { display: block; }
 
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-bottom: 10px; background: var(--light-gray); padding: 10px; border-radius: 6px; border: 1px solid #cbd5e0; }
@@ -202,6 +208,12 @@
             header { padding: 12px; text-align: center; justify-content: center; }
             header h2 { font-size: 1.2rem; width: 100%; justify-content: center; }
             .hub-grid { padding: 15px 10px; gap: 15px; }
+            /* Conde 2026-08-23: "para el celular deja este cuadro de copia de seguridad para el
+               final" -- no es lo primero que se quiere ver al entrar desde el celular. Se reordena
+               con flex/order en vez de mover el HTML, así en escritorio queda igual que siempre. */
+            #view-hub { display: flex !important; flex-direction: column !important; }
+            #hub-respaldo-box { order: 5; }
+            #view-hub > .hub-grid { order: 2; }
 
             #view-reprocesos table, #view-reprocesos thead, #view-reprocesos tbody, #view-reprocesos th, #view-reprocesos td, #view-reprocesos tr { display: block !important; width: 100% !important; box-sizing: border-box; }
             #view-tareas table, #view-tareas thead, #view-tareas tbody, #view-tareas th, #view-tareas td, #view-tareas tr { display: block !important; width: 100% !important; box-sizing: border-box; }
@@ -364,7 +376,7 @@
                 <p style="color: #718096; margin-top: 6px; font-size: 0.95rem;">Seleccione el módulo en el que desea trabajar hoy:</p>
             </div>
 
-            <div style="margin: 15px 20px 0 20px; background: var(--light-gray); border: 1px solid #cbd5e0; border-radius: 6px; padding: 12px 15px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <div id="hub-respaldo-box" style="margin: 15px 20px 0 20px; background: var(--light-gray); border: 1px solid #cbd5e0; border-radius: 6px; padding: 12px 15px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                 <span style="font-weight:bold; color:var(--dark);">💾 Copia de Seguridad (descarga un respaldo de todos los datos reales guardados en Supabase):</span>
                 <button class="btn-action" onclick="contExportarRespaldo()">⬇️ Exportar todo (backup)</button>
                 <span id="respaldo-nota" style="font-size:0.82rem; color:#718096;"></span>
@@ -7678,7 +7690,7 @@
 
 <style>
   #tactical-quicknav{ position:fixed; bottom:16px; right:16px; z-index:99999; display:flex; flex-direction:column; align-items:flex-end; gap:8px; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
-  #tactical-quicknav-menu{ display:none; background:#fff; border:1px solid #d7dee5; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.18); padding:8px; flex-direction:column; gap:2px; min-width:210px; }
+  #tactical-quicknav-menu{ display:none; background:#fff; border:1px solid #d7dee5; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.18); padding:8px; flex-direction:column; gap:2px; min-width:210px; max-height:70vh; overflow-y:auto; }
   #tactical-quicknav-menu.abierto{ display:flex; }
   .tactical-qn-item{ display:block; padding:9px 12px; border-radius:5px; font-size:13.5px; color:#1a202c; text-decoration:none; cursor:pointer; }
   .tactical-qn-item:hover{ background:#f4f6f8; }
@@ -7686,12 +7698,22 @@
 </style>
 <div id="tactical-quicknav">
   <div id="tactical-quicknav-menu">
+    <!-- Conde 2026-08-23: orden pedido explícitamente -- Hub, Kanban, Tareas, Calculadora,
+         Reprocesos primero; el resto organizado a criterio, y se completó la lista con los
+         módulos que faltaban (Radar, Precios, Fototeca, Bot, Montajes). -->
     <a class="tactical-qn-item" onclick="tacticalIrHub('hub')">Hub Principal</a>
-    <a class="tactical-qn-item" onclick="tacticalIrHub('calculadoras')">Calculadora de Costos</a>
     <a class="tactical-qn-item" onclick="tacticalIrHub('kanban')">Kanban de Producción</a>
+    <a class="tactical-qn-item" onclick="tacticalIrHub('tareas')">Plan de Tareas</a>
+    <a class="tactical-qn-item" onclick="tacticalIrHub('calculadoras')">Calculadora de Costos</a>
+    <a class="tactical-qn-item" onclick="tacticalIrHub('reprocesos')">Control de Reprocesos</a>
     <a class="tactical-qn-item" onclick="tacticalIrHub('crm')">CRM y Clientes</a>
     <a class="tactical-qn-item" onclick="tacticalIrHub('reportes')">Reportes</a>
     <a class="tactical-qn-item" onclick="tacticalIrHub('contabilidad')">Contabilidad</a>
+    <a class="tactical-qn-item" onclick="tacticalIrHub('radar')">Radar de Negocio</a>
+    <a class="tactical-qn-item" onclick="tacticalIrHub('precios')">Panel de Precios</a>
+    <a class="tactical-qn-item" onclick="tacticalIrHub('fototeca')">Fototeca de Productos</a>
+    <a class="tactical-qn-item" onclick="tacticalIrHub('botwa')">Bot WhatsApp</a>
+    <a class="tactical-qn-item" onclick="tacticalAbrirMontajes()">Montajes Rompecabezas (B2C)</a>
   </div>
   <button id="tactical-quicknav-btn" onclick="tacticalToggleQuickNav()" title="Acceso rápido a otras herramientas">☰</button>
 </div>
@@ -7706,6 +7728,10 @@ function tacticalIrHub(vista){
   } else {
     window.open('TACTICAL_ERP_HUB.html#'+vista, 'tactical_hub');
   }
+}
+function tacticalAbrirMontajes(){
+  document.getElementById('tactical-quicknav-menu').classList.remove('abierto');
+  window.open('modulo_montajes_rompecabezas.html', 'tactical_montajes');
 }
 document.addEventListener('click', function(ev){
   const menu = document.getElementById('tactical-quicknav-menu');

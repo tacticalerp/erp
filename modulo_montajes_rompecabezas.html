@@ -243,7 +243,7 @@
 
 <style>
   #tactical-quicknav{ position:fixed; bottom:16px; right:16px; z-index:99999; display:flex; flex-direction:column; align-items:flex-end; gap:8px; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
-  #tactical-quicknav-menu{ display:none; background:#fff; border:1px solid #d7dee5; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.18); padding:8px; flex-direction:column; gap:2px; min-width:210px; }
+  #tactical-quicknav-menu{ display:none; background:#fff; border:1px solid #d7dee5; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.18); padding:8px; flex-direction:column; gap:2px; min-width:210px; max-height:70vh; overflow-y:auto; }
   #tactical-quicknav-menu.abierto{ display:flex; }
   .tactical-qn-item{ display:block; padding:9px 12px; border-radius:5px; font-size:13.5px; color:#1a202c; text-decoration:none; cursor:pointer; }
   .tactical-qn-item:hover{ background:#f4f6f8; }
@@ -252,11 +252,18 @@
 <div id="tactical-quicknav">
   <div id="tactical-quicknav-menu">
     <a class="tactical-qn-item" onclick="tacticalIrHub('hub')">Hub Principal</a>
-    <a class="tactical-qn-item" onclick="tacticalIrHub('calculadoras')">Calculadora de Costos</a>
     <a class="tactical-qn-item" onclick="tacticalIrHub('kanban')">Kanban de Producción</a>
+    <a class="tactical-qn-item" onclick="tacticalIrHub('tareas')">Plan de Tareas</a>
+    <a class="tactical-qn-item" onclick="tacticalIrHub('calculadoras')">Calculadora de Costos</a>
+    <a class="tactical-qn-item" onclick="tacticalIrHub('reprocesos')">Control de Reprocesos</a>
     <a class="tactical-qn-item" onclick="tacticalIrHub('crm')">CRM y Clientes</a>
     <a class="tactical-qn-item" onclick="tacticalIrHub('reportes')">Reportes</a>
     <a class="tactical-qn-item" onclick="tacticalIrHub('contabilidad')">Contabilidad</a>
+    <a class="tactical-qn-item" onclick="tacticalIrHub('radar')">Radar de Negocio</a>
+    <a class="tactical-qn-item" onclick="tacticalIrHub('precios')">Panel de Precios</a>
+    <a class="tactical-qn-item" onclick="tacticalIrHub('fototeca')">Fototeca de Productos</a>
+    <a class="tactical-qn-item" onclick="tacticalIrHub('botwa')">Bot WhatsApp</a>
+    <a class="tactical-qn-item" onclick="tacticalAbrirMontajes()">Montajes Rompecabezas (B2C)</a>
   </div>
   <button id="tactical-quicknav-btn" onclick="tacticalToggleQuickNav()" title="Acceso rápido a otras herramientas">☰</button>
 </div>
@@ -267,6 +274,9 @@ function tacticalToggleQuickNav(){
 function tacticalIrHub(vista){
   document.getElementById('tactical-quicknav-menu').classList.remove('abierto');
   window.open('TACTICAL_ERP_HUB.html#'+vista, 'tactical_hub');
+}
+function tacticalAbrirMontajes(){
+  document.getElementById('tactical-quicknav-menu').classList.remove('abierto');
 }
 document.addEventListener('click', function(ev){
   const menu = document.getElementById('tactical-quicknav-menu');

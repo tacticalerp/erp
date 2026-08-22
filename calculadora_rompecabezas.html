@@ -26,7 +26,7 @@
   .col-form{flex:1 1 620px; min-width:340px;}
   .col-resultado{flex:1 1 380px; min-width:320px; position:sticky; top:20px;}
   .card{
-    background:var(--tarjeta); border:1px solid var(--borde); border-radius:8px;
+    background:#dde3ea; border:1px solid var(--borde); border-radius:8px;
     padding:16px 18px; margin-bottom:16px;
   }
   .card h2{margin:0 0 12px; font-size:15px; color:var(--azul); border-bottom:1px solid var(--borde); padding-bottom:8px;}
@@ -36,7 +36,7 @@
   .campo.chico{flex:0 1 100px;}
   label{font-size:12px; color:var(--texto-suave); font-weight:600;}
   input[type=number], input[type=text], select{
-    padding:7px 8px; border:1px solid var(--borde); border-radius:5px; font-size:13.5px;
+    padding:7px 8px; border:1.5px solid #94a3b8; border-radius:5px; font-size:13.5px;
     background:#fff; color:var(--texto);
   }
   input[type=number]{width:100%;}
@@ -1496,7 +1496,7 @@ poblarVarianteFoto();
 
 <style>
   #tactical-quicknav{ position:fixed; bottom:16px; right:16px; z-index:99999; display:flex; flex-direction:column; align-items:flex-end; gap:8px; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
-  #tactical-quicknav-menu{ display:none; background:#fff; border:1px solid #d7dee5; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.18); padding:8px; flex-direction:column; gap:2px; min-width:210px; }
+  #tactical-quicknav-menu{ display:none; background:#fff; border:1px solid #d7dee5; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.18); padding:8px; flex-direction:column; gap:2px; min-width:210px; max-height:70vh; overflow-y:auto; }
   #tactical-quicknav-menu.abierto{ display:flex; }
   .tactical-qn-item{ display:block; padding:9px 12px; border-radius:5px; font-size:13.5px; color:#1a202c; text-decoration:none; cursor:pointer; }
   .tactical-qn-item:hover{ background:#f4f6f8; }
@@ -1505,11 +1505,18 @@ poblarVarianteFoto();
 <div id="tactical-quicknav">
   <div id="tactical-quicknav-menu">
     <a class="tactical-qn-item" onclick="tacticalIrHub('hub')">Hub Principal</a>
-    <a class="tactical-qn-item" onclick="tacticalIrHub('calculadoras')">Calculadora de Costos</a>
     <a class="tactical-qn-item" onclick="tacticalIrHub('kanban')">Kanban de Producción</a>
+    <a class="tactical-qn-item" onclick="tacticalIrHub('tareas')">Plan de Tareas</a>
+    <a class="tactical-qn-item" onclick="tacticalIrHub('calculadoras')">Calculadora de Costos</a>
+    <a class="tactical-qn-item" onclick="tacticalIrHub('reprocesos')">Control de Reprocesos</a>
     <a class="tactical-qn-item" onclick="tacticalIrHub('crm')">CRM y Clientes</a>
     <a class="tactical-qn-item" onclick="tacticalIrHub('reportes')">Reportes</a>
     <a class="tactical-qn-item" onclick="tacticalIrHub('contabilidad')">Contabilidad</a>
+    <a class="tactical-qn-item" onclick="tacticalIrHub('radar')">Radar de Negocio</a>
+    <a class="tactical-qn-item" onclick="tacticalIrHub('precios')">Panel de Precios</a>
+    <a class="tactical-qn-item" onclick="tacticalIrHub('fototeca')">Fototeca de Productos</a>
+    <a class="tactical-qn-item" onclick="tacticalIrHub('botwa')">Bot WhatsApp</a>
+    <a class="tactical-qn-item" onclick="tacticalAbrirMontajes()">Montajes Rompecabezas (B2C)</a>
   </div>
   <button id="tactical-quicknav-btn" onclick="tacticalToggleQuickNav()" title="Acceso rápido a otras herramientas">☰</button>
 </div>
@@ -1524,6 +1531,10 @@ function tacticalIrHub(vista){
   } else {
     window.open('TACTICAL_ERP_HUB.html#'+vista, 'tactical_hub');
   }
+}
+function tacticalAbrirMontajes(){
+  document.getElementById('tactical-quicknav-menu').classList.remove('abierto');
+  window.open('modulo_montajes_rompecabezas.html', 'tactical_montajes');
 }
 document.addEventListener('click', function(ev){
   const menu = document.getElementById('tactical-quicknav-menu');
