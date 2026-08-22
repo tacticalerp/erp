@@ -1159,6 +1159,15 @@ window.tacticalOnLogin = async function(){
     window.location.href = 'TACTICAL_ERP_HUB.html';
     return;
   }
+  // Conde 2026-08-23: "Buscar/Aprobar Pedidos" y "Reporte de Ventas" son funciones comerciales/
+  // financieras (ver quién pagó, cuánto se ha vendido) -- diseño y producción entran a este módulo
+  // solo para armar montajes (pestaña 1), no deberían ver esas 2 pestañas.
+  if(!['administrador','comercial'].includes(rolActual)){
+    const btnBuscar = document.querySelector('nav.tabs button[data-tab="buscar"]');
+    const btnReportes = document.querySelector('nav.tabs button[data-tab="reportes"]');
+    if(btnBuscar) btnBuscar.style.display = 'none';
+    if(btnReportes) btnReportes.style.display = 'none';
+  }
   db_ventas_b2c = await tacticalB2CPedidosCargar();
   db_clientes_b2c = await tacticalClientesCargar();
   await tacticalB2CCarritoCargar();
