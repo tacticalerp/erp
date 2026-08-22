@@ -197,8 +197,8 @@
             header h2 { font-size: 1.2rem; width: 100%; justify-content: center; }
             .hub-grid { padding: 15px 10px; gap: 15px; }
 
-            #view-tareas table, #view-tareas thead, #view-tareas tbody, #view-tareas th, #view-tareas td, #view-tareas tr,
             #view-reprocesos table, #view-reprocesos thead, #view-reprocesos tbody, #view-reprocesos th, #view-reprocesos td, #view-reprocesos tr { display: block !important; width: 100% !important; box-sizing: border-box; }
+            #view-tareas table, #view-tareas thead, #view-tareas tbody, #view-tareas th, #view-tareas td, #view-tareas tr { display: block !important; width: 100% !important; box-sizing: border-box; }
             thead { display: none !important; }
             tr { background: #ffffff !important; border: 1px solid #cbd5e0 !important; border-radius: 8px !important; padding: 12px !important; margin-bottom: 15px !important; position: relative !important; }
             td { padding: 4px 0 !important; border: none !important; display: block !important; text-align: left !important; }
@@ -207,6 +207,41 @@
             .card-grid { grid-template-columns: 1fr; }
             .detail-row-grid { grid-template-columns: 1fr; gap: 8px; border: 1px dashed #cbd5e0; padding: 12px; border-radius: 6px; background: white; }
             td:last-child { display: flex !important; flex-direction: row !important; justify-content: space-between !important; gap: 6px !important; margin-top: 10px !important; border-top: 1px dashed #cbd5e0 !important; padding-top: 8px !important; }
+
+            /* Conde 2026-08-23: "que se vean varias tareas, quiza 6 u 8, en la misma pantalla" --
+               antes cada tarea ocupaba casi toda la pantalla del celular (6 campos apilados en
+               bloques de 44px). Nada se quita: los mismos 6 campos siguen ahí y siguen editables,
+               solo se reacomodan en 3-4 líneas angostas en vez de 6 bloques altos. Probado en una
+               maqueta aparte: ~7 tareas visibles por pantalla en un mobile de 375x812.
+               Estas reglas son MÁS específicas que las genéricas de arriba (llevan #view-tareas),
+               así que ganan sin importar el orden. */
+            #view-tareas tr {
+                display: flex !important; flex-flow: row wrap !important; align-items: center !important;
+                gap: 2px 5px !important; background: #fff !important; border: 1px solid #cbd5e0 !important;
+                border-radius: 6px !important; padding: 5px 7px !important; margin-bottom: 4px !important;
+            }
+            #view-tareas td { display: block !important; padding: 0 !important; border: none !important; box-sizing: border-box; }
+            #view-tareas input[type="text"], #view-tareas select { width: 100%; box-sizing: border-box; }
+            /* td1: descripción -- su propia línea, siempre completa */
+            #view-tareas td:nth-child(1) { order: 1; flex: 1 1 100%; display: flex !important; align-items: center !important; gap: 5px; }
+            #view-tareas .task-desc { font-weight: 600 !important; font-size: 12px !important; border: 1px solid transparent !important; padding: 1px 2px !important; height: auto !important; margin: 0 !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+            #view-tareas .badge-delay { font-size: 9px !important; padding: 1px 5px !important; margin: 0 !important; flex-shrink: 0; }
+            #view-tareas .input-aclaracion { flex: 1 1 100%; order: 1; font-size: 10px !important; height: 18px !important; color: #c53030; padding: 1px 4px !important; margin: 0 !important; }
+            /* td2: espec/notas -- su propia línea chica, texto gris discreto */
+            #view-tareas td:nth-child(2) { order: 4; flex: 1 1 100%; }
+            #view-tareas .task-espec { font-size: 10px !important; height: 18px !important; padding: 1px 4px !important; margin: 0 !important; color: #718096 !important; }
+            /* td3: responsables -- chips chicos + selector angosto */
+            #view-tareas td:nth-child(3) { order: 2; flex: 1 1 58%; display: flex !important; align-items: center !important; gap: 3px; flex-wrap: wrap; min-height: 20px; }
+            #view-tareas .task-emp-list { display: flex; flex-wrap: wrap; gap: 2px; }
+            #view-tareas .task-emp-add { font-size: 9.5px !important; height: 20px !important; padding: 0 2px !important; margin: 0 !important; width: auto !important; max-width: 100px; }
+            #view-tareas .emp-chip { font-size: 9.5px !important; padding: 1px 5px !important; }
+            /* td4: estado -- angosto, junto a responsables */
+            #view-tareas td:nth-child(4) { order: 3; flex: 0 0 auto; }
+            #view-tareas .status-select { font-size: 9.5px !important; padding: 2px 3px !important; height: 20px !important; margin: 0 !important; width: auto !important; }
+            /* td5 (fecha) + td6 (acciones) -- última línea, juntas */
+            #view-tareas td:nth-child(5) { order: 5; flex: 1 1 auto; font-size: 9px !important; color: #a0aec0 !important; white-space: nowrap; }
+            #view-tareas td:nth-child(6) { order: 6; flex: 0 0 auto; display: flex !important; gap: 3px; }
+            #view-tareas .btn-action { padding: 1px 5px !important; font-size: 10.5px !important; line-height: 1.6; }
 
             /* La regla "td { display:block }" de arriba es global y tambien
                rompia las tablas del PDF/Orden de Produccion en pantallas
@@ -1652,6 +1687,15 @@
                 navContainer.style.display = 'block';
                 mainTitle.innerText = "PLAN DE TAREAS TACTICAL";
                 subTitle.innerText = "Gestión Operativa Sincronizada (2026)";
+                // Conde 2026-08-23: "gestionar personal sea solo visible para administradores" --
+                // vive dentro de Plan de Tareas (no es una vista propia con su ROLES_POR_VISTA),
+                // así que se oculta la sección entera acá cada vez que se entra a esta vista.
+                const rolActualTareas = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol;
+                const seccionPersonal = document.getElementById('head-personal');
+                if(seccionPersonal){
+                    const item = seccionPersonal.closest('.accordion-item');
+                    if(item) item.style.display = (rolActualTareas === 'administrador') ? '' : 'none';
+                }
             } else if (viewId === 'reprocesos') {
                 navContainer.style.display = 'block';
                 mainTitle.innerText = "CONTROL DE REPROCESOS TACTICAL";
