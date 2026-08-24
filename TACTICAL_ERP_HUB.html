@@ -73,6 +73,13 @@
           }
           #view-tareas .badge-delay { flex-basis: 100%; }
           #view-tareas .input-aclaracion.td-detalle-desktop { flex-basis: 100%; }
+          /* Conde 2026-08-24 (3ra vuelta): "Pendiente" solo icono (el texto completo no cabía y se
+             cortaba a la mitad -- ver captura), y Responsable se oculta detrás del ▶ igual que
+             Impresión/flechas/motivo EN CUANTO ya tiene a alguien asignado (si está "Sin asignar"
+             sigue visible siempre, para poder asignarlo sin tener que expandir primero). */
+          #view-tareas .status-select { width: auto; padding: 6px 8px; }
+          #view-tareas td.td-responsable.resp-colapsable { display: none !important; }
+          #view-tareas tr.tarea-expandida td.td-responsable.resp-colapsable { display: table-cell !important; }
         }
         .desc-clamp { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; max-width: 100%; }
         .desc-clamp.expandido { white-space: normal; overflow: visible; text-overflow: clip; }
@@ -133,6 +140,7 @@
         .status-finalizado { background-color: var(--finalizado); color: white; }
 
         .badge-delay { display: inline-block; background: var(--peligro); color: white; padding: 3px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; margin-bottom: 5px; }
+        .task-fecha-limite { display: block; font-size: 0.75rem; padding: 2px 4px; margin-top: 3px; width: auto; height: auto; color: #718096; }
         .badge-escape { background: #fff5f5; color: var(--primary); border: 1px solid #feb2b2; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; display: inline-block; margin-top: 4px; }
         .badge-supplier { background: #f3e8ff; color: var(--externo); border: 1px solid #d6bcfa; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; display: inline-block; margin-top: 4px; }
 
@@ -305,6 +313,10 @@
             #view-tareas .task-emp-list { display: flex; flex-wrap: wrap; gap: 2px; }
             #view-tareas .task-emp-add { font-size: 9.5px !important; height: 20px !important; padding: 0 2px !important; margin: 0 !important; width: auto !important; max-width: 110px; }
             #view-tareas .emp-chip { font-size: 9.5px !important; padding: 1px 5px !important; }
+            /* Conde 2026-08-24 (3ra vuelta): mismo colapso que en escritorio -- Responsable ya
+               asignado se oculta detrás del ▶, "Sin asignar" se queda visible. */
+            #view-tareas td.td-responsable.resp-colapsable { display: none !important; }
+            #view-tareas tr.tarea-expandida td.td-responsable.resp-colapsable { display: flex !important; }
 
             /* Todo lo demás -- notas/impresión, estado, fecha, botones -- oculto salvo expandida */
             #view-tareas td.td-detalle { display: none !important; order: 3; }
@@ -312,6 +324,7 @@
             #view-tareas .task-espec { font-size: 10.5px !important; height: 20px !important; padding: 2px 4px !important; margin: 2px 0 !important; color: #718096 !important; }
             #view-tareas .status-select { font-size: 10.5px !important; padding: 2px 4px !important; height: 22px !important; margin: 2px 0 !important; width: auto !important; }
             #view-tareas .task-origin { font-size: 10px !important; color: #a0aec0 !important; white-space: nowrap; margin: 2px 0; }
+            #view-tareas .task-fecha-limite { font-size: 10px !important; height: 20px !important; padding: 1px 3px !important; margin: 2px 0 0 !important; width: auto !important; display: inline-block !important; }
             #view-tareas tr.tarea-expandida td.td-detalle[style*="text-align:center"] { display: flex !important; gap: 4px; margin: 2px 0; }
             #view-tareas .btn-action { padding: 2px 6px !important; font-size: 11px !important; }
 
@@ -1811,6 +1824,20 @@
                     const item = seccionPersonal.closest('.accordion-item');
                     if(item) item.style.display = (rolActualTareas === 'administrador') ? '' : 'none';
                 }
+                // Conde 2026-08-24: "las tareas de gerencia solo sean vistas por administradores, y
+                // las de comercial queden ocultas a diseño y produccion" -- mismo patrón de arriba
+                // (Gestionar Personal), acá aplicado a las 2 áreas de la tabla en vez de a la
+                // sub-sección de Personal.
+                const seccionGerencia = document.getElementById('head-gerencia');
+                if(seccionGerencia){
+                    const item = seccionGerencia.closest('.accordion-item');
+                    if(item) item.style.display = (rolActualTareas === 'administrador') ? '' : 'none';
+                }
+                const seccionComercial = document.getElementById('head-comercial');
+                if(seccionComercial){
+                    const item = seccionComercial.closest('.accordion-item');
+                    if(item) item.style.display = (rolActualTareas === 'diseno' || rolActualTareas === 'produccion') ? 'none' : '';
+                }
             } else if (viewId === 'reprocesos') {
                 navContainer.style.display = 'block';
                 mainTitle.innerText = "CONTROL DE REPROCESOS TACTICAL";
@@ -1966,8 +1993,9 @@
             const emp = taskLeerResponsables(tr);
             const status = tr.querySelector('.status-select').value;
             const aclaracion = tr.querySelector('.input-aclaracion').value;
+            const fechaLimite = tr.querySelector('.task-fecha-limite').value || null;
             tacticalSyncTarea({
-                id: tr.dataset.id, area, desc, espec, emp, status, aclaracion,
+                id: tr.dataset.id, area, desc, espec, emp, status, aclaracion, fechaLimite,
                 fechaOrigen: tr.dataset.fechaOrigen, orden: parseFloat(tr.dataset.orden),
             });
         }
@@ -1982,13 +2010,14 @@
             const espec = tr.querySelector('.task-espec').value;
             const emp = taskLeerResponsables(tr);
             const aclaracion = tr.querySelector('.input-aclaracion').value;
+            const fechaLimite = tr.querySelector('.task-fecha-limite').value || null;
             const fechaOrigen = tr.dataset.fechaOrigen;
             tacticalSyncTarea({
-                id: tr.dataset.id, area, desc, espec, emp, status, aclaracion, fechaOrigen,
+                id: tr.dataset.id, area, desc, espec, emp, status, aclaracion, fechaLimite, fechaOrigen,
                 orden: parseFloat(tr.dataset.orden),
                 cerrada: true, fechaCierre: new Date().toISOString(), delayCerrado: tareaDiasRetraso(fechaOrigen),
             });
-            db_historico.push({ id: tr.dataset.id, area, desc, espec, emp, status, aclaracion, fechaCierre: new Date().toISOString(), delay: tareaDiasRetraso(fechaOrigen) });
+            db_historico.push({ id: tr.dataset.id, area, desc, espec, emp, status, aclaracion, fechaLimite, fechaCierre: new Date().toISOString(), delay: tareaDiasRetraso(fechaOrigen) });
             tr.remove();
             if(document.getElementById('historico') && document.getElementById('historico').classList.contains('active')) renderHistory();
             if(document.getElementById('kpis') && document.getElementById('kpis').classList.contains('active')) renderKPIs();
@@ -2001,7 +2030,8 @@
         function tacticalEscAttr(s){
           return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;');
         }
-        function addTask(area, desc = '', espec = '', assigned = '', status = 'pendiente', id = null, fechaOrigen = null, orden = null, aclaracion = '') {
+        const TACTICAL_ESTADO_LABELS = { pendiente:'Pendiente', proceso:'En Proceso', externo:'Causa Externa', listo:'Listo', finalizado:'Finalizado' };
+        function addTask(area, desc = '', espec = '', assigned = '', status = 'pendiente', id = null, fechaOrigen = null, orden = null, aclaracion = '', fechaLimite = null) {
             const tbody = document.querySelector(`#table-${area} tbody`);
             const tr = document.createElement('tr');
             tr.dataset.id = id || crypto.randomUUID();
@@ -2014,7 +2044,7 @@
             // antes de este cambio) como el nuevo (array de nombres) -- se normaliza a array siempre.
             const assignedList = Array.isArray(assigned) ? assigned.filter(Boolean) : (assigned ? [assigned] : []);
 
-            let delayBadge = diasRetraso > 0 ? `<div class="badge-delay">⚠️ Retraso: ${diasRetraso} día(s)</div><br>` : '';
+            let delayBadge = diasRetraso > 0 ? `<div class="badge-delay" title="Retraso: ${diasRetraso} día(s)">⚠️ ${diasRetraso}</div><br>` : '';
             let displayAclaracion = (diasRetraso > 0 || status === 'externo') ? 'block' : 'none';
             let inputPlaceholder = area === 'diseno' ? 'Cant. y tipo de impresión...' : (area === 'produccion' ? 'Dirección proveedor...' : 'Notas...');
 
@@ -2028,24 +2058,27 @@
                 <td class="td-tarea">
                     ${delayBadge}
                     <button type="button" class="task-toggle" onclick="taskToggleExpandir(this)" title="Ver más detalles">▶</button>
-                    <input type="text" style="width:95%; font-weight:bold;" placeholder="Escriba la tarea..." value="${tacticalEscAttr(desc)}" class="task-desc" onchange="guardarFila(this.closest('tr'))">
+                    <input type="text" style="width:95%; font-weight:bold;" placeholder="Escriba la tarea..." value="${tacticalEscAttr(desc)}" class="task-desc tactical-campo-dictado" onchange="guardarFila(this.closest('tr'))">
                     <input type="text" class="input-aclaracion td-detalle td-detalle-desktop" style="display: ${displayAclaracion};" placeholder="💡 Motivo del retraso externo..." value="${tacticalEscAttr(aclaracion)}" onchange="guardarFila(this.closest('tr'))">
                 </td>
                 <td class="td-detalle td-detalle-desktop"><input type="text" class="task-espec" placeholder="${inputPlaceholder}" value="${tacticalEscAttr(espec)}" onchange="guardarFila(this.closest('tr'))"></td>
-                <td class="td-responsable">
+                <td class="td-responsable${assignedList.length ? ' resp-colapsable' : ''}">
                     <div class="task-emp-list" data-emp='${JSON.stringify(assignedList)}'></div>
                     <select class="task-emp-add" onchange="taskAgregarResponsable(this)"></select>
                 </td>
                 <td class="td-detalle">
-                    <select class="status-select status-${status}" onchange="evaluarEstadoFila(this)">
-                        <option value="pendiente" ${status === 'pendiente' ? 'selected' : ''}>⏳ Pendiente</option>
-                        <option value="proceso" ${status === 'proceso' ? 'selected' : ''}>🔄 En Proceso</option>
-                        <option value="externo" ${status === 'externo' ? 'selected' : ''}>⚠️ Causa Externa</option>
-                        <option value="listo" ${status === 'listo' ? 'selected' : ''}>✅ Listo</option>
-                        <option value="finalizado" ${status === 'finalizado' ? 'selected' : ''}>🏁 Finalizado</option>
+                    <select class="status-select status-${status}" title="${TACTICAL_ESTADO_LABELS[status]||''}" onchange="evaluarEstadoFila(this)">
+                        <option value="pendiente" ${status === 'pendiente' ? 'selected' : ''}>⏳</option>
+                        <option value="proceso" ${status === 'proceso' ? 'selected' : ''}>🔄</option>
+                        <option value="externo" ${status === 'externo' ? 'selected' : ''}>⚠️</option>
+                        <option value="listo" ${status === 'listo' ? 'selected' : ''}>✅</option>
+                        <option value="finalizado" ${status === 'finalizado' ? 'selected' : ''}>🏁</option>
                     </select>
                 </td>
-                <td class="td-detalle task-origin">${dateStr}</td>
+                <td class="td-detalle task-origin">
+                    ${dateStr}
+                    <input type="date" class="task-fecha-limite" title="Fecha límite (opcional)" value="${fechaLimite||''}" onchange="guardarFila(this.closest('tr'))">
+                </td>
                 <td class="td-detalle td-detalle-desktop" style="text-align:center;">
                     <button class="btn-action" onclick="moveRowUp(this)" title="Subir prioridad">🔼</button>
                     <button class="btn-action" onclick="moveRowDown(this)" title="Bajar prioridad">🔽</button>
@@ -2054,6 +2087,11 @@
             `;
             tbody.appendChild(tr);
             taskRenderChips(tr.querySelector('.task-emp-list'), area);
+            // Conde 2026-08-24: dictado por voz también al escribir una tarea nueva -- addTask crea
+            // filas en vivo (no existen todavía cuando tacticalInicializarDictado() corrió una sola
+            // vez en DOMContentLoaded), así que se vuelve a llamar acá; es segura de repetir (usa
+            // dataset.dictadoListo como guardia, no duplica el botón en los campos ya armados).
+            if(typeof tacticalInicializarDictado === 'function') tacticalInicializarDictado();
         }
 
         // Conde 2026-08-23: flecha para desplegar el resto de la tarea en móvil (ver arriba, en
@@ -2104,6 +2142,10 @@
             const select = container.nextElementSibling;
             const disponibles = empleadosPorArea(area).filter(e => !list.includes(e));
             select.innerHTML = '<option value="">+ Agregar responsable</option>' + disponibles.map(e=>`<option value="${e}">${e}</option>`).join('');
+            // Conde 2026-08-24 (3ra vuelta): en cuanto ya hay alguien asignado, esta celda se
+            // oculta detrás del ▶ (igual que Impresión/flechas) -- se recalcula acá porque la
+            // lista cambia en vivo al agregar/quitar personas, no solo al crear la fila.
+            container.closest('td.td-responsable').classList.toggle('resp-colapsable', list.length > 0);
         }
         function taskAgregarResponsable(select){
             if(!select.value) return;
@@ -2159,6 +2201,7 @@
 
         function evaluarEstadoFila(selectElement) {
             selectElement.className = 'status-select status-' + selectElement.value;
+            selectElement.title = TACTICAL_ESTADO_LABELS[selectElement.value] || '';
             const tr = selectElement.closest('tr');
             const aclInput = tr.querySelector('.input-aclaracion');
             if (selectElement.value === 'externo') aclInput.style.display = 'block';
@@ -2199,9 +2242,9 @@
             let t = db_historico.find(x => x.id === id);
             if(!t) return;
             const fechaOrigenNueva = new Date().toISOString();
-            addTask(t.area, t.desc, t.espec, t.emp, 'proceso', t.id, fechaOrigenNueva, Date.now(), t.aclaracion);
+            addTask(t.area, t.desc, t.espec, t.emp, 'proceso', t.id, fechaOrigenNueva, Date.now(), t.aclaracion, t.fechaLimite);
             tacticalSyncTarea({
-                id: t.id, area: t.area, desc: t.desc, espec: t.espec, emp: t.emp, status: 'proceso', aclaracion: t.aclaracion,
+                id: t.id, area: t.area, desc: t.desc, espec: t.espec, emp: t.emp, status: 'proceso', aclaracion: t.aclaracion, fechaLimite: t.fechaLimite,
                 fechaOrigen: fechaOrigenNueva, orden: Date.now(), cerrada: false, fechaCierre: null, delayCerrado: null,
             });
             db_historico = db_historico.filter(x => x.id !== id);
@@ -2589,7 +2632,7 @@
           db_cotizaciones = await tacticalCotizacionesCargar();
           const tareas = await tacticalTareasCargar();
           db_historico = tareas.historico;
-          tareas.activas.forEach(t => addTask(t.area, t.desc, t.espec, t.emp, t.status, t.id, t.fechaOrigen, t.orden, t.aclaracion));
+          tareas.activas.forEach(t => addTask(t.area, t.desc, t.espec, t.emp, t.status, t.id, t.fechaOrigen, t.orden, t.aclaracion, t.fechaLimite));
           db_proveedores = await tacticalProveedoresCargar();
           db_docventa = await tacticalDocVentaCargar();
           db_ingresos = await tacticalIngresosCargar();

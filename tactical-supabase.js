@@ -530,20 +530,21 @@ function tacticalTareaADb(t){
     responsables: t.emp||[], status: t.status||'pendiente', aclaracion: t.aclaracion||null,
     fecha_origen: t.fechaOrigen||new Date().toISOString(), orden: t.orden||Date.now(),
     cerrada: !!t.cerrada, fecha_cierre: t.fechaCierre||null, delay_cerrado: t.delayCerrado!=null ? t.delayCerrado : null,
+    fecha_limite: t.fechaLimite||null,
   };
 }
 function tacticalTareaActivaDeDb(r){
   return {
     id: r.id, area: r.area, desc: r.descripcion, espec: r.especificaciones||'',
     emp: r.responsables||[], status: r.status, aclaracion: r.aclaracion||'',
-    fechaOrigen: r.fecha_origen, orden: r.orden,
+    fechaOrigen: r.fecha_origen, orden: r.orden, fechaLimite: r.fecha_limite||null,
   };
 }
 function tacticalTareaHistDeDb(r){
   return {
     id: r.id, area: r.area, desc: r.descripcion, espec: r.especificaciones||'',
     emp: r.responsables||[], status: r.status, aclaracion: r.aclaracion||'',
-    fechaCierre: r.fecha_cierre, delay: r.delay_cerrado||0,
+    fechaCierre: r.fecha_cierre, delay: r.delay_cerrado||0, fechaLimite: r.fecha_limite||null,
   };
 }
 async function tacticalTareasCargar(){
