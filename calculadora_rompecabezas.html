@@ -220,6 +220,17 @@
           <input type="number" id="in-troquelManualCop" value="0" min="0">
         </div>
       </div>
+      <div class="fila" id="fila-medidasNuevas" style="display:none;">
+        <div class="campo">
+          <label>Ancho del troquel nuevo (cm):</label>
+          <input type="number" id="in-anchoNuevo" min="1" step="0.1" placeholder="Ej: 22">
+        </div>
+        <div class="campo">
+          <label>Alto del troquel nuevo (cm):</label>
+          <input type="number" id="in-altoNuevo" min="1" step="0.1" placeholder="Ej: 15">
+        </div>
+        <div class="hint" style="flex-basis:100%;">Un troquel nuevo no existe todavía -- no se puede partir de la medida de un troquel de referencia (esa medida es solo para copiar la cantidad de fichas/complejidad de corte). El papel y el cartón de esta cotización se calculan con estas medidas.</div>
+      </div>
     </div>
 
     <div class="card">
@@ -626,9 +637,16 @@ function cotizarRompecabezas(p){
   // marco perimetral (solo ROMB-001, siempre chica) es +3cm en vez de +2cm. Este mismo tamaño
   // de montaje se usa TANTO para el material impreso como para el backing del colaminado.
   const extraCm = esLineaMacro ? 0 : (conMarco ? MARCO_EXTRA_CM_CON : MARCO_EXTRA_CM_SIN);
+  // Conde 2026-08-24: "si es un troquel nuevo no podemos partir de las medidas de los troqueles
+  // existentes" -- la referencia elegida arriba (troquel.ancho/alto) solo sirve para copiar fichas/
+  // complejidad de corte cuando se trata de un troquel YA EXISTENTE. Si es nuevo, el papel y el
+  // cartón se calculan con la medida real que se preguntó (p.anchoNuevoCm/altoNuevoCm), no con la
+  // del troquel de referencia.
+  const anchoTroquelReal = p.troquelEsNuevo ? p.anchoNuevoCm : troquel.ancho;
+  const altoTroquelReal  = p.troquelEsNuevo ? p.altoNuevoCm  : troquel.alto;
   // ROMB-008 ya trae marco de fábrica incluido en la medida de troquel — no se le suma nada extra.
-  const anchoMontaje = troquel.marcoFabrica ? troquel.ancho : troquel.ancho + extraCm;
-  const altoMontaje  = troquel.marcoFabrica ? troquel.alto  : troquel.alto  + extraCm;
+  const anchoMontaje = troquel.marcoFabrica ? anchoTroquelReal : anchoTroquelReal + extraCm;
+  const altoMontaje  = troquel.marcoFabrica ? altoTroquelReal  : altoTroquelReal  + extraCm;
 
   const [sustratoNombre, gramajeStr] = p.sustrato.split("__");
   const gramaje = parseFloat(gramajeStr);
@@ -687,7 +705,7 @@ function cotizarRompecabezas(p){
 
   let costoBaseMarco = 0, detalleBaseMarco = null;
   if(conMarco){
-    const anchoBase = troquel.ancho + 2, altoBase = troquel.alto + 2;
+    const anchoBase = anchoTroquelReal + 2, altoBase = altoTroquelReal + 2;
     const piezasBase = Math.ceil(p.cantidad * (1+MARCO_BASE_MERMA_PCT));
     detalleBaseMarco = costoMaterialPliegos(anchoBase, altoBase, MARCO_BASE_SUSTRATO, MARCO_BASE_GRAMAJE, piezasBase, 0);
     costoBaseMarco = detalleBaseMarco.costoTotal;
@@ -797,6 +815,14 @@ function onCambioTroquelNuevo(){
   const esNuevo = document.getElementById("in-troquelNuevo").value === "nuevo";
   document.getElementById("fila-complejidad").style.display = esNuevo ? "none" : "flex";
   document.getElementById("fila-troquelManual").style.display = esNuevo ? "flex" : "none";
+  // Conde 2026-08-24: "si es nuevo no podemos partir de las medidas de los troqueles existentes,
+  // debes preguntar cuanto mide de ancho y de alto" -- se activan en blanco (no se copia la medida
+  // del troquel de referencia elegido arriba, que solo se usa para las fichas/complejidad de corte).
+  document.getElementById("fila-medidasNuevas").style.display = esNuevo ? "flex" : "none";
+  if(!esNuevo){
+    document.getElementById("in-anchoNuevo").value = "";
+    document.getElementById("in-altoNuevo").value = "";
+  }
 }
 
 /* ============ RECOMENDACIONES DE PRODUCCIÓN ============ */
@@ -858,10 +884,16 @@ function calcular(){
       troquelEsNuevo: document.getElementById("in-troquelNuevo").value === "nuevo",
       complejidadDesgaste: document.getElementById("in-complejidad").value,
       costoTroquelNuevoManual: parseFloat(document.getElementById("in-troquelManualCop").value)||0,
+      anchoNuevoCm: parseFloat(document.getElementById("in-anchoNuevo").value)||0,
+      altoNuevoCm: parseFloat(document.getElementById("in-altoNuevo").value)||0,
       cabeEnMoto: document.getElementById("in-cabeEnMoto").checked,
       utilidadPct: parseFloat(document.getElementById("in-utilidadPct").value)/100,
       comisionPct: parseFloat(document.getElementById("in-comisionPct").value)/100,
     };
+    if(p.troquelEsNuevo && (!p.anchoNuevoCm || !p.altoNuevoCm)){
+      alert("Para un troquel nuevo, ingresa el ancho y el alto reales (no se puede calcular el papel/cartón sin esa medida).");
+      return;
+    }
     const r = cotizarRompecabezas(p);
     renderRecomendaciones(r);
 

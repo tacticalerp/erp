@@ -2028,6 +2028,14 @@
             const expandida = tr.classList.toggle('tarea-expandida');
             btn.textContent = expandida ? '▼' : '▶';
         }
+        // Conde 2026-08-24: "no puedo saber que es ni de quien" -- recorte simple por caracteres
+        // para que la vista colapsada de Seguimiento/Cotizaciones alcance a mostrar cliente+monto+
+        // un pedazo del producto, en vez de solo el título completo (que se veía cortado por ancho
+        // de pantalla, no por longitud, y no dejaba ver ni el cliente ni el monto).
+        function tacticalTruncar(texto, n){
+          if(!texto) return '';
+          return texto.length > n ? texto.slice(0, n).trim() + '…' : texto;
+        }
         // Conde 2026-08-24: mismo patrón de arriba, para tarjetas (.data-card) en vez de filas de
         // tabla -- Clientes y Seguimiento (renderClientes/renderOportunidades) en el CRM.
         function tacticalToggleCardDetalle(btn){
@@ -2751,15 +2759,18 @@
                 container.innerHTML += `
                     <div class="data-card card-collapsible">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:6px;">
-                            <div class="card-title desc-clamp" style="margin:0; flex:1; min-width:0;">${opp.desc}</div>
+                            <div style="min-width:0; flex:1;">
+                                <div class="card-title" style="margin:0; font-size:0.95rem;">${opp.nombreCli}</div>
+                                <div style="font-size:1.05rem; font-weight:bold; color:var(--dark); margin-top:2px;">$${opp.monto.toLocaleString()} COP</div>
+                                <div style="font-size:0.8rem; color:#718096; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${tacticalTruncar(opp.desc, 40)}</div>
+                            </div>
                             <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
                                 <span class="tag ${tags_etapa[opp.etapa].cls}">${tags_etapa[opp.etapa].lbl}</span>
                                 <button class="card-flecha-toggle" onclick="tacticalToggleCardDetalle(this)">▶</button>
                             </div>
                         </div>
                         <div class="card-detalle">
-                            <div class="card-subtitle">👤 Cliente: <strong>${opp.nombreCli}</strong></div>
-                            <div style="font-size:1.3rem; font-weight:bold; color:var(--dark);">$${opp.monto.toLocaleString()} COP</div>
+                            <div class="card-subtitle">${opp.desc}</div>
                             <div class="action-row">
                                 ${btnAvanzar}
                                 <button class="btn-stage btn-ganado" onclick="intentarMarcarGanado('${opp.id}')">💲 Ganado</button>
@@ -4612,21 +4623,23 @@
           tbody.innerHTML = todas.length ? todas.map(o => {
             const fecha = fechaDeRegistro(o);
             const fechaTxt = fecha ? fecha.toLocaleDateString('es-CO', {year:'numeric', month:'short', day:'numeric'}) : '-';
-            // Conde 2026-08-24: en móvil, las celdas "cot-td-titulo" (OT y Producto, con la flecha
-            // en la de OT) quedan siempre visibles -- el resto (fecha/cliente/valor/estado/acciones)
-            // vive en "cot-td-detalle", oculto salvo que la fila tenga "cot-expandida" (ver CSS de
-            // #buscadorCot en el @media(max-width:768px) de arriba). Mismas 7 celdas de siempre (para
-            // no desalinear las 7 columnas del <thead> en escritorio), solo con clases nuevas.
+            // Conde 2026-08-24: "quiero ver el nombre del cliente, el monto y quiza unos 40
+            // caracteres del producto... eso seria la informacion antes de desplegar todo" -- en
+            // móvil, las celdas "cot-td-titulo" (Cliente con la flecha, Valor, Producto recortado a
+            // 40 caracteres) quedan siempre visibles -- OT/fecha/estado/acciones pasan a
+            // "cot-td-detalle", oculto salvo "cot-expandida" (ver CSS de #buscadorCot en el
+            // @media(max-width:768px) de arriba). Mismas 7 celdas de siempre, en el mismo orden que
+            // el <thead> (para no desalinear la tabla en escritorio), solo con clases nuevas.
             return `<tr>
-              <td class="cot-td-titulo"><button type="button" class="cot-toggle" onclick="tacticalToggleFilaCot(this)">▶</button> ${o.ot||'-'}</td>
+              <td class="cot-td-detalle">${o.ot||'-'}</td>
               <td class="cot-td-detalle">${fechaTxt}</td>
-              <td class="cot-td-detalle">${o.nombreCli}</td>
-              <td class="cot-td-titulo" style="max-width:280px;"><div class="desc-clamp" title="Clic para ver completo" onclick="this.classList.toggle('expandido')">${o.desc}</div></td>
-              <td class="cot-td-detalle">${cotFormatoCop(o.monto)}</td>
+              <td class="cot-td-titulo"><button type="button" class="cot-toggle" onclick="tacticalToggleFilaCot(this)">▶</button> ${o.nombreCli}</td>
+              <td class="cot-td-titulo" style="max-width:280px; font-size:0.85rem; color:#4a5568;" title="${o.desc}">${tacticalTruncar(o.desc, 40)}</td>
+              <td class="cot-td-titulo">${cotFormatoCop(o.monto)}</td>
               <td class="cot-td-detalle">${o.estadoTxt||'-'}</td>
               <td class="cot-td-detalle">
                 <button class="btn-action" onclick="verPDFCotizacionGuardada('${o.id}')">🖨️ Ver PDF</button>
-                ${(o.linea==='cuadernos' && o.etapa) ? `<button class="btn-action" style="color:#d97706; border-color:#d97706;" onclick="cotCargarCotizacionGuardada('${o.id}')" title="Ver el desglose y cambiar algo puntual sin recotizar desde cero">✏️ Editar</button>` : ''}
+                ${(o.linea==='cuadernos' && o.etapa) ? `<button class="btn-action" style="color:#d97706; border-color:#d97706;" onclick="cotCargarCotizacionGuardada('${o.id}')" title="Ver el desglose y crear una nueva versión con cambios, sin borrar esta">✏️ Ver / Nueva versión</button>` : ''}
                 <button class="btn-action" style="color:var(--peligro); border-color:var(--peligro);" onclick="eliminarCotizacionRegistro('${o.id}')">🗑️</button>
               </td>
             </tr>`;
@@ -5792,6 +5805,25 @@
            mientras se está editando, ACTUALIZA esa misma cotización (mismo id/OT) en vez de crear
            una duplicada -- ver cotEditandoId más abajo. ---- */
         let cotEditandoId = null;
+        let cotEditandoOtOriginal = null; // respaldo del OT si la cotización original ya no está en db_opps
+        // Quita la letra de versión de un OT si la tiene (ej. "OT-2608-34-B" -> "OT-2608-34";
+        // "OT-2608-34" se queda igual, es la original y nunca tiene letra).
+        function cotOtBase(ot){
+          const m = /^(.*)-([A-Z])$/.exec(ot||'');
+          return m ? m[1] : (ot||'');
+        }
+        // Siguiente letra de versión libre para un OT base -- revisa TODAS las cotizaciones
+        // (activas y cerradas) que compartan ese mismo OT base, y devuelve la letra siguiente a la
+        // más alta ya usada (empieza en "B" porque la original, sin letra, es implícitamente "A").
+        function cotSiguienteSufijoOT(otBase){
+          let maxCode = 'A'.charCodeAt(0);
+          [...db_opps, ...db_historial_cierres].forEach(o => {
+            if(!o.ot || o.ot === otBase) return;
+            const m = new RegExp('^' + otBase.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '-([A-Z])$').exec(o.ot);
+            if(m) maxCode = Math.max(maxCode, m[1].charCodeAt(0));
+          });
+          return String.fromCharCode(maxCode + 1);
+        }
         function cotLlenarLineaEnForm(prefix, datos){
           const elSustrato = document.getElementById(prefix+'_sustrato');
           if(elSustrato) elSustrato.value = datos.sustrato.nombre+'__'+datos.sustrato.gramaje;
@@ -5887,13 +5919,17 @@
           }
 
           cotEditandoId = cot.id;
+          cotEditandoOtOriginal = cot.ot;
+          const otBaseVista = cotOtBase(cot.ot);
+          const siguienteVersion = otBaseVista + '-' + cotSiguienteSufijoOT(otBaseVista);
           const banner = document.getElementById('cot-edicion-banner');
           banner.style.display = 'block';
-          banner.innerHTML = `✏️ Editando la cotización <strong>${cot.ot||''}</strong> -- al guardar, ACTUALIZA esta misma cotización (no crea una nueva). <button type="button" class="btn-action" onclick="cotCancelarEdicion()">Cancelar edición</button>`;
+          banner.innerHTML = `✏️ Editando a partir de <strong>${cot.ot||''}</strong> -- al guardar, se crea una cotización NUEVA (<strong>${siguienteVersion}</strong>) sin tocar ni borrar esta original -- el cliente todavía puede elegir cualquiera de las versiones. <button type="button" class="btn-action" onclick="cotCancelarEdicion()">Cancelar edición</button>`;
           document.getElementById('view-cotizador').scrollIntoView({behavior:'smooth'});
         }
         function cotCancelarEdicion(){
           cotEditandoId = null;
+          cotEditandoOtOriginal = null;
           const banner = document.getElementById('cot-edicion-banner');
           banner.style.display = 'none';
           banner.innerHTML = '';
@@ -6050,17 +6086,23 @@
           const observaciones = document.getElementById('cot-observaciones').value.trim();
           const condicionesComerciales = document.getElementById('cot-condicionesComerciales').value.split('\n').map(l=>l.trim()).filter(Boolean);
 
-          // Conde 2026-08-24: "en ocasiones piden un cambio pequeño y la idea no es hacerla de
-          // nuevo" -- si se cargó una cotización guardada (cotCargarCotizacionGuardada), guardar
-          // ACTUALIZA esa misma cotización (mismo id/OT, upsert por id) en vez de crear una nueva.
-          // Solo aplica a cotizaciones que siguen activas en el embudo (db_opps) -- una ya cerrada
-          // como Ganada/Perdida no se puede editar desde aquí (afectaría el Documento de Venta ya
-          // emitido), así que cotCargarCotizacionGuardada nunca ofrece el botón para esas.
+          // Conde 2026-08-24 (corregido el mismo día): "necesitamos tener todas las versiones sin
+          // borrar la primera" -- al guardar una edición NO se sobreescribe la cotización original
+          // (el cliente puede terminar eligiendo esa). En vez de eso se crea una cotización NUEVA
+          // (nuevo id, propio registro) con el mismo número de OT + una letra de versión: la
+          // original es OT-2608-34 (sin letra), la 1ra edición queda OT-2608-34-B, la 2da
+          // OT-2608-34-C, etc. -- todas quedan visibles por separado en el buscador de Cotizaciones,
+          // ninguna se pierde. Solo aplica a cotizaciones que siguen activas en el embudo (db_opps)
+          // -- una ya cerrada como Ganada/Perdida no se puede editar desde aquí (afectaría el
+          // Documento de Venta ya emitido), así que cotCargarCotizacionGuardada nunca ofrece el
+          // botón para esas.
           let opp, ot;
-          if(cotEditandoId && db_opps.find(o => o.id === cotEditandoId)){
-            opp = db_opps.find(o => o.id === cotEditandoId);
-            ot = opp.ot;
-            Object.assign(opp, { idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc, vendedor, monto: Math.round(r.precioFinalTotal), linea: 'cuadernos', cantidad: p.cantidad, planoCorteLineas });
+          if(cotEditandoId){
+            const original = db_opps.find(o => o.id === cotEditandoId);
+            const otBase = cotOtBase((original && original.ot) || cotEditandoOtOriginal || '');
+            ot = otBase ? (otBase + '-' + cotSiguienteSufijoOT(otBase)) : await cotObtenerOT();
+            opp = { id: crypto.randomUUID(), idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc, vendedor, monto: Math.round(r.precioFinalTotal), etapa: 'cot', linea: 'cuadernos', cantidad: p.cantidad, planoCorteLineas, fecha: new Date().toISOString(), ot };
+            db_opps.push(opp);
           } else {
             opp = { id: crypto.randomUUID(), idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc, vendedor, monto: Math.round(r.precioFinalTotal), etapa: 'cot', linea: 'cuadernos', cantidad: p.cantidad, planoCorteLineas, fecha: new Date().toISOString() };
             db_opps.push(opp);
@@ -6075,9 +6117,7 @@
             plazoEntrega, validezOferta, observaciones, condicionesComerciales,
             fotoUrl: cotFotoElegidaUrl(), videoUrl: cotVideoElegidoUrl(),
           };
-          const iExistente = db_cotizaciones.findIndex(c => c.id === opp.id);
-          if(iExistente > -1) db_cotizaciones[iExistente] = cotizacion;
-          else db_cotizaciones.push(cotizacion);
+          db_cotizaciones.push(cotizacion);
           tacticalSyncCotizacion(cotizacion);
           cotRefrescarDatalistClientes();
           cotCancelarEdicion();
