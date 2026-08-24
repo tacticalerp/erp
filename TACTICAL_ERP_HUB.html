@@ -2083,6 +2083,24 @@
 
         // Guarda SOLO la fila que cambió (no todo el tablero) -- así el guardado
         // de una persona no le borra un cambio recién hecho por otra en otra fila.
+        // "organiza automaticamente de fecha mas reciente a fecha mas distante" -- por fecha de
+        // ENTREGA (E / fechaLimite), la más próxima primero (más urgente arriba); las tareas sin
+        // fecha de entrega asignada quedan al final (no se sabe qué tan urgentes son). Reordena
+        // moviendo los <tr> ya existentes (no los recrea), así no se pierde ningún listener.
+        function taskReordenarTabla(area){
+            const tbody = document.querySelector(`#table-${area} tbody`);
+            if(!tbody) return;
+            const filas = [...tbody.querySelectorAll('tr')];
+            filas.sort((a, b) => {
+                const fa = a.querySelector('.task-fecha-limite').value;
+                const fb = b.querySelector('.task-fecha-limite').value;
+                if(!fa && !fb) return 0;
+                if(!fa) return 1;
+                if(!fb) return -1;
+                return fa < fb ? -1 : (fa > fb ? 1 : 0);
+            });
+            filas.forEach(tr => tbody.appendChild(tr));
+        }
         function guardarFila(tr){
             if(!tr || !tr.dataset.id) return;
             const area = tr.closest('table').id.replace('table-','');
@@ -2097,6 +2115,7 @@
                 id: tr.dataset.id, area, desc, espec, emp, status, aclaracion, fechaLimite,
                 fechaOrigen: tr.dataset.fechaOrigen, orden: parseFloat(tr.dataset.orden),
             });
+            taskReordenarTabla(area);
         }
 
         // Conde 2026-08-19: en cuanto una tarea queda Lista/Finalizada, se archiva
@@ -2195,6 +2214,7 @@
             if(typeof tacticalInicializarDictado === 'function') tacticalInicializarDictado();
             taskActualizarDictadoVisible(tr.querySelector('.task-desc'));
             taskActualizarEntregaTexto(tr);
+            taskReordenarTabla(area);
         }
 
         // Conde 2026-08-24 (4ta vuelta): "oculta dictar por voz si ya se lleno la tarea" -- el
