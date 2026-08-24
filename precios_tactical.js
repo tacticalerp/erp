@@ -653,3 +653,67 @@ function tacticalAplicarRecomendacionesOverride(lista, calculadoraId){
     .map(c => ({ id: c.id, aplica: () => true, texto: c.texto }));
   return [...conOverride, ...customDeEstaCalculadora];
 }
+
+/* ==========================================
+   DICTADO POR VOZ + ORTOGRAFÍA (Conde 2026-08-24): un botón "🎤 Dictar por voz" que agrega, al
+   final de lo ya escrito, lo que se diga en voz alta -- usa el reconocimiento de voz nativo del
+   navegador (Web Speech API), sin servidor ni costo aparte. Solo funciona en Chrome (Android o
+   escritorio) -- Safari/iPhone no lo soporta; si el navegador no lo tiene, simplemente no aparece
+   el botón (el campo se sigue escribiendo a mano normal, no se rompe nada). También activa el
+   corrector ortográfico nativo del navegador (spellcheck) en el mismo campo -- eso sí funciona en
+   cualquier navegador. Se activa solo, en todo campo con class="tactical-campo-dictado" -- no hace
+   falta llamarlo a mano en cada calculadora, corre una vez al cargar la página.
+   ========================================== */
+// CSS del botón inyectado por JS (una sola vez) en vez de pedirle a las 10 herramientas que
+// agreguen las mismas reglas cada una en su <style> -- todo el feature queda autocontenido aquí.
+(function tacticalInyectarEstiloDictado(){
+  const style = document.createElement('style');
+  style.textContent = `
+    .tactical-dictado-btn{ display:inline-flex; align-items:center; gap:4px; margin-top:4px; padding:4px 10px; border-radius:14px; border:1px solid #cbd5e0; background:#f7fafc; color:#4a5568; font-size:11.5px; cursor:pointer; font-family:inherit; }
+    .tactical-dictado-btn:hover{ background:#edf2f7; }
+    .tactical-dictado-btn.escuchando{ background:#fde8e8; border-color:#c53030; color:#c53030; animation: tactical-dictado-pulso 1s infinite; }
+    @keyframes tactical-dictado-pulso{ 0%{opacity:1;} 50%{opacity:0.55;} 100%{opacity:1;} }
+  `;
+  document.head.appendChild(style);
+})();
+function tacticalInicializarDictado(){
+  const RecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+  document.querySelectorAll('.tactical-campo-dictado').forEach(campo => {
+    campo.setAttribute('spellcheck', 'true');
+    if(!RecognitionCtor || campo.dataset.dictadoListo) return;
+    campo.dataset.dictadoListo = '1';
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'tactical-dictado-btn';
+    btn.title = 'Dictar por voz (agrega al final de lo que ya está escrito)';
+    btn.textContent = '🎤 Dictar por voz';
+    campo.insertAdjacentElement('afterend', btn);
+
+    const rec = new RecognitionCtor();
+    rec.lang = 'es-CO';
+    rec.continuous = false;
+    rec.interimResults = false;
+    let escuchando = false;
+
+    btn.addEventListener('click', () => {
+      if(escuchando){ rec.stop(); return; }
+      try{ rec.start(); } catch(e){ /* ya estaba corriendo -- se ignora, onstart/onend resuelven el estado */ }
+    });
+    rec.onstart = () => { escuchando = true; btn.classList.add('escuchando'); btn.textContent = '🔴 Escuchando... (toca para detener)'; };
+    rec.onend = () => { escuchando = false; btn.classList.remove('escuchando'); btn.textContent = '🎤 Dictar por voz'; };
+    rec.onerror = (e) => {
+      escuchando = false; btn.classList.remove('escuchando'); btn.textContent = '🎤 Dictar por voz';
+      if(e.error !== 'no-speech' && e.error !== 'aborted') console.error('Error de dictado por voz:', e.error);
+    };
+    rec.onresult = (e) => {
+      const texto = e.results[0][0].transcript;
+      const actual = campo.value;
+      const necesitaEspacio = actual && !/[\s\n]$/.test(actual);
+      campo.value = actual + (necesitaEspacio ? ' ' : '') + texto;
+      campo.dispatchEvent(new Event('input', {bubbles:true}));
+      campo.focus();
+    };
+  });
+}
+document.addEventListener('DOMContentLoaded', tacticalInicializarDictado);

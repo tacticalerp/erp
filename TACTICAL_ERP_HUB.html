@@ -743,7 +743,7 @@
 
                     <div class="form-group">
                         <label>Observaciones y Acciones Preventivas (Lección Aprendida):</label>
-                        <textarea id="txt-observaciones" placeholder="Escriba la acción preventiva para evitar que este error se repita..."></textarea>
+                        <textarea id="txt-observaciones" class="tactical-campo-dictado" placeholder="Escriba la acción preventiva para evitar que este error se repita..."></textarea>
                     </div>
 
                     <button class="btn-submit" onclick="procesarIncidenteReproceso()">⚠️ Registrar Incidente Completo</button>
@@ -1145,8 +1145,8 @@
                             <div class="form-group"><label>% Ventas:</label><input type="number" id="cot-ventasPct" value="2" step="1"></div>
                             <div class="form-group" style="flex-basis:100%;"><label>Plazo de entrega:</label><input type="text" id="cot-plazoEntrega" value="15 días hábiles luego de aprobado montaje digital y anticipo"></div>
                             <div class="form-group" style="flex-basis:100%;"><label>Validez de la oferta:</label><input type="text" id="cot-validezOferta" placeholder="Ej: 30 días calendario desde la fecha de emisión"></div>
-                            <div class="form-group" style="flex-basis:100%;"><label>Condiciones comerciales (editable — una por línea; ajusta forma de pago u otras según el cliente):</label><textarea id="cot-condicionesComerciales" rows="5" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e0; border-radius:4px; font-family:inherit; font-size:0.9rem;"></textarea></div>
-                            <div class="form-group" style="flex-basis:100%;"><label>Observaciones (opcional — aparecen en el PDF, y queda espacio para agregar más a mano):</label><textarea id="cot-observaciones" rows="2" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e0; border-radius:4px; font-family:inherit; font-size:0.95rem;"></textarea></div>
+                            <div class="form-group" style="flex-basis:100%;"><label>Condiciones comerciales (editable — una por línea; ajusta forma de pago u otras según el cliente):</label><textarea id="cot-condicionesComerciales" class="tactical-campo-dictado" rows="5" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e0; border-radius:4px; font-family:inherit; font-size:0.9rem;"></textarea></div>
+                            <div class="form-group" style="flex-basis:100%;"><label>Observaciones (opcional — aparecen en el PDF, y queda espacio para agregar más a mano):</label><textarea id="cot-observaciones" class="tactical-campo-dictado" rows="2" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e0; border-radius:4px; font-family:inherit; font-size:0.95rem;"></textarea></div>
                         </div>
                     </div>
                 </div>
@@ -1160,7 +1160,7 @@
                     <div id="cot-resultado" class="accordion-content active">
                         <button class="btn-submit" onclick="cotCalcular()">🧮 Calcular Cotización</button>
                         <div id="cot-resultado-contenido" style="margin-top:15px;"></div>
-                        <div class="form-group" style="margin-top:10px;"><label>Descripción para el cliente (editable — útil para distinguir varios cuadernos parecidos dentro de un mismo pedido). Tip: escribe <strong>**así**</strong> para resaltar en negrilla en el PDF:</label><textarea id="cot-descCliente" rows="1" style="width:100%; box-sizing:border-box; resize:vertical; overflow:hidden; font-family:inherit; font-size:inherit; padding:8px; line-height:1.4;" oninput="this.style.height='auto'; this.style.height=(this.scrollHeight+2)+'px';"></textarea></div>
+                        <div class="form-group" style="margin-top:10px;"><label>Descripción para el cliente (editable — útil para distinguir varios cuadernos parecidos dentro de un mismo pedido). Tip: escribe <strong>**así**</strong> para resaltar en negrilla en el PDF:</label><textarea id="cot-descCliente" class="tactical-campo-dictado" rows="1" style="width:100%; box-sizing:border-box; resize:vertical; overflow:hidden; font-family:inherit; font-size:inherit; padding:8px; line-height:1.4;" oninput="this.style.height='auto'; this.style.height=(this.scrollHeight+2)+'px';"></textarea></div>
                         <div class="form-group" style="margin-top:10px;"><label>Foto para el PDF/comparativa:</label><select id="cot-fotoElegida"></select></div>
                         <div id="card-recomendaciones-cot" style="display:none; margin-top:12px;">
                             <div style="font-weight:bold; color:var(--dark); margin-bottom:6px;">⚠️ Recomendaciones de Producción</div>
