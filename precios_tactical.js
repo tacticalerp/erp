@@ -501,6 +501,34 @@ function tacticalMejorLayoutPliego(pa, pal, pw, ph){
   candidatos.sort((x,y)=>y.total-x.total);
   return candidatos[0];
 }
+// Conde 2026-08-24: "la maquina puede alimentar desde 24x17 hasta 50x25... y todos los
+// intermedios" -- confirmó que cada máquina litográfica NO imprime solo su tamaño máximo de
+// catálogo (octavo/cuarto/medio pliego), sino cualquier medida intermedia dentro de un rango.
+// Antes, el material se cortaba SIEMPRE al tamaño máximo de la máquina aunque la pieza real fuera
+// mucho más chica (ej. un volante de 36x23cm en máquina "cuarto" -- 35x50cm -- solo aprovechaba
+// una pequeña parte de esa hoja, el resto se desperdiciaba: con el pliego madre de 70x100cm eso
+// eran 4 piezas de 35x50cm por pliego, cuando cortando SOLO lo que la pieza necesita (24x36.5cm,
+// con el mismo margen de pinza de esa máquina) caben 6 -- 34% menos papel para el mismo trabajo,
+// mismas pasadas de máquina). tacticalCorteMontajeOffset() calcula esa medida ajustada: envuelve
+// justo las piezas de esa pasada (ya calculadas por planoImpresionOffset de cada calculadora) más
+// el margen de pinza real de esa máquina (la diferencia entre su tamaño completo y su área
+// imprimible, YA definida por calculadora en OFFSET_FORMATOS_CM/OFFSET_FORMATOS_IMPRESION_CM --
+// no es un margen inventado nuevo, es el mismo que ya se usaba), sin bajar del mínimo real que esa
+// máquina puede alimentar ni pasarse de su máximo de catálogo.
+const TACTICAL_OFFSET_MINIMO_CM = { octavo: [14, 21], cuarto: [17, 24], medio_pliego: [25, 35] };
+function tacticalCorteMontajeOffset(fraccion, plano, formatosCm, formatosImpresionCm){
+  function ordenar2(a, b){ return a <= b ? [a, b] : [b, a]; }
+  const anchoUtil = plano.columnas * (plano.rotado ? plano.piezaAlto : plano.piezaAncho);
+  const altoUtil = plano.filas * (plano.rotado ? plano.piezaAncho : plano.piezaAlto);
+  const [fChico, fGrande] = ordenar2(...formatosCm[fraccion]);
+  const [fiChico, fiGrande] = ordenar2(...formatosImpresionCm[fraccion]);
+  const margenChico = fChico - fiChico, margenGrande = fGrande - fiGrande;
+  const [utilChico, utilGrande] = ordenar2(anchoUtil, altoUtil);
+  const [minChico, minGrande] = TACTICAL_OFFSET_MINIMO_CM[fraccion];
+  const anchoCorte = Math.min(fChico, Math.max(utilChico + margenChico, minChico));
+  const altoCorte = Math.min(fGrande, Math.max(utilGrande + margenGrande, minGrande));
+  return [anchoCorte, altoCorte];
+}
 // planoCorte = {piezaAncho, piezaAlto, pliegoAncho, pliegoAlto, columnas, filas, rotado,
 // piezasPorPliego, secundaria?:{x,y,piezaAncho,piezaAlto,columnas,filas,rotado}} -- "secundaria"
 // es opcional (solo aparece cuando mezclar orientaciones sacó más piezas que una sola).

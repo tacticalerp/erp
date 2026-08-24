@@ -5367,7 +5367,13 @@
               piezasMaterialNecesarias=Math.ceil((nPiezasFisicas+mermaD)/det.piezasPorClic);
               esMontaje=true;
             } else if(det.fraccion){
-              [anchoMaterial,altoMaterial]=OFFSET_FORMATOS_CM[det.fraccion];
+              // Conde 2026-08-24: la máquina litográfica alimenta cualquier tamaño intermedio
+              // dentro de su rango (no solo el máximo de catálogo) -- el material se corta
+              // AJUSTADO a lo que la pasada realmente necesita (pieza(s) + margen de pinza real
+              // de esa máquina), no siempre al tamaño completo de la clase. Ver
+              // tacticalCorteMontajeOffset en precios_tactical.js.
+              const planoImp=planoImpresionOffset(ancho,alto,det.fraccion);
+              [anchoMaterial,altoMaterial]=tacticalCorteMontajeOffset(det.fraccion, planoImp, OFFSET_FORMATOS_CM, OFFSET_FORMATOS_IMPRESION_CM);
               piezasMaterialNecesarias=det.nPasadas;
               esMontaje=true;
             }

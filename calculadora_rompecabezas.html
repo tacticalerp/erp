@@ -674,7 +674,12 @@ function cotizarRompecabezas(p){
     [anchoMontajeImpresion, altoMontajeImpresion] = DIGITAL_FORMATOS_CM[detalleImpresion.clase];
     nPliegosImpresion = Math.ceil(piezasFisicasImpresion/detalleImpresion.piezasPorClic);
   } else {
-    [anchoMontajeImpresion, altoMontajeImpresion] = OFFSET_FORMATOS_CM[detalleImpresion.fraccion];
+    // Conde 2026-08-24: la máquina litográfica alimenta cualquier tamaño intermedio dentro de su
+    // rango (no solo el máximo de catálogo) -- el material se corta AJUSTADO a lo que la pasada
+    // realmente necesita (pieza(s) + margen de pinza real de esa máquina), no siempre al tamaño
+    // completo de la clase. Ver tacticalCorteMontajeOffset en precios_tactical.js.
+    const planoImp = planoImpresionOffset(anchoMontaje, altoMontaje, detalleImpresion.fraccion);
+    [anchoMontajeImpresion, altoMontajeImpresion] = tacticalCorteMontajeOffset(detalleImpresion.fraccion, planoImp, OFFSET_FORMATOS_CM, OFFSET_FORMATOS_IMPRESION_CM);
     nPliegosImpresion = detalleImpresion.nPasadas;
   }
 
