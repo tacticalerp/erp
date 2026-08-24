@@ -354,6 +354,7 @@ function tacticalFichaKanbanADb(f){
     titulo: f.titulo||'', columna: f.columna||'aprobada', urgente: !!f.urgente,
     fecha_entrega: f.fechaEntrega||null, entrega: f.entrega||null,
     responsable: f.responsable||null, origen: f.origen||null, diseno_aprobado: !!f.disenoAprobado,
+    op_notas_manual: f.opNotasManual||null,
   };
 }
 function tacticalFichaKanbanDeDb(r, lineas, checklist, fotos){
@@ -361,8 +362,16 @@ function tacticalFichaKanbanDeDb(r, lineas, checklist, fotos){
     id: r.id, ot: r.ot, idCli: r.id_cliente, nombreCli: r.nombre_cli, titulo: r.titulo,
     columna: r.columna, urgente: r.urgente, fechaEntrega: r.fecha_entrega, entrega: r.entrega,
     responsable: r.responsable, origen: r.origen, disenoAprobado: !!r.diseno_aprobado, fechaCreacion: r.created_at,
+    opNotasManual: r.op_notas_manual||'',
     lineas: lineas||[], checklist: checklist||[], fotos: fotos||[],
   };
+}
+// Conde 2026-08-24: guardado suelto (solo esta columna) -- tacticalSyncFichaKanban() de arriba
+// borra y reinserta líneas/checklist cada vez que se llama, innecesario y arriesgado solo para
+// guardar un texto libre cada vez que se abre/cierra la vista previa de la Orden de Producción.
+async function tacticalGuardarNotasManualesOP(fichaId, texto){
+  const { error } = await tacticalSupabase.from('kanban_fichas').update({ op_notas_manual: texto||null }).eq('id', fichaId);
+  if(error) console.error('Error guardando notas manuales de OP:', error);
 }
 function tacticalLineaKanbanADb(fichaId, l){
   return {
