@@ -3412,7 +3412,8 @@
                 <label style="display:block; font-weight:700; font-size:0.85rem; color:#4a5568; margin-bottom:4px;">📝 Notas manuales de producción</label>
                 <div style="font-size:0.78rem; color:#a0aec0; margin-bottom:6px;">Se ve resaltado al imprimir y queda guardado en la ficha -- puedes volver a abrir esta OP y seguir editándolo.</div>
                 <textarea id="op-preview-notas" rows="3" placeholder="Ej: para esta corrida usar el troquel viejo porque el nuevo está en mantenimiento..." style="width:100%; box-sizing:border-box; font-size:0.88rem; padding:8px; border:1.5px solid #cbd5e0; border-radius:6px; font-family:inherit; margin-bottom:14px;"></textarea>
-                <div id="op-preview-auto"></div>
+                <div style="font-size:0.78rem; color:#a0aec0; margin-bottom:6px;">✏️ Los datos de abajo (calculados en automático) también se pueden tocar y corregir a mano -- solo para esta impresión, no queda guardado en el sistema.</div>
+                <div id="op-preview-auto" contenteditable="true" style="border:1px dashed #cbd5e0; border-radius:6px; padding:8px; outline:none;"></div>
               </div>
               <div style="padding:14px 18px; border-top:1px solid #e2e8f0; flex-shrink:0;">
                 <button type="button" id="op-preview-imprimir" style="width:100%; padding:11px; border:none; background:var(--secondary); color:#fff; border-radius:6px; font-weight:700; cursor:pointer;">🖨️ Imprimir</button>
@@ -3437,7 +3438,8 @@
               <div style="background:#fff3cd; color:#7a5b00; border:1px solid #f0d98c; border-radius:4px; padding:6px 10px; margin-bottom:6px; font-size:${TACTICAL_OP_FONT_SIZE};">
                 <strong>📝 Notas manuales de producción:</strong><br>${notasEsc.replace(/\n/g,'<br>')}
               </div>` : '';
-            document.getElementById('print-area').innerHTML = notasHtml + htmlAuto;
+            const autoEditado = overlay.querySelector('#op-preview-auto').innerHTML;
+            document.getElementById('print-area').innerHTML = notasHtml + autoEditado;
             document.getElementById('print-area').style.display = 'block';
             tacticalImprimirConTitulo(tituloArchivo);
             overlay.remove();

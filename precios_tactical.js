@@ -1,3 +1,19 @@
+// Conde 2026-08-24: miniatura de pestaña (favicon) para las 10 herramientas -- "ERP" en blanco,
+// fuente condensada y pesada, dentro de un recuadro rojo corporativo (var(--primary) = #cc0000 en
+// el CSS de cada página, repetido acá literal porque este script corre antes de que exista el
+// <style> de la página). SVG inline (sin archivo aparte que pedir/mantener) -- se inyecta una sola
+// vez acá porque este archivo se carga en las 10 herramientas, así no hay que repetir el <link> en
+// cada una ni arriesgarse a que alguna quede desactualizada.
+(function tacticalInyectarFavicon(){
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>`
+    + `<rect width='64' height='64' rx='12' fill='%23cc0000'/>`
+    + `<text x='32' y='42' font-family='Arial Narrow,Helvetica Neue,Arial,sans-serif' font-weight='900' `
+    + `font-size='25' letter-spacing='-1' fill='white' text-anchor='middle'>ERP</text></svg>`;
+  let link = document.querySelector("link[rel~='icon']");
+  if(!link){ link = document.createElement('link'); link.rel = 'icon'; document.head.appendChild(link); }
+  link.type = 'image/svg+xml';
+  link.href = 'data:image/svg+xml,' + svg;
+})();
 // ==========================================
 // Conde 2026-08-21: "se están aprobando y se omite la fecha" -- el prompt() de texto libre para la
 // fecha de entrega de la Orden de Producción se podía cancelar o dejar vacío sin darse cuenta
