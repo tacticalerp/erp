@@ -1174,6 +1174,7 @@
                             <button class="btn-submit" style="flex:1; min-width:220px; background:#25D366;" onclick="cotCompartirWhatsAppClick()">📲 Enviar por WhatsApp</button>
                         </div>
                         <div id="cot-ot-nota" style="display:none; margin-top:10px; padding:8px 12px; background:#eef2f7; border-left:4px solid var(--primary); border-radius:4px; font-size:0.9rem;"></div>
+                        <div id="cot-edicion-banner" style="display:none; margin-top:10px; padding:8px 12px; background:#fff7e6; border-left:4px solid #d97706; border-radius:4px; font-size:0.9rem;"></div>
                         <div id="cot-pedido-banner" style="display:none; margin-top:10px; padding:8px 12px; background:#eafaf0; border-left:4px solid var(--ganado); border-radius:4px; font-size:0.9rem;"></div>
                         <div id="cot-comparacion-banner" style="display:none; margin-top:10px; padding:8px 12px; background:#f3ecfb; border-left:4px solid #805ad5; border-radius:4px; font-size:0.9rem;"></div>
                     </div>
@@ -4625,6 +4626,7 @@
               <td class="cot-td-detalle">${o.estadoTxt||'-'}</td>
               <td class="cot-td-detalle">
                 <button class="btn-action" onclick="verPDFCotizacionGuardada('${o.id}')">🖨️ Ver PDF</button>
+                ${(o.linea==='cuadernos' && o.etapa) ? `<button class="btn-action" style="color:#d97706; border-color:#d97706;" onclick="cotCargarCotizacionGuardada('${o.id}')" title="Ver el desglose y cambiar algo puntual sin recotizar desde cero">✏️ Editar</button>` : ''}
                 <button class="btn-action" style="color:var(--peligro); border-color:var(--peligro);" onclick="eliminarCotizacionRegistro('${o.id}')">🗑️</button>
               </td>
             </tr>`;
@@ -5782,6 +5784,121 @@
         /* ---- GUARDAR COTIZACIÓN: CRM + PDF CLIENTE ---- */
         let db_cotizaciones = [];
 
+        /* ---- EDITAR UNA COTIZACIÓN YA GUARDADA (Conde 2026-08-24: "en ocasiones piden un cambio
+           pequeño y la idea no es hacerla de nuevo") -- repuebla el formulario con los datos EXACTOS
+           de una cotización guardada (ya se guardaban completos en params/resultado, solo faltaba
+           esta pantalla para volver a leerlos) y recalcula, para verificar cualquier parte del
+           desglose o cambiar algo puntual sin volver a escribir todo desde cero. Al guardar de nuevo
+           mientras se está editando, ACTUALIZA esa misma cotización (mismo id/OT) en vez de crear
+           una duplicada -- ver cotEditandoId más abajo. ---- */
+        let cotEditandoId = null;
+        function cotLlenarLineaEnForm(prefix, datos){
+          const elSustrato = document.getElementById(prefix+'_sustrato');
+          if(elSustrato) elSustrato.value = datos.sustrato.nombre+'__'+datos.sustrato.gramaje;
+          const elTintasTiro = document.getElementById(prefix+'_tintasTiro');
+          if(elTintasTiro) elTintasTiro.value = datos.tintasTiro;
+          const elTintasRetiro = document.getElementById(prefix+'_tintasRetiro');
+          if(elTintasRetiro) elTintasRetiro.value = datos.tintasRetiro;
+          const disenoEl = document.getElementById(prefix+'_diseno');
+          if(disenoEl) disenoEl.value = datos.diseno;
+          const intercaladoEl = document.getElementById(prefix+'_intercalado');
+          if(intercaladoEl) intercaladoEl.value = datos.intercalado ? 'intercalados' : 'seguidos';
+          const pliegueEl = document.getElementById(prefix+'_pliegue');
+          if(pliegueEl) pliegueEl.checked = !!datos.pliegue;
+          const nombreEl = document.getElementById(prefix+'_nombre');
+          if(nombreEl && datos.nombre) nombreEl.value = datos.nombre;
+          const hojasEl = document.getElementById(prefix+'_hojas');
+          if(hojasEl) hojasEl.value = datos.hojasPorCuaderno;
+          COT_ACABADOS_DISPONIBLES.forEach(a=>{
+            const el = document.getElementById(prefix+'_acab_'+a.tipo);
+            if(el) el.checked = false;
+          });
+          const otroChk = document.getElementById(prefix+'_acab_otro');
+          if(otroChk) otroChk.checked = false;
+          (datos.acabados||[]).forEach(a=>{
+            if(a.tipo === 'otro'){
+              if(otroChk){
+                otroChk.checked = true;
+                const costoEl = document.getElementById(prefix+'_otroCosto');
+                if(costoEl) costoEl.value = a.costoManual||0;
+              }
+            } else {
+              const el = document.getElementById(prefix+'_acab_'+a.tipo);
+              if(el) el.checked = true;
+            }
+          });
+        }
+        function cotCargarCotizacionGuardada(id){
+          const cot = db_cotizaciones.find(c => c.id === id);
+          if(!cot){ alert('No se encontró el detalle guardado de esta cotización (puede ser muy antigua, de antes de que se empezara a guardar el desglose).'); return; }
+          const p = cot.params;
+
+          showView('cotizador');
+          initCotizador();
+
+          document.getElementById('cot-cli-empresa').value = cot.cliente.empresa || '';
+          document.getElementById('cot-cli-encargado').value = cot.cliente.encargado || '';
+          document.getElementById('cot-cli-telefono').value = cot.cliente.telefono || '';
+          document.getElementById('cot-cli-correo').value = cot.cliente.correo || '';
+          if(cot.vendedor) document.getElementById('cot-vendedor').value = cot.vendedor;
+          document.getElementById('cot-plazoEntrega').value = cot.plazoEntrega || '';
+          document.getElementById('cot-validezOferta').value = cot.validezOferta || '';
+          document.getElementById('cot-observaciones').value = cot.observaciones || '';
+          document.getElementById('cot-condicionesComerciales').value = (cot.condicionesComerciales||[]).join('\n');
+
+          document.getElementById('cot-lineaProducto').value = p.lineaProducto;
+          cotOnLineaProductoChange();
+          document.getElementById('cot-anchoCm').value = p.anchoCm;
+          document.getElementById('cot-altoCm').value = p.altoCm;
+          document.getElementById('cot-cantidad').value = Math.round(p.cantidad).toLocaleString('es-CO');
+          document.getElementById('cot-tapaTipo').value = p.tapaTipo;
+          cotOnTapaTipoChange();
+          if(p.cartonCalibreMm != null) document.getElementById('cot-cartonCalibre').value = p.cartonCalibreMm.toFixed(1);
+          document.getElementById('cot-encuadernacionTipo').value = p.encuadernacionTipo;
+          cotOnEncuadernacionChange();
+          document.getElementById('cot-tacoHojas').value = p.tacoHojas;
+          const tacoHojasEspejo = document.getElementById('cottaco_hojas');
+          if(tacoHojasEspejo) tacoHojasEspejo.value = p.tacoHojas;
+          document.getElementById('cot-guardasCantidad').value = p.guardasCantidad;
+          document.getElementById('cot-guardasSustrato').value = p.guardasSustrato.nombre+'__'+p.guardasSustrato.gramaje;
+          document.getElementById('cot-guardasTintasTiro').value = p.guardasTintasTiro;
+          document.getElementById('cot-guardasPlastificado').checked = !!p.guardasPlastificado;
+          document.getElementById('cot-anillado2Secciones').checked = !!p.anilladoDosSecciones;
+          document.getElementById('cot-utilidadPct').value = Math.round(p.utilidadPct*100);
+          document.getElementById('cot-ventasPct').value = Math.round(p.ventasPct*100);
+
+          const [caratula, taco, ...insertos] = p.lineasImpresion;
+          if(caratula) cotLlenarLineaEnForm('cotcaratula', caratula);
+          if(taco) cotLlenarLineaEnForm('cottaco', taco);
+          document.getElementById('cot-insertosContainer').innerHTML = '';
+          insertos.forEach(datosInserto => cotAgregarInserto(datosInserto));
+
+          cotCalcular();
+          // cotCalcular() siempre resetea "Descripción para el cliente" a la versión corta
+          // automática (comportamiento existente para cuando se cotiza desde cero) -- por eso el
+          // texto largo original se restaura DESPUÉS de calcular, no antes. Se guardaba fusionado
+          // con el título corto (separados por " — ") solo si eran distintos -- si el desc guardado
+          // es igual al título corto que generaría este mismo p, es porque no se había escrito nada aparte.
+          const corto = cotDescripcionProducto(p);
+          if(cot.desc && cot.desc.startsWith(corto+' — ')){
+            const dc = document.getElementById('cot-descCliente');
+            dc.value = cot.desc.slice(corto.length+3);
+            dc.style.height = 'auto'; dc.style.height = (dc.scrollHeight+2)+'px';
+          }
+
+          cotEditandoId = cot.id;
+          const banner = document.getElementById('cot-edicion-banner');
+          banner.style.display = 'block';
+          banner.innerHTML = `✏️ Editando la cotización <strong>${cot.ot||''}</strong> -- al guardar, ACTUALIZA esta misma cotización (no crea una nueva). <button type="button" class="btn-action" onclick="cotCancelarEdicion()">Cancelar edición</button>`;
+          document.getElementById('view-cotizador').scrollIntoView({behavior:'smooth'});
+        }
+        function cotCancelarEdicion(){
+          cotEditandoId = null;
+          const banner = document.getElementById('cot-edicion-banner');
+          banner.style.display = 'none';
+          banner.innerHTML = '';
+        }
+
         function cotRefrescarDatalistClientes(){
           const dlEmpresa = document.getElementById('cot-clientes-datalist');
           const dlCorreo = document.getElementById('cot-clientes-correo-datalist');
@@ -5927,26 +6044,43 @@
           // desglose más detallado (varias líneas: carátula/taco/insertos) que Reportes sigue leyendo
           // de tactical_cotizaciones_v1 para Consumo de Papel y Uso de Máquinas.
           const planoCorteLineas = Object.keys(r.detalleLineas).map(clave => ({clave, planoCorte: (r.detalleLineas[clave].detalleMaterial||{}).planoCorte || null})).filter(pc=>pc.planoCorte);
-          const opp = { id: crypto.randomUUID(), idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc, vendedor, monto: Math.round(r.precioFinalTotal), etapa: 'cot', linea: 'cuadernos', cantidad: p.cantidad, planoCorteLineas, fecha: new Date().toISOString() };
-          db_opps.push(opp);
-          tacticalSyncOpps(db_opps);
 
           const plazoEntrega = document.getElementById('cot-plazoEntrega').value.trim();
           const validezOferta = document.getElementById('cot-validezOferta').value.trim();
           const observaciones = document.getElementById('cot-observaciones').value.trim();
           const condicionesComerciales = document.getElementById('cot-condicionesComerciales').value.split('\n').map(l=>l.trim()).filter(Boolean);
-          const ot = await cotObtenerOT();
-          opp.ot = ot;
+
+          // Conde 2026-08-24: "en ocasiones piden un cambio pequeño y la idea no es hacerla de
+          // nuevo" -- si se cargó una cotización guardada (cotCargarCotizacionGuardada), guardar
+          // ACTUALIZA esa misma cotización (mismo id/OT, upsert por id) en vez de crear una nueva.
+          // Solo aplica a cotizaciones que siguen activas en el embudo (db_opps) -- una ya cerrada
+          // como Ganada/Perdida no se puede editar desde aquí (afectaría el Documento de Venta ya
+          // emitido), así que cotCargarCotizacionGuardada nunca ofrece el botón para esas.
+          let opp, ot;
+          if(cotEditandoId && db_opps.find(o => o.id === cotEditandoId)){
+            opp = db_opps.find(o => o.id === cotEditandoId);
+            ot = opp.ot;
+            Object.assign(opp, { idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc, vendedor, monto: Math.round(r.precioFinalTotal), linea: 'cuadernos', cantidad: p.cantidad, planoCorteLineas });
+          } else {
+            opp = { id: crypto.randomUUID(), idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc, vendedor, monto: Math.round(r.precioFinalTotal), etapa: 'cot', linea: 'cuadernos', cantidad: p.cantidad, planoCorteLineas, fecha: new Date().toISOString() };
+            db_opps.push(opp);
+            ot = await cotObtenerOT();
+            opp.ot = ot;
+          }
           tacticalSyncOpps(db_opps);
+
           const cotizacion = {
             ot, id: opp.id, idOpp: opp.id, idCli: cli.id, fecha: new Date().toISOString(),
             cliente: {empresa, encargado, telefono, correo}, vendedor, desc, params: p, resultado: r,
             plazoEntrega, validezOferta, observaciones, condicionesComerciales,
             fotoUrl: cotFotoElegidaUrl(), videoUrl: cotVideoElegidoUrl(),
           };
-          db_cotizaciones.push(cotizacion);
+          const iExistente = db_cotizaciones.findIndex(c => c.id === opp.id);
+          if(iExistente > -1) db_cotizaciones[iExistente] = cotizacion;
+          else db_cotizaciones.push(cotizacion);
           tacticalSyncCotizacion(cotizacion);
           cotRefrescarDatalistClientes();
+          cotCancelarEdicion();
 
           cotImprimirPDFCliente(cotizacion);
         }
