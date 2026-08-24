@@ -51,6 +51,29 @@
           display: inline-block; cursor: pointer; background: #edf2f7; border: 1px solid #cbd5e0;
           border-radius: 4px; font-size: 0.8rem; color: #4a5568; padding: 3px 9px; line-height: 1.4; flex-shrink: 0;
         }
+        /* Conde 2026-08-24: "en pantalla de pc solo veo 2 pendientes... ocultes impresion, las
+           flechas de desplazamiento y motivo de retraso" -- en ESCRITORIO se ocultan SOLO esos 3
+           elementos de cada tarea (Impresión/Notas, flechas subir/bajar/eliminar, motivo del
+           retraso) detrás del mismo botón ▶ que ya existía -- Estado y Origen quedan siempre
+           visibles (decisión explícita de Conde, a diferencia de esos 3, y a diferencia también del
+           colapso de móvil de abajo que sí los oculta). Usa una clase nueva "td-detalle-desktop"
+           (no la genérica "td-detalle", que en escritorio Estado/Origen también la tienen y deben
+           seguir visibles). Todo dentro de @media(min-width:769px) -- el punto de quiebre exacto
+           opuesto al @media(max-width:768px) de abajo, para que estas reglas nunca compitan ni se
+           mezclen con las de móvil (ya verificadas, sin tocar). */
+        @media (min-width: 769px) {
+          .td-detalle-desktop { display: none !important; }
+          tr.tarea-expandida .td-detalle-desktop { display: table-cell !important; }
+          tr.tarea-expandida input.td-detalle-desktop { display: block !important; }
+          #view-tareas td.td-tarea { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+          #view-tareas td.td-tarea .task-desc { width: auto !important; flex: 1 1 200px; min-width: 0; }
+          #view-tareas .task-toggle {
+            width: 22px; height: 22px; font-size: 11px; padding: 0; flex-shrink: 0;
+            border: 1px solid #cbd5e0; background: #edf2f7; border-radius: 4px; cursor: pointer;
+          }
+          #view-tareas .badge-delay { flex-basis: 100%; }
+          #view-tareas .input-aclaracion.td-detalle-desktop { flex-basis: 100%; }
+        }
         .desc-clamp { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; max-width: 100%; }
         .desc-clamp.expandido { white-space: normal; overflow: visible; text-overflow: clip; }
         .kanban-card-title { cursor: default; }
@@ -2006,9 +2029,9 @@
                     ${delayBadge}
                     <button type="button" class="task-toggle" onclick="taskToggleExpandir(this)" title="Ver más detalles">▶</button>
                     <input type="text" style="width:95%; font-weight:bold;" placeholder="Escriba la tarea..." value="${tacticalEscAttr(desc)}" class="task-desc" onchange="guardarFila(this.closest('tr'))">
-                    <input type="text" class="input-aclaracion td-detalle" style="display: ${displayAclaracion};" placeholder="💡 Motivo del retraso externo..." value="${tacticalEscAttr(aclaracion)}" onchange="guardarFila(this.closest('tr'))">
+                    <input type="text" class="input-aclaracion td-detalle td-detalle-desktop" style="display: ${displayAclaracion};" placeholder="💡 Motivo del retraso externo..." value="${tacticalEscAttr(aclaracion)}" onchange="guardarFila(this.closest('tr'))">
                 </td>
-                <td class="td-detalle"><input type="text" class="task-espec" placeholder="${inputPlaceholder}" value="${tacticalEscAttr(espec)}" onchange="guardarFila(this.closest('tr'))"></td>
+                <td class="td-detalle td-detalle-desktop"><input type="text" class="task-espec" placeholder="${inputPlaceholder}" value="${tacticalEscAttr(espec)}" onchange="guardarFila(this.closest('tr'))"></td>
                 <td class="td-responsable">
                     <div class="task-emp-list" data-emp='${JSON.stringify(assignedList)}'></div>
                     <select class="task-emp-add" onchange="taskAgregarResponsable(this)"></select>
@@ -2023,7 +2046,7 @@
                     </select>
                 </td>
                 <td class="td-detalle task-origin">${dateStr}</td>
-                <td class="td-detalle" style="text-align:center;">
+                <td class="td-detalle td-detalle-desktop" style="text-align:center;">
                     <button class="btn-action" onclick="moveRowUp(this)" title="Subir prioridad">🔼</button>
                     <button class="btn-action" onclick="moveRowDown(this)" title="Bajar prioridad">🔽</button>
                     <button class="btn-action btn-del-row" onclick="taskEliminarFila(this)" title="Eliminar">🗑️</button>
