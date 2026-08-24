@@ -61,25 +61,44 @@
            seguir visibles). Todo dentro de @media(min-width:769px) -- el punto de quiebre exacto
            opuesto al @media(max-width:768px) de abajo, para que estas reglas nunca compitan ni se
            mezclen con las de móvil (ya verificadas, sin tocar). */
+        /* Conde 2026-08-24 (4ta vuelta): el intento anterior ocultaba TDs enteros con display:none
+           dentro de una tabla real -- eso hace que el navegador alinee las celdas visibles por
+           POSICIÓN contra el <thead> (que sigue teniendo todas las columnas), así que el contenido
+           terminaba corrido bajo el encabezado equivocado (Estado aparecía bajo "Impresión",
+           Responsable directamente no se podía usar). La solución real es la misma que ya se usaba
+           en móvil desde antes: dejar de depender de la alineación nativa de <table> y convertir la
+           fila en un contenedor flex (igual que el media de abajo para 768px), con <thead> oculto
+           también en escritorio -- así el orden visual lo controla "order", no la posición de columna. */
         @media (min-width: 769px) {
-          .td-detalle-desktop { display: none !important; }
-          tr.tarea-expandida .td-detalle-desktop { display: table-cell !important; }
-          tr.tarea-expandida input.td-detalle-desktop { display: block !important; }
-          #view-tareas td.td-tarea { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-          #view-tareas td.td-tarea .task-desc { width: auto !important; flex: 1 1 200px; min-width: 0; }
+          #view-tareas thead { display: none; }
+          #view-tareas table, #view-tareas tbody, #view-tareas tr, #view-tareas td { display: block; width: 100%; box-sizing: border-box; }
+          #view-tareas tr {
+            display: flex; flex-flow: row wrap; align-items: center; gap: 6px 14px;
+            background: #fff; border: 1px solid #cbd5e0; border-radius: 6px; padding: 8px 10px; margin-bottom: 6px;
+          }
+          #view-tareas td { display: block; padding: 0; border: none; width: auto; }
+          #view-tareas td.td-tarea { order: 1; flex: 1 1 100%; display: flex; align-items: center; gap: 8px; min-width: 0; }
+          /* "amplia mas el espacio que usa la descripcion" -- ocupa toda la primera línea ella sola
+             (flex:1 1 100% en el td de arriba), y adentro se lleva casi todo el ancho disponible. */
+          #view-tareas td.td-tarea .task-desc { width: auto !important; flex: 1 1 auto; min-width: 0; font-size: 0.95rem; }
           #view-tareas .task-toggle {
             width: 22px; height: 22px; font-size: 11px; padding: 0; flex-shrink: 0;
             border: 1px solid #cbd5e0; background: #edf2f7; border-radius: 4px; cursor: pointer;
           }
-          #view-tareas .badge-delay { flex-basis: 100%; }
-          #view-tareas .input-aclaracion.td-detalle-desktop { flex-basis: 100%; }
-          /* Conde 2026-08-24 (3ra vuelta): "Pendiente" solo icono (el texto completo no cabía y se
-             cortaba a la mitad -- ver captura), y Responsable se oculta detrás del ▶ igual que
-             Impresión/flechas/motivo EN CUANTO ya tiene a alguien asignado (si está "Sin asignar"
-             sigue visible siempre, para poder asignarlo sin tener que expandir primero). */
+          #view-tareas .badge-delay, #view-tareas .tactical-dictado-btn { flex-shrink: 0; }
+          /* !important necesario -- el campo trae style="display:block" inline cuando hay retraso
+             (ver addTask), y un estilo inline siempre le gana a una regla externa sin !important. */
+          #view-tareas .input-aclaracion { display: none !important; flex-basis: 100%; }
+          #view-tareas tr.tarea-expandida .input-aclaracion { display: block !important; }
+          /* Segunda línea, siempre visible (decisión de Conde): Responsable, Estado, Origen. */
+          #view-tareas td.td-responsable { order: 2; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; width: auto; }
+          #view-tareas td.td-detalle:not(.td-detalle-desktop) { order: 2; width: auto; }
           #view-tareas .status-select { width: auto; padding: 6px 8px; }
-          #view-tareas td.td-responsable.resp-colapsable { display: none !important; }
-          #view-tareas tr.tarea-expandida td.td-responsable.resp-colapsable { display: table-cell !important; }
+          #view-tareas .task-fecha-limite { width: auto; display: inline-block; }
+          /* Detrás del ▶: Impresión/Notas, motivo del retraso (ya cubierto arriba) y las flechas/borrar. */
+          #view-tareas td.td-detalle-desktop { order: 3; display: none; flex: 1 1 240px; width: auto; }
+          #view-tareas tr.tarea-expandida td.td-detalle-desktop { display: block; }
+          #view-tareas tr.tarea-expandida td.td-detalle-desktop[style*="text-align:center"] { display: flex; gap: 6px; flex: 0 0 auto; }
         }
         .desc-clamp { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; max-width: 100%; }
         .desc-clamp.expandido { white-space: normal; overflow: visible; text-overflow: clip; }
@@ -102,6 +121,22 @@
         .task-emp-list{ display:flex; flex-wrap:wrap; gap:4px; margin-bottom:4px; }
         .emp-chip{ display:inline-flex; align-items:center; gap:4px; background:var(--light-gray); border:1px solid #cbd5e0; border-radius:12px; padding:2px 4px 2px 9px; font-size:12.5px; color:var(--dark); }
         .emp-chip button{ background:none; border:none; color:var(--peligro); font-weight:bold; cursor:pointer; font-size:13px; line-height:1; padding:2px 5px; }
+        /* Conde 2026-08-24 (4ta vuelta): "coloca el responsable solo las primeras 4 letras del
+           nombre al estar reducido" -- en vez de ocultar TODO el td de Responsable cuando ya hay
+           alguien asignado (eso fue lo que rompía la alineación en escritorio y dejaba el campo
+           inalcanzable), ahora el td SIEMPRE se queda como celda visible; lo que cambia es cuál de
+           sus 2 contenidos internos se muestra: el resumen corto (".resp-corto", 4 letras por
+           persona) o la lista completa de chips + el selector de agregar. Regla única, sin repetir
+           en cada @media -- aplica igual en móvil y escritorio. */
+        .td-responsable .resp-corto { display: none; font-size: 11.5px; color: #4a5568; background: #edf2f7; border: 1px solid #cbd5e0; border-radius: 10px; padding: 2px 8px; }
+        .td-responsable.resp-colapsable .resp-corto { display: inline-block; }
+        /* "#view-tareas" antepuesto a propósito -- la regla móvil #view-tareas .task-emp-list{display:flex}
+           es más específica que una regla de solo-clases (un id le gana a cualquier cantidad de
+           clases), así que sin este prefijo el ocultamiento no ganaba en móvil. */
+        #view-tareas .td-responsable.resp-colapsable .task-emp-list, #view-tareas .td-responsable.resp-colapsable .task-emp-add { display: none; }
+        #view-tareas tr.tarea-expandida .td-responsable.resp-colapsable .resp-corto { display: none; }
+        #view-tareas tr.tarea-expandida .td-responsable.resp-colapsable .task-emp-list { display: flex; }
+        #view-tareas tr.tarea-expandida .td-responsable.resp-colapsable .task-emp-add { display: inline-block; }
         .cot-layout { display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap; }
         .cot-col-form { flex:1 1 620px; min-width:340px; }
         .cot-col-resultado { flex:1 1 380px; min-width:320px; position:sticky; top:20px; }
@@ -298,11 +333,16 @@
 
             #view-tareas td.td-tarea { order: 1; flex: 1 1 100%; display: flex !important; align-items: center !important; gap: 5px; min-width: 0; }
             #view-tareas .task-toggle { width: 22px; height: 22px; font-size: 11px; padding: 0; flex-shrink: 0; border: 1px solid #cbd5e0; background: #edf2f7; border-radius: 4px; }
+            /* Conde 2026-08-24 (4ta vuelta): "no quiero que se reduzca la informacion que se ve de
+               la descripcion... quiero ver mas el texto" -- antes se cortaba con "..." en una sola
+               línea. Ahora se le da todo el ancho de la fila para ella sola (abajo, flex-basis:100%)
+               y se deja hacer varias líneas en vez de recortar. */
             #view-tareas .task-desc {
                 font-weight: 600 !important; font-size: 13px !important; border: 1px solid transparent !important;
-                padding: 2px 3px !important; height: 24px !important; margin: 0 !important; min-width: 0;
-                white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto;
+                padding: 2px 3px !important; margin: 0 !important; min-width: 0; min-height: 24px;
+                white-space: normal; flex: 1 1 100%;
             }
+            #view-tareas .tactical-dictado-btn { display: none !important; }
             #view-tareas .badge-delay { font-size: 9px !important; padding: 1px 5px !important; margin: 0 !important; flex-shrink: 0; }
             /* motivo del retraso -- oculto salvo expandida, aunque haya retraso (el badge rojo de
                arriba ya avisa sin necesidad de desplegar). */
@@ -313,18 +353,19 @@
             #view-tareas .task-emp-list { display: flex; flex-wrap: wrap; gap: 2px; }
             #view-tareas .task-emp-add { font-size: 9.5px !important; height: 20px !important; padding: 0 2px !important; margin: 0 !important; width: auto !important; max-width: 110px; }
             #view-tareas .emp-chip { font-size: 9.5px !important; padding: 1px 5px !important; }
-            /* Conde 2026-08-24 (3ra vuelta): mismo colapso que en escritorio -- Responsable ya
-               asignado se oculta detrás del ▶, "Sin asignar" se queda visible. */
-            #view-tareas td.td-responsable.resp-colapsable { display: none !important; }
-            #view-tareas tr.tarea-expandida td.td-responsable.resp-colapsable { display: flex !important; }
 
-            /* Todo lo demás -- notas/impresión, estado, fecha, botones -- oculto salvo expandida */
+            /* Todo lo demás -- notas/impresión, motivo, flechas/borrar -- oculto salvo expandida */
             #view-tareas td.td-detalle { display: none !important; order: 3; }
             #view-tareas tr.tarea-expandida td.td-detalle { display: block !important; }
             #view-tareas .task-espec { font-size: 10.5px !important; height: 20px !important; padding: 2px 4px !important; margin: 2px 0 !important; color: #718096 !important; }
             #view-tareas .status-select { font-size: 10.5px !important; padding: 2px 4px !important; height: 22px !important; margin: 2px 0 !important; width: auto !important; }
-            #view-tareas .task-origin { font-size: 10px !important; color: #a0aec0 !important; white-space: nowrap; margin: 2px 0; }
-            #view-tareas .task-fecha-limite { font-size: 10px !important; height: 20px !important; padding: 1px 3px !important; margin: 2px 0 0 !important; width: auto !important; display: inline-block !important; }
+            /* Conde 2026-08-24 (4ta vuelta): "la fecha de solicitud ej 24AGO nada mas" -- Origen
+               ahora se ve siempre (no solo al expandir), en formato compacto. Necesita más
+               especificidad (2 clases) que la regla genérica de arriba (td.td-detalle, 1 clase) para
+               ganarle sin depender del orden en el archivo. */
+            #view-tareas td.td-detalle.task-origin { display: flex !important; order: 2; align-items: center; gap: 4px; }
+            #view-tareas .task-origin-txt { font-size: 10px !important; color: #a0aec0 !important; white-space: nowrap; }
+            #view-tareas .task-fecha-limite { font-size: 10px !important; height: 20px !important; padding: 1px 3px !important; margin: 0 !important; width: auto !important; display: inline-block !important; }
             #view-tareas tr.tarea-expandida td.td-detalle[style*="text-align:center"] { display: flex !important; gap: 4px; margin: 2px 0; }
             #view-tareas .btn-action { padding: 2px 6px !important; font-size: 11px !important; }
 
@@ -1912,9 +1953,16 @@
             const hoy = new Date(); hoy.setHours(0,0,0,0);
             return Math.max(0, Math.round((hoy - origen) / 86400000));
         }
+        // Conde 2026-08-24 (4ta vuelta): "desde 22 de agosto no solo D 22Ago" -- formato compacto
+        // "D DDMES" (D de "Desde") en vez del texto largo, para que quepan más tareas en pantalla.
+        const TACTICAL_MESES_CORTOS = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+        function tareaFechaCorta(fechaIso){
+            const d = new Date(fechaIso);
+            return `${d.getDate()}${TACTICAL_MESES_CORTOS[d.getMonth()]}`;
+        }
         function tareaOrigenTexto(fechaOrigenIso){
             const dias = tareaDiasRetraso(fechaOrigenIso);
-            return dias <= 0 ? 'Hoy' : `Desde ${new Date(fechaOrigenIso).toLocaleDateString('es-CO', {day:'numeric', month:'long'})}`;
+            return dias <= 0 ? 'D Hoy' : `D ${tareaFechaCorta(fechaOrigenIso)}`;
         }
 
         // Personal editable desde "Plan de Tareas -> Gestionar Personal" (Conde 2026-08-19) --
@@ -2058,11 +2106,12 @@
                 <td class="td-tarea">
                     ${delayBadge}
                     <button type="button" class="task-toggle" onclick="taskToggleExpandir(this)" title="Ver más detalles">▶</button>
-                    <input type="text" style="width:95%; font-weight:bold;" placeholder="Escriba la tarea..." value="${tacticalEscAttr(desc)}" class="task-desc tactical-campo-dictado" onchange="guardarFila(this.closest('tr'))">
+                    <input type="text" style="width:95%; font-weight:bold;" placeholder="Escriba la tarea..." value="${tacticalEscAttr(desc)}" class="task-desc tactical-campo-dictado" oninput="taskActualizarDictadoVisible(this)" onchange="guardarFila(this.closest('tr'))">
                     <input type="text" class="input-aclaracion td-detalle td-detalle-desktop" style="display: ${displayAclaracion};" placeholder="💡 Motivo del retraso externo..." value="${tacticalEscAttr(aclaracion)}" onchange="guardarFila(this.closest('tr'))">
                 </td>
                 <td class="td-detalle td-detalle-desktop"><input type="text" class="task-espec" placeholder="${inputPlaceholder}" value="${tacticalEscAttr(espec)}" onchange="guardarFila(this.closest('tr'))"></td>
                 <td class="td-responsable${assignedList.length ? ' resp-colapsable' : ''}">
+                    <span class="resp-corto" title="Responsable(s) -- ver completo en ▶"></span>
                     <div class="task-emp-list" data-emp='${JSON.stringify(assignedList)}'></div>
                     <select class="task-emp-add" onchange="taskAgregarResponsable(this)"></select>
                 </td>
@@ -2076,8 +2125,8 @@
                     </select>
                 </td>
                 <td class="td-detalle task-origin">
-                    ${dateStr}
-                    <input type="date" class="task-fecha-limite" title="Fecha límite (opcional)" value="${fechaLimite||''}" onchange="guardarFila(this.closest('tr'))">
+                    <span class="task-origin-txt" title="Fecha en que quedó pendiente">${dateStr}</span>
+                    <input type="date" class="task-fecha-limite" title="Fecha límite (opcional)" value="${fechaLimite||''}" onfocus="taskFechaLimiteFocus(this)" onchange="guardarFila(this.closest('tr'))">
                 </td>
                 <td class="td-detalle td-detalle-desktop" style="text-align:center;">
                     <button class="btn-action" onclick="moveRowUp(this)" title="Subir prioridad">🔼</button>
@@ -2092,6 +2141,27 @@
             // vez en DOMContentLoaded), así que se vuelve a llamar acá; es segura de repetir (usa
             // dataset.dictadoListo como guardia, no duplica el botón en los campos ya armados).
             if(typeof tacticalInicializarDictado === 'function') tacticalInicializarDictado();
+            taskActualizarDictadoVisible(tr.querySelector('.task-desc'));
+        }
+
+        // Conde 2026-08-24 (4ta vuelta): "oculta dictar por voz si ya se lleno la tarea" -- el
+        // botón 🎤 (inyectado como hermano del campo por tacticalInicializarDictado, en
+        // precios_tactical.js) solo tiene sentido mientras la tarea está vacía; en celular además se
+        // oculta siempre por CSS (ver @media max-width:768px), sin espacio para él.
+        function taskActualizarDictadoVisible(input){
+            const btn = input && input.nextElementSibling;
+            if(!btn || !btn.classList.contains('tactical-dictado-btn')) return;
+            btn.style.display = input.value.trim() ? 'none' : '';
+        }
+        // "que al escribir la fecha automaticamente tome 2026" -- al enfocar un campo de fecha
+        // límite vacío, se precarga con el día/mes de hoy pero año 2026, para no tener que teclear
+        // los 4 dígitos del año cada vez (se puede cambiar si hace falta otro año).
+        function taskFechaLimiteFocus(input){
+            if(input.value) return;
+            const hoy = new Date();
+            const mm = String(hoy.getMonth()+1).padStart(2,'0');
+            const dd = String(hoy.getDate()).padStart(2,'0');
+            input.value = `2026-${mm}-${dd}`;
         }
 
         // Conde 2026-08-23: flecha para desplegar el resto de la tarea en móvil (ver arriba, en
@@ -2142,10 +2212,14 @@
             const select = container.nextElementSibling;
             const disponibles = empleadosPorArea(area).filter(e => !list.includes(e));
             select.innerHTML = '<option value="">+ Agregar responsable</option>' + disponibles.map(e=>`<option value="${e}">${e}</option>`).join('');
-            // Conde 2026-08-24 (3ra vuelta): en cuanto ya hay alguien asignado, esta celda se
-            // oculta detrás del ▶ (igual que Impresión/flechas) -- se recalcula acá porque la
-            // lista cambia en vivo al agregar/quitar personas, no solo al crear la fila.
-            container.closest('td.td-responsable').classList.toggle('resp-colapsable', list.length > 0);
+            // Conde 2026-08-24 (4ta vuelta): "coloca el responsable solo las primeras 4 letras del
+            // nombre al estar reducido" -- en cuanto hay alguien asignado, la vista reducida muestra
+            // este resumen corto (".resp-corto") en vez de la lista completa de chips; se recalcula
+            // acá porque la lista cambia en vivo al agregar/quitar personas, no solo al crear la fila.
+            const td = container.closest('td.td-responsable');
+            td.classList.toggle('resp-colapsable', list.length > 0);
+            const corto = td.querySelector('.resp-corto');
+            if(corto) corto.textContent = list.map(n => n.slice(0,4)).join('+');
         }
         function taskAgregarResponsable(select){
             if(!select.value) return;
