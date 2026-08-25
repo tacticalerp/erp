@@ -5074,10 +5074,15 @@
           // Conde 2026-08-19: el cliente necesita ver el valor unitario SIN IVA de cada línea, no
           // solo el total de esa línea con IVA incluido -- si no viene precalculado (l.precioUnitario),
           // se deriva del monto total de la línea asumiendo el 19% plano de toda la cotización.
+          // Conde 2026-08-25: "no esta funcionando" -- sí funcionaba al generar el PDF por primera
+          // vez (cotImprimirPDFCliente), pero verPDFGenerico() es la función APARTE que se usa para
+          // REABRIR una cotización ya guardada (buscador, Kanban, oportunidad...) en cualquiera de
+          // las 8 calculadoras + Cuadernos, y nunca convertía los ** a negrilla ahí -- se imprimían
+          // los asteriscos tal cual.
           const filasLineas = datos.lineas.map(l => {
             const cant = l.cantidad || 1;
             const unitario = l.precioUnitario!=null ? l.precioUnitario : (l.monto/cant/1.19);
-            return `<tr><td><div style="display:flex; align-items:center; gap:6px;">${l.fotoUrl?`<img src="${l.fotoUrl}" style="width:90px; height:90px; object-fit:contain; background:#f8fafc; border:1px solid #cbd5e0; border-radius:4px; flex-shrink:0;">`:''}<div>${l.desc}${l.videoUrl?`<br><a href="${l.videoUrl}" style="color:#cc0000; text-decoration:none; font-size:0.65rem; font-weight:bold;">▶ Ver video del producto</a>`:''}</div></div></td><td style="text-align:right;">${l.cantidad||'-'}</td><td style="text-align:right;">${cotFormatoCop(unitario)}</td><td style="text-align:right;">${cotFormatoCop(l.monto)}</td></tr>`;
+            return `<tr><td><div style="display:flex; align-items:center; gap:6px;">${l.fotoUrl?`<img src="${l.fotoUrl}" style="width:90px; height:90px; object-fit:contain; background:#f8fafc; border:1px solid #cbd5e0; border-radius:4px; flex-shrink:0;">`:''}<div>${cotTextoConNegrilla(l.desc)}${l.videoUrl?`<br><a href="${l.videoUrl}" style="color:#cc0000; text-decoration:none; font-size:0.65rem; font-weight:bold;">▶ Ver video del producto</a>`:''}</div></div></td><td style="text-align:right;">${l.cantidad||'-'}</td><td style="text-align:right;">${cotFormatoCop(unitario)}</td><td style="text-align:right;">${cotFormatoCop(l.monto)}</td></tr>`;
           }).join('');
           const subtotalPedido = datos.total/1.19;
           const ivaTotalPedido = datos.total - subtotalPedido;
