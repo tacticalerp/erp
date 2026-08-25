@@ -185,6 +185,27 @@ async function tareasPendientesFilas(filtro: { area?: string | string[]; respons
     .map((t: any) => `${iconoRetraso(diasDesde(t.fecha_origen))} <strong>${t.descripcion}</strong> (${t.area}) -- ${diasDesde(t.fecha_origen)} día(s) desde que se creó`);
 }
 
+// Conde 2026-08-25 (2da vuelta): "quiero que separes por area... que no se vean mezcladas" -- cuando
+// un informe junta más de un área (Diseño ve Diseño+Producción, Producción ve Producción+Diseño,
+// administrador ve las 4), en vez de UNA lista mezclada de todas, arma UNA SECCIÓN POR ÁREA (cada
+// una ya ordenada por más atrasada primero). El nombre del área ya no se repite en cada línea
+// (era redundante con el título de la sección).
+const AREA_LABEL: Record<string, string> = { diseno: "Diseño", produccion: "Producción", comercial: "Comercial", gerencia: "Gerencia" };
+async function tareasPendientesFilasDeArea(area: string): Promise<string[]> {
+  const { data, error } = await supabase.from("tareas").select("descripcion, fecha_origen")
+    .eq("cerrada", false).not("status", "in", "(listo,finalizado)").eq("area", area);
+  if (error) { console.error(`Error consultando tareas de ${area}:`, error); return []; }
+  return (data || [])
+    .sort((a: any, b: any) => diasDesde(b.fecha_origen) - diasDesde(a.fecha_origen))
+    .map((t: any) => `${iconoRetraso(diasDesde(t.fecha_origen))} <strong>${t.descripcion}</strong> -- ${diasDesde(t.fecha_origen)} día(s) desde que se creó`);
+}
+async function seccionesTareasPorArea(areas: string[]): Promise<{ titulo: string; filas: string[] }[]> {
+  return Promise.all(areas.map(async (area) => ({
+    titulo: `Pendientes -- ${AREA_LABEL[area] || area}`,
+    filas: await tareasPendientesFilasDeArea(area),
+  })));
+}
+
 async function carteraVencida(): Promise<{ total: number; filas: string[] }> {
   const clientes = await mapaClientes();
   const { data, error } = await supabase.from("documentos_venta")
@@ -426,10 +447,10 @@ const INFORMES: Record<string, Record<string, () => Promise<{ asunto: string; se
       // Conde 2026-08-25: "diseño vea todos los pendientes de diseño y de produccion" -- las 2
       // áreas trabajan la misma línea de producción día a día, por eso Diseño también necesita ver
       // qué hay pendiente en Producción (y viceversa, ver abajo).
-      const pendientes = await tareasPendientesFilas({ area: ["diseno", "produccion"] });
+      const secciones = await seccionesTareasPorArea(["diseno", "produccion"]);
       const enDiseno = await fichasEnColumnaFilas("diseno");
       return { asunto: "📋 Informe diario -- Diseño", secciones: [
-        { titulo: "Tareas pendientes (Diseño y Producción)", filas: pendientes },
+        ...secciones,
         { titulo: `Fichas en Kanban esperando diseño (${enDiseno.length})`, filas: enDiseno },
       ] };
     },
@@ -451,10 +472,10 @@ const INFORMES: Record<string, Record<string, () => Promise<{ asunto: string; se
     diario: async () => {
       // Conde 2026-08-25: "produccion vea todos los pendientes de produccion y de diseño" -- mismo
       // criterio que el informe de Diseño (ver arriba), en el sentido contrario.
-      const pendientes = await tareasPendientesFilas({ area: ["produccion", "diseno"] });
+      const secciones = await seccionesTareasPorArea(["produccion", "diseno"]);
       const urgentes = await fichasUrgentesFilas();
       return { asunto: "📋 Informe diario -- Producción", secciones: [
-        { titulo: "Tareas pendientes (Producción y Diseño)", filas: pendientes },
+        ...secciones,
         { titulo: "Fichas urgentes", filas: urgentes },
       ] };
     },
@@ -482,10 +503,10 @@ const INFORMES: Record<string, Record<string, () => Promise<{ asunto: string; se
     diario: async () => {
       // Conde 2026-08-25: "administrador vea todos los pendientes de todos" -- antes solo mostraba
       // las que llevaban 3+ días (tareasVencidasTodasLasAreasFilas), dejando fuera todo lo demás.
-      const pendientes = await tareasPendientesFilas({});
+      const secciones = await seccionesTareasPorArea(["diseno", "produccion", "comercial", "gerencia"]);
       const cartera = await carteraVencida();
       return { asunto: "📋 Informe diario -- Gerencia", secciones: [
-        { titulo: "Tareas pendientes (todas las áreas)", filas: pendientes },
+        ...secciones,
         { titulo: `Cartera vencida (total: ${cop(cartera.total)})`, filas: cartera.filas },
       ] };
     },
