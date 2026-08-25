@@ -11,9 +11,14 @@
     --rojo:#b91c1c; --acento:#e8792c;
   }
   *{box-sizing:border-box;}
+  /* Conde 2026-08-25: fondo oscuro en toda la app (mismo criterio que el Hub) -- ojo, NO se toca
+     la variable --fondo en sí (#f4f6f8), porque también la usan los elementos .doc-* del PDF de
+     cliente (que siempre se imprime en blanco); se cambia el fondo de <body> directo, aparte. Las
+     .card ya son un recuadro propio (#dde3ea) que no necesita cambiar -- sigue contrastando bien
+     contra el nuevo fondo oscuro, igual que ya contrastaba contra el claro. */
   body{
     margin:0; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-    background:var(--fondo); color:var(--texto); line-height:1.4;
+    background:#12161d; color:var(--texto); line-height:1.4;
   }
   header{background:var(--azul); color:#fff; padding:18px 24px;}
   header h1{margin:0; font-size:20px;}
