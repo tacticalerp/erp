@@ -133,7 +133,14 @@
         #view-tareas .task-emp-add { height: 22px !important; margin: 0 !important; }
         #view-tareas .task-fecha-limite { display: none !important; width: auto; }
         #view-tareas tr.tarea-expandida .task-fecha-limite { display: inline-block !important; }
-        #view-tareas .task-origin-txt, #view-tareas .task-entrega-txt { white-space: nowrap; font-weight: 600; }
+        /* Conde 2026-08-25: "separa mas D 22 AGO - E 25 AGO, crea espacios porque no se entiende"
+           -- td.task-origin no tenía "gap" propio (el gap general vivía en el <tr>, no llegaba
+           aquí), así que las 2 fechas quedaban pegadas una a la otra. Ahora cada una es una
+           "píldora" con su propio fondo, para que se lean como 2 datos distintos de un vistazo. */
+        #view-tareas td.task-origin { gap: 5px; }
+        #view-tareas .task-origin-txt, #view-tareas .task-entrega-txt {
+          white-space: nowrap; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: #f7fafc;
+        }
         #view-tareas .task-origin-txt { color: #718096; }
         /* Detrás del ▶: Impresión/Notas, motivo del retraso (ya cubierto arriba) y las flechas/borrar.
            !important necesario en las 3 -- "#view-tareas td{display:flex!important}" de arriba

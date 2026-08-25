@@ -161,26 +161,28 @@ async function mapaClientes(): Promise<Map<string, string>> {
   return new Map((data || []).map((c: any) => [c.id, c.empresa]));
 }
 
-async function tareasPendientesFilas(filtro: { area?: string; responsable?: string }): Promise<string[]> {
+// Conde 2026-08-25: "todos los pendientes iniciando por lo que llevan mas dias atrasados... diseño
+// vea diseño y produccion, produccion vea produccion y diseño, administrador vea todos" -- "area"
+// ahora acepta también un array (una o varias áreas a la vez); sin "area" ni "responsable" trae
+// TODAS las áreas (para administrador). El ícono 🔴/🟡 es para que el listado sea "practico de
+// entender" de un vistazo, sin tener que leer el número (3+ días = mismo umbral que ya usaba el
+// informe de Gerencia para marcar algo como urgente).
+function iconoRetraso(dias: number): string {
+  return dias >= 3 ? "🔴" : "🟡";
+}
+async function tareasPendientesFilas(filtro: { area?: string | string[]; responsable?: string }): Promise<string[]> {
   let q = supabase.from("tareas").select("descripcion, area, fecha_origen")
     .eq("cerrada", false).not("status", "in", "(listo,finalizado)");
-  if (filtro.area) q = q.eq("area", filtro.area);
+  if (filtro.area) {
+    const areas = Array.isArray(filtro.area) ? filtro.area : [filtro.area];
+    q = q.in("area", areas);
+  }
   if (filtro.responsable) q = q.contains("responsables", [filtro.responsable]);
   const { data, error } = await q;
   if (error) { console.error("Error consultando tareas:", error); return []; }
   return (data || [])
     .sort((a: any, b: any) => diasDesde(b.fecha_origen) - diasDesde(a.fecha_origen))
-    .map((t: any) => `<strong>${t.descripcion}</strong> (${t.area}) -- ${diasDesde(t.fecha_origen)} día(s) desde que se creó`);
-}
-
-async function tareasVencidasTodasLasAreasFilas(minDias = 3): Promise<string[]> {
-  const { data, error } = await supabase.from("tareas").select("descripcion, area, fecha_origen")
-    .eq("cerrada", false).not("status", "in", "(listo,finalizado)");
-  if (error) { console.error("Error consultando tareas:", error); return []; }
-  return (data || [])
-    .filter((t: any) => diasDesde(t.fecha_origen) >= minDias)
-    .sort((a: any, b: any) => diasDesde(b.fecha_origen) - diasDesde(a.fecha_origen))
-    .map((t: any) => `<strong>${t.descripcion}</strong> (${t.area}) -- ${diasDesde(t.fecha_origen)} día(s)`);
+    .map((t: any) => `${iconoRetraso(diasDesde(t.fecha_origen))} <strong>${t.descripcion}</strong> (${t.area}) -- ${diasDesde(t.fecha_origen)} día(s) desde que se creó`);
 }
 
 async function carteraVencida(): Promise<{ total: number; filas: string[] }> {
@@ -421,10 +423,13 @@ const INFORMES: Record<string, Record<string, () => Promise<{ asunto: string; se
 
   diseno: {
     diario: async () => {
-      const pendientes = await tareasPendientesFilas({ area: "diseno" });
+      // Conde 2026-08-25: "diseño vea todos los pendientes de diseño y de produccion" -- las 2
+      // áreas trabajan la misma línea de producción día a día, por eso Diseño también necesita ver
+      // qué hay pendiente en Producción (y viceversa, ver abajo).
+      const pendientes = await tareasPendientesFilas({ area: ["diseno", "produccion"] });
       const enDiseno = await fichasEnColumnaFilas("diseno");
       return { asunto: "📋 Informe diario -- Diseño", secciones: [
-        { titulo: "Tareas pendientes", filas: pendientes },
+        { titulo: "Tareas pendientes (Diseño y Producción)", filas: pendientes },
         { titulo: `Fichas en Kanban esperando diseño (${enDiseno.length})`, filas: enDiseno },
       ] };
     },
@@ -444,10 +449,12 @@ const INFORMES: Record<string, Record<string, () => Promise<{ asunto: string; se
 
   produccion: {
     diario: async () => {
-      const pendientes = await tareasPendientesFilas({ area: "produccion" });
+      // Conde 2026-08-25: "produccion vea todos los pendientes de produccion y de diseño" -- mismo
+      // criterio que el informe de Diseño (ver arriba), en el sentido contrario.
+      const pendientes = await tareasPendientesFilas({ area: ["produccion", "diseno"] });
       const urgentes = await fichasUrgentesFilas();
       return { asunto: "📋 Informe diario -- Producción", secciones: [
-        { titulo: "Tareas pendientes", filas: pendientes },
+        { titulo: "Tareas pendientes (Producción y Diseño)", filas: pendientes },
         { titulo: "Fichas urgentes", filas: urgentes },
       ] };
     },
@@ -473,10 +480,12 @@ const INFORMES: Record<string, Record<string, () => Promise<{ asunto: string; se
 
   administrador: {
     diario: async () => {
-      const vencidas = await tareasVencidasTodasLasAreasFilas(3);
+      // Conde 2026-08-25: "administrador vea todos los pendientes de todos" -- antes solo mostraba
+      // las que llevaban 3+ días (tareasVencidasTodasLasAreasFilas), dejando fuera todo lo demás.
+      const pendientes = await tareasPendientesFilas({});
       const cartera = await carteraVencida();
       return { asunto: "📋 Informe diario -- Gerencia", secciones: [
-        { titulo: "Tareas con más de 3 días sin resolver (todas las áreas)", filas: vencidas },
+        { titulo: "Tareas pendientes (todas las áreas)", filas: pendientes },
         { titulo: `Cartera vencida (total: ${cop(cartera.total)})`, filas: cartera.filas },
       ] };
     },
