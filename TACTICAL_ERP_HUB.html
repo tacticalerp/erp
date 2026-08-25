@@ -14,8 +14,16 @@
             --vip: #805ad5; --recurrente: #3182ce; --ocasional: #ed8936; --nuevo: #48bb78;
             --req: #ecc94b; --cot: #ed8936; --neg: #4299e1; --ganado: #48bb78; --perdido: #e53e3e;
         }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #edf2f7; margin: 0; padding: 10px; color: var(--dark); -webkit-tap-highlight-color: transparent; }
-        .container { max-width: 1280px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden; border-top: 5px solid var(--primary); }
+        /* Conde 2026-08-25: "fondo gris oscuro para que sea mas facil la visibilidad... siempre
+           que la premisa sea la facil ubicacion visual de los recuadros" -- casi todo el contenido
+           de la app YA vive dentro de recuadros propios con su propio fondo claro (.hub-card,
+           .kanban-card, .accordion-content, .data-card, tablas, etc.) -- esos NO se tocan, siguen
+           blancos/claros con su texto oscuro de siempre, y por eso resaltan más contra el fondo
+           general oscuro (exactamente el efecto Trello que se pidió). Solo se oscurece el fondo
+           general (antes blanco) y las pocas piezas que quedaban "sueltas" directo sobre ese fondo
+           sin su propio recuadro (buscar "sobre fondo oscuro" más abajo). */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0d1015; margin: 0; padding: 10px; color: var(--dark); -webkit-tap-highlight-color: transparent; }
+        .container { max-width: 1280px; margin: 0 auto; background: #12161d; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.35); overflow: hidden; border-top: 5px solid var(--primary); }
 
         /* ENCABEZADO GLOBAL */
         header { background: var(--dark); color: white; padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--primary); flex-wrap: wrap; gap: 10px; }
@@ -252,7 +260,12 @@
         .search-date { flex: 1; min-width: 140px; padding: 8px 12px; border: 1px solid #cbd5e0; border-radius: 4px; }
 
         .main-grid { display: flex; gap: 20px; padding: 20px; flex-wrap: wrap; }
-        .form-side { flex: 1.3; min-width: 320px; }
+        /* Conde 2026-08-25 (fondo oscuro): a diferencia de .stats-side (su vecino), este panel nunca
+           tuvo fondo propio -- quedaba directo sobre el fondo general de la página, con las mismas
+           etiquetas/título en texto oscuro que antes se leían bien sobre blanco. Se detectó con una
+           revisión de contraste real (no a ojo): el título quedaba casi invisible (1.11:1). Se le da
+           el mismo tratamiento de "recuadro propio" que ya usa el resto de la app. */
+        .form-side { flex: 1.3; min-width: 320px; background: white; padding: 20px; border-radius: 6px; border: 1px solid #e2e8f0; height: fit-content; }
         .stats-side { flex: 0.7; min-width: 300px; background: var(--light-gray); padding: 20px; border-radius: 6px; border: 1px solid #e2e8f0; height: fit-content; }
         .detail-container { background: #f8fafc; border: 1px solid #cbd5e0; border-radius: 6px; padding: 15px; margin-bottom: 20px; }
         .detail-header { font-weight: bold; color: var(--dark); margin-bottom: 10px; border-bottom: 2px solid var(--primary); padding-bottom: 5px; }
@@ -292,14 +305,21 @@
         .kanban-board { display:flex; gap:14px; overflow-x:auto; padding:6px 2px 20px; align-items:flex-start; scroll-behavior:smooth; }
         /* Conde 2026-08-23: "asi funcionaba trello... no es muy claro la division de una columna a
            otra... fondo de kanban en un gris mas oscuro" -- antes usaba --light-gray (#f7fafc, casi
-           blanco, igual que el fondo de la página), por eso las columnas se perdían contra el fondo. */
-        .kanban-col { flex:0 0 300px; background:#d8dee5; border-radius:8px; padding:10px; min-height:120px; }
-        .kanban-col-header { font-weight:800; color:var(--dark); padding:6px 8px 12px; display:flex; justify-content:space-between; align-items:center; font-size:1.12rem; border-bottom:2px solid #cbd5e0; margin-bottom:8px; }
+           blanco, igual que el fondo de la página), por eso las columnas se perdían contra el fondo.
+           Conde 2026-08-25 (fondo oscuro de toda la app): ahora que el fondo general es oscuro, la
+           columna usa el mismo gris corporativo (--secondary) como color SÓLIDO -- 3 escalones bien
+           distintos: página (casi negro) -> columna (gris medio) -> tarjeta (blanca). El texto del
+           encabezado pasa a blanco porque ya no está sobre un fondo claro. */
+        .kanban-col { flex:0 0 300px; background:var(--secondary); border-radius:8px; padding:10px; min-height:120px; }
+        .kanban-col-header { font-weight:800; color:#fff; padding:6px 8px 12px; display:flex; justify-content:space-between; align-items:center; font-size:1.12rem; border-bottom:2px solid rgba(255,255,255,0.18); margin-bottom:8px; }
         .kanban-col-cards { max-height:65vh; overflow-y:auto; padding-right:4px; }
         .kanban-scroll-row { display:flex; align-items:center; gap:10px; margin:10px 0; }
         .kanban-scroll-btn { flex:0 0 auto; background:var(--primary); color:#fff; border:none; border-radius:6px; width:38px; height:38px; font-size:1.1rem; font-weight:900; cursor:pointer; }
         .kanban-scroll-btn:hover { background:var(--secondary); }
-        .kanban-col-count { background:var(--secondary); color:white; border-radius:12px; padding:2px 10px; font-size:0.82rem; font-weight:700; }
+        /* background var(--dark) a propósito, no var(--secondary) -- la columna ya usa --secondary
+           como su propio fondo (ver .kanban-col arriba); si el badge usara el mismo tono se perdería
+           contra la columna, igual que le pasaba antes contra el fondo de página. */
+        .kanban-col-count { background:var(--dark); color:white; border-radius:12px; padding:2px 10px; font-size:0.82rem; font-weight:700; }
         .kanban-fotos-grid { display:flex; flex-wrap:wrap; gap:10px; margin-top:6px; }
         .kanban-foto-item { position:relative; width:74px; }
         .kanban-foto-item img { width:74px; height:74px; object-fit:cover; border-radius:6px; border:1px solid #e2e8f0; display:block; }
@@ -548,8 +568,8 @@
         <!-- VISTA 0: HUB DE SELECCIÓN PRINCIPAL -->
         <div id="view-hub" class="app-view active-view">
             <div style="padding: 25px 20px 0 20px; text-align: center;">
-                <h3 style="margin: 0; font-size: 1.4rem; color: var(--dark);">Centro de Control de Operaciones</h3>
-                <p style="color: #718096; margin-top: 6px; font-size: 0.95rem;">Seleccione el módulo en el que desea trabajar hoy:</p>
+                <h3 style="margin: 0; font-size: 1.4rem; color: #e8eaed;">Centro de Control de Operaciones</h3>
+                <p style="color: #a0aec0; margin-top: 6px; font-size: 0.95rem;">Seleccione el módulo en el que desea trabajar hoy:</p>
             </div>
 
             <div id="hub-respaldo-box" style="margin: 15px 20px 0 20px; background: var(--light-gray); border: 1px solid #cbd5e0; border-radius: 6px; padding: 12px 15px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
@@ -1075,8 +1095,8 @@
         <!-- VISTA 4a: CALCULADORA DE COSTOS (sub-hub de cotizadores por producto) -->
         <div id="view-calculadoras" class="app-view">
             <div style="padding: 25px 20px 0 20px; text-align: center;">
-                <h3 style="margin: 0; font-size: 1.4rem; color: var(--dark);">Calculadora de Costos</h3>
-                <p style="color: #718096; margin-top: 6px; font-size: 0.95rem;">Elige el producto que quieres cotizar:</p>
+                <h3 style="margin: 0; font-size: 1.4rem; color: #e8eaed;">Calculadora de Costos</h3>
+                <p style="color: #a0aec0; margin-top: 6px; font-size: 0.95rem;">Elige el producto que quieres cotizar:</p>
             </div>
             <div class="hub-grid" style="padding: 20px;">
                 <div class="hub-card active-card" onclick="showView('cotizador')">
