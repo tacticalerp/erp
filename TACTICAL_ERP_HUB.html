@@ -391,15 +391,40 @@
                que es un celular, más el resto de vistas (Reprocesos, Personal, etc.) que siguen con
                su propio colapso de tarjeta apilada de siempre. */
             #view-tareas .task-toggle { width: 18px; height: 18px; font-size: 9px; }
-            #view-tareas .task-desc { font-size: 12.5px; }
+            /* Conde 2026-08-25 (6ta vuelta): "en celular no se lee casi nada de la descripcion...
+               deja solo la fecha de entrega, omite la fecha de creacion, omite responsable... omite
+               el icono, solo un pequeño recuadro con el color del estado" -- SOLO en celular (en pc
+               "esta perfecto, no le cambies"). La vista resumida ahora es: ▶ + retraso + descripción
+               (con todo el espacio que sueltan los datos ocultos) + un cuadrito de color de Estado +
+               fecha de entrega (E). Responsable, fecha de origen (D) y el Estado completo se ven
+               igual que antes, pero solo al desplegar con ▶. */
+            #view-tareas .task-desc { font-size: 13.5px; font-family: 'Arial Narrow', 'Helvetica Neue Condensed', Arial, sans-serif; }
             #view-tareas .badge-delay { font-size: 9px; padding: 1px 5px; }
             #view-tareas .tactical-dictado-btn { display: none !important; }
             #view-tareas .input-aclaracion { font-size: 10.5px !important; color: #c53030; }
             #view-tareas .emp-chip { font-size: 9.5px; padding: 1px 5px; }
             #view-tareas .task-espec { font-size: 10.5px; color: #718096; }
-            #view-tareas .status-select { font-size: 10.5px; padding: 3px 5px; }
             #view-tareas .task-origin-txt, #view-tareas .task-entrega-txt { font-size: 9.5px; }
             #view-tareas .btn-action { padding: 2px 6px !important; font-size: 11px !important; }
+
+            #view-tareas td.td-responsable { display: none !important; }
+            #view-tareas tr.tarea-expandida td.td-responsable { display: flex !important; }
+            #view-tareas .task-origin-txt { display: none !important; }
+            #view-tareas tr.tarea-expandida .task-origin-txt { display: inline-block !important; }
+            /* Estado colapsado: mismo <select> funcional de siempre (sigue pudiéndose tocar para
+               cambiar estado sin desplegar), pero se ve solo como un cuadrito del color de turno --
+               color:transparent esconde el ícono/texto sin esconder el fondo, y appearance:none
+               quita la flechita nativa que ya no tiene sentido en un cuadrito tan chico. */
+            /* !important en todo -- una regla base (sin @media, más arriba en el archivo) ya pone
+               width/height/padding/font-size con !important para escritorio; sin repetir !important
+               acá esa regla ganaba igual y el cuadrito no bajaba de tamaño. */
+            #view-tareas .status-select {
+              width: 16px !important; height: 16px !important; padding: 0 !important; font-size: 10.5px !important; color: transparent !important;
+              -webkit-appearance: none; appearance: none; border-radius: 4px; flex-shrink: 0;
+            }
+            #view-tareas tr.tarea-expandida .status-select {
+              width: auto !important; height: auto !important; padding: 3px 5px !important; color: initial !important; -webkit-appearance: menulist; appearance: menulist;
+            }
 
             /* La regla "td { display:block }" de arriba es global y tambien
                rompia las tablas del PDF/Orden de Produccion en pantallas
