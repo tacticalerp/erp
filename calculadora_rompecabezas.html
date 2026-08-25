@@ -86,6 +86,11 @@
   @page { margin: 0; }
   @media print{
     body *{ visibility:hidden; }
+    /* Conde 2026-08-25: "el pdf sale con 2 paginas en blanco" -- visibility:hidden NO saca el
+       formulario del flujo normal del documento (sigue ocupando su alto real, solo invisible), así
+       que el navegador seguía paginando por esa altura completa aunque no se viera nada -- de ahí
+       las páginas en blanco después del contenido real. Hay que sacarlo del todo con display:none. */
+    .layout{ display:none !important; }
     #print-area, #print-area *{ visibility:visible; }
     #print-area{ display:block !important; position:absolute; left:0; top:0; width:100%; padding:20px; box-sizing:border-box; }
   }
@@ -940,12 +945,16 @@ function calcular(){
     filas += `<tr><td>Empaque (caja para despachar las bolsas, ${r.unidadesPorCaja}u/caja)</td><td class="num">${cop(r.empaqueCop)}</td></tr>`;
     filas += `<tr><td>Transporte${p.cabeEnMoto?' (moto, fijo)':''}</td><td class="num">${cop(r.transporteCop)}</td></tr>`;
     filas += `<tr class="sub"><td>Subtotal</td><td class="num">${cop(r.subtotal)}</td></tr>`;
-    filas += `<tr><td>Precio de venta (total pedido)</td><td class="num">${cop(r.precioVentaTotal)}</td></tr>`;
-    filas += `<tr style="font-weight:bold; color:var(--rojo); font-size:1.05rem; border-top:2px solid var(--rojo);"><td>Precio de venta UNITARIO</td><td class="num">${cop(r.precioVentaUnitario)}</td></tr>`;
-    filas += `<tr><td>IVA (19%)</td><td class="num">${cop(r.ivaTotal)}</td></tr>`;
-    filas += `<tr style="font-weight:bold;"><td>Precio final total (con IVA)</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
-    filas += `<tr style="font-weight:bold; color:var(--verde); border-top:2px solid var(--verde);"><td>Ganancia total del pedido (utilidad+comisión, sin IVA)</td><td class="num">${cop(r.gananciaTotal)}</td></tr>`;
-    filas += `<tr class="detalle"><td colspan="2">↳ Ganancia por unidad: ${cop(r.gananciaUnitaria)}</td></tr>`;
+    filas += `<tr><td>Precio de venta (total pedido)</td><td class="num" id="celda-venta-total">${cop(r.precioVentaTotal)}</td></tr>`;
+    // Conde 2026-08-25: "quiero poder editar el precio" -- el motor calcula un precio sugerido, pero
+    // a veces Conde necesita ajustarlo a mano (negociación, redondeo comercial, etc). Al cambiar el
+    // unitario se recalculan en cadena venta total, IVA, final y ganancia (el costo base -- subtotal --
+    // no cambia, así que la ganancia sigue siendo un número real, no inflado).
+    filas += `<tr style="font-weight:bold; color:var(--rojo); font-size:1.05rem; border-top:2px solid var(--rojo);"><td>Precio de venta UNITARIO <span style="font-weight:normal; font-size:11px; color:var(--texto-suave);">(editable)</span></td><td class="num"><input type="text" id="precio-unitario-input" value="${Math.round(r.precioVentaUnitario).toLocaleString('es-CO')}" style="width:130px; text-align:right; font-weight:bold; color:var(--rojo); font-size:1rem; border:1px solid var(--borde); border-radius:4px; padding:4px 6px;" onchange="ajustarPrecioManualRompecabezas(this.value)"></td></tr>`;
+    filas += `<tr><td>IVA (19%)</td><td class="num" id="celda-iva">${cop(r.ivaTotal)}</td></tr>`;
+    filas += `<tr style="font-weight:bold;"><td>Precio final total (con IVA)</td><td class="num" id="celda-final">${cop(r.precioFinalTotal)}</td></tr>`;
+    filas += `<tr style="font-weight:bold; color:var(--verde); border-top:2px solid var(--verde);"><td>Ganancia total del pedido (utilidad+comisión, sin IVA)</td><td class="num" id="celda-ganancia-total">${cop(r.gananciaTotal)}</td></tr>`;
+    filas += `<tr class="detalle"><td colspan="2">↳ Ganancia por unidad: <span id="celda-ganancia-unit">${cop(r.gananciaUnitaria)}</span></td></tr>`;
     filas += `</table>`;
     cont.innerHTML = filas;
     ultimoResultado = r; ultimoParams = p;
@@ -956,6 +965,31 @@ function calcular(){
     document.getElementById("card-recomendaciones").style.display = "none";
     ultimoResultado = null; ultimoParams = null;
   }
+}
+
+function ajustarPrecioManualRompecabezas(valorTexto){
+  if(!ultimoResultado || !ultimoParams) return;
+  const nuevoUnitario = Math.round(parseFloat(String(valorTexto).replace(/[^\d]/g,'')));
+  const input = document.getElementById('precio-unitario-input');
+  if(!nuevoUnitario || nuevoUnitario<=0){
+    alert('Ingresa un precio válido.');
+    if(input) input.value = Math.round(ultimoResultado.precioVentaUnitario).toLocaleString('es-CO');
+    return;
+  }
+  const r = ultimoResultado;
+  const cantidad = ultimoParams.cantidad;
+  r.precioVentaUnitario = nuevoUnitario;
+  r.precioVentaTotal = nuevoUnitario * cantidad;
+  r.ivaTotal = Math.round(r.precioVentaTotal * 0.19);
+  r.precioFinalTotal = r.precioVentaTotal + r.ivaTotal;
+  r.gananciaTotal = r.precioVentaTotal - r.subtotal;
+  r.gananciaUnitaria = Math.round(r.gananciaTotal / cantidad);
+  if(input) input.value = nuevoUnitario.toLocaleString('es-CO');
+  document.getElementById('celda-venta-total').textContent = cop(r.precioVentaTotal);
+  document.getElementById('celda-iva').textContent = cop(r.ivaTotal);
+  document.getElementById('celda-final').textContent = cop(r.precioFinalTotal);
+  document.getElementById('celda-ganancia-total').textContent = cop(r.gananciaTotal);
+  document.getElementById('celda-ganancia-unit').textContent = cop(r.gananciaUnitaria);
 }
 
 /* ============ CLIENTE Y CRM (Supabase, compartido con TACTICAL_ERP_HUB.html y las demás calculadoras) ============ */
@@ -1540,44 +1574,21 @@ poblarVarianteFoto();
   #tactical-quicknav{ position:fixed; bottom:16px; right:16px; z-index:99999; display:flex; flex-direction:column; align-items:flex-end; gap:8px; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
   #tactical-quicknav-menu{ display:none; background:#fff; border:1px solid #d7dee5; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.18); padding:8px; flex-direction:column; gap:2px; min-width:210px; max-height:70vh; overflow-y:auto; }
   #tactical-quicknav-menu.abierto{ display:flex; }
-  .tactical-qn-item{ display:block; padding:9px 12px; border-radius:5px; font-size:13.5px; color:#1a202c; text-decoration:none; cursor:pointer; }
-  .tactical-qn-item:hover{ background:#f4f6f8; }
   #tactical-quicknav-btn{ width:50px; height:50px; border-radius:50%; background:#1e3a5f; color:#fff; border:none; box-shadow:0 4px 12px rgba(0,0,0,0.28); font-size:21px; cursor:pointer; }
 </style>
+<!-- Conde 2026-08-25: "reemplaza el hamburguesa por uno que SOLO navegue al Hub" -- antes abría un
+     menú con 6 accesos; ahora es un solo botón, un solo clic, directo al Hub principal. -->
 <div id="tactical-quicknav">
-  <div id="tactical-quicknav-menu">
-    <a class="tactical-qn-item" onclick="tacticalIrHub('hub')">Hub Principal</a>
-    <a class="tactical-qn-item" onclick="tacticalIrHub('kanban')">Kanban de Producción</a>
-    <a class="tactical-qn-item" onclick="tacticalIrHub('tareas')">Plan de Tareas</a>
-    <a class="tactical-qn-item" onclick="tacticalIrHub('calculadoras')">Calculadora de Costos</a>
-    <a class="tactical-qn-item" onclick="tacticalIrHub('reprocesos')">Control de Reprocesos</a>
-    <a class="tactical-qn-item" onclick="tacticalAbrirMontajes()">Montajes Rompecabezas (B2C)</a>
-  </div>
-  <button id="tactical-quicknav-btn" onclick="tacticalToggleQuickNav()" title="Acceso rápido a otras herramientas">☰</button>
+  <button id="tactical-quicknav-btn" onclick="tacticalIrHub('hub')" title="Ir al Hub principal">🏠</button>
 </div>
 <script>
-function tacticalToggleQuickNav(){
-  document.getElementById('tactical-quicknav-menu').classList.toggle('abierto');
-}
 function tacticalIrHub(vista){
-  document.getElementById('tactical-quicknav-menu').classList.remove('abierto');
   if(typeof showView === 'function'){
     showView(vista);
   } else {
     window.open('TACTICAL_ERP_HUB.html#'+vista, 'tactical_hub');
   }
 }
-function tacticalAbrirMontajes(){
-  document.getElementById('tactical-quicknav-menu').classList.remove('abierto');
-  window.open('modulo_montajes_rompecabezas.html', 'tactical_montajes');
-}
-document.addEventListener('click', function(ev){
-  const menu = document.getElementById('tactical-quicknav-menu');
-  const btn = document.getElementById('tactical-quicknav-btn');
-  if(menu && menu.classList.contains('abierto') && !menu.contains(ev.target) && ev.target!==btn){
-    menu.classList.remove('abierto');
-  }
-});
 </script>
 <style>
   #tactical-ayuda-btn{ position:fixed; bottom:76px; right:16px; z-index:99999; width:50px; height:50px; border-radius:50%; background:#0d9488; color:#fff; border:none; box-shadow:0 4px 12px rgba(0,0,0,0.28); font-size:22px; cursor:pointer; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; }

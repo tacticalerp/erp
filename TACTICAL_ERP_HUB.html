@@ -1700,7 +1700,7 @@
                                     <option value="manual" selected>Otro / Maquila externa</option>
                                 </select>
                             </div>
-                            <div class="form-group"><label>Descripción:</label><input type="text" id="kb-descripcion" placeholder="Ej: Corte láser 50 llaveros MDF"></div>
+                            <div class="form-group"><label>Descripción:</label><input type="text" id="kb-descripcion" class="tactical-campo-dictado" placeholder="Ej: Corte láser 50 llaveros MDF"></div>
                             <div class="form-group"><label>Cantidad:</label><input type="text" inputmode="numeric" id="kb-cantidad" value="1" oninput="tacticalFormatearMiles(this)"></div>
                             <div class="form-group"><label>Fecha de entrega (opcional):</label><input type="date" id="kb-fechaEntrega"></div>
                         </div>
@@ -2229,7 +2229,7 @@
                     ${delayBadge}
                     <button type="button" class="task-toggle" onclick="taskToggleExpandir(this)" title="Ver más detalles">▶</button>
                     <input type="text" style="width:95%; font-weight:bold;" placeholder="Escriba la tarea..." value="${tacticalEscAttr(desc)}" class="task-desc tactical-campo-dictado" oninput="taskActualizarDictadoVisible(this)" onchange="guardarFila(this.closest('tr'))">
-                    <input type="text" class="input-aclaracion td-detalle td-detalle-desktop" style="display: ${displayAclaracion};" placeholder="💡 Motivo del retraso externo..." value="${tacticalEscAttr(aclaracion)}" onchange="guardarFila(this.closest('tr'))">
+                    <input type="text" class="input-aclaracion td-detalle td-detalle-desktop tactical-campo-dictado" style="display: ${displayAclaracion};" placeholder="💡 Motivo del retraso externo..." value="${tacticalEscAttr(aclaracion)}" onchange="guardarFila(this.closest('tr'))">
                 </td>
                 <td class="td-detalle td-detalle-desktop"><input type="text" class="task-espec" placeholder="${inputPlaceholder}" value="${tacticalEscAttr(espec)}" onchange="guardarFila(this.closest('tr'))"></td>
                 <td class="td-responsable${assignedList.length ? ' resp-colapsable' : ''}">
@@ -3266,14 +3266,24 @@
             {texto:'Confirmar con proveedor / diseño'}, {texto:'Producción o entrega del proveedor'}, {texto:'Entrega al cliente'},
           ],
         };
+        // Conde 2026-08-25: nombre corto de UN producto de una línea de ficha (checklist, tarjeta
+        // compacta del Kanban, tarea automática de "Diseño aprobado") -- antes estos lugares usaban
+        // la categoría genérica (NOMBRES_LINEA_PRODUCTO), que para "manual" mostraba "Producto libre
+        // (fuera de catálogo)" sin aportar nada, y que hacía que 2 productos distintos de la MISMA
+        // categoría (ej. 2 cuadernos diferentes en una ficha) se vieran como si fueran el mismo ítem
+        // repetido. Ahora se arma con las primeras palabras de la descripción real de ESE producto.
+        function tituloCortoLinea(l, maxPalabras){
+          const palabras = (l.desc||'').trim().split(/\s+/).filter(Boolean);
+          return palabras.slice(0, maxPalabras).join(' ') || (NOMBRES_LINEA_PRODUCTO[l.linea]||l.linea);
+        }
         function generarChecklistParaFicha(opp){
-          const lineasOpp = (opp.lineas && opp.lineas.length) ? opp.lineas : [{linea: opp.linea}];
+          const lineasOpp = (opp.lineas && opp.lineas.length) ? opp.lineas : [{linea: opp.linea, desc: opp.desc}];
           let items = [];
           const prefijoNecesario = lineasOpp.length > 1;
           lineasOpp.forEach(l=>{
             const base = KANBAN_CHECKLIST_POR_LINEA[l.linea] || KANBAN_CHECKLIST_POR_LINEA.manual;
             base.forEach(i=>{
-              const prefijo = prefijoNecesario ? `${NOMBRES_LINEA_PRODUCTO[l.linea]||l.linea} — ` : '';
+              const prefijo = prefijoNecesario ? `${tituloCortoLinea(l,4)} — ` : '';
               items.push({texto: prefijo+i.texto, hecho:false, riel: i.riel||null});
             });
           });
@@ -3291,9 +3301,20 @@
           addTask(area, desc, '', [], 'pendiente', id, fechaOrigen, orden, '');
           tacticalSyncTarea({ id, area, desc, espec:'', emp:[], status:'pendiente', aclaracion:'', fechaOrigen, orden });
         }
+        // Conde 2026-08-25: "quiero que inicie con cantidad, producto (max 3 palabras) y despues la
+        // descripcion (max 6 palabras)" -- antes la tarea llevaba el título completo de la ficha
+        // (que en pedidos multi-producto puede ser larguísimo) y quedaba ilegible en Plan de Tareas.
+        function resumenLineaParaTarea(l){
+          const palabras = (l.desc||'').trim().split(/\s+/).filter(Boolean);
+          const producto = palabras.slice(0,3).join(' ');
+          const descripcion = palabras.slice(3,9).join(' ');
+          const cant = l.cantidad ? `${l.cantidad} ` : '';
+          return `${cant}${producto}${descripcion?' — '+descripcion:''}`.trim();
+        }
         function marcarDisenoAprobado(id){
           const f = db_kanban.find(x=>x.id===id); if(!f || f.disenoAprobado) return;
-          crearTareaAutomatica('diseno', `Diseño aprobado: "${f.nombreCli}" — ${f.titulo}`);
+          const resumen = (f.lineas && f.lineas.length) ? f.lineas.map(resumenLineaParaTarea).join('; ') : f.titulo;
+          crearTareaAutomatica('diseno', `Diseño aprobado: ${f.nombreCli} — ${resumen}`);
           f.disenoAprobado = true;
           tacticalSyncFichaKanban(f);
           renderKanban();
@@ -3531,7 +3552,7 @@
               <div style="overflow-y:auto; padding:16px 18px; flex:1;">
                 <label style="display:block; font-weight:700; font-size:0.85rem; color:#4a5568; margin-bottom:4px;">📝 Notas manuales de producción</label>
                 <div style="font-size:0.78rem; color:#a0aec0; margin-bottom:6px;">Se ve resaltado al imprimir y queda guardado en la ficha -- puedes volver a abrir esta OP y seguir editándolo.</div>
-                <textarea id="op-preview-notas" rows="3" placeholder="Ej: para esta corrida usar el troquel viejo porque el nuevo está en mantenimiento..." style="width:100%; box-sizing:border-box; font-size:0.88rem; padding:8px; border:1.5px solid #cbd5e0; border-radius:6px; font-family:inherit; margin-bottom:14px;"></textarea>
+                <textarea id="op-preview-notas" class="tactical-campo-dictado" rows="3" placeholder="Ej: para esta corrida usar el troquel viejo porque el nuevo está en mantenimiento..." style="width:100%; box-sizing:border-box; font-size:0.88rem; padding:8px; border:1.5px solid #cbd5e0; border-radius:6px; font-family:inherit; margin-bottom:14px;"></textarea>
                 <div style="font-size:0.78rem; color:#a0aec0; margin-bottom:6px;">✏️ Los datos de abajo (calculados en automático) también se pueden tocar y corregir a mano -- solo para esta impresión, no queda guardado en el sistema.</div>
                 <div id="op-preview-auto" contenteditable="true" style="border:1px dashed #cbd5e0; border-radius:6px; padding:8px; outline:none;"></div>
               </div>
@@ -4152,10 +4173,17 @@
           } else {
             dueCompactoHtml = '<span style="font-size:0.68rem; color:#a0aec0;">Sin fecha</span>';
           }
+          // Conde 2026-08-25: "cuando hay mas de 1 producto aprobado, en la vista resumida quiero
+          // ver las primeras palabras de cada producto" -- antes solo se veía un punto de color por
+          // línea (con el nombre completo escondido en el tooltip, que en celular no se puede ver).
+          const productosCompactoHtml = (f.lineas && f.lineas.length>1)
+            ? `<div style="margin-bottom:3px;">${f.lineas.map(l=>`<span style="font-size:0.68rem; color:#4a5568; background:#edf2f7; border-radius:3px; padding:1px 6px; margin-right:3px; display:inline-block;">${tituloCortoLinea(l,3)}</span>`).join('')}</div>`
+            : '';
           const cabeceraCompactaHtml = `
             ${fotoCompactaHtml}
             ${f.urgente?'<div style="font-size:0.68rem; font-weight:900; color:#fff; background:var(--peligro); padding:2px 6px; border-radius:4px; margin-bottom:3px; display:inline-block;">🚨 URGENTE</div>':''}
             <div class="kanban-card-title" style="font-size:0.85rem; margin-bottom:2px;">${dotsHtml}${tituloCortoCompacto}</div>
+            ${productosCompactoHtml}
             <div class="kanban-card-meta" style="margin-bottom:3px;">👤 ${f.nombreCli}</div>
             ${dueCompactoHtml}
             <div style="clear:both;"></div>`;
@@ -4216,7 +4244,7 @@
               <div style="margin-bottom:6px;"><label style="font-size:0.72rem; color:#4a5568; display:block; margin-bottom:2px;">Entrega (ciudad / especificaciones)</label>
                 <input type="text" id="kb-edit-entrega-${f.id}" value="${(f.entrega||'').replace(/"/g,'&quot;')}" style="width:100%; box-sizing:border-box; font-size:0.85rem; padding:6px; border:1px solid #cbd5e0; border-radius:4px;"></div>
               <div style="margin-bottom:8px;"><label style="font-size:0.72rem; color:#4a5568; display:block; margin-bottom:2px;">Notas (aclaraciones del producto)</label>
-                <input type="text" id="kb-edit-responsable-${f.id}" value="${(f.responsable||'').replace(/"/g,'&quot;')}" placeholder="Ej: cliente pidió cambiar el color del anillado" style="width:100%; box-sizing:border-box; font-size:0.85rem; padding:6px; border:1px solid #cbd5e0; border-radius:4px;"></div>
+                <input type="text" id="kb-edit-responsable-${f.id}" class="tactical-campo-dictado" value="${(f.responsable||'').replace(/"/g,'&quot;')}" placeholder="Ej: cliente pidió cambiar el color del anillado" style="width:100%; box-sizing:border-box; font-size:0.85rem; padding:6px; border:1px solid #cbd5e0; border-radius:4px;"></div>
               <div style="display:flex; gap:6px;">
                 <button class="btn-action" style="flex:1; background:var(--ganado); color:#fff;" onclick="guardarEdicionFicha('${f.id}')">💾 Guardar cambios</button>
                 <button class="btn-action" style="flex:1;" onclick="toggleEditarFicha('${f.id}')">Cancelar</button>
@@ -4301,6 +4329,15 @@
 
           const board = document.getElementById('kanban-board');
           if(!board) return;
+          // Conde 2026-08-25: "al tocar ver detalle la columna se va hasta arriba, se pierde la
+          // posición" -- cada columna se redibuja completa (innerHTML) en cada cambio, lo que
+          // reseteaba su scroll interno (.kanban-col-cards tiene su propio overflow-y). Se guarda el
+          // scroll de cada columna antes de redibujar y se restaura después.
+          const scrollsPrevios = {};
+          board.querySelectorAll('.kanban-col-cards').forEach(el=>{
+            const col = el.closest('.kanban-col').dataset.columna;
+            scrollsPrevios[col] = el.scrollTop;
+          });
           board.innerHTML = KANBAN_COLUMNAS.map(col=>{
             let fichas = db_kanban.filter(f=>f.columna===col);
             fichas = fichas.filter(f => kanbanFichaCoincide(f, textoBusqueda));
@@ -4317,6 +4354,13 @@
               <div class="kanban-col-cards">${cardsHtml}</div>
             </div>`;
           }).join('');
+          board.querySelectorAll('.kanban-col-cards').forEach(el=>{
+            const col = el.closest('.kanban-col').dataset.columna;
+            if(scrollsPrevios[col]) el.scrollTop = scrollsPrevios[col];
+          });
+          // Conde 2026-08-25: el campo "Notas" de editar ficha se crea dinámico -- re-engancha el
+          // dictado/ortografía (mismo patrón que Plan de Tareas y Panel de Precios).
+          if(typeof tacticalInicializarDictado === 'function') tacticalInicializarDictado();
         }
 
         // ==========================================
@@ -4554,10 +4598,15 @@
             const valorActual = overrides[rec.id] || rec.original;
             html += `<div style="margin-bottom:8px; padding:8px; background:#f8fafc; border-radius:6px; border:1px solid #e2e8f0;">
               <div style="font-size:0.75rem; color:#718096; margin-bottom:3px;">${rec.condicion}</div>
-              <textarea class="recomendacion-input" data-id="${rec.id}" rows="2" style="width:100%; box-sizing:border-box; font-size:0.85rem; padding:6px; border:1px solid #cbd5e0; border-radius:4px; font-family:inherit;">${valorActual}</textarea>
+              <textarea class="recomendacion-input tactical-campo-dictado" data-id="${rec.id}" rows="2" style="width:100%; box-sizing:border-box; font-size:0.85rem; padding:6px; border:1px solid #cbd5e0; border-radius:4px; font-family:inherit;">${valorActual}</textarea>
             </div>`;
           });
           cont.innerHTML = html;
+          // Conde 2026-08-25: "verificar que todas las calculadoras tengan el dictado" -- este
+          // textarea se crea dinámico (innerHTML), después de que tacticalInicializarDictado() ya
+          // corrió una vez al cargar la página, así que había que volver a llamarlo aquí (mismo
+          // patrón ya usado en Plan de Tareas).
+          if(typeof tacticalInicializarDictado === 'function') tacticalInicializarDictado();
 
           const custom = cache.custom || [];
           let htmlCustom = custom.map(c => {
@@ -7262,7 +7311,7 @@
             const tr = document.createElement('tr');
             tr.id = id;
             tr.innerHTML = `
-                <td><input type="text" id="${id}_desc" value="${descripcion||''}" placeholder="Descripción del ítem" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></td>
+                <td><input type="text" id="${id}_desc" class="tactical-campo-dictado" value="${descripcion||''}" placeholder="Descripción del ítem" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></td>
                 <td><input type="number" id="${id}_cant" value="${cantidad||1}" min="1" oninput="contRecalcularItemDoc('${id}')"></td>
                 <td><input type="text" inputmode="numeric" id="${id}_valorU" value="${valorUnitario?Number(valorUnitario).toLocaleString('es-CO'):''}" oninput="contFormatearMiles(this); contRecalcularItemDoc('${id}')"></td>
                 <td><input type="text" inputmode="numeric" id="${id}_iva" value="${iva?Number(iva).toLocaleString('es-CO'):'0'}" oninput="contFormatearMiles(this); this.dataset.editadoManual='1'; contRecalcularItemDoc('${id}')"></td>
@@ -7270,6 +7319,7 @@
                 <td id="${id}_total">$0</td>
                 <td><button type="button" class="btn-action btn-del-row" onclick="contQuitarItemDoc('${id}')">✕</button></td>`;
             document.getElementById('doc-items-body').appendChild(tr);
+            if(typeof tacticalInicializarDictado === 'function') tacticalInicializarDictado();
             contRecalcularItemDoc(id);
         }
         function contRecalcularItemDoc(id){
@@ -7343,13 +7393,14 @@
             const tr = document.createElement('tr');
             tr.id = id;
             tr.innerHTML = `
-                <td><input type="text" id="${id}_desc" value="${descripcion||''}" placeholder="Descripción del ítem" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></td>
+                <td><input type="text" id="${id}_desc" class="tactical-campo-dictado" value="${descripcion||''}" placeholder="Descripción del ítem" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></td>
                 <td><input type="number" id="${id}_cant" value="${cantidad||1}" min="1" oninput="contRecalcularItemCxp('${id}')"></td>
                 <td><input type="text" inputmode="numeric" id="${id}_valorU" value="${valorUnitario?Number(valorUnitario).toLocaleString('es-CO'):''}" oninput="contFormatearMiles(this); contRecalcularItemCxp('${id}')"></td>
                 <td><input type="text" inputmode="numeric" id="${id}_iva" value="${iva?Number(iva).toLocaleString('es-CO'):'0'}" oninput="contFormatearMiles(this); this.dataset.editadoManual='1'; contRecalcularItemCxp('${id}')"></td>
                 <td id="${id}_total">$0</td>
                 <td><button type="button" class="btn-action btn-del-row" onclick="contQuitarItemCxp('${id}')">✕</button></td>`;
             document.getElementById('cxp-items-body').appendChild(tr);
+            if(typeof tacticalInicializarDictado === 'function') tacticalInicializarDictado();
             contRecalcularItemCxp(id);
         }
         // Conde 2026-08-20: el IVA de cada ítem se sugiere solo (19% de Cantidad×Valor Unitario) --
@@ -8366,47 +8417,21 @@
   #tactical-quicknav{ position:fixed; bottom:16px; right:16px; z-index:99999; display:flex; flex-direction:column; align-items:flex-end; gap:8px; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
   #tactical-quicknav-menu{ display:none; background:#fff; border:1px solid #d7dee5; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.18); padding:8px; flex-direction:column; gap:2px; min-width:210px; max-height:70vh; overflow-y:auto; }
   #tactical-quicknav-menu.abierto{ display:flex; }
-  .tactical-qn-item{ display:block; padding:9px 12px; border-radius:5px; font-size:13.5px; color:#1a202c; text-decoration:none; cursor:pointer; }
-  .tactical-qn-item:hover{ background:#f4f6f8; }
   #tactical-quicknav-btn{ width:50px; height:50px; border-radius:50%; background:#1e3a5f; color:#fff; border:none; box-shadow:0 4px 12px rgba(0,0,0,0.28); font-size:21px; cursor:pointer; }
 </style>
+<!-- Conde 2026-08-25: "reemplaza el hamburguesa por uno que SOLO navegue al Hub" -- antes abría un
+     menú con 6 accesos; ahora es un solo botón, un solo clic, directo al Hub principal. -->
 <div id="tactical-quicknav">
-  <div id="tactical-quicknav-menu">
-    <!-- Conde 2026-08-24: menú corto a propósito -- Hub, Kanban, Tareas, Calculadora,
-         Reprocesos, Montajes -- Conde pidió explícitamente no agregar más módulos aquí ("no dejes
-         mas pues queda muy extenso"), aunque el Hub tenga más módulos que estos 6. -->
-    <a class="tactical-qn-item" onclick="tacticalIrHub('hub')">Hub Principal</a>
-    <a class="tactical-qn-item" onclick="tacticalIrHub('kanban')">Kanban de Producción</a>
-    <a class="tactical-qn-item" onclick="tacticalIrHub('tareas')">Plan de Tareas</a>
-    <a class="tactical-qn-item" onclick="tacticalIrHub('calculadoras')">Calculadora de Costos</a>
-    <a class="tactical-qn-item" onclick="tacticalIrHub('reprocesos')">Control de Reprocesos</a>
-    <a class="tactical-qn-item" onclick="tacticalAbrirMontajes()">Montajes Rompecabezas (B2C)</a>
-  </div>
-  <button id="tactical-quicknav-btn" onclick="tacticalToggleQuickNav()" title="Acceso rápido a otras herramientas">☰</button>
+  <button id="tactical-quicknav-btn" onclick="tacticalIrHub('hub')" title="Ir al Hub principal">🏠</button>
 </div>
 <script>
-function tacticalToggleQuickNav(){
-  document.getElementById('tactical-quicknav-menu').classList.toggle('abierto');
-}
 function tacticalIrHub(vista){
-  document.getElementById('tactical-quicknav-menu').classList.remove('abierto');
   if(typeof showView === 'function'){
     showView(vista);
   } else {
     window.open('TACTICAL_ERP_HUB.html#'+vista, 'tactical_hub');
   }
 }
-function tacticalAbrirMontajes(){
-  document.getElementById('tactical-quicknav-menu').classList.remove('abierto');
-  window.open('modulo_montajes_rompecabezas.html', 'tactical_montajes');
-}
-document.addEventListener('click', function(ev){
-  const menu = document.getElementById('tactical-quicknav-menu');
-  const btn = document.getElementById('tactical-quicknav-btn');
-  if(menu && menu.classList.contains('abierto') && !menu.contains(ev.target) && ev.target!==btn){
-    menu.classList.remove('abierto');
-  }
-});
 </script>
 <style>
   #tactical-ayuda-btn{ position:fixed; bottom:76px; right:16px; z-index:99999; width:50px; height:50px; border-radius:50%; background:#0d9488; color:#fff; border:none; box-shadow:0 4px 12px rgba(0,0,0,0.28); font-size:22px; cursor:pointer; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
