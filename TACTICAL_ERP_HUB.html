@@ -1495,11 +1495,22 @@
                 </div>
 
                 <div class="accordion-item">
+                    <div class="accordion-header" id="head-cont-prefacturas" onclick="toggleSection('cont-prefacturas')">
+                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>Prefacturas pendientes (negocios ganados sin facturar)</span><span class="arrow" id="arrow-cont-prefacturas">►</span>
+                    </div>
+                    <div id="cont-prefacturas" class="accordion-content">
+                        <p style="font-size:0.85rem; color:#718096; margin-top:0;">Al marcar "Ganado" en el CRM ya NO se genera un Documento de Venta automático -- queda aquí, pendiente. Selecciona una o varias (del MISMO cliente, para juntarlas en una sola factura) y presiona el botón de abajo: el formulario de "Documentos de Venta" queda prellenado, listo para revisar y guardar con el número real.</p>
+                        <div id="lista-prefacturas" class="card-grid"></div>
+                        <button class="btn-submit" style="margin-top:10px;" onclick="generarDocVentaDesdePrefacturasSeleccionadas()">Generar Documento de Venta con las seleccionadas</button>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
                     <div class="accordion-header" id="head-cont-docventa" onclick="toggleSection('cont-docventa')">
                         <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>Documentos de Venta (Factura ref. / Cuenta de Cobro)</span><span class="arrow" id="arrow-cont-docventa">►</span>
                     </div>
                     <div id="cont-docventa" class="accordion-content">
-                        <p style="font-size:0.85rem; color:#718096; margin-top:0;">Los negocios marcados "Ganado" en el CRM generan este documento automáticamente. Use este formulario solo para ventas que no vienen de una cotización/oportunidad.</p>
+                        <p style="font-size:0.85rem; color:#718096; margin-top:0;">Se llena solo al generar desde una prefactura (arriba), o rellénelo a mano para ventas que no vienen de una cotización/oportunidad.</p>
                         <div class="form-grid">
                             <div class="form-group"><label>Cliente:</label>
                                 <input type="text" id="doc-cliente-filtro" placeholder="Escribe para buscar..." oninput="tacticalFiltrarSelectClientes('doc-cliente-filtro','doc-cliente',true)" style="margin-bottom:4px;">
@@ -2850,6 +2861,7 @@
           tareas.activas.forEach(t => addTask(t.area, t.desc, t.espec, t.emp, t.status, t.id, t.fechaOrigen, t.orden, t.aclaracion, t.fechaLimite));
           db_proveedores = await tacticalProveedoresCargar();
           db_docventa = await tacticalDocVentaCargar();
+          db_prefacturas = await tacticalPrefacturasCargar();
           db_ingresos = await tacticalIngresosCargar();
           db_cxp = await tacticalCxpCargar();
           db_egresos = await tacticalEgresosCargar();
@@ -3235,7 +3247,13 @@
                     if(cli.clase === 'nuevo' && cli.ltv > 0) cli.clase = 'recurrente';
                     tacticalSyncClientes(db_clientes);
                 }
-                if(typeof contCrearDocVentaDesdeOpp === 'function') contCrearDocVentaDesdeOpp(opp, cli);
+                // Conde 2026-08-27: "quiero que primero se cree una prefactura y la persona de
+                // contabilidad crea el documento factura de venta" -- antes acá se generaba el
+                // Documento de Venta YA numerado y terminado, sin revisión y sin poder juntar varios
+                // pedidos del mismo cliente en una sola factura. Ahora solo queda un registro simple
+                // pendiente en "Prefacturas" (ver contCrearPrefactura) -- Contabilidad decide desde
+                // ahí cuándo y cómo facturar.
+                if(typeof contCrearPrefactura === 'function') contCrearPrefactura(opp, cli);
                 if(typeof crearFichaKanbanDesdeOpp === 'function') crearFichaKanbanDesdeOpp(opp, cli, fechaEntrega);
             }
 
@@ -7333,6 +7351,7 @@
             dl.innerHTML = db_proveedores.map(p => `<option value="${p.nombre}"></option>`).join('');
         }
         let db_docventa = [];
+        let db_prefacturas = [];
         let db_ingresos = [];
         let db_cxp = [];
         let db_egresos = [];
@@ -7529,37 +7548,79 @@
             contActualizarTotalCxp();
         }
 
-        /* ---- CRUCE AUTOMÁTICO: negocio Ganado en CRM → Documento de Venta ---- */
-        async function contCrearDocVentaDesdeOpp(opp, cli){
+        /* ---- CRUCE AUTOMÁTICO: negocio Ganado en CRM → Prefactura pendiente ---- */
+        // Conde 2026-08-27: registro simple y liviano -- sin número, sin IVA/reteiva calculados
+        // todavía (eso se decide al generar el Documento de Venta real, según el tipo de documento
+        // que elija Contabilidad ahí). Solo guarda lo necesario para poder armar el ítem después.
+        function contCrearPrefactura(opp, cli){
             if(!cli) return;
             const cot = db_cotizaciones.find(c => c.idOpp === opp.id);
-            const tipoDoc = cli.tipo === 'corporativo' ? 'factura' : 'cuenta_cobro';
-            let valorBruto, iva;
-            if(tipoDoc === 'factura'){
-                if(cot){ valorBruto = cot.resultado.precioVentaTotal; iva = cot.resultado.ivaTotal; }
-                else { valorBruto = Math.round(opp.monto / 1.19); iva = opp.monto - valorBruto; }
-            } else {
-                // Cuenta de Cobro no calcula IVA — se registra el valor total ya acordado con el cliente como un solo bruto.
-                valorBruto = cot ? cot.resultado.precioFinalTotal : opp.monto;
-                iva = 0;
-            }
-            const aplicaReteiva = tipoDoc === 'factura';
-            const reteiva = aplicaReteiva ? Math.round(iva*0.15) : 0;
-            const totalDocumento = valorBruto + iva - reteiva;
-            const condicionPago = 'credito30';
-            const fechaVencimiento = contSumarDias(contHoy(), 30);
-            const prefijo = tipoDoc === 'factura' ? 'FV-' : 'CC-';
-            const tipoContador = tipoDoc === 'factura' ? 'fv' : 'cc';
-            const doc = {
-                id: crypto.randomUUID(), numero: await contSiguienteNumero(tipoContador, prefijo), tipoDoc, fecha: contHoy(),
-                idCli: cli.id, idCot: cot ? cot.id : null, idOpp: opp.id, descripcion: opp.desc,
-                items: [{descripcion: opp.desc, cantidad: 1, valorUnitario: valorBruto, iva, valorTotal: valorBruto + iva}],
-                valorBruto, iva, reteiva, valorEnvio: 0, totalDocumento, totalCobrar: totalDocumento,
-                condicionPago, fechaVencimiento, saldoPendiente: totalDocumento,
-                estado: 'pendiente', vendedor: cot ? cot.vendedor : '',
+            const pre = {
+                id: crypto.randomUUID(), idOpp: opp.id, idCot: cot ? cot.id : null, idCli: cli.id,
+                nombreCli: cli.empresa, ot: opp.ot||'', desc: opp.desc, monto: opp.monto,
+                vendedor: cot ? cot.vendedor : (opp.vendedor||''), facturada: false, idDocVenta: null,
             };
-            db_docventa.push(doc);
-            tacticalSyncDocVenta(doc);
+            db_prefacturas.push(pre);
+            tacticalSyncPrefactura(pre);
+        }
+        function renderPrefacturas(){
+            const cont = document.getElementById('lista-prefacturas');
+            if(!cont) return;
+            const pendientes = db_prefacturas.filter(p => !p.facturada);
+            cont.innerHTML = pendientes.length ? pendientes.map(p => `
+                <div class="data-card" style="display:flex; align-items:flex-start; gap:10px;">
+                    <input type="checkbox" class="chk-prefactura" data-id="${p.id}" data-cli="${p.idCli}" style="margin-top:5px; flex-shrink:0;">
+                    <div style="flex:1; min-width:0;">
+                        <div class="card-title" style="margin:0;">${p.nombreCli}${p.ot?` — ${p.ot}`:''}</div>
+                        <div style="font-size:0.85rem; color:#4a5568; margin-top:2px;">${cotTextoConNegrilla(p.desc)}</div>
+                        <div style="font-size:0.85rem; margin-top:4px;">Monto: <strong>${cotFormatoCop(p.monto)}</strong> — ${new Date(p.fecha).toLocaleDateString('es-CO')}</div>
+                    </div>
+                    <button class="btn-action" style="color:var(--peligro); border-color:var(--peligro); flex-shrink:0;" onclick="eliminarPrefactura('${p.id}')" title="Eliminar (no genera ningún documento)">${ticon('trash',{noMargin:true})}</button>
+                </div>`).join('') : '<p style="color:#718096;">No hay negocios ganados pendientes de facturar.</p>';
+        }
+        function eliminarPrefactura(id){
+            if(!confirm('¿Eliminar esta prefactura? No se generará ningún Documento de Venta a partir de ella.')) return;
+            db_prefacturas = db_prefacturas.filter(p => p.id !== id);
+            tacticalEliminarPrefacturaRemoto(id);
+            renderPrefacturas();
+        }
+        // Prellena el formulario de Documento de Venta con 1 o varias prefacturas (todas del MISMO
+        // cliente, para poder juntar varios pedidos en una sola factura). La descripción de cada
+        // ítem se recorta a 30 caracteres (Conde: "nunca colocamos todos los detalles del producto y
+        // ocupa mucho espacio en el formato") -- la descripción completa sigue disponible en la
+        // cotización original, esto solo acorta el ÍTEM de la factura.
+        function generarDocVentaDesdePrefacturasSeleccionadas(){
+            const checks = [...document.querySelectorAll('.chk-prefactura:checked')];
+            if(checks.length === 0){ alert('Selecciona al menos una prefactura.'); return; }
+            const clientesSel = new Set(checks.map(c => c.dataset.cli));
+            if(clientesSel.size > 1){ alert('Todas las prefacturas seleccionadas deben ser del mismo cliente -- selecciona solo las de un cliente a la vez.'); return; }
+            const ids = checks.map(c => c.dataset.id);
+            const seleccionadas = db_prefacturas.filter(p => ids.includes(p.id));
+            if(docVentaEditandoId) cancelarEdicionDocVenta();
+
+            document.getElementById('doc-cliente-filtro').value = '';
+            contLlenarSelectClienteDoc();
+            document.getElementById('doc-cliente').value = seleccionadas[0].idCli;
+            contAutocompletarTipoDoc();
+            contLimpiarItemsDoc();
+            const tipoDoc = document.getElementById('doc-tipoDoc').value;
+            seleccionadas.forEach(p => {
+                const cot = db_cotizaciones.find(c => c.id === p.idCot);
+                let valorBruto, iva;
+                if(tipoDoc === 'factura'){
+                    if(cot){ valorBruto = cot.resultado.precioVentaTotal; iva = cot.resultado.ivaTotal; }
+                    else { valorBruto = Math.round(p.monto / 1.19); iva = p.monto - valorBruto; }
+                } else {
+                    valorBruto = cot ? cot.resultado.precioFinalTotal : p.monto;
+                    iva = 0;
+                }
+                contAgregarItemDoc(tacticalTruncar(p.desc, 30), 1, valorBruto, iva);
+            });
+            if(seleccionadas[0].vendedor) document.getElementById('doc-vendedor').value = seleccionadas[0].vendedor;
+            window.tacticalPrefacturasEnEdicion = ids;
+            const cli = db_clientes.find(c => c.id === seleccionadas[0].idCli);
+            alert(`Formulario prellenado con ${seleccionadas.length} pedido(s) de ${cli?cli.empresa:''}. Revisa los datos y presiona "Registrar Documento de Venta" para generar el número real.`);
+            document.getElementById('doc-cliente').scrollIntoView({behavior:'smooth', block:'center'});
         }
 
         /* ---- SELECTS COMPARTIDOS ---- */
@@ -7663,6 +7724,16 @@
                 };
                 db_docventa.push(doc);
                 tacticalSyncDocVenta(doc);
+
+                // Si este documento se generó desde "Prefacturas pendientes", las marca facturadas
+                // para que desaparezcan de esa lista y no se vuelvan a facturar por error.
+                if(window.tacticalPrefacturasEnEdicion && window.tacticalPrefacturasEnEdicion.length){
+                    window.tacticalPrefacturasEnEdicion.forEach(id => {
+                        const p = db_prefacturas.find(x => x.id === id);
+                        if(p){ p.facturada = true; p.idDocVenta = doc.id; tacticalSyncPrefactura(p); }
+                    });
+                    window.tacticalPrefacturasEnEdicion = null;
+                }
             }
 
             contLimpiarItemsDoc();
@@ -8477,6 +8548,7 @@
             contLlenarSelectVendedorDoc();
             contLlenarDatalistProveedores();
             if(document.getElementById('cxp-subcategoria') && !document.getElementById('cxp-subcategoria').options.length) contLlenarSubcategorias();
+            renderPrefacturas();
             renderDocVenta();
             renderIngresos();
             renderCxp();

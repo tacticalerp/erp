@@ -690,6 +690,38 @@ async function tacticalSyncDocVenta(d){
   }
 }
 
+// ============ PREFACTURAS ============
+// Conde 2026-08-27: registro simple (sin número, sin ciclo de vida financiero) que se crea al
+// marcar un negocio "Ganado" -- reemplaza la creación automática del Documento de Venta. Contabilidad
+// las revisa y desde ahí genera el Documento de Venta real (una o varias juntas, mismo cliente).
+function tacticalPrefacturaADb(p){
+  return {
+    id: p.id, opp_id: p.idOpp||null, id_cot: p.idCot||null, id_cliente: p.idCli||null,
+    cliente_empresa: p.nombreCli||null, ot: p.ot||null, descripcion: p.desc||'', monto: p.monto||0,
+    vendedor: p.vendedor||null, facturada: !!p.facturada, id_doc_venta: p.idDocVenta||null,
+  };
+}
+function tacticalPrefacturaDeDb(r){
+  return {
+    id: r.id, idOpp: r.opp_id, idCot: r.id_cot, idCli: r.id_cliente, nombreCli: r.cliente_empresa,
+    ot: r.ot, desc: r.descripcion, monto: Number(r.monto)||0, vendedor: r.vendedor,
+    facturada: !!r.facturada, idDocVenta: r.id_doc_venta, fecha: r.created_at,
+  };
+}
+async function tacticalPrefacturasCargar(){
+  const { data, error } = await tacticalSupabase.from('prefacturas').select('*').order('created_at');
+  if(error){ console.error('Error cargando prefacturas de Supabase:', error); return []; }
+  return data.map(tacticalPrefacturaDeDb);
+}
+async function tacticalSyncPrefactura(p){
+  const { error } = await tacticalSupabase.from('prefacturas').upsert(tacticalPrefacturaADb(p));
+  if(error) console.error('Error guardando prefactura en Supabase:', error);
+}
+async function tacticalEliminarPrefacturaRemoto(id){
+  const { error } = await tacticalSupabase.from('prefacturas').delete().eq('id', id);
+  if(error) console.error('Error eliminando prefactura en Supabase:', error);
+}
+
 function tacticalIngresoADb(i){
   return {
     id: i.id, numero: i.numero, fecha: i.fecha, id_cliente: i.idCli||null, id_documento_venta: i.idDocVenta||null,
