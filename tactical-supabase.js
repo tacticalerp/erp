@@ -528,6 +528,46 @@ async function tacticalEliminarCotizacionRemoto(id){
   if(error) console.error('Error eliminando cotización en Supabase:', error);
 }
 
+// ============ COTIZACIONES DE LAS OTRAS 8 CALCULADORAS ============
+// Conde 2026-08-27: mismo patrón que "cotizaciones_cuadernos" de arriba, pero en tabla aparte
+// ("cotizaciones_calculadoras", con columna "linea") porque estas 8 calculadoras son archivos HTML
+// independientes -- cada una tiene su propio ultimoParams/ultimoResultado, con forma distinta a la
+// de Cuadernos. Permite reabrir y editar cotizaciones desde el Buscador del Hub en cualquier línea,
+// no solo Cuadernos.
+function tacticalCotizacionCalcADb(c){
+  return {
+    id: c.id, linea: c.linea, ot: c.ot||null, opp_id: c.idOpp||null, id_cliente: c.idCli||null,
+    vendedor: c.vendedor||null, descripcion: c.desc||'',
+    cliente_empresa: (c.cliente||{}).empresa||null, cliente_encargado: (c.cliente||{}).encargado||null,
+    cliente_telefono: (c.cliente||{}).telefono||null, cliente_correo: (c.cliente||{}).correo||null,
+    params: c.params||{}, resultado: c.resultado||{},
+    plazo_entrega: c.plazoEntrega||null, validez_oferta: c.validezOferta||null,
+    observaciones: c.observaciones||null, condiciones_comerciales: c.condicionesComerciales||null,
+  };
+}
+function tacticalCotizacionCalcDeDb(r){
+  return {
+    id: r.id, linea: r.linea, ot: r.ot, idOpp: r.opp_id, idCli: r.id_cliente, fecha: r.created_at,
+    cliente: { empresa: r.cliente_empresa, encargado: r.cliente_encargado, telefono: r.cliente_telefono, correo: r.cliente_correo },
+    vendedor: r.vendedor, desc: r.descripcion, params: r.params, resultado: r.resultado,
+    plazoEntrega: r.plazo_entrega, validezOferta: r.validez_oferta,
+    observaciones: r.observaciones, condicionesComerciales: r.condiciones_comerciales,
+  };
+}
+// Trae solo las cotizaciones de UNA línea (cada calculadora solo necesita las suyas) -- filtrado
+// además por OT si se pasa (usado al abrir la calculadora desde el link "editar" del Buscador).
+async function tacticalCotizacionesCalcCargar(linea, ot){
+  let q = tacticalSupabase.from('cotizaciones_calculadoras').select('*').eq('linea', linea);
+  if(ot) q = q.eq('ot', ot);
+  const { data, error } = await q.order('created_at');
+  if(error){ console.error('Error cargando cotizaciones de Supabase:', error); return []; }
+  return data.map(tacticalCotizacionCalcDeDb);
+}
+async function tacticalSyncCotizacionCalc(c){
+  const { error } = await tacticalSupabase.from('cotizaciones_calculadoras').upsert(tacticalCotizacionCalcADb(c));
+  if(error) console.error('Error guardando cotización en Supabase:', error);
+}
+
 // ============ PLAN DE TAREAS ============
 // Cada campo se guarda fila por fila (no todo el tablero de una) porque
 // varias personas pueden estar editando tareas distintas al mismo tiempo --

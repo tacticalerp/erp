@@ -136,11 +136,13 @@
   <p>Herramienta de pruebas paralelas — Tactical Marketing Group SAS. Reutiliza el motor de impresión digital/offset de Cuadernos, tal cual confirmó Conde.</p>
 </div><button type="button" onclick="tacticalIrHub('calculadoras')" style="flex:0 0 auto; background:#c0392b; color:#fff; border:none; border-radius:6px; padding:10px 16px; font-size:13.5px; font-weight:700; cursor:pointer; white-space:nowrap;">&#8592; Otras Calculadoras</button></header>
 <div class="beta-banner">
-  ⚠️ Versión BETA sin validar contra cotizaciones reales todavía. Solo cubre Cajas Blandas 1 Pieza (CJB1) — las líneas CJB2 (2 piezas) y Cajas Duras (CJD1/CJD2) no tienen datos en los documentos fuente todavía.
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Versión BETA sin validar contra cotizaciones reales todavía. Solo cubre Cajas Blandas 1 Pieza (CJB1) — las líneas CJB2 (2 piezas) y Cajas Duras (CJD1/CJD2) no tienen datos en los documentos fuente todavía.
 </div>
 
 <div class="layout">
   <div class="col-form">
+
+    <div id="cot-edicion-banner" style="display:none; margin-bottom:14px; padding:10px 14px; background:#fff3cd; border:1px solid #f0d98c; border-radius:6px; color:#7a5b00; font-size:0.88rem;"></div>
 
     <div class="card">
       <h2>0. Datos del Cliente</h2>
@@ -149,7 +151,7 @@
           <label>Cliente:</label>
           <input type="text" id="in-cli-empresa" list="cli-datalist" placeholder="Nombre de la empresa o persona" oninput="autocompletarCliente()">
           <datalist id="cli-datalist"></datalist>
-          <div id="cli-existente-nota" style="display:none; font-size:0.8rem; color:var(--verde); margin-top:2px;">✓ Cliente existente — datos cargados automáticamente</div>
+          <div id="cli-existente-nota" style="display:none; font-size:0.8rem; color:var(--verde); margin-top:2px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>Cliente existente — datos cargados automáticamente</div>
         </div>
         <div class="campo"><label>Encargado:</label><input type="text" id="in-cli-encargado" placeholder="Persona de contacto"></div>
         <div class="campo"><label>Teléfono:</label><input type="text" id="in-cli-telefono" placeholder="Ej: 3001234567"></div>
@@ -299,27 +301,27 @@
     <div class="card">
       <h2>Resultado</h2>
       <div id="resultado-contenido"><div class="placeholder">Completa el formulario y presiona Calcular.</div></div>
-      <div class="campo" style="margin-top:10px;"><label>Descripción para el cliente (editable):</label><input type="text" id="in-descCliente" class="tactical-campo-dictado" style="width:100%; box-sizing:border-box;"></div>
+      <div class="campo" style="margin-top:10px;"><label>Descripción para el cliente (editable — escribe **así** para resaltar en negrilla en el PDF):</label><textarea id="in-descCliente" class="tactical-campo-dictado" rows="1" style="width:100%; box-sizing:border-box; resize:vertical; overflow:hidden; font-family:inherit; font-size:inherit; padding:8px; line-height:1.4;" oninput="this.style.height='auto'; this.style.height=(this.scrollHeight+2)+'px';"></textarea></div>
       <div class="campo" style="margin-top:10px;">
         <label>Variante de foto (opcional -- solo si creaste variantes en la Fototeca para esta línea):</label>
         <select id="in-varianteFoto" style="width:100%; box-sizing:border-box;"><option value="">(Automática de la línea)</option></select>
       </div>
       <div class="campo" style="margin-top:10px;">
         <label>Foto personalizada para esta cotización (opcional -- reemplaza la de la Fototeca, solo para este pedido):</label>
-        <div id="fotoPersonal-zona" tabindex="0" style="min-height:60px; border:2px dashed #cbd5e0; border-radius:6px; display:flex; align-items:center; justify-content:center; text-align:center; padding:8px; cursor:pointer; background:#f8fafc; color:#94a3b8; font-size:0.78rem;" onpaste="fotoPersonalPegar(event)" onclick="document.getElementById('fotoPersonal-input').click()">📎 Clic aquí y pega (Ctrl+V) o sube un archivo</div>
+        <div id="fotoPersonal-zona" tabindex="0" style="min-height:60px; border:2px dashed #cbd5e0; border-radius:6px; display:flex; align-items:center; justify-content:center; text-align:center; padding:8px; cursor:pointer; background:#f8fafc; color:#94a3b8; font-size:0.78rem;" onpaste="fotoPersonalPegar(event)" onclick="document.getElementById('fotoPersonal-input').click()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>Clic aquí y pega (Ctrl+V) o sube un archivo</div>
         <input type="file" accept="image/*" id="fotoPersonal-input" style="display:none;" onchange="fotoPersonalArchivo(this)">
       </div>
-      <button class="btn-primario" style="margin-top:10px; background:var(--verde);" onclick="guardarCotizacionClick()">💾 Guardar y Generar PDF Cliente</button>
-      <button class="btn-primario" style="margin-top:8px; background:#4a5568;" onclick="generarOrdenProduccion()">🏭 Generar Orden de Producción</button>
-      <button class="btn-primario" style="margin-top:8px; background:#25D366;" onclick="compartirWhatsAppClick()">📲 Enviar por WhatsApp</button>
-      <button class="btn-primario" style="margin-top:8px; background:var(--azul);" onclick="iniciarOAgregarPedido()">📦 Agregar a un pedido (varios productos, mismo cliente)</button>
+      <button class="btn-primario" style="margin-top:10px; background:var(--verde);" onclick="guardarCotizacionClick()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>Guardar y Generar PDF Cliente</button>
+      <button class="btn-primario" style="margin-top:8px; background:#4a5568;" onclick="generarOrdenProduccion()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M2 20h20"></path><path d="M4 20V10l6 4v-4l6 4V6l4 3v11"></path></svg>Generar Orden de Producción</button>
+      <button class="btn-primario" style="margin-top:8px; background:#25D366;" onclick="compartirWhatsAppClick()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>Enviar por WhatsApp</button>
+      <button class="btn-primario" style="margin-top:8px; background:var(--azul);" onclick="iniciarOAgregarPedido()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>Agregar a un pedido (varios productos, mismo cliente)</button>
       <button class="btn-primario" style="margin-top:8px; background:#805ad5;" onclick="agregarOpcionComparacion()">🆚 Agregar como opción a comparar (el cliente elige una)</button>
       <div id="cot-ot-nota" style="display:none; margin-top:10px; padding:8px 12px; background:#eef2f7; border-left:4px solid var(--azul); border-radius:4px; font-size:0.9rem;"></div>
       <div id="pedido-banner" style="display:none; margin-top:10px; padding:8px 12px; background:#eafaf0; border-left:4px solid var(--verde); border-radius:4px; font-size:0.85rem;"></div>
       <div id="comparacion-banner" style="display:none; margin-top:10px; padding:8px 12px; background:#f3ecfb; border-left:4px solid #805ad5; border-radius:4px; font-size:0.85rem;"></div>
     </div>
     <div class="card" id="card-recomendaciones">
-      <h2>⚠️ Recomendaciones de Producción</h2>
+      <h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Recomendaciones de Producción</h2>
       <div id="recomendaciones-contenido"></div>
     </div>
   </div>
@@ -699,6 +701,13 @@ function renderRecomendaciones(r){
 
 /* ============ UI ============ */
 function cop(n){ return "$" + Math.round(n).toLocaleString("es-CO"); }
+// Conde 2026-08-27: "negrilla con ** no esta funcionando en todas las calculadoras" -- esta
+// convención (escribir **así** en la Descripción para que salga en negrilla real en el PDF) solo
+// existía en Cuadernos (Hub). Misma función, copiada a las 8 calculadoras.
+function cotTextoConNegrilla(txt){
+  const esc = (txt||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return esc.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
 
 function poblarTroqueles(){
   const sel = document.getElementById("in-troquel");
@@ -797,7 +806,9 @@ function calcular(){
     filas += `</table>`;
     cont.innerHTML = filas;
     ultimoResultado = r; ultimoParams = p;
-    document.getElementById("in-descCliente").value = `${p.cantidad} Cajas ${r.troquel.id}`;
+    const campoDescCli = document.getElementById("in-descCliente");
+    campoDescCli.value = `${p.cantidad} Cajas ${r.troquel.id}`;
+    campoDescCli.style.height = 'auto'; campoDescCli.style.height = (campoDescCli.scrollHeight+2)+'px';
     document.getElementById("cot-ot-nota").style.display = "none";
   } catch(err){
     cont.innerHTML = `<div class="error-box">Error en el cálculo: ${err.message}</div>`;
@@ -818,8 +829,14 @@ window.tacticalOnLogin = async function(){
   tacticalRecomendacionesCargar();
   await tacticalPedidoBorradorCargar(); refrescarBannerPedido();
   await tacticalComparacionBorradorCargar(); refrescarBannerComparacion();
+  tacticalCargarEdicionDesdeURL();
 };
 let ultimoResultado = null, ultimoParams = null, ultimoOT = null;
+// Conde 2026-08-27: "editar cotizaciones de todas las calculadoras" -- mismo criterio ya usado en
+// Cuadernos (Hub): editar y guardar NUNCA pisa la cotización original, crea una nueva con el mismo
+// OT + letra de versión (ver tacticalCotOtBase/tacticalCotSiguienteSufijoOT en precios_tactical.js).
+let cotEditandoId = null;
+let cotEditandoOtOriginal = null;
 
 function refrescarDatalistClientes(){
   const dlEmpresa = document.getElementById('cli-datalist');
@@ -931,7 +948,7 @@ function imprimirPDFCliente(datos){
   const filasLineas = datos.lineas.map(l => {
     const cant = l.cantidad || 1;
     const unitario = l.precioUnitario!=null ? l.precioUnitario : (l.monto/cant/1.19);
-    return `<tr><td><div style="display:flex; align-items:center; gap:6px;">${l.fotoUrl?`<img src="${l.fotoUrl}" style="width:90px; height:90px; object-fit:contain; background:#f8fafc; border:1px solid #d7dee5; border-radius:4px; flex-shrink:0;">`:''}<div>${l.desc}${l.videoUrl?`<br><a href="${l.videoUrl}" style="color:#cc0000; text-decoration:none; font-size:0.65rem; font-weight:bold;">▶ Ver video del producto</a>`:''}</div></div></td><td style="text-align:right;">${l.cantidad||'-'}</td><td style="text-align:right;">${cop(unitario)}</td><td style="text-align:right;">${cop(l.monto)}</td></tr>`;
+    return `<tr><td><div style="display:flex; align-items:center; gap:6px;">${l.fotoUrl?`<img src="${l.fotoUrl}" style="width:90px; height:90px; object-fit:contain; background:#f8fafc; border:1px solid #d7dee5; border-radius:4px; flex-shrink:0;">`:''}<div>${cotTextoConNegrilla(l.desc)}${l.videoUrl?`<br><a href="${l.videoUrl}" style="color:#cc0000; text-decoration:none; font-size:0.65rem; font-weight:bold;">▶ Ver video del producto</a>`:''}</div></div></td><td style="text-align:right;">${l.cantidad||'-'}</td><td style="text-align:right;">${cop(unitario)}</td><td style="text-align:right;">${cop(l.monto)}</td></tr>`;
   }).join('');
   // El desglose Subtotal/IVA se calcula siempre a partir del total (IVA plano del 19% en toda
   // la cotización) -- antes se saltaba en los pedidos multi-producto porque no se pasaba ivaTotal.
@@ -1048,7 +1065,15 @@ async function guardarCotizacionClick(){
   }
   tacticalSyncClientes(db_clientes);
 
-  if(!ultimoOT) ultimoOT = await siguienteOT();
+  let ot;
+  if(cotEditandoId){
+    const original = db_opps.find(o => o.id === cotEditandoId);
+    const otBase = tacticalCotOtBase((original && original.ot) || cotEditandoOtOriginal || '');
+    ot = otBase ? (otBase + '-' + tacticalCotSiguienteSufijoOT(otBase, db_opps)) : await siguienteOT();
+  } else {
+    if(!ultimoOT) ultimoOT = await siguienteOT();
+    ot = ultimoOT;
+  }
   const desc = tacticalTituloCorto(`${ultimoParams.cantidad} Cajas ${ultimoResultado.troquel.id}`, document.getElementById("in-descCliente").value);
   let maquina = 'otro', material = null, nPliegos = null, planoCorte = null;
   if(ultimoResultado.detalleImpresion){
@@ -1062,20 +1087,93 @@ async function guardarCotizacionClick(){
     planoCorte = ultimoResultado.detalleMaterial.planoCorte || null;
   }
   const recomendaciones = RECOMENDACIONES_PRODUCCION.filter(reg=>reg.aplica(ultimoResultado)).map(reg=>typeof reg.texto==='function'?reg.texto(ultimoResultado):reg.texto);
-  const opp = { id: crypto.randomUUID(), ot: ultimoOT, idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'cajas', cantidad: ultimoParams.cantidad, maquina, material, nPliegos, planoCorte, recomendaciones };
+  const opp = { id: crypto.randomUUID(), ot, idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'cajas', cantidad: ultimoParams.cantidad, maquina, material, nPliegos, planoCorte, recomendaciones };
   db_opps.push(opp);
   tacticalSyncOpps(db_opps);
+
+  const cotizacionGuardada = {
+    id: opp.id, linea: 'cajas', ot, idOpp: opp.id, idCli: cli.id,
+    cliente: {empresa: cli.empresa, encargado: cli.nombre, telefono: cli.wp, correo: cli.correo},
+    vendedor, desc, params: ultimoParams, resultado: ultimoResultado,
+    condicionesComerciales: leerCondicionesComerciales(),
+  };
+  tacticalSyncCotizacionCalc(cotizacionGuardada);
+  cotCancelarEdicion();
 
   refrescarDatalistClientes();
   const nota = document.getElementById('cot-ot-nota');
   nota.style.display = 'block';
-  nota.innerText = `📋 Cotización guardada en el CRM como ${ultimoOT} — cliente: ${cli.empresa}.`;
+  nota.innerText = `📋 Cotización guardada en el CRM como ${ot} — cliente: ${cli.empresa}.`;
 
   imprimirPDFCliente({
-    ot: ultimoOT, fecha: new Date(), vendedor, cliente: {empresa: cli.empresa, encargado: cli.nombre, telefono: cli.wp, correo: cli.correo},
+    ot, fecha: new Date(), vendedor, cliente: {empresa: cli.empresa, encargado: cli.nombre, telefono: cli.wp, correo: cli.correo},
     lineas: [{desc, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), precioUnitario: ultimoResultado.precioVentaUnitario, fotoUrl: fotoParaCotizacion('cajas'), videoUrl: videoParaCotizacion('cajas')}],
     ivaTotal: ultimoResultado.ivaTotal, total: Math.round(ultimoResultado.precioFinalTotal),
   });
+}
+
+// Conde 2026-08-27: reabre una cotización guardada (viene del Buscador de Cotizaciones del Hub, vía
+// ?ot=... en la URL -- ver tacticalCargarEdicionDesdeURL más abajo).
+function cargarCotizacionGuardada(cot){
+  const p = cot.params;
+  document.getElementById('in-cli-empresa').value = cot.cliente.empresa || '';
+  document.getElementById('in-cli-encargado').value = cot.cliente.encargado || '';
+  document.getElementById('in-cli-telefono').value = cot.cliente.telefono || '';
+  document.getElementById('in-cli-correo').value = cot.cliente.correo || '';
+  if(cot.vendedor) document.getElementById('in-vendedor').value = cot.vendedor;
+  if(cot.condicionesComerciales && cot.condicionesComerciales.length){
+    document.getElementById('in-condicionesComerciales').value = cot.condicionesComerciales.join('\n');
+  }
+
+  document.getElementById('in-troquel').value = p.troquelId;
+  onCambioTroquel();
+  document.getElementById('in-cantidad').value = Math.round(p.cantidad).toLocaleString('es-CO');
+  document.getElementById('in-sustrato').value = p.sustrato;
+  document.getElementById('in-tintasTiro').value = p.tintasTiro;
+  document.getElementById('in-tintasRetiro').value = p.tintasRetiro;
+  document.getElementById('in-troquelNuevo').value = p.troquelEsNuevo ? 'nuevo' : 'existente';
+  onCambioTroquelNuevo();
+  document.getElementById('in-desgasteCop').value = p.desgasteCop || 0;
+  document.getElementById('in-troquelManualCop').value = p.costoTroquelNuevoManual || 0;
+  document.getElementById('in-cust-cavidades').value = p.custCavidades || 1;
+  document.getElementById('in-cust-anchoImpreso').value = p.custAnchoImpreso || '';
+  document.getElementById('in-cust-altoImpreso').value = p.custAltoImpreso || '';
+  document.getElementById('in-empaqueUnidadesPorCaja').value = p.empaqueUnidadesPorCaja || 100;
+  document.getElementById('in-empaqueCostoCaja').value = p.empaqueCostoCaja || 0;
+  document.getElementById('in-utilidadPct').value = Math.round(p.utilidadPct*100);
+  document.getElementById('in-comisionPct').value = Math.round(p.comisionPct*100);
+
+  calcular();
+  if(ultimoResultado){
+    const corto = `${p.cantidad} Cajas ${ultimoResultado.troquel.id}`;
+    if(cot.desc && cot.desc.startsWith(corto+' — ')){
+      const campoDescCli2 = document.getElementById('in-descCliente');
+      campoDescCli2.value = cot.desc.slice(corto.length+3);
+      campoDescCli2.style.height = 'auto'; campoDescCli2.style.height = (campoDescCli2.scrollHeight+2)+'px';
+    }
+  }
+
+  cotEditandoId = cot.id;
+  cotEditandoOtOriginal = cot.ot;
+  const otBaseVista = tacticalCotOtBase(cot.ot);
+  const siguienteVersion = otBaseVista + '-' + tacticalCotSiguienteSufijoOT(otBaseVista, db_opps);
+  const banner = document.getElementById('cot-edicion-banner');
+  banner.style.display = 'block';
+  banner.innerHTML = `✏️ Editando a partir de <strong>${cot.ot||''}</strong> -- al guardar, se crea una cotización NUEVA (<strong>${siguienteVersion}</strong>) sin tocar ni borrar esta original. <button type="button" class="btn-action" onclick="cotCancelarEdicion()">Cancelar edición</button>`;
+  banner.scrollIntoView({behavior:'smooth'});
+}
+function cotCancelarEdicion(){
+  cotEditandoId = null;
+  cotEditandoOtOriginal = null;
+  const banner = document.getElementById('cot-edicion-banner');
+  if(banner) banner.style.display = 'none';
+}
+async function tacticalCargarEdicionDesdeURL(){
+  const ot = new URLSearchParams(window.location.search).get('ot');
+  if(!ot) return;
+  const cots = await tacticalCotizacionesCalcCargar('cajas', ot);
+  if(!cots.length){ alert(`No se encontró el desglose guardado de la cotización ${ot} (puede ser muy antigua, de antes de que se empezara a guardar).`); return; }
+  cargarCotizacionGuardada(cots[cots.length-1]);
 }
 
 /* ============ PEDIDO MULTI-PRODUCTO (varias líneas, un solo cliente/OT) ============ */
@@ -1377,7 +1475,7 @@ poblarVarianteFoto();
 <!-- Conde 2026-08-25: "reemplaza el hamburguesa por uno que SOLO navegue al Hub" -- antes abría un
      menú con 6 accesos; ahora es un solo botón, un solo clic, directo al Hub principal. -->
 <div id="tactical-quicknav">
-  <button id="tactical-quicknav-btn" onclick="tacticalIrHub('hub')" title="Ir al Hub principal">🏠</button>
+  <button id="tactical-quicknav-btn" onclick="tacticalIrHub('hub')" title="Ir al Hub principal"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"></path></svg></button>
 </div>
 <script>
 function tacticalIrHub(vista){
