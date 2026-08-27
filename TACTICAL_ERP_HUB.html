@@ -5905,7 +5905,15 @@
           }
           desglose["tapa_semidura_segunda_capa"]=costoTapaSemiduraExtra;
           const guardasSustrato=p.guardasSustrato||{nombre:"Propalcote",gramaje:150};
-          const lineaGuardas={ nombre:"Guardas", hojasPorCuaderno: p.guardasCantidad!=null?p.guardasCantidad:GUARDAS_CANTIDAD_DEFAULT, sustrato:guardasSustrato, tintasTiro:p.guardasTintasTiro||0, tintasRetiro:0, diseno:"unico_por_pagina", acabados:[] };
+          // Conde 2026-08-27: "no entiendo porque me da 115 pliegos" -- bug real encontrado al
+          // investigar: Guardas quedó marcada "unico_por_pagina" ("Páginas diferentes", el modo
+          // pensado para Insertos personalizados donde cada hoja NO se puede repetir en una misma
+          // pasada) -- eso le impedía al motor aprovechar que caben 8 piezas de 17x24cm por
+          // medio pliego, y calculaba una pasada de máquina POR CADA LIBRO en vez de imponer varias
+          // guardas por pliego. "uniforme" (mismo diseño repetido, el caso real de Guardas) usa
+          // piezasPorPlancha de verdad -- de 115 pliegos a 14, y el costo baja de $212.484 a
+          // $109.761 en el ejemplo real que reportó Conde (100 cuadernos 24x17cm, 4 tintas).
+          const lineaGuardas={ nombre:"Guardas", hojasPorCuaderno: p.guardasCantidad!=null?p.guardasCantidad:GUARDAS_CANTIDAD_DEFAULT, sustrato:guardasSustrato, tintasTiro:p.guardasTintasTiro||0, tintasRetiro:0, diseno:"uniforme", acabados:[] };
           const rGuardas=procesarLineaImpresion(lineaGuardas,p.anchoCm,p.altoCm,p.cantidad);
           let costoGuardasTotal=rGuardas.costoTotal;
           if(p.guardasPlastificado){
