@@ -59,6 +59,13 @@
           display: inline-block; cursor: pointer; background: #edf2f7; border: 1px solid #cbd5e0;
           border-radius: 4px; font-size: 0.8rem; color: #4a5568; padding: 3px 9px; line-height: 1.4; flex-shrink: 0;
         }
+        /* Conde 2026-08-27: "vista comprimida, visualice unicamente nombre, contacto, compras
+           acumuladas, lo demas que se expanda" -- mismo patrón de arriba (Oportunidades) pero para
+           Clientes, y ahora en TODOS los anchos de pantalla (antes solo colapsaba en móvil, ver
+           regla scopeada a #view-crm dentro del @media más abajo). Nombre/Contacto/LTV quedan fuera
+           de .card-detalle en renderClientes() a propósito -- son los únicos 3 que se ven siempre. */
+        #lista-clientes .card-collapsible .card-detalle { display: none; }
+        #lista-clientes .card-collapsible.expandido .card-detalle { display: block; margin-top: 8px; }
         /* Conde 2026-08-24: "en pantalla de pc solo veo 2 pendientes... ocultes impresion, las
            flechas de desplazamiento y motivo de retraso" -- en ESCRITORIO se ocultan SOLO esos 3
            elementos de cada tarea (Impresión/Notas, flechas subir/bajar/eliminar, motivo del
@@ -2981,9 +2988,10 @@
                                 <button class="card-flecha-toggle" onclick="tacticalToggleCardDetalle(this)">▶</button>
                             </div>
                         </div>
+                        <div class="card-subtitle" style="display:flex; align-items:center; margin-top:4px;">${ticon('user')}Contacto: <strong style="margin-left:3px;">${c.nombre}</strong></div>
+                        <div style="display:flex; align-items:center; font-size:0.85rem; color:#4a5568; margin-top:4px;">${ticon('dollar',{color:'var(--primary)'})}Compras Acumuladas (LTV): <strong style="color:var(--primary); font-size:1rem; margin-left:3px;">$${c.ltv.toLocaleString()} COP</strong></div>
                         <div class="card-detalle">
-                            <div class="card-subtitle" style="display:flex; align-items:center;">${ticon('user')}Contacto: <strong style="margin-left:3px;">${c.nombre}</strong></div>
-                            <div style="font-size:0.85rem; color:#4a5568; line-height:1.6;">
+                            <div style="font-size:0.85rem; color:#4a5568; line-height:1.6; margin-top:6px;">
                                 <div style="display:flex; align-items:center;">${ticon('phone')}WA: <strong style="margin-left:3px;">${c.wp || 'No registrado'}</strong></div>
                                 <div style="display:flex; align-items:center;">${ticon('mail')}Email: <strong style="margin-left:3px;">${c.correo || 'No registrado'}</strong></div>
                                 ${tipoLbl ? `<div style="display:flex; align-items:center;">${tipoLbl}</div>` : ''}
@@ -2992,7 +3000,6 @@
                             <div class="client-stats-box">
                                 <div style="display:flex; align-items:center;">${ticon('clipboard')}Total Cotizaciones/Solicitudes: <strong style="margin-left:3px;">${totalCotizaciones}</strong></div>
                                 <div style="display:flex; align-items:center;">${ticon('target',{color:'var(--ganado)'})}Negocios Ganados: <strong style="color:var(--ganado); margin-left:3px;">${ganadasCount}</strong></div>
-                                <div style="display:flex; align-items:center;">${ticon('dollar',{color:'var(--primary)'})}Compras Acumuladas (LTV): <strong style="color:var(--primary); font-size:1rem; margin-left:3px;">$${c.ltv.toLocaleString()} COP</strong></div>
                             </div>
                             ${editSectionHtml}
                         </div>

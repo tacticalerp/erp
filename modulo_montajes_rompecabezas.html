@@ -10,7 +10,13 @@
     --accent:#e8792c; --warn:#7a5b00; --ok:#1a7d3f; --danger:#b91c1c; --azul:#1e3a5f;
   }
   *{box-sizing:border-box;}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
+  /* Conde 2026-08-27: "ajusta el modulo de montaje de rompecabezas a los colores del resto del erp"
+     -- mismo criterio ya usado en el Hub y las 8 calculadoras: fondo oscuro en el body, los paneles
+     (.panel, que ya son recuadros blancos propios) se quedan igual -- solo cambia el color de fondo
+     de <body> directo, la variable --bg no se toca (la siguen usando .note/.price-box, que quedan
+     bien como gris clarito DENTRO de los paneles blancos, igual que ya se veían antes).
+     Revierte la decisión anterior de "B2C a tema claro" -- Conde pidió explícitamente unificar. */
+  body{margin:0;background:#12161d;color:var(--text);font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
   header{padding:16px 22px;background:var(--azul);display:flex;align-items:center;gap:14px;}
   header img{height:38px;}
   header h1{margin:0;font-size:16px;color:#fff;}
