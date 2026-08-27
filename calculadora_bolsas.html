@@ -1615,12 +1615,12 @@ poblarVarianteFoto();
   #tactical-quicknav{ position:fixed; bottom:16px; right:16px; z-index:99999; display:flex; flex-direction:column; align-items:flex-end; gap:8px; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
   #tactical-quicknav-menu{ display:none; background:#fff; border:1px solid #d7dee5; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.18); padding:8px; flex-direction:column; gap:2px; min-width:210px; max-height:70vh; overflow-y:auto; }
   #tactical-quicknav-menu.abierto{ display:flex; }
-  #tactical-quicknav-btn{ width:50px; height:50px; border-radius:50%; background:#1e3a5f; color:#fff; border:none; box-shadow:0 4px 12px rgba(0,0,0,0.28); font-size:21px; cursor:pointer; }
+  #tactical-quicknav-btn{ width:50px; height:50px; border-radius:50%; background:#cc0000; color:#fff; border:none; box-shadow:0 4px 12px rgba(0,0,0,0.28); font-size:21px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
 </style>
 <!-- Conde 2026-08-25: "reemplaza el hamburguesa por uno que SOLO navegue al Hub" -- antes abría un
      menú con 6 accesos; ahora es un solo botón, un solo clic, directo al Hub principal. -->
 <div id="tactical-quicknav">
-  <button id="tactical-quicknav-btn" onclick="tacticalIrHub('hub')" title="Ir al Hub principal"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"></path></svg></button>
+  <button id="tactical-quicknav-btn" onclick="tacticalIrHub('hub')" title="Ir al Hub principal"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"></path></svg></button>
 </div>
 <script>
 function tacticalIrHub(vista){
