@@ -593,8 +593,8 @@
 
             <div class="hub-grid">
                 <!-- Conde 2026-08-28: orden pedido explícitamente -- 1 Tareas, 2 Comercial, 3
-                     Calculadora, 4 Montajes Rompecabezas, 5 Kanban, 6 Reprocesos, 7 CRM,
-                     Radar de Negocio y Reportes, Contabilidad, Panel de Precios, Fototeca, Bot. -->
+                     Calculadora, 4 Montajes Rompecabezas, 5 Kanban, 6 CRM, 7 Radar y Reportes,
+                     8 Reprocesos (justo después de Radar), Contabilidad, Panel de Precios, Fototeca, Bot. -->
                 <!-- MÓDULO 1: TAREAS -->
                 <div class="hub-card active-card" onclick="showView('tareas')">
                     <div>
@@ -650,18 +650,7 @@
                     <div class="card-footer">Ingresar al Módulo ➔</div>
                 </div>
 
-                <!-- MÓDULO 5: REPROCESOS -->
-                <div class="hub-card active-card" onclick="showView('reprocesos')">
-                    <div>
-                        <div class="card-header">
-                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Control de Reprocesos</h3>
-                            <span class="badge badge-active">Activo</span>
-                        </div>
-                    </div>
-                    <div class="card-footer">Ingresar al Módulo ➔</div>
-                </div>
-
-                <!-- MÓDULO 6: CRM -->
+                <!-- MÓDULO 5: CRM -->
                 <div class="hub-card active-card" onclick="showView('crm')">
                     <div>
                         <div class="card-header">
@@ -672,17 +661,28 @@
                     <div class="card-footer">Ingresar al Módulo ➔</div>
                 </div>
 
-                <!-- MÓDULO 7: RADAR DE NEGOCIO Y REPORTES (Conde 2026-08-28: unificados en una sola
-                     herramienta -- antes eran 2 tarjetas separadas, showView('reportes') ahora
-                     también pinta las recomendaciones que antes vivían en showView('radar'). -->
+                <!-- MÓDULO 6: RADAR Y REPORTES (Conde 2026-08-28: unificados en una sola herramienta
+                     -- antes eran 2 tarjetas separadas, showView('reportes') ahora también pinta las
+                     recomendaciones que antes vivían en showView('radar'). -->
                 <div class="hub-card active-card" onclick="showView('reportes')" style="border:2px solid var(--primary);">
                     <div>
                         <div class="card-header">
-                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>Radar de Negocio y Reportes</h3>
+                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>Radar y Reportes</h3>
                             <span class="badge badge-active">Activo</span>
                         </div>
                     </div>
                     <div class="card-footer">Ver recomendaciones e indicadores ➔</div>
+                </div>
+
+                <!-- MÓDULO 7: REPROCESOS (Conde 2026-08-28: "que quede después de Radar de Negocio") -->
+                <div class="hub-card active-card" onclick="showView('reprocesos')">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Control de Reprocesos</h3>
+                            <span class="badge badge-active">Activo</span>
+                        </div>
+                    </div>
+                    <div class="card-footer">Ingresar al Módulo ➔</div>
                 </div>
 
                 <!-- MÓDULO 8: CONTABILIDAD -->
@@ -1103,7 +1103,7 @@
                         <!-- Conde 2026-08-28: "dejemos el motivo de la pérdida solo en Reportes, que será lo
                              que revisaré más frecuentemente" -- quitado de acá (estaba duplicado, mismo
                              cálculo que "Motivos de Pérdida" en Reportes → Ventas y Comercial). -->
-                        <p style="font-size:0.85rem; color:#718096; margin:6px 0 0;">El análisis de "Motivos de Pérdida" se ve en <a href="#" onclick="showView('reportes'); return false;" style="color:var(--primary); font-weight:600;">Radar de Negocio y Reportes ➔</a></p>
+                        <p style="font-size:0.85rem; color:#718096; margin:6px 0 0;">El análisis de "Motivos de Pérdida" se ve en <a href="#" onclick="showView('reportes'); return false;" style="color:var(--primary); font-weight:600;">Radar y Reportes ➔</a></p>
                     </div>
                 </div>
 
@@ -2057,7 +2057,7 @@
                 if (typeof cotRefrescarDatalistClientes === 'function') cotRefrescarDatalistClientes();
             } else if (viewId === 'reportes') {
                 navContainer.style.display = 'block';
-                mainTitle.innerText = "RADAR DE NEGOCIO Y REPORTES";
+                mainTitle.innerText = "RADAR Y REPORTES";
                 subTitle.innerText = "Recomendaciones de hoy + Indicadores de Ventas, Producción, Calidad y Tareas (2026)";
                 if (typeof renderRadar === 'function') renderRadar();
                 if (typeof renderReportes === 'function') renderReportes();
