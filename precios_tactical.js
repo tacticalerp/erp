@@ -94,6 +94,44 @@ function tacticalAplicarCodigoFechaSeguimiento(textoActual, fechaISO){
   const limpio = (textoActual || '').replace(/^\d{1,2} [A-ZÁÉÍÓÚÑ]{3}\s*-?\s*/, '').trim();
   return limpio ? `${codigo} - ${limpio}` : codigo;
 }
+// Conde 2026-08-28: "ese módulo está pensado en simplicidad visual" -- el botón ✕ de Comercial
+// obligaba a saltar a la vista de CRM para ver el panel de "¿por qué se perdió?" (vivía como un
+// <div> fijo dentro de esa vista, no como ventana flotante). Se convierte al mismo patrón de
+// tacticalConfirmarFlotante -- ahora funciona igual sin importar en qué vista esté parado quien
+// lo llama. Devuelve el motivo (string) elegido, o null si canceló.
+function tacticalPedirMotivoPerdidaFlotante(){
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed; inset:0; background:rgba(26,32,44,0.6); z-index:99999; display:flex; align-items:center; justify-content:center; padding:20px;';
+    overlay.innerHTML = `
+      <div style="background:#fff; border-radius:10px; padding:24px; max-width:380px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,0.35); font-family:'Segoe UI', Tahoma, sans-serif;">
+        <div style="font-weight:800; font-size:1.05rem; color:#1a202c; margin-bottom:14px;">¿Por qué se perdió este negocio?</div>
+        <select id="tactical-motivo-perdida-select" style="width:100%; box-sizing:border-box; padding:10px; border:2px solid #cbd5e0; border-radius:6px; margin-bottom:10px; font-size:0.95rem;">
+          <option value="Precio">Por Precio (Competencia más barata)</option>
+          <option value="Tiempo Cotización">Tiempo de entrega de cotización tardó mucho</option>
+          <option value="Tiempo Producto">Tiempo de entrega del producto muy largo</option>
+          <option value="Cliente no respondió">El cliente cotizó y no respondió</option>
+          <option value="Otra">Otra razón...</option>
+        </select>
+        <input type="text" id="tactical-motivo-perdida-otra" placeholder="Escriba la razón..." style="display:none; width:100%; box-sizing:border-box; padding:10px; border:2px solid #cbd5e0; border-radius:6px; margin-bottom:10px; font-size:0.95rem;">
+        <div style="display:flex; gap:8px; margin-top:6px;">
+          <button type="button" id="tactical-motivo-perdida-cancelar" style="flex:1; padding:10px; border:1px solid #cbd5e0; background:#fff; color:#4a5568; border-radius:6px; font-weight:700; cursor:pointer;">Cancelar</button>
+          <button type="button" id="tactical-motivo-perdida-confirmar" style="flex:1; padding:10px; border:none; background:#cc0000; color:#fff; border-radius:6px; font-weight:700; cursor:pointer;">Confirmar Cierre Perdido</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    const sel = overlay.querySelector('#tactical-motivo-perdida-select');
+    const otra = overlay.querySelector('#tactical-motivo-perdida-otra');
+    sel.onchange = () => { otra.style.display = sel.value === 'Otra' ? 'block' : 'none'; };
+    function cerrar(valor){ overlay.remove(); resolve(valor); }
+    overlay.querySelector('#tactical-motivo-perdida-cancelar').onclick = () => cerrar(null);
+    overlay.querySelector('#tactical-motivo-perdida-confirmar').onclick = () => {
+      let motivo = sel.value;
+      if(motivo === 'Otra') motivo = otra.value.trim() || 'Razón no especificada';
+      cerrar(motivo);
+    };
+  });
+}
 // precios_tactical.js
 // Fuente única de precios de insumos compartidos entre las 8 herramientas de Tactical ERP.
 // Se carga con <script src="precios_tactical.js"></script> ANTES del script principal de

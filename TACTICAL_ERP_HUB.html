@@ -766,6 +766,8 @@
           .tabla-comercial tr:nth-child(even) td{ background:#f8fafc; }
           .tabla-comercial input[type=text]{ width:100%; box-sizing:border-box; border:1px solid transparent; background:transparent; font-size:0.78rem; padding:1px 3px; font-family:inherit; color:inherit; }
           .tabla-comercial input[type=text]:hover, .tabla-comercial input[type=text]:focus{ border-color:#cbd5e0; background:#fff; border-radius:3px; }
+          .tabla-comercial select{ width:100%; box-sizing:border-box; border:1px solid transparent; background:transparent; font-size:0.76rem; padding:1px 2px; font-family:inherit; color:inherit; cursor:pointer; }
+          .tabla-comercial select:hover, .tabla-comercial select:focus{ border-color:#cbd5e0; background:#fff; border-radius:3px; }
           .comercial-titulo-seccion{ background:#cc0000; color:#fff; font-weight:800; padding:6px 10px; font-size:0.85rem; margin:16px 0 0; border-radius:4px 4px 0 0; }
           .comercial-subtitulo{ background:#4a5568; color:#fff; font-weight:700; padding:4px 10px; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.03em; }
           .comercial-vendedor-tab{ padding:7px 16px; border:1px solid #cbd5e0; background:#fff; color:#1a202c; cursor:pointer; font-weight:600; font-size:0.85rem; border-radius:5px; }
@@ -785,6 +787,10 @@
             <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px;">
               <div id="comercial-tabs" style="display:flex; gap:6px;"></div>
               <input type="text" id="comercial-buscar" placeholder="Buscar en todo el historial de este vendedor (cliente, OT, producto)..." oninput="renderComercial()" style="flex:1; min-width:220px; padding:7px 10px; border:1px solid #cbd5e0; border-radius:5px; font-size:0.85rem;">
+              <!-- Conde 2026-08-28: "deja crear negocio manual en comercial, que sea un botón que abra
+                   una ventana flotante" -- reemplaza el formulario siempre visible que tenía CRM antes
+                   (ver comercialAbrirCrearNegocio más abajo). -->
+              <button class="btn-action" onclick="comercialAbrirCrearNegocio()" style="white-space:nowrap;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Nuevo Negocio</button>
             </div>
 
             <div id="comercial-recordatorios" style="margin-bottom:4px;"></div>
@@ -813,7 +819,7 @@
                 </table></div></div>
                 <div class="comercial-subtitulo" style="margin-top:10px;">Cotizaciones creadas</div>
                 <div class="comercial-tabla-wrap"><div class="table-responsive"><table class="tabla-comercial">
-                  <thead><tr><th style="width:18%;">Cliente</th><th style="width:30%;">Producto</th><th style="width:12%;">Cotizada</th><th>Observaciones</th><th style="width:92px;"></th></tr></thead>
+                  <thead><tr><th style="width:16%;">Cliente</th><th style="width:26%;">Producto</th><th style="width:10%;">Cotizada</th><th style="width:15%;">Etapa</th><th>Observaciones</th><th style="width:92px;"></th></tr></thead>
                   <tbody id="comercial-cotizaciones"></tbody>
                 </table></div></div>
               </div>
@@ -1035,71 +1041,33 @@
         <!-- VISTA 3: CRM & CLIENTES B2B -->
         <div id="view-crm" class="app-view">
             <div style="padding:10px;">
-                <div class="accordion-item">
-                    <div class="accordion-header active" onclick="toggleSection('pipeline')" id="head-pipeline">
-                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>1. Embudo de Negocios Activos (Automático con Cotizador)</span><span class="arrow" id="arrow-pipeline">▼</span>
-                    </div>
-                    <div id="pipeline" class="accordion-content active">
-                        <div class="form-grid">
-                            <div class="form-group"><label>Seleccionar Cliente:</label>
-                                <input type="text" id="opp-cliente-filtro" placeholder="Escribe para buscar..." oninput="tacticalFiltrarSelectClientes('opp-cliente-filtro','opp-cliente')" style="margin-bottom:4px;">
-                                <select id="opp-cliente"></select></div>
-                            <div class="form-group"><label>¿Qué está cotizando / pidiendo?</label><input type="text" id="opp-desc" placeholder="Ej: 1000 Cuadernos Tapa Dura"></div>
-                            <div class="form-group"><label>Monto Cotizado ($ COP):</label><input type="number" id="opp-monto" value="0"></div>
-                            <div class="form-group">
-                                <label>Etapa Comercial Actual:</label>
-                                <select id="opp-etapa">
-                                    <option value="req"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>Nuevo Requerimiento</option>
-                                    <option value="cot"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>Cotización Enviada</option>
-                                    <option value="neg"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>En Negociación / Seguimiento</option>
-                                </select>
-                            </div>
-                            <!-- Conde 2026-08-28: "aqui crea una casilla de comercial" -- sin esto, un negocio
-                                 creado manualmente quedaba sin vendedor y nunca aparecía en el módulo Comercial de
-                                 ninguno de los 2 (ver renderComercial, filtra por o.vendedor). Se poblan las
-                                 opciones y se preselecciona quien tiene la sesión iniciada en renderOportunidades(). -->
-                            <div class="form-group"><label>Comercial:</label><select id="opp-vendedor"></select></div>
-                            <div class="form-group" style="display:flex; align-items:flex-end;">
-                                <button class="btn-submit" onclick="guardarOportunidad()">+ Crear Negocio Manual</button>
-                            </div>
-                        </div>
+                <!-- Conde 2026-08-28: "el embudo se simplificó en Comercial, que es donde realmente se
+                     revisarán los datos" -- se quitó la sección "Embudo de Negocios Activos" (tarjetas +
+                     formulario de crear). El formulario se mudó a Comercial como ventana flotante (ver
+                     comercialAbrirCrearNegocio en renderComercial). Estos 2 paneles quedan acá sueltos
+                     (no dentro de ningún accordion) porque intentarMarcarGanado los necesita mostrar
+                     encima de la vista CRM en los 2 casos particulares que todavía no son ventana
+                     flotante de verdad: cotización comparativa y pedido multi-producto. El caso de
+                     "Perdido" ya es 100% flotante (ver tacticalPedirMotivoPerdidaFlotante) y no necesita
+                     ninguno de estos 2. -->
+                <div id="modal-eleccion-opcion" style="display:none; background:#f3ecfb; border:1px solid #b794f4; padding:15px; border-radius:6px; margin-bottom:14px;">
+                    <label style="font-weight:bold; color:#553c9a; display:block; margin-bottom:8px;">🆚 Esta es una cotización comparativa — ¿cuál opción eligió el cliente?</label>
+                    <div id="lista-opciones-eleccion" style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;"></div>
+                    <input type="hidden" id="opp-id-eleccion">
+                </div>
 
-                        <div id="modal-eleccion-opcion" style="display:none; background:#f3ecfb; border:1px solid #b794f4; padding:15px; border-radius:6px; margin-top:10px;">
-                            <label style="font-weight:bold; color:#553c9a; display:block; margin-bottom:8px;">🆚 Esta es una cotización comparativa — ¿cuál opción eligió el cliente?</label>
-                            <div id="lista-opciones-eleccion" style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;"></div>
-                            <input type="hidden" id="opp-id-eleccion">
-                        </div>
-
-                        <div id="modal-seleccion-lineas-ganado" style="display:none; background:#fff8e1; border:1px solid #f0d98c; padding:15px; border-radius:6px; margin-top:10px;">
-                            <label style="font-weight:bold; color:#7a5b00; display:block; margin-bottom:8px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>Este pedido tiene varios productos — ¿cuáles aprobó el cliente? (desmarca los que NO)</label>
-                            <div id="lista-lineas-seleccion-ganado" style="display:flex; flex-direction:column; gap:4px; margin-bottom:10px;"></div>
-                            <input type="hidden" id="opp-id-seleccion-lineas">
-                            <div><button class="btn-submit" style="width:auto; background:var(--ganado);" onclick="confirmarSeleccionLineasGanado()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>Continuar con lo seleccionado</button></div>
-                        </div>
-
-                        <div id="modal-perdida">
-                            <label style="font-weight:bold; color:var(--peligro); display:block; margin-bottom:5px;">¿Por qué se perdió este negocio?</label>
-                            <select id="motivo-perdida" style="margin-bottom:10px;" onchange="if(this.value==='Otra') document.getElementById('motivo-otra').style.display='block'; else document.getElementById('motivo-otra').style.display='none';">
-                                <option value="Precio">Por Precio (Competencia más barata)</option>
-                                <option value="Tiempo Cotización">Tiempo de entrega de cotización tardó mucho</option>
-                                <option value="Tiempo Producto">Tiempo de entrega del producto muy largo</option>
-                                <option value="Cliente no respondió">El cliente cotizó y disappeared (No respondió)</option>
-                                <option value="Otra">Otra razón...</option>
-                            </select>
-                            <input type="text" id="motivo-otra" placeholder="Escriba la razón manual..." style="display:none; margin-bottom:10px;">
-                            <button class="btn-submit" style="background:var(--peligro);" onclick="confirmarPerdida()">Confirmar Cierre Perdido</button>
-                            <input type="hidden" id="opp-id-perdida">
-                        </div>
-
-                        <div class="card-grid" id="lista-oportunidades"></div>
-                    </div>
+                <div id="modal-seleccion-lineas-ganado" style="display:none; background:#fff8e1; border:1px solid #f0d98c; padding:15px; border-radius:6px; margin-bottom:14px;">
+                    <label style="font-weight:bold; color:#7a5b00; display:block; margin-bottom:8px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>Este pedido tiene varios productos — ¿cuáles aprobó el cliente? (desmarca los que NO)</label>
+                    <div id="lista-lineas-seleccion-ganado" style="display:flex; flex-direction:column; gap:4px; margin-bottom:10px;"></div>
+                    <input type="hidden" id="opp-id-seleccion-lineas">
+                    <div><button class="btn-submit" style="width:auto; background:var(--ganado);" onclick="confirmarSeleccionLineasGanado()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>Continuar con lo seleccionado</button></div>
                 </div>
 
                 <div class="accordion-item">
-                    <div class="accordion-header" onclick="toggleSection('buscadorCot'); renderBuscadorCotizaciones();" id="head-buscadorCot">
-                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>2. Todas las Cotizaciones (Buscador)</span><span class="arrow" id="arrow-buscadorCot">►</span>
+                    <div class="accordion-header active" onclick="toggleSection('buscadorCot'); renderBuscadorCotizaciones();" id="head-buscadorCot">
+                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>1. Todas las Cotizaciones (Buscador)</span><span class="arrow" id="arrow-buscadorCot">▼</span>
                     </div>
-                    <div id="buscadorCot" class="accordion-content">
+                    <div id="buscadorCot" class="accordion-content active">
                         <div id="buscador-nota-periodo" style="font-size:0.82rem; color:#64748b; margin-bottom:8px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>Mostrando solo el período activo arriba en "Inteligencia de Ventas" — escribe algo para buscar en todo el histórico.</div>
                         <input type="text" id="search-cotizaciones" class="search-input" placeholder="🔍 Buscar por cliente, OT o producto..." style="margin-bottom:12px; width:100%; box-sizing:border-box; padding:10px; border:1px solid #cbd5e0; border-radius:4px; font-size:0.95rem;" oninput="renderBuscadorCotizaciones()">
                         <div class="table-responsive">
@@ -1113,7 +1081,7 @@
 
                 <div class="accordion-item">
                     <div class="accordion-header header-special" onclick="toggleSection('dashboard'); renderDashboard();" id="head-dashboard">
-                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>3. Inteligencia de Ventas (Dashboard)</span><span class="arrow" id="arrow-dashboard">►</span>
+                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>2. Inteligencia de Ventas (Dashboard)</span><span class="arrow" id="arrow-dashboard">►</span>
                     </div>
                     <div id="dashboard" class="accordion-content">
                         <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:14px; padding:10px; background:var(--light-gray); border-radius:6px; border:1px solid #cbd5e0;">
@@ -1132,14 +1100,16 @@
                             <div class="kpi-box" style="border-color:var(--ganado);"><div class="kpi-label">Ventas Ganadas</div><div class="kpi-value" id="kpi-ganadas" style="color:var(--ganado);">$0</div></div>
                             <div class="kpi-box" style="border-color:var(--peligro);"><div class="kpi-label">Tasa de Cierre</div><div class="kpi-value" id="kpi-tasa" style="color:var(--dark);">0%</div></div>
                         </div>
-                        <h4 style="color:var(--dark); border-bottom:2px solid #cbd5e0; padding-bottom:5px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>Análisis de Razones de Pérdida</h4>
-                        <div id="lista-motivos" style="background:var(--light-gray); padding:15px; border-radius:6px; border:1px solid #cbd5e0; font-size:0.95rem; line-height:1.6;"></div>
+                        <!-- Conde 2026-08-28: "dejemos el motivo de la pérdida solo en Reportes, que será lo
+                             que revisaré más frecuentemente" -- quitado de acá (estaba duplicado, mismo
+                             cálculo que "Motivos de Pérdida" en Reportes → Ventas y Comercial). -->
+                        <p style="font-size:0.85rem; color:#718096; margin:6px 0 0;">El análisis de "Motivos de Pérdida" se ve en <a href="#" onclick="showView('reportes'); return false;" style="color:var(--primary); font-weight:600;">Radar de Negocio y Reportes ➔</a></p>
                     </div>
                 </div>
 
                 <div class="accordion-item">
                     <div class="accordion-header" onclick="toggleSection('directorio')" id="head-directorio">
-                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>4. Directorio de Clientes B2B</span><span class="arrow" id="arrow-directorio">►</span>
+                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>3. Directorio de Clientes B2B</span><span class="arrow" id="arrow-directorio">►</span>
                     </div>
                     <div id="directorio" class="accordion-content">
                         <div class="form-grid">
@@ -1901,8 +1871,8 @@
     <div id="print-area" style="display:none;"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="tactical-supabase.js?v=20260828b"></script>
-    <script src="precios_tactical.js?v=20260828b"></script>
+    <script src="tactical-supabase.js?v=20260828c"></script>
+    <script src="precios_tactical.js?v=20260828c"></script>
     <script src="precios_promocionales.js"></script>
     <script>
         // NAVEGACIÓN SPA DEL HUB
@@ -1924,8 +1894,10 @@
             cotizador: ['administrador', 'comercial'],
             reportes: ['administrador', 'comercial', 'contabilidad'],
             contabilidad: ['administrador', 'contabilidad'],
-            precios: ['administrador', 'produccion', 'contabilidad'],
-            fototeca: ['administrador', 'diseno'],
+            // Conde 2026-08-28: "los precios y las fotos serán para cualquier comercial" -- se agrega
+            // 'comercial' a las 2 (antes solo admin/producción/contabilidad y admin/diseño podían).
+            precios: ['administrador', 'produccion', 'contabilidad', 'comercial'],
+            fototeca: ['administrador', 'diseno', 'comercial'],
             botwa: ['administrador', 'comercial'],
             comercial: ['administrador', 'comercial'],
         };
@@ -2071,10 +2043,8 @@
             } else if (viewId === 'crm') {
                 navContainer.style.display = 'block';
                 mainTitle.innerText = "CRM & CLIENTES B2B";
-                subTitle.innerText = "Directorio y Embudo de Ventas (2026)";
+                subTitle.innerText = "Directorio de Clientes, Buscador e Inteligencia de Ventas (2026)";
                 renderClientes();
-                llenarSelectClientes();
-                renderOportunidades();
             } else if (viewId === 'calculadoras') {
                 navContainer.style.display = 'block';
                 mainTitle.innerText = "CALCULADORA DE COSTOS";
@@ -2411,7 +2381,7 @@
           return texto.length > n ? texto.slice(0, n).trim() + '…' : texto;
         }
         // Conde 2026-08-24: mismo patrón de arriba, para tarjetas (.data-card) en vez de filas de
-        // tabla -- Clientes y Seguimiento (renderClientes/renderOportunidades) en el CRM.
+        // tabla -- Directorio de Clientes (renderClientes) en el CRM.
         function tacticalToggleCardDetalle(btn){
             const card = btn.closest('.card-collapsible');
             const expandida = card.classList.toggle('expandido');
@@ -2981,7 +2951,7 @@
           await tacticalComparacionBorradorCargar(); cotRefrescarBannerComparacion();
           // Si ya se está viendo CRM/Kanban justo cuando termina de cargar, refresca:
           if(document.getElementById('view-crm') && document.getElementById('view-crm').classList.contains('active-view')){
-            renderClientes(); llenarSelectClientes(); renderOportunidades();
+            renderClientes();
           }
           if(typeof renderKanban === 'function' && document.getElementById('view-kanban') && document.getElementById('view-kanban').classList.contains('active-view')){
             renderKanban();
@@ -3034,7 +3004,7 @@
             document.getElementById('cli-empresa').value = ''; document.getElementById('cli-nombre').value = '';
             document.getElementById('cli-wp').value = ''; document.getElementById('cli-correo').value = '';
             document.getElementById('cli-tipo').value = ''; document.getElementById('cli-identificacion').value = '';
-            renderClientes(); llenarSelectClientes();
+            renderClientes();
         }
 
         function renderClientes() {
@@ -3176,96 +3146,16 @@
         function tacticalFiltrarSelectClientes(filtroInputId, selectId, modoPrefijo){
             tacticalPoblarSelectClientes(selectId, document.getElementById(filtroInputId).value, modoPrefijo);
         }
-        function llenarSelectClientes() {
-            tacticalPoblarSelectClientes('opp-cliente', (document.getElementById('opp-cliente-filtro')||{}).value);
-        }
 
-        function guardarOportunidad() {
-            const idCli = document.getElementById('opp-cliente').value;
-            const desc = document.getElementById('opp-desc').value.trim();
-            const monto = parseFloat(document.getElementById('opp-monto').value) || 0;
-            const etapa = document.getElementById('opp-etapa').value;
-            const vendedor = document.getElementById('opp-vendedor').value;
-
-            if(!idCli || !desc) { alert("Debe seleccionar un cliente y escribir la descripción."); return; }
-            const cliObj = db_clientes.find(c => c.id === idCli);
-            db_opps.push({ id: crypto.randomUUID(), idCli, nombreCli: tacticalNombreCliente(cliObj), desc, monto, etapa, vendedor, fecha: new Date().toISOString() });
-            tacticalSyncOpps(db_opps);
-
-            document.getElementById('opp-desc').value = ''; document.getElementById('opp-monto').value = '0';
-            renderOportunidades(); renderClientes();
-        }
-
-        function renderOportunidades() {
-            // Conde 2026-08-28: casilla "Comercial" del formulario de arriba -- se puebla una sola vez
-            // (mismo patrón que rep-periodo-vendedor en Reportes) y se preselecciona a quien tiene la
-            // sesión iniciada si su nombre coincide con una clave de VENDEDORES.
-            const selVendOpp = document.getElementById('opp-vendedor');
-            if(selVendOpp && !selVendOpp.dataset.poblado){
-                Object.keys(VENDEDORES).forEach(v=>{ const opt=document.createElement('option'); opt.value=v; opt.textContent=v; selVendOpp.appendChild(opt); });
-                const nombreActual = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.nombre;
-                if(nombreActual && VENDEDORES[nombreActual]) selVendOpp.value = nombreActual;
-                selVendOpp.dataset.poblado = '1';
-            }
-            const container = document.getElementById('lista-oportunidades');
-            container.innerHTML = '';
-            const orden = { 'neg': 1, 'cot': 2, 'req': 3 };
-            let activas = [...db_opps].sort((a, b) => orden[a.etapa] - orden[b.etapa]);
-
-            activas.forEach(opp => {
-                let btnAvanzar = '';
-                if(opp.etapa === 'req') btnAvanzar = `<button class="btn-stage btn-avanzar" onclick="avanzarEtapa('${opp.id}', 'cot')">Mandar Cotización ➔</button>`;
-                if(opp.etapa === 'cot') btnAvanzar = `<button class="btn-stage btn-avanzar" onclick="avanzarEtapa('${opp.id}', 'neg')">A Seguimiento ➔</button>`;
-
-                container.innerHTML += `
-                    <div class="data-card card-collapsible">
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:6px;">
-                            <div style="min-width:0; flex:1;">
-                                <div class="card-title" style="margin:0; font-size:0.9rem;">${opp.nombreCli}</div>
-                                <div style="font-size:1.05rem; font-weight:bold; color:var(--dark); margin-top:2px;">$${opp.monto.toLocaleString()}</div>
-                                <div style="font-size:0.8rem; color:#718096; margin-top:2px;" title="${opp.desc}">${cotTextoConNegrilla(tacticalTruncar(opp.desc, 40))}</div>
-                            </div>
-                            <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
-                                <span class="tag ${tags_etapa[opp.etapa].cls}">${tags_etapa[opp.etapa].lbl}</span>
-                                <button class="card-flecha-toggle" onclick="tacticalToggleCardDetalle(this)">▶</button>
-                            </div>
-                        </div>
-                        <div class="card-detalle">
-                            <div style="font-size:0.85rem; color:#4a5568;">${cotTextoConNegrilla(opp.desc)}</div>
-                            <div style="display:flex; align-items:center; gap:6px; margin-top:8px; font-size:0.8rem; color:#4a5568;">
-                                <label for="vend-opp-${opp.id}" style="font-weight:600; margin:0;">Vendedor:</label>
-                                <select id="vend-opp-${opp.id}" onchange="cambiarVendedorOpp('${opp.id}', this.value)" style="font-size:0.8rem; padding:3px 6px; border:1px solid #cbd5e0; border-radius:4px;">
-                                    ${Object.keys(VENDEDORES).map(v=>`<option value="${v}" ${opp.vendedor===v?'selected':''}>${v}</option>`).join('')}
-                                </select>
-                            </div>
-                            <div class="action-row">
-                                ${btnAvanzar}
-                                <button class="btn-stage btn-ganado" onclick="intentarMarcarGanado('${opp.id}')">${ticon('dollar')}Ganado</button>
-                                <button class="btn-stage btn-perdido" onclick="abrirModalPerdida('${opp.id}')">${ticon('x')}Perdido</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            if(activas.length === 0) container.innerHTML = '<p style="color:#718096; grid-column: 1/-1;">No hay cotizaciones/negocios activos en el embudo.</p>';
-        }
-        // Conde 2026-08-28: "por error cree varias cotizaciones de Norely que son de Helver" -- antes
-        // no había forma de corregir el vendedor de una cotización ya creada sin editarla (lo que
-        // crea una VERSIÓN nueva, no corrige la real). Corrige el registro real en el mismo lugar
-        // donde el error se nota -- no re-renderiza toda la lista para no perder la posición del
-        // scroll ni cerrar la tarjeta que se estaba viendo (mismo motivo que el fix de scroll del
-        // Kanban).
-        function cambiarVendedorOpp(id, nuevoVendedor){
-            const opp = db_opps.find(o => o.id === id); if(!opp) return;
-            opp.vendedor = nuevoVendedor;
-            tacticalSyncOpps([opp]);
-        }
-
+        // Conde 2026-08-28: "el embudo se simplificó en Comercial" -- la lista de tarjetas y el
+        // formulario de crear que vivían acá se quitaron; ver comercialAbrirCrearNegocio y
+        // comercialCambiarEtapa en renderComercial() para lo que las reemplaza. avanzarEtapa() sigue
+        // viva porque el ✓/✕ de Comercial y el <select> de Etapa la siguen necesitando.
         function avanzarEtapa(idOpp, nuevaEtapa) {
             let opp = db_opps.find(o => o.id === idOpp);
             opp.etapa = nuevaEtapa;
             tacticalSyncOpps(db_opps);
-            renderOportunidades();
+            if(typeof renderComercial === 'function') renderComercial();
         }
 
         function intentarMarcarGanado(idOpp){
@@ -3388,8 +3278,7 @@
             db_opps.splice(idx, 1);
             tacticalEliminarOppRemoto(idOpp);
 
-            document.getElementById('modal-perdida').style.display = 'none';
-            renderOportunidades(); renderClientes();
+            renderClientes();
             if(typeof renderComercial === 'function') renderComercial();
         }
 
@@ -5080,16 +4969,11 @@
           location.reload();
         }
 
-        function abrirModalPerdida(idOpp) {
-            document.getElementById('opp-id-perdida').value = idOpp;
-            document.getElementById('modal-perdida').style.display = 'block';
-            document.getElementById('modal-perdida').scrollIntoView();
-        }
-
-        function confirmarPerdida() {
-            let motivo = document.getElementById('motivo-perdida').value;
-            if(motivo === 'Otra') motivo = document.getElementById('motivo-otra').value.trim() || 'Razón no especificada';
-            let idOpp = document.getElementById('opp-id-perdida').value;
+        // Conde 2026-08-28: ahora es ventana flotante (tacticalPedirMotivoPerdidaFlotante, en
+        // precios_tactical.js) -- ya no depende de estar parado en la vista de CRM para verse.
+        async function abrirModalPerdida(idOpp) {
+            const motivo = await tacticalPedirMotivoPerdidaFlotante();
+            if(!motivo) return;
             cerrarNegocio(idOpp, 'perdido', motivo);
         }
 
@@ -5168,26 +5052,8 @@
             let totalCerrados = ganadas.length + perdidas.length;
             let tasa = totalCerrados === 0 ? 0 : Math.round((ganadas.length / totalCerrados) * 100);
             document.getElementById('kpi-tasa').innerText = tasa + "%";
-
-            let objMotivos = {};
-            perdidas.forEach(p => { objMotivos[p.motivo] = (objMotivos[p.motivo] || 0) + 1; });
-
-            let listaHTML = '';
-            for(let mot in objMotivos) {
-                let pct = Math.round((objMotivos[mot] / perdidas.length) * 100);
-                let barraColor = mot.includes('Precio') ? 'var(--peligro)' : (mot.includes('Tiempo') ? 'var(--proceso)' : 'var(--secondary)');
-                listaHTML += `
-                    <div style="margin-bottom:10px;">
-                        <div style="display:flex; justify-content:space-between; font-weight:bold;">
-                            <span>${mot}</span><span>${objMotivos[mot]} casos (${pct}%)</span>
-                        </div>
-                        <div style="width:100%; background:#e2e8f0; height:8px; border-radius:4px; margin-top:3px;">
-                            <div style="width:${pct}%; background:${barraColor}; height:100%; border-radius:4px;"></div>
-                        </div>
-                    </div>
-                `;
-            }
-            document.getElementById('lista-motivos').innerHTML = listaHTML || '<span style="color:#718096; font-style:italic;">No hay registros de pérdidas para analizar en este período.</span>';
+            // Conde 2026-08-28: "Motivos de Pérdida" se quitó de acá (duplicaba exactamente el mismo
+            // cálculo que ya vive en Reportes → Ventas y Comercial, ver rep-motivos en renderReportes).
         }
 
         // ---- BUSCADOR DE COTIZACIONES (Conde 2026-08-06): todas las cotizaciones de las 8
@@ -7030,7 +6896,8 @@
           tacticalImprimirConTitulo(`${cot.cliente.empresa||'Cliente'} - ${cot.ot||''}`);
 
           // Refrescar CRM si esta visible
-          if(document.getElementById('view-crm').classList.contains('active-view')){ renderClientes(); llenarSelectClientes(); renderOportunidades(); }
+          if(document.getElementById('view-crm').classList.contains('active-view')){ renderClientes(); }
+          if(typeof renderComercial === 'function') renderComercial();
         }
 
         /* ---- ORDEN DE PRODUCCIÓN ---- */
@@ -7304,6 +7171,64 @@
           o.seguimiento = valor;
           tacticalGuardarSeguimientoOpp(id, valor);
         }
+        // Conde 2026-08-28: "deja crear negocio manual en comercial, que sea un botón que al
+        // activarse abra una ventana flotante... ese módulo está pensado en simplicidad visual" --
+        // reemplaza el formulario que antes vivía siempre visible en CRM (ver el historial de
+        // guardarOportunidad, ya no existe). Reusa tacticalPoblarSelectClientes/
+        // tacticalFiltrarSelectClientes tal cual (mismos ids opp-cliente/opp-cliente-filtro) para no
+        // duplicar la lógica de búsqueda de cliente que ya existe.
+        function comercialAbrirCrearNegocio(){
+          const overlay = document.createElement('div');
+          overlay.id = 'comercial-modal-crear-negocio';
+          overlay.style.cssText = 'position:fixed; inset:0; background:rgba(26,32,44,0.6); z-index:99999; display:flex; align-items:center; justify-content:center; padding:20px;';
+          overlay.innerHTML = `
+            <div style="background:#fff; border-radius:10px; padding:24px; max-width:420px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,0.35); font-family:'Segoe UI', Tahoma, sans-serif;">
+              <div style="font-weight:800; font-size:1.05rem; color:#1a202c; margin-bottom:16px;">+ Nuevo Negocio Manual</div>
+              <label style="font-size:0.8rem; font-weight:700; color:#4a5568; display:block; margin-bottom:3px;">Cliente:</label>
+              <input type="text" id="opp-cliente-filtro" placeholder="Escribe para buscar..." oninput="tacticalFiltrarSelectClientes('opp-cliente-filtro','opp-cliente')" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e0; border-radius:6px; margin-bottom:4px; font-size:0.9rem;">
+              <select id="opp-cliente" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e0; border-radius:6px; margin-bottom:10px; font-size:0.9rem;"></select>
+              <label style="font-size:0.8rem; font-weight:700; color:#4a5568; display:block; margin-bottom:3px;">¿Qué está cotizando / pidiendo?</label>
+              <input type="text" id="opp-desc" placeholder="Ej: 1000 Cuadernos Tapa Dura" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e0; border-radius:6px; margin-bottom:10px; font-size:0.9rem;">
+              <div style="display:flex; gap:10px; margin-bottom:10px;">
+                <div style="flex:1;">
+                  <label style="font-size:0.8rem; font-weight:700; color:#4a5568; display:block; margin-bottom:3px;">Monto ($ COP):</label>
+                  <input type="number" id="opp-monto" value="0" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e0; border-radius:6px; font-size:0.9rem;">
+                </div>
+                <div style="flex:1;">
+                  <label style="font-size:0.8rem; font-weight:700; color:#4a5568; display:block; margin-bottom:3px;">Comercial:</label>
+                  <select id="opp-vendedor" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e0; border-radius:6px; font-size:0.9rem;">
+                    ${Object.keys(VENDEDORES).map(v=>`<option value="${v}" ${v===comercialVendedorActivo?'selected':''}>${v}</option>`).join('')}
+                  </select>
+                </div>
+              </div>
+              <label style="font-size:0.8rem; font-weight:700; color:#4a5568; display:block; margin-bottom:3px;">Etapa comercial actual:</label>
+              <select id="opp-etapa" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e0; border-radius:6px; margin-bottom:16px; font-size:0.9rem;">
+                <option value="req">Nuevo Requerimiento</option>
+                <option value="cot">Cotización Enviada</option>
+                <option value="neg">En Negociación / Seguimiento</option>
+              </select>
+              <div style="display:flex; gap:8px;">
+                <button type="button" onclick="document.getElementById('comercial-modal-crear-negocio').remove()" style="flex:1; padding:10px; border:1px solid #cbd5e0; background:#fff; color:#4a5568; border-radius:6px; font-weight:700; cursor:pointer;">Cancelar</button>
+                <button type="button" onclick="comercialGuardarNegocioManual()" style="flex:1; padding:10px; border:none; background:#cc0000; color:#fff; border-radius:6px; font-weight:700; cursor:pointer;">Crear Negocio</button>
+              </div>
+            </div>`;
+          document.body.appendChild(overlay);
+          tacticalPoblarSelectClientes('opp-cliente', '');
+          setTimeout(() => document.getElementById('opp-cliente-filtro').focus(), 0);
+        }
+        function comercialGuardarNegocioManual(){
+          const idCli = document.getElementById('opp-cliente').value;
+          const desc = document.getElementById('opp-desc').value.trim();
+          const monto = parseFloat(document.getElementById('opp-monto').value) || 0;
+          const etapa = document.getElementById('opp-etapa').value;
+          const vendedor = document.getElementById('opp-vendedor').value;
+          if(!idCli || !desc){ alert('Debe seleccionar un cliente y escribir la descripción.'); return; }
+          const cliObj = db_clientes.find(c => c.id === idCli);
+          db_opps.push({ id: crypto.randomUUID(), idCli, nombreCli: tacticalNombreCliente(cliObj), desc, monto, etapa, vendedor, fecha: new Date().toISOString() });
+          tacticalSyncOpps(db_opps);
+          document.getElementById('comercial-modal-crear-negocio').remove();
+          renderComercial();
+        }
         function renderComercial(){
           const tabsCont = document.getElementById('comercial-tabs');
           if(!tabsCont) return;
@@ -7383,6 +7308,11 @@
               <td>${o.nombreCli}</td>
               <td>${tacticalTruncarPalabraCompleta(o.desc, 40)}</td>
               <td>${fecha ? fecha.toLocaleDateString('es-CO',{day:'numeric',month:'short'}) : '-'}</td>
+              <td><select onchange="avanzarEtapa('${o.id}',this.value)">
+                <option value="req" ${o.etapa==='req'?'selected':''}>Nuevo Requerimiento</option>
+                <option value="cot" ${o.etapa==='cot'?'selected':''}>Cotización Enviada</option>
+                <option value="neg" ${o.etapa==='neg'?'selected':''}>Seguimiento</option>
+              </select></td>
               <td><input type="text" value="${(o.seguimiento||'').replace(/"/g,'&quot;')}" placeholder="Ej: llamé el 28, volver a llamar el 2 de sept." onchange="comercialGuardarSeguimiento('${o.id}',this.value)"></td>
               <td style="text-align:center; white-space:nowrap;">
                 <button onclick="comercialAbrirSeguimientoFecha('${o.id}')" title="Programar seguimiento" style="background:#64748b; border:none; border-radius:50%; width:22px; height:22px; padding:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; margin-right:4px;">${ticon('clock',{color:'#fff',noMargin:true,size:13})}</button>
@@ -7390,7 +7320,7 @@
                 <button onclick="comercialConfirmarGanado('${o.id}')" title="Marcar aprobada" style="background:#16a34a; border:none; border-radius:50%; width:22px; height:22px; padding:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">${ticon('check',{color:'#fff',noMargin:true,size:13})}</button>
               </td>
             </tr>`;
-          }).join('') : '<tr><td colspan="5" style="text-align:center; color:#a0aec0;">Sin cotizaciones activas.</td></tr>';
+          }).join('') : '<tr><td colspan="6" style="text-align:center; color:#a0aec0;">Sin cotizaciones activas.</td></tr>';
 
           // ---- Recordatorios de seguimiento (Conde 2026-08-28): "se active un recordatorio el dia
           // estipulado" -- se activa ese día Y se queda activo (marcado como atrasado) si no se
@@ -7434,8 +7364,10 @@
           });
           if(!ok) return;
           // intentarMarcarGanado puede necesitar mostrar el panel de "varios productos" o "elegir
-          // opción" -- esos viven adentro de la vista CRM (no son ventanas flotantes de verdad), así
-          // que hay que estar parado ahí para que se vean. Ver comercialConfirmarPerdido, mismo motivo.
+          // opción" -- esos 2 casos particulares (cotización comparativa, pedido multi-producto)
+          // todavía viven como paneles fijos adentro de la vista CRM, así que hay que estar parado
+          // ahí para que se vean. El caso normal (un solo producto) y el cierre Perdido de abajo ya
+          // son 100% ventana flotante y no necesitan esto -- ver abrirModalPerdida.
           showView('crm');
           intentarMarcarGanado(idOpp);
         }
@@ -7447,7 +7379,6 @@
             color: '#dc2626', textoBoton: 'Sí, cancelar', icono: 'x',
           });
           if(!ok) return;
-          showView('crm');
           abrirModalPerdida(idOpp);
         }
         function renderRadar(){
