@@ -290,6 +290,7 @@ function tacticalOppADb(o){
     recomendaciones: o.recomendaciones||null, lineas: o.lineas||null,
     opciones_comparativa: o.opcionesComparativa||null,
     cot_params: o.cotParams||null, cot_resultado: o.cotResultado||null,
+    seguimiento: o.seguimiento||null, seguimiento_fecha: o.seguimientoFecha||null,
   };
 }
 function tacticalOppDeDb(r){
@@ -300,8 +301,24 @@ function tacticalOppDeDb(r){
     planoCorte: r.plano_corte, planoCorteLineas: r.plano_corte_lineas,
     recomendaciones: r.recomendaciones, lineas: r.lineas,
     opcionesComparativa: r.opciones_comparativa, cotParams: r.cot_params, cotResultado: r.cot_resultado,
+    seguimiento: r.seguimiento||'',
+    seguimientoFecha: r.seguimiento_fecha||'',
     fecha: r.created_at,
   };
+}
+// Conde 2026-08-27 (módulo Comercial): "Observaciones" de Cotizaciones creadas -- seguimiento tipo
+// "llamé el viernes 28, volver a llamar el 2 de septiembre". Guardado suelto (mismo motivo que
+// tacticalGuardarNotasManualesOP/tacticalGuardarComercialB2C) -- tacticalSyncOpps de arriba
+// reescribe TODA la lista en cada llamada, innecesario solo para guardar un texto libre.
+async function tacticalGuardarSeguimientoOpp(id, texto){
+  const { error } = await tacticalSupabase.from('opps').update({ seguimiento: texto||null }).eq('id', id);
+  if(error) console.error('Error guardando seguimiento de negocio:', error);
+}
+// Conde 2026-08-28: fecha programada del ícono de reloj (activa el recordatorio "HOY seguimiento
+// cotización..." en Comercial) -- columna aparte de "seguimiento" (que es el texto libre).
+async function tacticalGuardarSeguimientoFechaOpp(id, fechaISO){
+  const { error } = await tacticalSupabase.from('opps').update({ seguimiento_fecha: fechaISO||null }).eq('id', id);
+  if(error) console.error('Error guardando fecha de seguimiento de negocio:', error);
 }
 async function tacticalOppsCargar(){
   const { data, error } = await tacticalSupabase.from('opps').select('*').order('created_at');
@@ -354,7 +371,7 @@ function tacticalFichaKanbanADb(f){
     titulo: f.titulo||'', columna: f.columna||'aprobada', urgente: !!f.urgente,
     fecha_entrega: f.fechaEntrega||null, entrega: f.entrega||null,
     responsable: f.responsable||null, origen: f.origen||null, diseno_aprobado: !!f.disenoAprobado,
-    op_notas_manual: f.opNotasManual||null,
+    op_notas_manual: f.opNotasManual||null, vendedor: f.vendedor||null,
   };
 }
 function tacticalFichaKanbanDeDb(r, lineas, checklist, fotos){
@@ -362,7 +379,7 @@ function tacticalFichaKanbanDeDb(r, lineas, checklist, fotos){
     id: r.id, ot: r.ot, idCli: r.id_cliente, nombreCli: r.nombre_cli, titulo: r.titulo,
     columna: r.columna, urgente: r.urgente, fechaEntrega: r.fecha_entrega, entrega: r.entrega,
     responsable: r.responsable, origen: r.origen, disenoAprobado: !!r.diseno_aprobado, fechaCreacion: r.created_at,
-    opNotasManual: r.op_notas_manual||'',
+    opNotasManual: r.op_notas_manual||'', vendedor: r.vendedor||'',
     lineas: lineas||[], checklist: checklist||[], fotos: fotos||[],
   };
 }
@@ -372,6 +389,12 @@ function tacticalFichaKanbanDeDb(r, lineas, checklist, fotos){
 async function tacticalGuardarNotasManualesOP(fichaId, texto){
   const { error } = await tacticalSupabase.from('kanban_fichas').update({ op_notas_manual: texto||null }).eq('id', fichaId);
   if(error) console.error('Error guardando notas manuales de OP:', error);
+}
+// Conde 2026-08-27 (módulo Comercial): mismo motivo que tacticalGuardarNotasManualesOP -- editar
+// "Observaciones" ahí reusa el campo "responsable" (📝 Notas) que ya tiene cada ficha, sin re-sincronizar líneas/checklist/fotos por un solo texto.
+async function tacticalGuardarNotasFicha(fichaId, texto){
+  const { error } = await tacticalSupabase.from('kanban_fichas').update({ responsable: texto||null }).eq('id', fichaId);
+  if(error) console.error('Error guardando notas de ficha:', error);
 }
 function tacticalLineaKanbanADb(fichaId, l){
   return {
@@ -446,6 +469,7 @@ function tacticalB2CPedidoADb(p){
     nombre: p.nombre||'', celular: p.cel||'', correo: p.correo||'', entrega: p.entrega||'',
     total: p.total||0, cantidad: p.cantidad||0, kanban_ficha_id: p.idKanban||null,
     fecha_aprobado: p.fechaAprobado||null,
+    nota_comercial: p.notaComercial||null, observaciones_comercial: p.observacionesComercial||null,
   };
 }
 function tacticalB2CPedidoDeDb(r, items){
@@ -453,6 +477,7 @@ function tacticalB2CPedidoDeDb(r, items){
     id: r.id, fecha: r.fecha, estado: r.estado, nombre: r.nombre, cel: r.celular,
     correo: r.correo, entrega: r.entrega, total: Number(r.total)||0, cantidad: Number(r.cantidad)||0,
     idKanban: r.kanban_ficha_id, fechaAprobado: r.fecha_aprobado, items: items||[],
+    notaComercial: r.nota_comercial||'', observacionesComercial: r.observaciones_comercial||'',
   };
 }
 function tacticalB2CItemADb(pedidoId, it){
@@ -485,6 +510,14 @@ async function tacticalSyncB2CPedido(p){
     const { error } = await tacticalSupabase.from('b2c_pedido_items').insert(p.items.map(it=>tacticalB2CItemADb(p.id, it)));
     if(error) console.error('Error guardando items de pedido B2C:', error);
   }
+}
+// Conde 2026-08-27 (módulo Comercial): guardado suelto de "Pendiente"/"Observaciones" -- mismo
+// motivo que tacticalGuardarNotasManualesOP, tacticalSyncB2CPedido de arriba borra y reinserta TODOS
+// los ítems del pedido en cada llamada, innecesario y arriesgado solo para guardar un texto libre.
+async function tacticalGuardarComercialB2C(pedidoId, campo, texto){
+  const columna = campo==='pendiente' ? 'nota_comercial' : 'observaciones_comercial';
+  const { error } = await tacticalSupabase.from('b2c_pedidos').update({ [columna]: texto||null }).eq('id', pedidoId);
+  if(error) console.error('Error guardando seguimiento comercial B2C:', error);
 }
 
 // ============ COTIZACIONES CUADERNOS ============

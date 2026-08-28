@@ -1056,6 +1056,9 @@ document.getElementById('btnGuardarPedido').addEventListener('click', async ()=>
     nombre, cel, correo, entrega,
     items, total, cantidad,
     idKanban: null,
+    // Conde 2026-08-27 (módulo Comercial): arranca así, el comercial lo reescribe a mano según
+    // avanza el proceso real (ver tablero "Comercial" en el Hub).
+    notaComercial: 'Pendiente aprobación diseño', observacionesComercial: '',
   };
   db_ventas_b2c.push(pedido);
   tacticalSyncB2CPedido(pedido);

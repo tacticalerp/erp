@@ -661,25 +661,28 @@
                     <div class="card-footer">Ingresar al Módulo ➔</div>
                 </div>
 
-                <div class="hub-card active-card" onclick="showView('radar')" style="border:2px solid var(--primary);">
+                <!-- MÓDULO: COMERCIAL (tablero compacto por vendedor) -->
+                <div class="hub-card active-card" onclick="showView('comercial')">
                     <div>
                         <div class="card-header">
-                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>Radar de Negocio</h3>
+                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>Comercial</h3>
                             <span class="badge badge-active">Nuevo</span>
                         </div>
                     </div>
-                    <div class="card-footer">Ver recomendaciones de hoy ➔</div>
+                    <div class="card-footer">Ver tablero por vendedor ➔</div>
                 </div>
 
-                <!-- MÓDULO 7: REPORTES -->
-                <div class="hub-card active-card" onclick="showView('reportes')">
+                <!-- MÓDULO 7: RADAR DE NEGOCIO Y REPORTES (Conde 2026-08-28: unificados en una sola
+                     herramienta -- antes eran 2 tarjetas separadas, showView('reportes') ahora
+                     también pinta las recomendaciones que antes vivían en showView('radar'). -->
+                <div class="hub-card active-card" onclick="showView('reportes')" style="border:2px solid var(--primary);">
                     <div>
                         <div class="card-header">
-                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>Reportes</h3>
+                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>Radar de Negocio y Reportes</h3>
                             <span class="badge badge-active">Activo</span>
                         </div>
                     </div>
-                    <div class="card-footer">Ingresar al Módulo ➔</div>
+                    <div class="card-footer">Ver recomendaciones e indicadores ➔</div>
                 </div>
 
                 <!-- MÓDULO 8: CONTABILIDAD -->
@@ -744,14 +747,66 @@
         </div>
 
         <!-- VISTA: RADAR DE NEGOCIO -->
-        <div id="view-radar" class="app-view">
-            <div style="padding:15px; max-width:760px; margin:0 auto;">
-                <p style="color:#718096; font-size:0.9rem; margin:0 0 18px;">Cruces de CRM, Contabilidad y Reprocesos, traducidos a frases simples con una acción sugerida — no hace falta saber de contabilidad para leerlo.</p>
-                <div style="font-size:0.8rem; color:#a0aec0; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px;">Esta semana</div>
-                <div id="radar-urgente" style="display:flex; flex-direction:column; gap:10px; margin-bottom:26px;"></div>
-                <div style="font-size:0.8rem; color:#a0aec0; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px;">Para tener en cuenta</div>
-                <div id="radar-informativo" style="display:flex; flex-direction:column; gap:10px;"></div>
+        <!-- MÓDULO COMERCIAL (Conde 2026-08-27): tablero compacto por vendedor -- Personalizados
+             (pedidos B2C Rompecabezas) + Corporativo (cotizaciones creadas / productos aprobados).
+             Estilo tabla apretada a propósito (mismo pedido de Conde: "muchos espacios entre
+             casillas", quiere verlo de un vistazo tipo Excel) -- NO usa .data-card/.card-grid como
+             el resto del ERP. No es una tabla nueva de datos: reusa db_opps/db_kanban/db_b2cPedidos
+             tal cual existen, ver renderComercial(). -->
+        <style>
+          /* Conde 2026-08-28: "no se ve las lineas de gris oscuro, dejalas en blanco" -- el resto
+             del ERP (fondo oscuro desde hace unos días) siempre mete las tablas/tarjetas dentro de
+             un recuadro blanco propio (.accordion-content, .data-card, etc.) -- estas tablas
+             quedaron flotando directo sobre el fondo oscuro del body, sin ese recuadro, por eso las
+             franjas oscuras se perdían contra el negro. Mismo criterio que el resto: blanco. */
+          .comercial-tabla-wrap{ background:#fff; border:1px solid #e2e8f0; border-top:none; padding:8px; }
+          .tabla-comercial{ width:100%; border-collapse:collapse; font-size:0.78rem; }
+          .tabla-comercial th{ background:#e2e8f0; color:#1a202c; text-align:left; padding:4px 8px; border:1px solid #cbd5e0; font-weight:700; white-space:nowrap; }
+          .tabla-comercial td{ padding:3px 8px; border:1px solid #e2e8f0; vertical-align:top; line-height:1.3; }
+          .tabla-comercial tr:nth-child(even) td{ background:#f8fafc; }
+          .tabla-comercial input[type=text]{ width:100%; box-sizing:border-box; border:1px solid transparent; background:transparent; font-size:0.78rem; padding:1px 3px; font-family:inherit; color:inherit; }
+          .tabla-comercial input[type=text]:hover, .tabla-comercial input[type=text]:focus{ border-color:#cbd5e0; background:#fff; border-radius:3px; }
+          .comercial-titulo-seccion{ background:#cc0000; color:#fff; font-weight:800; padding:6px 10px; font-size:0.85rem; margin:16px 0 0; border-radius:4px 4px 0 0; }
+          .comercial-subtitulo{ background:#4a5568; color:#fff; font-weight:700; padding:4px 10px; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.03em; }
+          .comercial-vendedor-tab{ padding:7px 16px; border:1px solid #cbd5e0; background:#fff; color:#1a202c; cursor:pointer; font-weight:600; font-size:0.85rem; border-radius:5px; }
+          .comercial-vendedor-tab.active{ background:var(--primary); border-color:var(--primary); color:#fff; }
+          /* Conde 2026-08-28: "un poco mas de contraste entre filas" -- la franja par (#f8fafc)
+             era casi blanca contra el fondo blanco de la impar, no se notaba. */
+          .tabla-comercial tr:nth-child(even) td{ background:#e7ecf2; }
+          .tabla-comercial td{ border-color:#cbd5e0; }
+          /* Recordatorio de seguimiento (ícono de reloj): se activa solo el día programado o si ya
+             se pasó la fecha -- para que no se pierda un seguimiento por no entrar justo ese día. */
+          .comercial-recordatorio{ display:flex; align-items:center; gap:8px; background:#fff7ed; border:1px solid #fdba74; color:#9a3412; padding:8px 12px; border-radius:6px; font-size:0.82rem; margin-bottom:8px; }
+          .comercial-recordatorio.atrasado{ background:#fef2f2; border-color:#fca5a5; color:#991b1b; }
+        </style>
+        <div id="view-comercial" class="app-view">
+          <div style="padding:15px; max-width:1100px; margin:0 auto;">
+            <p style="color:#718096; font-size:0.85rem; margin:0 0 12px;">Vista compacta por vendedor -- Cliente/Producto/Fecha se llenan solos desde el CRM/Kanban/B2C; "Pendiente" y "Observaciones" se editan a mano (clic y escribe).</p>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px;">
+              <div id="comercial-tabs" style="display:flex; gap:6px;"></div>
+              <input type="text" id="comercial-buscar" placeholder="Buscar en todo el historial de este vendedor (cliente, OT, producto)..." oninput="renderComercial()" style="flex:1; min-width:220px; padding:7px 10px; border:1px solid #cbd5e0; border-radius:5px; font-size:0.85rem;">
             </div>
+
+            <div id="comercial-recordatorios" style="margin-bottom:4px;"></div>
+
+            <div class="comercial-titulo-seccion">Personalizados (Rompecabezas B2C)</div>
+            <div class="comercial-tabla-wrap"><div class="table-responsive"><table class="tabla-comercial">
+              <thead><tr><th style="width:18%;">Cliente</th><th style="width:32%;">Pendiente</th><th style="width:14%;">Fecha de entrega</th><th>Observaciones</th></tr></thead>
+              <tbody id="comercial-personalizados"></tbody>
+            </table></div></div>
+
+            <div class="comercial-titulo-seccion">Corporativo en producción</div>
+            <div class="comercial-subtitulo">Productos aprobados</div>
+            <div class="comercial-tabla-wrap"><div class="table-responsive"><table class="tabla-comercial">
+              <thead><tr><th style="width:18%;">Cliente</th><th style="width:32%;">Producto</th><th style="width:14%;">Fecha de entrega</th><th>Observaciones</th></tr></thead>
+              <tbody id="comercial-aprobados"></tbody>
+            </table></div></div>
+            <div class="comercial-subtitulo" style="margin-top:10px;">Cotizaciones creadas</div>
+            <div class="comercial-tabla-wrap"><div class="table-responsive"><table class="tabla-comercial">
+              <thead><tr><th style="width:18%;">Cliente</th><th style="width:30%;">Producto</th><th style="width:12%;">Cotizada</th><th>Observaciones</th><th style="width:92px;"></th></tr></thead>
+              <tbody id="comercial-cotizaciones"></tbody>
+            </table></div></div>
+          </div>
         </div>
 
         <!-- VISTA 1: PLAN DE TAREAS TACTICAL -->
@@ -1115,7 +1170,7 @@
                 <div class="hub-card active-card" onclick="showView('cotizador')">
                     <div>
                         <div class="card-header">
-                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>Cuadernos</h3>
+                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="7" y="2" width="15" height="20" rx="1"></rect><circle cx="4" cy="5" r="1.2"></circle><circle cx="4" cy="9" r="1.2"></circle><circle cx="4" cy="13" r="1.2"></circle><circle cx="4" cy="17" r="1.2"></circle><circle cx="4" cy="21" r="1.2"></circle></svg>Cuadernos</h3>
                             <span class="badge badge-active">Activo</span>
                         </div>
                     </div>
@@ -1236,7 +1291,7 @@
 
                 <div class="accordion-item">
                     <div class="accordion-header" id="head-cot-producto" onclick="toggleSection('cot-producto')">
-                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>2. Datos del Cuaderno</span><span class="arrow" id="arrow-cot-producto">►</span>
+                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="7" y="2" width="15" height="20" rx="1"></rect><circle cx="4" cy="5" r="1.2"></circle><circle cx="4" cy="9" r="1.2"></circle><circle cx="4" cy="13" r="1.2"></circle><circle cx="4" cy="17" r="1.2"></circle><circle cx="4" cy="21" r="1.2"></circle></svg>2. Datos del Cuaderno</span><span class="arrow" id="arrow-cot-producto">►</span>
                     </div>
                     <div id="cot-producto" class="accordion-content">
                         <div class="form-grid">
@@ -1300,7 +1355,7 @@
 
                 <div class="accordion-item">
                     <div class="accordion-header" id="head-cot-guardas" onclick="toggleSection('cot-guardas')">
-                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>6. Guardas</span><span class="arrow" id="arrow-cot-guardas">►</span>
+                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="7" y="2" width="15" height="20" rx="1"></rect><circle cx="4" cy="5" r="1.2"></circle><circle cx="4" cy="9" r="1.2"></circle><circle cx="4" cy="13" r="1.2"></circle><circle cx="4" cy="17" r="1.2"></circle><circle cx="4" cy="21" r="1.2"></circle></svg>6. Guardas</span><span class="arrow" id="arrow-cot-guardas">►</span>
                     </div>
                     <div id="cot-guardas" class="accordion-content">
                         <div class="form-grid">
@@ -1365,6 +1420,15 @@
         <!-- VISTA 5: REPORTES -->
         <div id="view-reportes" class="app-view">
             <div style="padding:15px;">
+                <!-- Conde 2026-08-28: "unifica radar de negocio y reportes en una sola herramienta"
+                     -- el Radar (recomendaciones de hoy) queda arriba, fuera del acordeón, para que
+                     siga viéndose de una sola vez como antes; los reportes de siempre van debajo. -->
+                <p style="color:#718096; font-size:0.9rem; margin:0 0 14px;">Cruces de CRM, Contabilidad y Reprocesos, traducidos a frases simples con una acción sugerida — no hace falta saber de contabilidad para leerlo.</p>
+                <div style="font-size:0.8rem; color:#a0aec0; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px;">Esta semana</div>
+                <div id="radar-urgente" style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;"></div>
+                <div style="font-size:0.8rem; color:#a0aec0; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px;">Para tener en cuenta</div>
+                <div id="radar-informativo" style="display:flex; flex-direction:column; gap:10px; margin-bottom:24px;"></div>
+
                 <div class="accordion-item">
                     <div class="accordion-header active" id="head-rep-comercial" onclick="toggleSection('rep-comercial')">
                         <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>Ventas y Comercial</span><span class="arrow" id="arrow-rep-comercial">▼</span>
@@ -1678,7 +1742,7 @@
                     <input type="text" id="kb-buscador" class="search-input" placeholder="🔍 Buscar por cliente, OT o producto..." style="flex:1 1 260px;" oninput="renderKanban()">
                     <select id="kb-filtroLinea" onchange="renderKanban()" style="flex:0 1 210px;">
                         <option value="">Todas las líneas</option>
-                        <option value="cuadernos"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>Cuadernos/Agendas</option>
+                        <option value="cuadernos"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="7" y="2" width="15" height="20" rx="1"></rect><circle cx="4" cy="5" r="1.2"></circle><circle cx="4" cy="9" r="1.2"></circle><circle cx="4" cy="13" r="1.2"></circle><circle cx="4" cy="17" r="1.2"></circle><circle cx="4" cy="21" r="1.2"></circle></svg>Cuadernos/Agendas</option>
                         <option value="rompecabezas"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M4 7h3.5a1.5 1.5 0 0 0 0-3A1.5 1.5 0 0 1 9 2.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5A1.5 1.5 0 0 1 13.5 1a1.5 1.5 0 0 1 0 3H17a1 1 0 0 1 1 1v3.5a1.5 1.5 0 0 1-3 0A1.5 1.5 0 0 0 13.5 10a1.5 1.5 0 0 0 0 3 1.5 1.5 0 0 1 1.5 1.5V18a1 1 0 0 1-1 1h-3.5a1.5 1.5 0 0 1 0-3A1.5 1.5 0 0 0 9 14.5 1.5 1.5 0 0 0 7.5 16a1.5 1.5 0 0 1-3 0V13a1 1 0 0 1 1-1h1.5a1.5 1.5 0 0 0 0-3H5a1 1 0 0 1-1-1V7z"></path></svg>Rompecabezas</option>
                         <option value="cubo_rubik">🎲 Cubo Rubik</option>
                         <option value="carpetas"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>Carpetas</option>
@@ -1692,7 +1756,7 @@
                         <button class="btn-action" onclick="toggleMenuPlantillas()" id="kb-btn-plantillas"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>Nueva Ficha ▾</button>
                         <div id="kb-menu-plantillas" class="kb-menu-plantillas">
                             <div class="kb-plantilla-item" onclick="abrirFormularioManual('rompecabezas','Corte láser - ')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M4 7h3.5a1.5 1.5 0 0 0 0-3A1.5 1.5 0 0 1 9 2.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5A1.5 1.5 0 0 1 13.5 1a1.5 1.5 0 0 1 0 3H17a1 1 0 0 1 1 1v3.5a1.5 1.5 0 0 1-3 0A1.5 1.5 0 0 0 13.5 10a1.5 1.5 0 0 0 0 3 1.5 1.5 0 0 1 1.5 1.5V18a1 1 0 0 1-1 1h-3.5a1.5 1.5 0 0 1 0-3A1.5 1.5 0 0 0 9 14.5 1.5 1.5 0 0 0 7.5 16a1.5 1.5 0 0 1-3 0V13a1 1 0 0 1 1-1h1.5a1.5 1.5 0 0 0 0-3H5a1 1 0 0 1-1-1V7z"></path></svg>Rompecabezas Láser</div>
-                            <div class="kb-plantilla-item" onclick="abrirFormularioManual('cuadernos','')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>Editorial y Cuadernos Express</div>
+                            <div class="kb-plantilla-item" onclick="abrirFormularioManual('cuadernos','')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="7" y="2" width="15" height="20" rx="1"></rect><circle cx="4" cy="5" r="1.2"></circle><circle cx="4" cy="9" r="1.2"></circle><circle cx="4" cy="13" r="1.2"></circle><circle cx="4" cy="17" r="1.2"></circle><circle cx="4" cy="21" r="1.2"></circle></svg>Editorial y Cuadernos Express</div>
                             <div class="kb-plantilla-item" onclick="abrirFormularioManual('manual','Maquila láser CO2 - ')">🔦 Maquila Láser CO2</div>
                             <div class="kb-plantilla-item" onclick="abrirFormularioManual('manual','Marcación merchandising - ')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>Marcación / Merchandising</div>
                             <div class="kb-plantilla-item" onclick="abrirFormularioManual('manual','Papelería/Gran formato - ')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>Papelería y Gran Formato</div>
@@ -1838,7 +1902,6 @@
         // usa este showView() ni tiene todavía su propio login por rol -- pendiente, no cubierto
         // por este cambio.
         const TACTICAL_ROLES_POR_VISTA = {
-            radar: ['administrador'],
             crm: ['administrador', 'comercial', 'contabilidad'],
             calculadoras: ['administrador', 'comercial'],
             cotizador: ['administrador', 'comercial'],
@@ -1847,6 +1910,7 @@
             precios: ['administrador', 'produccion', 'contabilidad'],
             fototeca: ['administrador', 'diseno'],
             botwa: ['administrador', 'comercial'],
+            comercial: ['administrador', 'comercial'],
         };
         function tacticalAccesoPermitido(viewId){
             const rolesPermitidos = TACTICAL_ROLES_POR_VISTA[viewId];
@@ -1948,11 +2012,11 @@
                 navContainer.style.display = 'none';
                 mainTitle.innerText = "TACTICAL MARKETING ERP";
                 subTitle.innerText = "Planta de Producción & MIS (2026)";
-            } else if (viewId === 'radar') {
+            } else if (viewId === 'comercial') {
                 navContainer.style.display = 'block';
-                mainTitle.innerText = "RADAR DE NEGOCIO";
-                subTitle.innerText = "Recomendaciones de hoy, en palabras simples (2026)";
-                if (typeof renderRadar === 'function') renderRadar();
+                mainTitle.innerText = "COMERCIAL";
+                subTitle.innerText = "Tablero compacto por vendedor (2026)";
+                if (typeof renderComercial === 'function') renderComercial();
             } else if (viewId === 'tareas') {
                 navContainer.style.display = 'block';
                 mainTitle.innerText = "PLAN DE TAREAS TACTICAL";
@@ -2006,8 +2070,9 @@
                 if (typeof cotRefrescarDatalistClientes === 'function') cotRefrescarDatalistClientes();
             } else if (viewId === 'reportes') {
                 navContainer.style.display = 'block';
-                mainTitle.innerText = "REPORTES";
-                subTitle.innerText = "Indicadores de Ventas, Producción, Calidad y Tareas (2026)";
+                mainTitle.innerText = "RADAR DE NEGOCIO Y REPORTES";
+                subTitle.innerText = "Recomendaciones de hoy + Indicadores de Ventas, Producción, Calidad y Tareas (2026)";
+                if (typeof renderRadar === 'function') renderRadar();
                 if (typeof renderReportes === 'function') renderReportes();
             } else if (viewId === 'contabilidad') {
                 navContainer.style.display = 'block';
@@ -2874,6 +2939,7 @@
           tareas.activas.forEach(t => addTask(t.area, t.desc, t.espec, t.emp, t.status, t.id, t.fechaOrigen, t.orden, t.aclaracion, t.fechaLimite));
           db_proveedores = await tacticalProveedoresCargar();
           db_docventa = await tacticalDocVentaCargar();
+          db_b2cPedidos = await tacticalB2CPedidosCargar();
           db_prefacturas = await tacticalPrefacturasCargar();
           db_ingresos = await tacticalIngresosCargar();
           db_cxp = await tacticalCxpCargar();
@@ -3138,6 +3204,12 @@
                         </div>
                         <div class="card-detalle">
                             <div style="font-size:0.85rem; color:#4a5568;">${cotTextoConNegrilla(opp.desc)}</div>
+                            <div style="display:flex; align-items:center; gap:6px; margin-top:8px; font-size:0.8rem; color:#4a5568;">
+                                <label for="vend-opp-${opp.id}" style="font-weight:600; margin:0;">Vendedor:</label>
+                                <select id="vend-opp-${opp.id}" onchange="cambiarVendedorOpp('${opp.id}', this.value)" style="font-size:0.8rem; padding:3px 6px; border:1px solid #cbd5e0; border-radius:4px;">
+                                    ${Object.keys(VENDEDORES).map(v=>`<option value="${v}" ${opp.vendedor===v?'selected':''}>${v}</option>`).join('')}
+                                </select>
+                            </div>
                             <div class="action-row">
                                 ${btnAvanzar}
                                 <button class="btn-stage btn-ganado" onclick="intentarMarcarGanado('${opp.id}')">${ticon('dollar')}Ganado</button>
@@ -3148,6 +3220,17 @@
                 `;
             });
             if(activas.length === 0) container.innerHTML = '<p style="color:#718096; grid-column: 1/-1;">No hay cotizaciones/negocios activos en el embudo.</p>';
+        }
+        // Conde 2026-08-28: "por error cree varias cotizaciones de Norely que son de Helver" -- antes
+        // no había forma de corregir el vendedor de una cotización ya creada sin editarla (lo que
+        // crea una VERSIÓN nueva, no corrige la real). Corrige el registro real en el mismo lugar
+        // donde el error se nota -- no re-renderiza toda la lista para no perder la posición del
+        // scroll ni cerrar la tarjeta que se estaba viendo (mismo motivo que el fix de scroll del
+        // Kanban).
+        function cambiarVendedorOpp(id, nuevoVendedor){
+            const opp = db_opps.find(o => o.id === id); if(!opp) return;
+            opp.vendedor = nuevoVendedor;
+            tacticalSyncOpps([opp]);
         }
 
         function avanzarEtapa(idOpp, nuevaEtapa) {
@@ -3279,6 +3362,7 @@
 
             document.getElementById('modal-perdida').style.display = 'none';
             renderOportunidades(); renderClientes();
+            if(typeof renderComercial === 'function') renderComercial();
         }
 
         // ==========================================
@@ -3413,6 +3497,9 @@
             columna: 'aprobada', lineas: opp.lineas || [{linea:opp.linea||'manual', desc:opp.desc, cantidad:opp.cantidad, maquina:opp.maquina, material:opp.material, nPliegos:opp.nPliegos, planoCorte:opp.planoCorte, planoCorteLineas:opp.planoCorteLineas, recomendaciones:opp.recomendaciones, fotoUrl:opp.fotoUrl, videoUrl:opp.videoUrl}],
             checklist: generarChecklistParaFicha(opp), urgente:false, fechaEntrega: fechaEntrega || '',
             fechaCreacion: new Date().toISOString(), responsable:'', origen:'automatica',
+            // Conde 2026-08-27: para el tablero "Comercial" (Productos aprobados por vendedor) --
+            // antes esto solo vivía en la cotización/opp, no en la ficha.
+            vendedor: opp.vendedor || '',
           };
           db_kanban.push(ficha);
           tacticalSyncFichaKanban(ficha);
@@ -7155,6 +7242,174 @@
           const top = Object.keys(porResponsable).sort((a,b)=>porResponsable[b]-porResponsable[a])[0];
           return { responsable: top, costo: porResponsable[top], pct: Math.round((porResponsable[top]/totalGeneral)*100) };
         }
+        /* ==========================================
+           MÓDULO COMERCIAL (Conde 2026-08-27) -- tablero compacto por vendedor. No guarda datos
+           propios: Personalizados lee db_b2cPedidos, Corporativo lee db_opps/db_kanban tal cual ya
+           existen. Solo 2 campos son editables a mano (Pendiente/Observaciones), el resto refleja el
+           dato real -- si se pudiera editar todo se desincroniza y termina siendo una segunda hoja
+           de Excel disfrazada de módulo (fue la decisión explícita de Conde al analizar esto).
+           ========================================== */
+        // Recorta a "max" caracteres, pero SIN cortar una palabra a la mitad -- si el corte cae en
+        // medio de una palabra, se extiende hasta el siguiente espacio (Conde: "si a los 40
+        // caracteres da 'cuader...' pero la palabra completa es 'cuaderno', se expande hasta
+        // terminar la palabra"). Distinto de tacticalTruncar (que sí corta a la mitad de la palabra).
+        function tacticalTruncarPalabraCompleta(texto, max){
+          texto = texto || '';
+          if(texto.length <= max) return texto;
+          const corte = texto.indexOf(' ', max);
+          return corte === -1 ? texto : texto.slice(0, corte).trim() + '…';
+        }
+        let comercialVendedorActivo = Object.keys(VENDEDORES)[0];
+        function comercialCambiarVendedor(v){ comercialVendedorActivo = v; renderComercial(); }
+        function comercialGuardarB2C(id, campo, valor){
+          const p = db_b2cPedidos.find(x=>x.id===id); if(!p) return;
+          if(campo==='pendiente') p.notaComercial = valor; else p.observacionesComercial = valor;
+          tacticalGuardarComercialB2C(id, campo, valor);
+        }
+        function comercialGuardarNotaFicha(id, valor){
+          const f = db_kanban.find(x=>x.id===id); if(!f) return;
+          f.responsable = valor;
+          tacticalGuardarNotasFicha(id, valor);
+        }
+        function comercialGuardarSeguimiento(id, valor){
+          const o = db_opps.find(x=>x.id===id); if(!o) return;
+          o.seguimiento = valor;
+          tacticalGuardarSeguimientoOpp(id, valor);
+        }
+        function renderComercial(){
+          const tabsCont = document.getElementById('comercial-tabs');
+          if(!tabsCont) return;
+          tabsCont.innerHTML = Object.keys(VENDEDORES).map(v =>
+            `<button class="comercial-vendedor-tab ${v===comercialVendedorActivo?'active':''}" onclick="comercialCambiarVendedor('${v.replace(/'/g,"\\'")}')">${v}</button>`
+          ).join('');
+
+          const buscar = ((document.getElementById('comercial-buscar')||{}).value||'').trim().toLowerCase();
+          const hace30Dias = new Date(); hace30Dias.setDate(hace30Dias.getDate()-30);
+
+          // ---- PERSONALIZADOS (Rompecabezas B2C) -- el módulo B2C es autoservicio, no captura
+          // vendedor todavía; por ahora TODO queda bajo Norely (Conde 2026-08-27: "el vendedor de
+          // rompecabezas hoy es Norely, luego lo pasamos a un comercial nuevo").
+          const esNorely = comercialVendedorActivo === 'Norely Sarmiento';
+          let personalizados = esNorely ? db_b2cPedidos.filter(p => {
+            const ficha = p.idKanban ? db_kanban.find(f=>f.id===p.idKanban) : null;
+            return !(ficha && ficha.columna==='postventa'); // ya entregado -- sale de la vista
+          }) : [];
+          if(buscar){
+            personalizados = personalizados.filter(p => (p.nombre||'').toLowerCase().includes(buscar) || (p.notaComercial||'').toLowerCase().includes(buscar));
+          } else {
+            personalizados = personalizados.filter(p => new Date(p.fecha) >= hace30Dias);
+          }
+          personalizados.sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+          const contPers = document.getElementById('comercial-personalizados');
+          if(contPers) contPers.innerHTML = personalizados.length ? personalizados.map(p => {
+            const ficha = p.idKanban ? db_kanban.find(f=>f.id===p.idKanban) : null;
+            const fechaEntrega = ficha && ficha.fechaEntrega ? kanbanFormatearFecha(ficha.fechaEntrega) : '-';
+            return `<tr>
+              <td>${p.nombre}</td>
+              <td><input type="text" value="${(p.notaComercial||'').replace(/"/g,'&quot;')}" onchange="comercialGuardarB2C('${p.id}','pendiente',this.value)"></td>
+              <td>${fechaEntrega}</td>
+              <td><input type="text" value="${(p.observacionesComercial||'').replace(/"/g,'&quot;')}" onchange="comercialGuardarB2C('${p.id}','observaciones',this.value)"></td>
+            </tr>`;
+          }).join('') : '<tr><td colspan="4" style="text-align:center; color:#a0aec0;">Sin pedidos personalizados pendientes.</td></tr>';
+
+          // ---- Corporativo / Productos aprobados: fichas del Kanban de este vendedor, sin B2C, sin
+          // las ya entregadas (Postventa) -- así nunca crece sin límite con lo ya entregado.
+          let aprobados = db_kanban.filter(f => f.origen!=='b2c' && f.columna!=='postventa' && f.vendedor===comercialVendedorActivo);
+          if(buscar){
+            aprobados = aprobados.filter(f => (f.nombreCli||'').toLowerCase().includes(buscar) || (f.titulo||'').toLowerCase().includes(buscar) || (f.ot||'').toLowerCase().includes(buscar));
+          }
+          aprobados.sort((a,b) => new Date(b.fechaCreacion||0) - new Date(a.fechaCreacion||0));
+          const contApr = document.getElementById('comercial-aprobados');
+          if(contApr) contApr.innerHTML = aprobados.length ? aprobados.map(f => `<tr>
+            <td>${f.nombreCli}</td>
+            <td>${tacticalTruncarPalabraCompleta(f.titulo, 40)}</td>
+            <td>${f.fechaEntrega ? kanbanFormatearFecha(f.fechaEntrega) : '-'}</td>
+            <td><input type="text" value="${(f.responsable||'').replace(/"/g,'&quot;')}" onchange="comercialGuardarNotaFicha('${f.id}',this.value)"></td>
+          </tr>`).join('') : '<tr><td colspan="4" style="text-align:center; color:#a0aec0;">Sin productos en producción.</td></tr>';
+
+          // ---- Corporativo / Cotizaciones creadas: negocios activos del Embudo, sin cerrar todavía
+          // -- al marcar Ganado o Perdido salen solos de db_opps (ya no aparecen acá).
+          let cotizaciones = db_opps.filter(o => o.vendedor===comercialVendedorActivo);
+          if(buscar){
+            cotizaciones = cotizaciones.filter(o => (o.nombreCli||'').toLowerCase().includes(buscar) || (o.desc||'').toLowerCase().includes(buscar) || (o.ot||'').toLowerCase().includes(buscar));
+          } else {
+            cotizaciones = cotizaciones.filter(o => { const f=fechaDeRegistro(o); return f && f>=hace30Dias; });
+          }
+          cotizaciones.sort((a,b) => (fechaDeRegistro(b)||0) - (fechaDeRegistro(a)||0));
+          const contCot = document.getElementById('comercial-cotizaciones');
+          if(contCot) contCot.innerHTML = cotizaciones.length ? cotizaciones.map(o => {
+            const fecha = fechaDeRegistro(o);
+            return `<tr>
+              <td>${o.nombreCli}</td>
+              <td>${tacticalTruncarPalabraCompleta(o.desc, 40)}</td>
+              <td>${fecha ? fecha.toLocaleDateString('es-CO',{day:'numeric',month:'short'}) : '-'}</td>
+              <td><input type="text" value="${(o.seguimiento||'').replace(/"/g,'&quot;')}" placeholder="Ej: llamé el 28, volver a llamar el 2 de sept." onchange="comercialGuardarSeguimiento('${o.id}',this.value)"></td>
+              <td style="text-align:center; white-space:nowrap;">
+                <button onclick="comercialAbrirSeguimientoFecha('${o.id}')" title="Programar seguimiento" style="background:#64748b; border:none; border-radius:50%; width:22px; height:22px; padding:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; margin-right:4px;">${ticon('clock',{color:'#fff',noMargin:true,size:13})}</button>
+                <button onclick="comercialConfirmarPerdido('${o.id}')" title="Marcar cancelada" style="background:#dc2626; border:none; border-radius:50%; width:22px; height:22px; padding:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; margin-right:4px;">${ticon('x',{color:'#fff',noMargin:true,size:13})}</button>
+                <button onclick="comercialConfirmarGanado('${o.id}')" title="Marcar aprobada" style="background:#16a34a; border:none; border-radius:50%; width:22px; height:22px; padding:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">${ticon('check',{color:'#fff',noMargin:true,size:13})}</button>
+              </td>
+            </tr>`;
+          }).join('') : '<tr><td colspan="5" style="text-align:center; color:#a0aec0;">Sin cotizaciones activas.</td></tr>';
+
+          // ---- Recordatorios de seguimiento (Conde 2026-08-28): "se active un recordatorio el dia
+          // estipulado" -- se activa ese día Y se queda activo (marcado como atrasado) si no se
+          // atendió, para que nunca se pierda un seguimiento por no entrar justo ese día.
+          const contRec = document.getElementById('comercial-recordatorios');
+          if(contRec){
+            const hoyStr = new Date().toISOString().slice(0,10);
+            const pendientesHoy = db_opps.filter(o => o.vendedor===comercialVendedorActivo && o.seguimientoFecha && o.seguimientoFecha <= hoyStr);
+            pendientesHoy.sort((a,b) => (a.seguimientoFecha||'').localeCompare(b.seguimientoFecha||''));
+            contRec.innerHTML = pendientesHoy.map(o => {
+              const atrasado = o.seguimientoFecha < hoyStr;
+              const etiqueta = atrasado ? `ATRASADO (${tacticalFormatoDiaMes(o.seguimientoFecha)})` : 'HOY';
+              return `<div class="comercial-recordatorio${atrasado?' atrasado':''}">${ticon('clock',{noMargin:true,size:16})}<span><strong>${etiqueta} seguimiento cotización:</strong> ${o.nombreCli} — ${tacticalTruncarPalabraCompleta(o.desc, 40)}</span></div>`;
+            }).join('');
+          }
+        }
+        // Conde 2026-08-28: reloj de "programar seguimiento" -- elige fecha con el mismo calendario
+        // flotante de siempre, guarda opp.seguimientoFecha (activa el recordatorio de arriba ese
+        // día) y además antepone un código corto "D MES" al inicio de Observaciones sin borrar lo
+        // que ya había escrito el comercial ahí (ver tacticalAplicarCodigoFechaSeguimiento).
+        async function comercialAbrirSeguimientoFecha(idOpp){
+          const opp = db_opps.find(o => o.id === idOpp); if(!opp) return;
+          const fecha = await tacticalPedirFechaFlotante('¿Para qué fecha programas el seguimiento?');
+          if(!fecha) return;
+          opp.seguimientoFecha = fecha;
+          opp.seguimiento = tacticalAplicarCodigoFechaSeguimiento(opp.seguimiento, fecha);
+          tacticalGuardarSeguimientoFechaOpp(idOpp, fecha);
+          tacticalGuardarSeguimientoOpp(idOpp, opp.seguimiento);
+          renderComercial();
+        }
+        // Conde 2026-08-28: "que se aclare para evitar aprobaciones erradas" -- ventana flotante de
+        // confirmación ANTES de disparar el flujo real de Ganado/Perdido (que ya existe y sigue
+        // igual -- pide fecha de entrega, motivo de pérdida, etc.). Los botones ✓/✕ quedan chicos y
+        // pegados en la tabla, esto evita que un clic accidental cierre un negocio real.
+        async function comercialConfirmarGanado(idOpp){
+          const opp = db_opps.find(o => o.id === idOpp); if(!opp) return;
+          const ok = await tacticalConfirmarFlotante({
+            titulo: '¿Confirmas que está aprobada esta cotización?',
+            mensaje: `${opp.nombreCli} — ${tacticalTruncarPalabraCompleta(opp.desc, 60)}`,
+            color: '#16a34a', textoBoton: 'Sí, aprobar', icono: 'check',
+          });
+          if(!ok) return;
+          // intentarMarcarGanado puede necesitar mostrar el panel de "varios productos" o "elegir
+          // opción" -- esos viven adentro de la vista CRM (no son ventanas flotantes de verdad), así
+          // que hay que estar parado ahí para que se vean. Ver comercialConfirmarPerdido, mismo motivo.
+          showView('crm');
+          intentarMarcarGanado(idOpp);
+        }
+        async function comercialConfirmarPerdido(idOpp){
+          const opp = db_opps.find(o => o.id === idOpp); if(!opp) return;
+          const ok = await tacticalConfirmarFlotante({
+            titulo: '¿Confirmas que está cancelada esta cotización?',
+            mensaje: `${opp.nombreCli} — ${tacticalTruncarPalabraCompleta(opp.desc, 60)}`,
+            color: '#dc2626', textoBoton: 'Sí, cancelar', icono: 'x',
+          });
+          if(!ok) return;
+          showView('crm');
+          abrirModalPerdida(idOpp);
+        }
         function renderRadar(){
           const urgenteEl = document.getElementById('radar-urgente');
           const infoEl = document.getElementById('radar-informativo');
@@ -7379,6 +7634,7 @@
         }
         let db_docventa = [];
         let db_prefacturas = [];
+        let db_b2cPedidos = [];
         let db_ingresos = [];
         let db_cxp = [];
         let db_egresos = [];

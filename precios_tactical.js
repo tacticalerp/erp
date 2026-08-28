@@ -50,6 +50,50 @@ function tacticalPedirFechaFlotante(titulo){
     };
   });
 }
+// Conde 2026-08-28 (módulo Comercial): "que se aclare para evitar aprobaciones erradas" -- ventana
+// flotante genérica de sí/no, mismo patrón visual que tacticalPedirFechaFlotante de arriba. Usada
+// para los botones ✓/✕ de aprobar/cancelar una cotización directo desde la tabla (evita que un
+// clic accidental en botones chicos y cercanos dispare la aprobación/pérdida de un negocio real).
+// opts: {titulo, mensaje, color, textoBoton, icono} -- icono es una clave de TACTICAL_SVG_ICONOS
+// (ver ticon() más abajo). Devuelve una Promesa<boolean> -- true si confirmó, false si canceló.
+function tacticalConfirmarFlotante(opts){
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed; inset:0; background:rgba(26,32,44,0.6); z-index:99999; display:flex; align-items:center; justify-content:center; padding:20px;';
+    overlay.innerHTML = `
+      <div style="background:#fff; border-radius:10px; padding:24px; max-width:380px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,0.35); text-align:center; font-family:'Segoe UI', Tahoma, sans-serif;">
+        <div style="display:flex; justify-content:center; margin-bottom:10px; color:${opts.color};">${ticon(opts.icono, {size:42, noMargin:true})}</div>
+        <div style="font-weight:800; font-size:1.05rem; color:#1a202c; margin-bottom:6px;">${opts.titulo}</div>
+        <div style="font-size:0.85rem; color:#718096; margin-bottom:18px;">${opts.mensaje||''}</div>
+        <div style="display:flex; gap:8px;">
+          <button type="button" id="tactical-confirmar-flotante-no" style="flex:1; padding:10px; border:1px solid #cbd5e0; background:#fff; color:#4a5568; border-radius:6px; font-weight:700; cursor:pointer;">Cancelar</button>
+          <button type="button" id="tactical-confirmar-flotante-si" style="flex:1; padding:10px; border:none; background:${opts.color}; color:#fff; border-radius:6px; font-weight:700; cursor:pointer;">${opts.textoBoton||'Confirmar'}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    function cerrar(valor){ overlay.remove(); resolve(valor); }
+    overlay.querySelector('#tactical-confirmar-flotante-no').onclick = () => cerrar(false);
+    overlay.querySelector('#tactical-confirmar-flotante-si').onclick = () => cerrar(true);
+  });
+}
+// Conde 2026-08-28 (módulo Comercial): "en la casilla de observaciones aparezca 1 SEP al iniciar
+// la casilla" -- código corto día+mes (sin año, sin ceros a la izquierda) para la fecha de
+// seguimiento elegida con el ícono de reloj. Compartido porque tanto el Hub como (a futuro)
+// cualquier calculadora podrían necesitar el mismo formato.
+function tacticalFormatoDiaMes(fechaISO){
+  if(!fechaISO) return '';
+  const MESES = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+  const [anio, mes, dia] = fechaISO.split('-').map(Number);
+  if(!anio || !mes || !dia) return '';
+  return `${dia} ${MESES[mes-1]}`;
+}
+// Inserta/actualiza el código de fecha al INICIO de un texto de Observaciones ya existente, sin
+// duplicarlo si ya había uno puesto por una fecha de seguimiento anterior (lo reemplaza).
+function tacticalAplicarCodigoFechaSeguimiento(textoActual, fechaISO){
+  const codigo = tacticalFormatoDiaMes(fechaISO);
+  const limpio = (textoActual || '').replace(/^\d{1,2} [A-ZÁÉÍÓÚÑ]{3}\s*-?\s*/, '').trim();
+  return limpio ? `${codigo} - ${limpio}` : codigo;
+}
 // precios_tactical.js
 // Fuente única de precios de insumos compartidos entre las 8 herramientas de Tactical ERP.
 // Se carga con <script src="precios_tactical.js"></script> ANTES del script principal de
@@ -719,6 +763,11 @@ const TACTICAL_SVG_ICONOS = {
   film: '<rect x="2" y="2" width="20" height="20" rx="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line>',
   slash: '<circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>',
   building: '<rect x="4" y="2" width="16" height="20"></rect><line x1="9" y1="6" x2="9.01" y2="6"></line><line x1="15" y1="6" x2="15.01" y2="6"></line><line x1="9" y1="10" x2="9.01" y2="10"></line><line x1="15" y1="10" x2="15.01" y2="10"></line><line x1="9" y1="14" x2="9.01" y2="14"></line><line x1="15" y1="14" x2="15.01" y2="14"></line><path d="M10 22v-4h4v4"></path>',
+  // Conde 2026-08-28: reemplaza el ícono genérico de "libro" para Cuadernos -- cuaderno de espiral
+  // reconocible (tapa + argollas), redibujado en el mismo estilo de línea delgada del resto.
+  notebook: '<rect x="7" y="2" width="15" height="20" rx="1"></rect><circle cx="4" cy="5" r="1.2"></circle><circle cx="4" cy="9" r="1.2"></circle><circle cx="4" cy="13" r="1.2"></circle><circle cx="4" cy="17" r="1.2"></circle><circle cx="4" cy="21" r="1.2"></circle>',
+  // Reloj -- botón de "programar seguimiento" en Comercial.
+  clock: '<circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>',
 };
 function ticon(nombre, opts){
   opts = opts || {};
