@@ -3088,9 +3088,19 @@
         }
 
         let clientesEditando = new Set();
+        // Conde 2026-08-28: "estoy tratando de editar este cliente y no me permite" -- el formulario
+        // de edición vive dentro de .card-detalle, que en la vista comprimida del Directorio queda
+        // oculto (display:none) hasta que la tarjeta se expande con la flecha ▶. El lápiz armaba el
+        // formulario perfectamente, pero nunca expandía la tarjeta -- quedaba invisible en silencio,
+        // como si "no dejara editar". Ahora, al entrar en modo edición, expande la tarjeta sola.
         function toggleEditarCliente(id){
             if(clientesEditando.has(id)) clientesEditando.delete(id); else clientesEditando.add(id);
             renderClientes();
+            if(clientesEditando.has(id)){
+                const campo = document.getElementById('cli-edit-empresa-'+id);
+                const card = campo && campo.closest('.card-collapsible');
+                if(card) card.classList.add('expandido');
+            }
         }
         function guardarEdicionCliente(id){
             const c = db_clientes.find(x=>x.id===id);
