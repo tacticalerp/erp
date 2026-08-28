@@ -6778,7 +6778,11 @@
           const r = cotUltimoResultado, p = cotUltimoParams;
           const desc = cotTituloCorto(p, document.getElementById('cot-descCliente').value);
           const planoCorteLineas = Object.keys(r.detalleLineas).map(clave => ({clave, planoCorte: (r.detalleLineas[clave].detalleMaterial||{}).planoCorte || null})).filter(pc=>pc.planoCorte);
-          pd.lineas.push({ linea:'cuadernos', desc, cantidad: p.cantidad, monto: Math.round(r.precioFinalTotal), precioUnitario: r.precioVentaUnitario, maquina: null, material: null, nPliegos: null, planoCorteLineas, fotoUrl: cotFotoElegidaUrl(), videoUrl: cotVideoElegidoUrl() });
+          // Conde 2026-08-28: se guardan params/resultado completos (antes solo el resumen para
+          // mostrar) -- sin esto, un pedido de un solo producto no se podía reabrir para editar
+          // (el motor no tenía con qué recalcular). Ver cotCerrarPedido: con 1 sola línea, el
+          // pedido se guarda igual que una cotización directa usando estos mismos datos.
+          pd.lineas.push({ linea:'cuadernos', desc, cantidad: p.cantidad, monto: Math.round(r.precioFinalTotal), precioUnitario: r.precioVentaUnitario, maquina: null, material: null, nPliegos: null, planoCorteLineas, fotoUrl: cotFotoElegidaUrl(), videoUrl: cotVideoElegidoUrl(), params: p, resultado: r });
           window.tacticalPedidoBorradorCache = pd; tacticalGuardarPedidoBorrador(pd);
           cotRefrescarBannerPedido();
           alert(`Agregado al pedido ${pd.ot}. Ahora tiene ${pd.lineas.length} producto(s).`);
@@ -6787,6 +6791,40 @@
           const pd = cotPedidoActivo();
           if(!pd || pd.lineas.length===0){ window.tacticalPedidoBorradorCache = null; tacticalEliminarPedidoBorrador(); cotRefrescarBannerPedido(); return; }
           const montoTotal = pd.lineas.reduce((s,l)=>s+l.monto,0);
+          const cliPd = db_clientes.find(c=>c.id===pd.idCli) || {empresa:pd.nombreCli, nombre:'', wp:'', correo:''};
+          // Conde 2026-08-28: "las que se agregan a un pedido de varios productos no tienen la
+          // opción de editar" -- un pedido con UN SOLO producto se guarda exactamente igual que si
+          // se hubiera cotizado directo (misma línea real, ej. 'cuadernos', no el genérico 'multi'
+          // de abajo), con su propio registro en db_cotizaciones -- así queda con el mismo botón ✏️
+          // y el mismo desglose editable que cualquier cotización que nunca pasó por un pedido.
+          // Con 2+ productos sigue como 'multi' (todavía no existe un editor para varias líneas a
+          // la vez), pero desde ahora cada línea sí guarda su params/resultado por si se construye
+          // ese editor más adelante.
+          if(pd.lineas.length === 1){
+            const l = pd.lineas[0];
+            const opp = { id: crypto.randomUUID(), ot: pd.ot, idCli: pd.idCli, nombreCli: pd.nombreCli, desc: l.desc, monto: l.monto, etapa: 'cot', linea: l.linea, cantidad: l.cantidad, vendedor: pd.vendedor, planoCorteLineas: l.planoCorteLineas, fecha: new Date().toISOString() };
+            db_opps.push(opp);
+            tacticalSyncOpps(db_opps);
+            if(l.linea==='cuadernos' && l.params && l.resultado){
+              const cotizacion = {
+                ot: pd.ot, id: opp.id, idOpp: opp.id, idCli: pd.idCli, fecha: new Date().toISOString(),
+                cliente: {empresa: cliPd.empresa, encargado: cliPd.nombre, telefono: cliPd.wp, correo: cliPd.correo},
+                vendedor: pd.vendedor, desc: l.desc, params: l.params, resultado: l.resultado,
+                fotoUrl: l.fotoUrl, videoUrl: l.videoUrl,
+              };
+              db_cotizaciones.push(cotizacion);
+              tacticalSyncCotizacion(cotizacion);
+            }
+            window.tacticalPedidoBorradorCache = null; tacticalEliminarPedidoBorrador();
+            cotRefrescarBannerPedido();
+            alert(`Pedido ${pd.ot} guardado en el CRM — 1 producto, total ${cotFormatoCop(montoTotal)}.`);
+            verPDFGenerico({
+              ot: pd.ot, fecha: new Date(), vendedor: pd.vendedor, cliente: {empresa: cliPd.empresa, encargado: cliPd.nombre, telefono: cliPd.wp, correo: cliPd.correo},
+              lineas: [{desc:l.desc, cantidad:l.cantidad, monto:l.monto, precioUnitario:l.precioUnitario}],
+              total: montoTotal,
+            });
+            return;
+          }
           const cantidadTotal = pd.lineas.reduce((s,l)=>s+(l.cantidad||0),0);
           const descConsolidada = pd.lineas.map(l=>l.desc).join(' + ');
           const opp = { id: crypto.randomUUID(), ot: pd.ot, idCli: pd.idCli, nombreCli: pd.nombreCli, desc: descConsolidada, monto: montoTotal, etapa: 'cot', linea: 'multi', cantidad: cantidadTotal, vendedor: pd.vendedor, lineas: pd.lineas, fecha: new Date().toISOString() };
@@ -6796,7 +6834,6 @@
           cotRefrescarBannerPedido();
           alert(`Pedido ${pd.ot} guardado en el CRM — ${pd.lineas.length} producto(s), total ${cotFormatoCop(montoTotal)}.`);
 
-          const cliPd = db_clientes.find(c=>c.id===pd.idCli) || {empresa:pd.nombreCli, nombre:'', wp:'', correo:''};
           verPDFGenerico({
             ot: pd.ot, fecha: new Date(), vendedor: pd.vendedor, cliente: {empresa: cliPd.empresa, encargado: cliPd.nombre, telefono: cliPd.wp, correo: cliPd.correo},
             lineas: pd.lineas.map(l=>({desc:l.desc, cantidad:l.cantidad, monto:l.monto, precioUnitario:l.precioUnitario})),
