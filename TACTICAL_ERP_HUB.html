@@ -3029,6 +3029,15 @@
           if(window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol === 'administrador'){
             tacticalPurgaFotosSiToca();
           }
+          // Conde 2026-08-28: "le doy 'Otras Calculadoras' desde una calculadora y me dice 'no
+          // tienes permiso' aunque sí tengo, y me manda al hub" -- el botón abre
+          // TACTICAL_ERP_HUB.html#calculadoras (ver tacticalIrHub en cada calculadora), y esto
+          // corría en window.onload, ANTES de que terminara el login -- en ese momento
+          // window.tacticalUsuarioPerfil todavía no existía, así que tacticalAccesoPermitido()
+          // comparaba contra un rol vacío y siempre rechazaba, sin importar el rol real. Movido acá
+          // (se llama solo después de que el perfil/rol ya está cargado) para que revise el permiso
+          // correcto -- ver el window.onload de más abajo, que ya no lo llama.
+          irAVistaDesdeHash();
         };
 
         const tags_clase = { 'nuevo': 'tag-nuevo', 'ocasional': 'tag-ocasional', 'recurrente': 'tag-recurrente', 'vip': 'tag-vip' };
@@ -9139,10 +9148,11 @@
             contSugerirNumeroSiVacio('egr-numero', 'egreso', 'EG-');
         }
 
-        // CARGA GENERAL INICIAL
-        window.onload = () => {
-            irAVistaDesdeHash();
-        };
+        // Conde 2026-08-28: irAVistaDesdeHash() (antes en window.onload acá) se movió al final de
+        // window.tacticalOnLogin -- acá corría ANTES de que el login terminara (el rol todavía no
+        // existía), así que un acceso directo tipo #calculadoras desde otra calculadora siempre
+        // salía con "no tienes permiso" aunque el rol sí lo permitiera. Ver el comentario en
+        // tacticalOnLogin.
     </script>
 
 <style>
