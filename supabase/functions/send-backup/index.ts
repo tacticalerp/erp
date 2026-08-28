@@ -1,5 +1,5 @@
 // ==========================================================================
-// TACTICAL ERP -- Backup semanal automático (Edge Function de Supabase)
+// TACTICAL ERP -- Backup quincenal automático (Edge Function de Supabase)
 // Conde 2026-08-28: "puedes programar hacer un backup cada semana? donde se
 // descargaría?" -- mismo mecanismo ya desplegado y probado en
 // supabase/functions/send-reports/index.ts (Edge Function + pg_cron + pg_net
@@ -92,7 +92,7 @@ Deno.serve(async (_req: Request) => {
   }
 
   const fecha = new Date().toISOString().slice(0, 10);
-  const respaldo = { version: 2, exportadoEn: new Date().toISOString(), origen: "supabase (cron semanal)", data };
+  const respaldo = { version: 2, exportadoEn: new Date().toISOString(), origen: "supabase (cron quincenal)", data };
   const json = JSON.stringify(respaldo);
   const comprimido = await comprimirGzip(json);
   const base64 = bytesABase64(comprimido);
@@ -103,7 +103,7 @@ Deno.serve(async (_req: Request) => {
   const html = `
     <div style="font-family:Arial,sans-serif; max-width:600px; margin:0 auto;">
       <div style="background:#1e3a5f; color:#fff; padding:16px 20px;">
-        <h2 style="margin:0; font-size:18px;">📦 Backup semanal -- Tactical ERP</h2>
+        <h2 style="margin:0; font-size:18px;">📦 Backup quincenal -- Tactical ERP</h2>
         <p style="margin:4px 0 0; font-size:12px; color:#cbd8e8;">${
     new Date().toLocaleDateString("es-CO", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
   }</p>
@@ -122,7 +122,7 @@ Deno.serve(async (_req: Request) => {
     body: JSON.stringify({
       from: FROM,
       to: DESTINATARIOS,
-      subject: `Tactical ERP -- Backup semanal (${fecha})`,
+      subject: `Tactical ERP -- Backup quincenal (${fecha})`,
       html,
       attachments: [{ filename: `tactical-erp-backup-${fecha}.json.gz`, content: base64 }],
     }),
