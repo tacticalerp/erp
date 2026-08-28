@@ -1,0 +1,12 @@
+-- Conde 2026-08-28: "hice esta cotización ayer y 'editar' me dice que no encuentra el desglose"
+-- (OT-2608-47, Promocionales/Carpetas -- Kit de tarjetas con pliegue). El PDF y el registro en
+-- CRM sí existían -- eso pasa por tacticalSyncOpps, que ya tenía permisos. Lo que faltó fue el
+-- desglose EDITABLE (params/resultado de la calculadora), que se guarda aparte en
+-- cotizaciones_calculadoras -- mismo patrón que ya pasó varias veces esta semana
+-- (historial_cierres, b2c_pedidos): la tabla nunca tuvo el permiso concedido al rol autenticado,
+-- así que el guardado fallaba en silencio (solo se veía en la consola del navegador).
+--
+-- Nota: esto NO recupera el desglose de OT-2608-47 -- para esa cotización en particular, si hace
+-- falta editarla, tocaría rehacerla desde cero en la calculadora. Este permiso evita que se
+-- repita hacia adelante.
+grant select, insert, update on public.cotizaciones_calculadoras to authenticated;

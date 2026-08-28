@@ -370,7 +370,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="tactical-supabase.js?v=20260828d"></script>
+<script src="tactical-supabase.js?v=20260828e"></script>
 <script src="precios_tactical.js?v=20260828d"></script>
 <script>
 /* ============ CONSTANTES REUTILIZADAS DEL MOTOR DE CUADERNOS (ya validadas) ============ */
@@ -1677,13 +1677,13 @@ async function guardarCotizacionClick(){
     vendedor, desc, params: {...ultimoParams, modoProducto: document.getElementById('in-tipoProducto').value},
     resultado: ultimoResultado, condicionesComerciales: leerCondicionesComerciales(),
   };
-  tacticalSyncCotizacionCalc(cotizacionGuardada);
+  const desgloseGuardadoOk = await tacticalSyncCotizacionCalc(cotizacionGuardada);
   cotCancelarEdicion();
 
   refrescarDatalistClientes();
   const nota = document.getElementById('cot-ot-nota');
   nota.style.display = 'block';
-  nota.innerText = `📋 Cotización guardada en el CRM como ${ot} — cliente: ${cli.empresa}.`;
+  nota.innerText = `📋 Cotización guardada en el CRM como ${ot} — cliente: ${cli.empresa}.` + (desgloseGuardadoOk ? '' : ' ⚠️ El desglose editable no se pudo guardar (revisa la consola) -- el PDF y el registro en CRM sí quedaron bien, pero "editar cotización" no la va a encontrar después.');
 
   imprimirPDFCliente({
     ot, fecha: new Date(), vendedor, cliente: {empresa: cli.empresa, encargado: cli.nombre, telefono: cli.wp, correo: cli.correo},

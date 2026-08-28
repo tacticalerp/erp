@@ -613,9 +613,16 @@ async function tacticalCotizacionesCalcCargar(linea, ot){
   if(error){ console.error('Error cargando cotizaciones de Supabase:', error); return []; }
   return data.map(tacticalCotizacionCalcDeDb);
 }
+// Conde 2026-08-28: "hice esta cotización ayer y 'editar' me dice que no encuentra el desglose" --
+// esto fallaba en silencio (solo quedaba en la consola) si Supabase rechazaba el guardado --
+// típicamente falta el permiso en la tabla, mismo patrón que ya pasó con historial_cierres y
+// b2c_pedidos. El PDF y el registro en CRM sí quedan bien (usan otro guardado, tacticalSyncOpps),
+// solo el desglose editable se perdía sin que nadie se enterara. Devuelve true/false para que cada
+// calculadora pueda avisar en pantalla si esto vuelve a pasar.
 async function tacticalSyncCotizacionCalc(c){
   const { error } = await tacticalSupabase.from('cotizaciones_calculadoras').upsert(tacticalCotizacionCalcADb(c));
-  if(error) console.error('Error guardando cotización en Supabase:', error);
+  if(error){ console.error('Error guardando cotización en Supabase:', error); return false; }
+  return true;
 }
 
 // ============ PLAN DE TAREAS ============
