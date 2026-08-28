@@ -1953,7 +1953,13 @@
            pisar información viva de todo el equipo). Si algún día hace falta restaurar de verdad,
            se hace de forma guiada, tabla por tabla. */
         const TACTICAL_TABLAS_BACKUP = [
+            // Conde 2026-08-28: 'cotizaciones_calculadoras' (las 7 calculadoras) y 'prefacturas'
+            // faltaban acá -- se agregaron en fases posteriores del proyecto y esta lista nunca se
+            // actualizó. Misma lista que usa el backup semanal automático (ver
+            // supabase/functions/send-backup/index.ts) -- si se agrega una tabla nueva, agregarla
+            // en los 2 lugares.
             'usuarios', 'clientes', 'opps', 'historial_cierres', 'cotizaciones_cuadernos',
+            'cotizaciones_calculadoras', 'prefacturas',
             'pedidos_borrador', 'comparaciones_borrador', 'b2c_carrito_borrador',
             'kanban_fichas', 'kanban_lineas', 'kanban_checklist', 'kanban_fotos',
             'reprocesos', 'reprocesos_items', 'tareas', 'proveedores',
