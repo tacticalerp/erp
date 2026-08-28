@@ -1110,7 +1110,7 @@ function renderBusqueda(){
     const pillCls = p.estado==='aprobado' ? 'status-aprobado' : 'status-pendiente';
     const accion = (p.estado==='pendiente'
       ? `<button class="btn ok" style="padding:5px 10px;width:auto;" onclick="aprobarPedido('${p.id}')">✅ Aprobar (pagó)</button>`
-      : '') + `<button style="padding:5px 8px;width:auto;border:1px solid #cbd5e0;background:#fff;color:#dc2626;border-radius:4px;cursor:pointer;margin-left:4px;" onclick="eliminarPedidoB2C('${p.id}')" title="Eliminar pedido (ej. pruebas)">🗑</button>`;
+      : '') + `<button style="background:none; border:none; color:var(--danger); cursor:pointer; padding:2px 4px; display:inline-flex; align-items:center; vertical-align:middle; margin-left:4px;" onclick="eliminarPedidoB2C('${p.id}')" title="Eliminar pedido (ej. pruebas)">${ticon('trash',{noMargin:true})}</button>`;
     return `<tr><td>${fechaTxt}</td><td>${p.nombre}<br><span style="color:var(--muted);">${p.cel}</span></td><td>${prodTxt}</td><td>${p.cantidad}</td><td>${totalTxt}</td><td><span class="status-pill ${pillCls}">${p.estado}</span></td><td style="white-space:nowrap;">${accion}</td></tr>`;
   }).join('');
   if(filtrados.length===0) body.innerHTML = '<tr><td colspan="7" style="color:var(--muted);">Sin resultados.</td></tr>';
@@ -1245,6 +1245,15 @@ async function eliminarPedidoB2C(id){
   if(!pedido) return;
   if(!confirm(`¿Eliminar este pedido de ${pedido.nombre} (${pedido.cel})? Esto no se puede deshacer.${pedido.idKanban ? '\n\nTambién se borrará la ficha de producción que se creó en el Kanban del Hub.' : ''}`)) return;
 
+  // Conde 2026-08-28: "no lo está borrando" -- antes esto seguía de largo aunque Supabase
+  // rechazara el borrado (típico: falta el permiso DELETE en la tabla, ver
+  // supabase/migracion_permisos_borrado_b2c.sql), así que en pantalla parecía que no pasaba nada.
+  // Ahora se detiene y avisa si el borrado del pedido de verdad falló.
+  const ok = await tacticalEliminarB2CPedido(id);
+  if(!ok){
+    alert('No se pudo eliminar el pedido (revisa la consola para el detalle -- probablemente falta un permiso en Supabase). Avísale a soporte si esto se repite.');
+    return;
+  }
   if(pedido.idKanban && typeof tacticalEliminarFichaKanbanRemoto === 'function'){
     await tacticalEliminarFichaKanbanRemoto(pedido.idKanban);
   }
@@ -1252,7 +1261,6 @@ async function eliminarPedidoB2C(id){
     const cli = db_clientes_b2c.find(c => c.wp === pedido.cel);
     if(cli){ cli.ltv = Math.max(0, (cli.ltv||0) - pedido.total); tacticalSyncClientes([cli]); }
   }
-  await tacticalEliminarB2CPedido(id);
   db_ventas_b2c = db_ventas_b2c.filter(p=>p.id!==id);
   renderBusqueda();
 }

@@ -513,10 +513,13 @@ async function tacticalSyncB2CPedido(p){
 }
 // Conde 2026-08-28: "borrar los aprobados que fueron pruebas" -- borra el pedido y sus ítems.
 // b2c_pedido_items no tiene ON DELETE CASCADE confirmado, así que se borra explícito primero.
+// Devuelve true/false (antes solo quedaba en consola -- "no lo está borrando" y no había forma
+// de saber si de verdad falló o si solo no se refrescó la vista).
 async function tacticalEliminarB2CPedido(id){
   await tacticalSupabase.from('b2c_pedido_items').delete().eq('pedido_id', id);
   const { error } = await tacticalSupabase.from('b2c_pedidos').delete().eq('id', id);
-  if(error) console.error('Error eliminando pedido B2C:', error);
+  if(error){ console.error('Error eliminando pedido B2C:', error); return false; }
+  return true;
 }
 // Conde 2026-08-27 (módulo Comercial): guardado suelto de "Pendiente"/"Observaciones" -- mismo
 // motivo que tacticalGuardarNotasManualesOP, tacticalSyncB2CPedido de arriba borra y reinserta TODOS
