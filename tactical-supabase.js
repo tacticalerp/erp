@@ -359,6 +359,13 @@ async function tacticalEliminarHistorialRemoto(oppId){
   const { error } = await tacticalSupabase.from('historial_cierres').delete().eq('snapshot->>id', oppId);
   if(error) console.error('Error eliminando historial en Supabase:', error);
 }
+// Conde 2026-08-28: "botón de cambio para cambiar de comercial" en el Buscador de Cotizaciones --
+// para un negocio YA CERRADO el vendedor vive dentro del snapshot (JSON), no en su propia columna,
+// así que se reescribe el snapshot completo (ya se arma en JS con el vendedor corregido).
+async function tacticalCorregirVendedorHistorial(oppId, snapshotActualizado){
+  const { error } = await tacticalSupabase.from('historial_cierres').update({ snapshot: snapshotActualizado }).eq('snapshot->>id', oppId);
+  if(error) console.error('Error corrigiendo vendedor en historial:', error);
+}
 
 // ============ KANBAN (fichas de producción) ============
 // Cada ficha tiene 3 tablas hijas (líneas, checklist, fotos) -- se sincroniza

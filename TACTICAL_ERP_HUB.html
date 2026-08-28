@@ -1871,8 +1871,8 @@
     <div id="print-area" style="display:none;"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="tactical-supabase.js?v=20260828c"></script>
-    <script src="precios_tactical.js?v=20260828c"></script>
+    <script src="tactical-supabase.js?v=20260828d"></script>
+    <script src="precios_tactical.js?v=20260828d"></script>
     <script src="precios_promocionales.js"></script>
     <script>
         // NAVEGACIÓN SPA DEL HUB
@@ -5101,11 +5101,32 @@
                 <div style="display:flex; gap:4px;">
                   <button class="btn-action" style="padding:5px 8px;" onclick="verPDFCotizacionGuardada('${o.id}')" title="Ver PDF">${ticon('printer')}</button>
                   ${(o.etapa && (o.linea==='cuadernos' || LINEA_A_CALCULADORA_ARCHIVO[o.linea])) ? `<button class="btn-action" style="padding:5px 8px; color:#d97706; border-color:#d97706;" onclick="tacticalAbrirEdicionCotizacion('${o.id}','${o.linea}','${o.ot||''}')" title="Ver el desglose y crear una nueva versión con cambios, sin borrar esta">✏️</button>` : ''}
+                  <button class="btn-action" style="padding:5px 8px; color:#2563eb; border-color:#2563eb;" onclick="buscadorCambiarVendedor('${o.id}')" title="Cambiar de comercial">${ticon('refresh')}</button>
                   <button class="btn-action" style="padding:5px 8px; color:var(--peligro); border-color:var(--peligro);" onclick="eliminarCotizacionRegistro('${o.id}')" title="Eliminar">${ticon('trash')}</button>
                 </div>
               </td>
             </tr>`;
           }).join('') : '<tr><td colspan="7" style="text-align:center; color:#a0aec0; padding:20px;">Sin cotizaciones que coincidan.</td></tr>';
+        }
+        // Conde 2026-08-28: botón de cambio (↻) en Todas las Cotizaciones -- funciona tanto para
+        // negocios activos (db_opps, corrige directo) como ya cerrados (db_historial_cierres, el
+        // vendedor vive dentro del snapshot -- ver tacticalCorregirVendedorHistorial).
+        async function buscadorCambiarVendedor(id){
+          const activo = db_opps.find(o => o.id === id);
+          const cerrado = !activo ? db_historial_cierres.find(o => o.id === id) : null;
+          const target = activo || cerrado;
+          if(!target) return;
+          const nuevo = await tacticalElegirVendedorFlotante(target.vendedor);
+          if(!nuevo) return;
+          target.vendedor = nuevo;
+          if(activo){
+            tacticalSyncOpps([activo]);
+          } else {
+            const { estado, motivo, fechaCierre, _historialRowId, ...snapshot } = cerrado;
+            tacticalCorregirVendedorHistorial(id, snapshot);
+          }
+          renderBuscadorCotizaciones();
+          if(typeof renderComercial === 'function') renderComercial();
         }
         function eliminarCotizacionRegistro(id){
           if(!confirm('¿Eliminar esta cotización del registro? Esta acción no se puede deshacer.')) return;
@@ -7137,6 +7158,150 @@
           const top = Object.keys(porResponsable).sort((a,b)=>porResponsable[b]-porResponsable[a])[0];
           return { responsable: top, costo: porResponsable[top], pct: Math.round((porResponsable[top]/totalGeneral)*100) };
         }
+        // Conde 2026-08-28 -- 8 señales nuevas del Radar (ver el análisis dado antes de programar).
+        function radarIrAComercial(vendedor){
+          showView('comercial');
+          if(vendedor && typeof comercialCambiarVendedor === 'function') comercialCambiarVendedor(vendedor);
+        }
+        // Cartera vencida, agrupada por cliente (no solo el total agregado que ya daba radarFlujoCaja).
+        function radarCarteraVencida(){
+          const hoy = contHoy();
+          const porCliente = {};
+          db_docventa.filter(d=>d.saldoPendiente>0 && d.fechaVencimiento && d.fechaVencimiento<hoy).forEach(d=>{
+            const p = porCliente[d.idCli] = porCliente[d.idCli] || {idCli:d.idCli, saldo:0, fechaMasVieja:d.fechaVencimiento};
+            p.saldo += d.saldoPendiente;
+            if(d.fechaVencimiento < p.fechaMasVieja) p.fechaMasVieja = d.fechaVencimiento;
+          });
+          return Object.values(porCliente).map(p=>{
+            const cli = db_clientes.find(c=>c.id===p.idCli);
+            const dias = Math.round((new Date(hoy) - new Date(p.fechaMasVieja))/86400000);
+            return {...p, cli, dias};
+          }).filter(p=>p.cli).sort((a,b)=>b.saldo-a.saldo).slice(0,3);
+        }
+        // Mismo patrón, del lado de lo que se debe a proveedores.
+        function radarCxpVencida(){
+          const hoy = contHoy();
+          const porProveedor = {};
+          db_cxp.filter(c=>c.saldoPendiente>0 && c.fechaVencimiento && c.fechaVencimiento<hoy).forEach(c=>{
+            const key = c.proveedor || 'Proveedor sin nombre';
+            const p = porProveedor[key] = porProveedor[key] || {proveedor:key, saldo:0, fechaMasVieja:c.fechaVencimiento};
+            p.saldo += c.saldoPendiente;
+            if(c.fechaVencimiento < p.fechaMasVieja) p.fechaMasVieja = c.fechaVencimiento;
+          });
+          return Object.values(porProveedor).map(p=>{
+            const dias = Math.round((new Date(hoy) - new Date(p.fechaMasVieja))/86400000);
+            return {...p, dias};
+          }).sort((a,b)=>b.saldo-a.saldo).slice(0,3);
+        }
+        // Negocios que llevan mucho tiempo activos y siguen en "Seguimiento" sin cerrarse -- usa la
+        // fecha de creación del negocio como aproximación (no se guarda cuándo entró a CADA etapa),
+        // razonable porque en la etapa de espera es justo donde más importa la antigüedad total.
+        function radarNegociosEstancados(){
+          const hoyMs = Date.now();
+          return db_opps.filter(o=>o.etapa==='neg').map(o=>{
+            const f = fechaDeRegistro(o);
+            return {...o, dias: f ? Math.round((hoyMs-f.getTime())/86400000) : 0};
+          }).filter(o=>o.dias>=10).sort((a,b)=>b.dias-a.dias).slice(0,3);
+        }
+        // Negocios grandes sin fecha de seguimiento programada (el reloj de Comercial) -- umbral
+        // fijo de $1.000.000, ajustable si Conde pide otro corte.
+        function radarCotizacionesGrandesSinSeguimiento(){
+          const UMBRAL_MONTO_GRANDE = 1000000;
+          return db_opps.filter(o=>o.monto>=UMBRAL_MONTO_GRANDE && !o.seguimientoFecha).sort((a,b)=>b.monto-a.monto).slice(0,3);
+        }
+        // Mismo cálculo que radarClientesEnRiesgo, pero sobre TODA la actividad de cotización (no
+        // solo lo ganado) -- detecta el enfriamiento antes, cuando el cliente ya ni pide precio.
+        // Se excluyen los que radarClientesEnRiesgo ya está avisando, para no repetir el mismo
+        // cliente con 2 tarjetas distintas.
+        function radarClientesDejaronDeCotizar(){
+          const idsYaAvisados = new Set(radarClientesEnRiesgo().map(r=>r.cli.id));
+          const porCliente = {};
+          const acumular = (o) => { if(o.idCli){ const f = fechaDeRegistro(o); if(f) (porCliente[o.idCli] = porCliente[o.idCli]||[]).push(f.getTime()); } };
+          db_opps.forEach(acumular);
+          db_historial_cierres.forEach(acumular);
+          const hoyMs = Date.now();
+          const resultados = [];
+          Object.keys(porCliente).forEach(idCli=>{
+            if(idsYaAvisados.has(idCli)) return;
+            const fechas = porCliente[idCli].sort((a,b)=>a-b);
+            if(fechas.length < 2) return;
+            let suma = 0;
+            for(let i=1;i<fechas.length;i++) suma += (fechas[i]-fechas[i-1]);
+            const intervaloProm = suma / (fechas.length-1) / 86400000;
+            const diasDesdeUltima = (hoyMs - fechas[fechas.length-1]) / 86400000;
+            if(intervaloProm <= 90 && diasDesdeUltima > Math.max(intervaloProm*1.5, 15)){
+              const cli = db_clientes.find(c=>c.id===idCli);
+              if(cli) resultados.push({cli, dias: Math.round(diasDesdeUltima), ritmo: Math.round(intervaloProm)});
+            }
+          });
+          return resultados.sort((a,b)=>b.dias-a.dias).slice(0,3);
+        }
+        // Qué tan concentradas están las ventas históricas en pocos clientes -- solo avisa si de
+        // verdad es alto (40%+), para no ser ruido en negocios chicos donde 3 clientes es normal.
+        function radarConcentracionClientes(){
+          const conLtv = db_clientes.filter(c=>c.ltv>0).sort((a,b)=>b.ltv-a.ltv);
+          if(conLtv.length < 3) return null;
+          const totalLtv = conLtv.reduce((s,c)=>s+c.ltv,0);
+          if(totalLtv<=0) return null;
+          const top3 = conLtv.slice(0,3);
+          const pct = Math.round((top3.reduce((s,c)=>s+c.ltv,0)/totalLtv)*100);
+          return pct>=40 ? {top3, pct} : null;
+        }
+        // Mismo patrón que radarCostoCalidadResponsable, pero agrupado por proveedor en vez de
+        // responsable interno -- para negociar o cambiar de proveedor con un número real.
+        function radarProveedorMasReprocesos(){
+          const porProveedor = {};
+          db_reprocesos.forEach(r=>{ if(!r.proveedor) return; porProveedor[r.proveedor] = (porProveedor[r.proveedor]||0) + r.costoTotal; });
+          const totalGeneral = Object.values(porProveedor).reduce((s,v)=>s+v,0);
+          if(totalGeneral<=0) return null;
+          const top = Object.keys(porProveedor).sort((a,b)=>porProveedor[b]-porProveedor[a])[0];
+          const pct = Math.round((porProveedor[top]/totalGeneral)*100);
+          return pct>=30 ? {proveedor:top, costo:porProveedor[top], pct} : null;
+        }
+        // Mismo motivo ("origen") de reproceso repetido 3+ veces en los últimos casos -- distingue
+        // un patrón real de un incidente aislado (que ya cubre radarReprocesosRecientes).
+        function radarMotivoReprocesoRepetido(){
+          const porOrigen = {};
+          db_reprocesos.slice(-30).forEach(r=>{ if(!r.origen) return; (porOrigen[r.origen] = porOrigen[r.origen]||[]).push(r); });
+          let peor = null;
+          Object.keys(porOrigen).forEach(origen=>{
+            const lista = porOrigen[origen];
+            if(lista.length < 3) return;
+            if(!peor || lista.length > peor.veces) peor = { origen, veces: lista.length, costo: lista.reduce((s,r)=>s+r.costoTotal,0) };
+          });
+          return peor;
+        }
+        // Compara el gasto de este mes (hasta hoy) contra el mismo rango de días del mes anterior,
+        // por categoría de Egreso -- rango parejo para que no marque falso positivo a inicios de mes.
+        function radarGastoQueSubio(){
+          const hoy = new Date();
+          const diaHoy = hoy.getDate();
+          const inicioMesActual = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+          const inicioMesAnterior = new Date(hoy.getFullYear(), hoy.getMonth()-1, 1);
+          const finMesAnteriorComparable = new Date(hoy.getFullYear(), hoy.getMonth()-1, diaHoy+1);
+          const sumaPorCategoria = (desde, hasta) => {
+            const acc = {};
+            // "T00:00:00" (no solo la fecha) -- si no, el navegador la lee como medianoche UTC y en
+            // Colombia (UTC-5) puede caer en el día anterior, sacando egresos del mes que sí son.
+            db_egresos.filter(e=>{ const f = new Date(e.fecha+'T00:00:00'); return f>=desde && f<hasta; }).forEach(e=>{
+              const key = e.categoria || e.concepto || 'Otros';
+              acc[key] = (acc[key]||0) + e.monto;
+            });
+            return acc;
+          };
+          const actual = sumaPorCategoria(inicioMesActual, new Date(hoy.getTime()+86400000));
+          const anterior = sumaPorCategoria(inicioMesAnterior, finMesAnteriorComparable);
+          let peor = null;
+          Object.keys(actual).forEach(cat=>{
+            const prev = anterior[cat];
+            if(!prev || prev<=0 || actual[cat] < 100000) return;
+            const pct = (actual[cat]-prev)/prev;
+            if(pct >= 0.25 && (!peor || pct > peor.pctRaw)){
+              peor = { categoria: cat, actual: actual[cat], anterior: prev, pct: Math.round(pct*100), pctRaw: pct };
+            }
+          });
+          return peor;
+        }
         /* ==========================================
            MÓDULO COMERCIAL (Conde 2026-08-27) -- tablero compacto por vendedor. No guarda datos
            propios: Personalizados lee db_b2cPedidos, Corporativo lee db_opps/db_kanban tal cual ya
@@ -7400,6 +7565,27 @@
             urgente += radarCardHtml('var(--pendiente)', 'Revisar calidad', `El pedido ${r.ot} de <strong>${r.cli.empresa}</strong> tuvo un reproceso de ${cotFormatoCop(r.costoTotal)}. Vale la pena mirar qué pasó antes de cotizarle de nuevo.`, 'Ver el incidente', `radarIrAReproceso('${r.ot}')`);
           });
 
+          // Conde 2026-08-28: "puntos estratégicos que generen ahorro y mejoras" -- 8 señales
+          // nuevas, todas con datos que ya existían en el ERP (nada de campos nuevos). Ver el
+          // análisis que se dio antes de programar esto para lo que SÍ quedó afuera (margen por
+          // negocio, pronto pago en CxP, tasa de cierre por línea, cuello de botella por área) --
+          // esos requerían datos que hoy no se guardan en ningún lado.
+          radarCarteraVencida().forEach(r=>{
+            urgente += radarCardHtml('var(--peligro)', 'Cobrar', `<strong>${r.cli.empresa}</strong> tiene ${cotFormatoCop(r.saldo)} vencido hace ${r.dias} día(s).`, 'Ver Contabilidad', `showView('contabilidad')`);
+          });
+          radarCxpVencida().forEach(r=>{
+            urgente += radarCardHtml('var(--peligro)', 'Pagar', `Le debes a <strong>${r.proveedor}</strong> ${cotFormatoCop(r.saldo)}, vencido hace ${r.dias} día(s).`, 'Ver Contabilidad', `showView('contabilidad')`);
+          });
+          radarNegociosEstancados().forEach(r=>{
+            urgente += radarCardHtml('var(--pendiente)', 'Retomar', `<strong>${r.nombreCli}</strong> lleva ${r.dias} días en "Seguimiento" sin cerrarse — ${tacticalTruncarPalabraCompleta(r.desc,50)}.`, 'Ver en Comercial', `radarIrAComercial('${r.vendedor||''}')`);
+          });
+          radarCotizacionesGrandesSinSeguimiento().forEach(r=>{
+            urgente += radarCardHtml('var(--pendiente)', 'Programar', `El negocio de <strong>${r.nombreCli}</strong> por ${cotFormatoCop(r.monto)} no tiene fecha de seguimiento programada.`, 'Ver en Comercial', `radarIrAComercial('${r.vendedor||''}')`);
+          });
+          radarClientesDejaronDeCotizar().forEach(r=>{
+            urgente += radarCardHtml('var(--pendiente)', 'Escribir', `<strong>${r.cli.empresa}</strong> no pide cotización desde hace ${r.dias} días (antes pedía cada ${r.ritmo} aprox.) -- todavía no llegó a "cliente en riesgo", pero se está enfriando.`, 'Ver cliente', `radarIrACliente('${r.cli.id}')`);
+          });
+
           radarRentabilidadClientes().forEach(r=>{
             info += radarCardHtml('var(--info)', 'Dato', `<strong>${r.cli.empresa}</strong> te ha comprado ${cotFormatoCop(r.cli.ltv)} en total, pero ${cotFormatoCop(r.costo)} de eso se fue en reprocesos (${Math.round(r.pct*100)}%).`, null, null);
           });
@@ -7412,6 +7598,26 @@
           const calidadResp = radarCostoCalidadResponsable();
           if(calidadResp && calidadResp.pct >= 30){
             info += radarCardHtml('var(--secondary)', 'Dato', `<strong>${calidadResp.responsable}</strong> concentra el ${calidadResp.pct}% del costo de reprocesos registrado (${cotFormatoCop(calidadResp.costo)}). Vale la pena revisar el proceso.`, null, null);
+          }
+
+          const concentracion = radarConcentracionClientes();
+          if(concentracion){
+            info += radarCardHtml('var(--info)', 'Riesgo', `El ${concentracion.pct}% de lo que has facturado en total viene de solo 3 clientes: ${concentracion.top3.map(c=>c.empresa).join(', ')}. Si uno se va, el golpe es grande.`, null, null);
+          }
+
+          const provReprocesos = radarProveedorMasReprocesos();
+          if(provReprocesos){
+            info += radarCardHtml('var(--secondary)', 'Dato', `El proveedor <strong>${provReprocesos.proveedor}</strong> concentra el ${provReprocesos.pct}% del costo de reprocesos (${cotFormatoCop(provReprocesos.costo)}). Vale la pena hablar con él o buscar otro.`, null, null);
+          }
+
+          const motivoRepetido = radarMotivoReprocesoRepetido();
+          if(motivoRepetido){
+            info += radarCardHtml('var(--secondary)', 'Patrón', `"${motivoRepetido.origen}" se repitió ${motivoRepetido.veces} veces en los últimos reprocesos (${cotFormatoCop(motivoRepetido.costo)} en total). Es un patrón, no un caso aislado -- vale la pena atacar la causa.`, null, null);
+          }
+
+          const gastoSubio = radarGastoQueSubio();
+          if(gastoSubio){
+            info += radarCardHtml('var(--info)', 'Dato', `El gasto en <strong>${gastoSubio.categoria}</strong> este mes va ${gastoSubio.pct}% más alto que el mismo período del mes pasado (${cotFormatoCop(gastoSubio.actual)} vs ${cotFormatoCop(gastoSubio.anterior)}).`, 'Ver Contabilidad', `showView('contabilidad')`);
           }
 
           urgenteEl.innerHTML = urgente || '<p style="color:#a0aec0; font-style:italic;">Todo tranquilo por ahora -- no hay nada urgente que atender.</p>';

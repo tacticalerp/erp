@@ -80,6 +80,33 @@ function tacticalConfirmarFlotante(opts){
 // la casilla" -- código corto día+mes (sin año, sin ceros a la izquierda) para la fecha de
 // seguimiento elegida con el ícono de reloj. Compartido porque tanto el Hub como (a futuro)
 // cualquier calculadora podrían necesitar el mismo formato.
+// Conde 2026-08-28: "en Todas las Cotizaciones, un botón de cambio para cambiar de comercial" --
+// ventana flotante genérica de un solo select (mismo patrón visual que las de arriba). Devuelve el
+// vendedor elegido, o null si canceló o no cambió nada.
+function tacticalElegirVendedorFlotante(actual){
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed; inset:0; background:rgba(26,32,44,0.6); z-index:99999; display:flex; align-items:center; justify-content:center; padding:20px;';
+    overlay.innerHTML = `
+      <div style="background:#fff; border-radius:10px; padding:24px; max-width:340px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,0.35); font-family:'Segoe UI', Tahoma, sans-serif;">
+        <div style="font-weight:800; font-size:1.05rem; color:#1a202c; margin-bottom:14px;">¿A qué comercial se lo asignas?</div>
+        <select id="tactical-vendedor-flotante-select" style="width:100%; box-sizing:border-box; padding:10px; border:2px solid #cbd5e0; border-radius:6px; margin-bottom:16px; font-size:0.95rem;">
+          ${Object.keys(VENDEDORES).map(v=>`<option value="${v}" ${v===actual?'selected':''}>${v}</option>`).join('')}
+        </select>
+        <div style="display:flex; gap:8px;">
+          <button type="button" id="tactical-vendedor-flotante-cancelar" style="flex:1; padding:10px; border:1px solid #cbd5e0; background:#fff; color:#4a5568; border-radius:6px; font-weight:700; cursor:pointer;">Cancelar</button>
+          <button type="button" id="tactical-vendedor-flotante-confirmar" style="flex:1; padding:10px; border:none; background:#2563eb; color:#fff; border-radius:6px; font-weight:700; cursor:pointer;">Confirmar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    function cerrar(valor){ overlay.remove(); resolve(valor); }
+    overlay.querySelector('#tactical-vendedor-flotante-cancelar').onclick = () => cerrar(null);
+    overlay.querySelector('#tactical-vendedor-flotante-confirmar').onclick = () => {
+      const val = overlay.querySelector('#tactical-vendedor-flotante-select').value;
+      cerrar(val === actual ? null : val);
+    };
+  });
+}
 function tacticalFormatoDiaMes(fechaISO){
   if(!fechaISO) return '';
   const MESES = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
