@@ -1108,10 +1108,10 @@ function renderBusqueda(){
     const items = pedidoItems(p);
     const prodTxt = items.map(it => `${it.cantidad}x ${it.linea==='laser'?'Láser':'Troquel'}${it.forma?' - '+it.forma:''} ${it.medida}cm (${it.fichas}f)`).join('<br>');
     const pillCls = p.estado==='aprobado' ? 'status-aprobado' : 'status-pendiente';
-    const accion = p.estado==='pendiente'
+    const accion = (p.estado==='pendiente'
       ? `<button class="btn ok" style="padding:5px 10px;width:auto;" onclick="aprobarPedido('${p.id}')">✅ Aprobar (pagó)</button>`
-      : '—';
-    return `<tr><td>${fechaTxt}</td><td>${p.nombre}<br><span style="color:var(--muted);">${p.cel}</span></td><td>${prodTxt}</td><td>${p.cantidad}</td><td>${totalTxt}</td><td><span class="status-pill ${pillCls}">${p.estado}</span></td><td>${accion}</td></tr>`;
+      : '') + `<button style="padding:5px 8px;width:auto;border:1px solid #cbd5e0;background:#fff;color:#dc2626;border-radius:4px;cursor:pointer;margin-left:4px;" onclick="eliminarPedidoB2C('${p.id}')" title="Eliminar pedido (ej. pruebas)">🗑</button>`;
+    return `<tr><td>${fechaTxt}</td><td>${p.nombre}<br><span style="color:var(--muted);">${p.cel}</span></td><td>${prodTxt}</td><td>${p.cantidad}</td><td>${totalTxt}</td><td><span class="status-pill ${pillCls}">${p.estado}</span></td><td style="white-space:nowrap;">${accion}</td></tr>`;
   }).join('');
   if(filtrados.length===0) body.innerHTML = '<tr><td colspan="7" style="color:var(--muted);">Sin resultados.</td></tr>';
 }
@@ -1233,6 +1233,28 @@ async function aprobarPedido(id){
   } else {
     alert(`⚠️ El pedido quedó marcado como aprobado, pero la ficha de producción NO se pudo guardar en el Kanban del Hub (revisa tu conexión a internet o vuelve a intentar). Avísale a soporte si esto se repite.`);
   }
+}
+
+// Conde 2026-08-28: "borrar los aprobados que fueron pruebas" -- borra el pedido de verdad
+// (Supabase + lista local). Si ya estaba aprobado, también deshace lo que aprobarPedido() generó:
+// la ficha de producción en el Kanban del Hub y el monto sumado al LTV del cliente (si el cliente
+// solo tenía pedidos de prueba, queda con LTV=0 pero el registro del cliente no se borra solo por
+// esto -- podría tener otros pedidos reales).
+async function eliminarPedidoB2C(id){
+  const pedido = db_ventas_b2c.find(p=>p.id===id);
+  if(!pedido) return;
+  if(!confirm(`¿Eliminar este pedido de ${pedido.nombre} (${pedido.cel})? Esto no se puede deshacer.${pedido.idKanban ? '\n\nTambién se borrará la ficha de producción que se creó en el Kanban del Hub.' : ''}`)) return;
+
+  if(pedido.idKanban && typeof tacticalEliminarFichaKanbanRemoto === 'function'){
+    await tacticalEliminarFichaKanbanRemoto(pedido.idKanban);
+  }
+  if(pedido.estado === 'aprobado' && pedido.total){
+    const cli = db_clientes_b2c.find(c => c.wp === pedido.cel);
+    if(cli){ cli.ltv = Math.max(0, (cli.ltv||0) - pedido.total); tacticalSyncClientes([cli]); }
+  }
+  await tacticalEliminarB2CPedido(id);
+  db_ventas_b2c = db_ventas_b2c.filter(p=>p.id!==id);
+  renderBusqueda();
 }
 
 /* =====================  REPORTES / DESCARGA CSV  ===================== */
