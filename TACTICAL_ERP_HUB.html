@@ -5883,7 +5883,10 @@
           // alimentaba el costo, nunca se veía en el documento impreso.
           let detalleTapaCarton=null;
           if(p.tapaTipo==="dura"){
-            if(p.lineaProducto!=="agenda_ejecutiva") costoTapaArmado=ARMADO_FORRADO_TAPA_DURA_COP[catClave]*factorEscala*p.cantidad;
+            // Conde 2026-08-28: "el precio de armado de tapas dejalo minimo en $500 unidad" -- en
+            // tamaños chicos factorEscala puede bajar la tarifa por debajo de eso; con este piso
+            // nunca se cobra menos de $500 por unidad, sin importar qué tan chico sea el cuaderno.
+            if(p.lineaProducto!=="agenda_ejecutiva") costoTapaArmado=Math.max(ARMADO_FORRADO_TAPA_DURA_COP[catClave]*factorEscala,500)*p.cantidad;
             const cartonPrecio=p.cartonCalibreMm===1.5?CARTON_1_5MM_COP:CARTON_2_0MM_COP;
             const layoutCarton=tacticalMejorLayoutPliego(p.anchoCm,p.altoCm,70,100);
             const nTapasPorPliego=layoutCarton.total;
@@ -6106,8 +6109,12 @@
             mostrarHojas:true, hojasDefault:(datos&&datos.hojasPorCuaderno)||3,
             tintasTiroDefault:(datos&&datos.tintasTiro)!=null?datos.tintasTiro:4,
             tintasRetiroDefault:(datos&&datos.tintasRetiro)!=null?datos.tintasRetiro:4,
-            disenoDefault:(datos&&datos.diseno)||"unico_por_pagina", mostrarQuitar:true,
-            mostrarIntercalado:true, intercaladoDefault:(datos&&datos.intercalado)?"intercalados":"seguidos",
+            // Conde 2026-08-28: por defecto "Páginas iguales" e "Intercalados" -- el caso más común
+            // (el mismo diseño repetido en los 100 cuadernos) es mucho más barato y no obliga a
+            // acordarse de cambiar el dropdown cada vez; "Páginas diferentes" queda como elección a
+            // propósito para cuando el inserto sí es personalizado por cuaderno.
+            disenoDefault:(datos&&datos.diseno)||"uniforme", mostrarQuitar:true,
+            mostrarIntercalado:true, intercaladoDefault:datos ? (datos.intercalado?"intercalados":"seguidos") : "intercalados",
           });
           document.getElementById("cot-insertosContainer").appendChild(div.firstElementChild);
           document.getElementById(id+"_sustrato").value = "Propalcote__150";
