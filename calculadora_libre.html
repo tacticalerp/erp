@@ -309,9 +309,14 @@ function autocompletarCliente(){
     nombreVal = empresaVal.slice(sepIdx+4).trim();
     empresaVal = empresaVal.slice(0, sepIdx).trim();
   }
+  // Conde 2026-08-28: "cambio la persona encargada y no me deja, toma por defecto Margarita" -- el
+  // correo del CONTACTO ANTERIOR seguía en el campo cuando se elegía uno nuevo del desplegable, y
+  // esa coincidencia por correo se revisaba primero -- ganaba el contacto viejo aunque sí se
+  // hubiera elegido el nuevo. Si se eligió un contacto explícito ("Empresa -- Nombre"), ese manda
+  // siempre; el correo solo sirve de respaldo cuando NO se eligió un contacto puntual.
   const cli = db_clientes.find(c =>
-    (correoVal && c.correo && c.correo.toLowerCase() === correoVal.toLowerCase()) ||
     (nombreVal && c.empresa.toLowerCase() === empresaVal.toLowerCase() && (c.nombre||'').toLowerCase() === nombreVal.toLowerCase()) ||
+    (!nombreVal && correoVal && c.correo && c.correo.toLowerCase() === correoVal.toLowerCase()) ||
     (!nombreVal && empresaVal && c.empresa.toLowerCase() === empresaVal.toLowerCase())
   );
   if(cli){
