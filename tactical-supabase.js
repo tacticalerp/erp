@@ -60,7 +60,7 @@ async function tacticalEliminarFotosStorage(urls){
   const rutas = (urls||[]).map(tacticalRutaDesdeUrlStorage).filter(Boolean);
   if(!rutas.length) return;
   const { error } = await tacticalSupabase.storage.from(TACTICAL_STORAGE_BUCKET).remove(rutas);
-  if(error) console.error('Error eliminando fotos de Storage:', error);
+  if(error){ console.error('Error eliminando fotos de Storage:', error); tacticalAvisoErrorGuardado('Error eliminando fotos de Storage'); }
 }
 function tacticalFechaHaceMeses(meses){
   const d = new Date();
@@ -272,11 +272,11 @@ async function tacticalSyncClientes(lista){
   if(!lista || lista.length===0) return;
   const filas = lista.map(tacticalClienteADb);
   const { error } = await tacticalSupabase.from('clientes').upsert(filas);
-  if(error) console.error('Error guardando clientes en Supabase:', error);
+  if(error){ console.error('Error guardando clientes en Supabase:', error); tacticalAvisoErrorGuardado('Error guardando clientes en Supabase'); }
 }
 async function tacticalEliminarClienteRemoto(id){
   const { error } = await tacticalSupabase.from('clientes').delete().eq('id', id);
-  if(error) console.error('Error eliminando cliente en Supabase:', error);
+  if(error){ console.error('Error eliminando cliente en Supabase:', error); tacticalAvisoErrorGuardado('Error eliminando cliente en Supabase'); }
 }
 
 // ============ OPORTUNIDADES (pipeline activo) + HISTORIAL DE CIERRES ============
@@ -312,13 +312,13 @@ function tacticalOppDeDb(r){
 // reescribe TODA la lista en cada llamada, innecesario solo para guardar un texto libre.
 async function tacticalGuardarSeguimientoOpp(id, texto){
   const { error } = await tacticalSupabase.from('opps').update({ seguimiento: texto||null }).eq('id', id);
-  if(error) console.error('Error guardando seguimiento de negocio:', error);
+  if(error){ console.error('Error guardando seguimiento de negocio:', error); tacticalAvisoErrorGuardado('Error guardando seguimiento de negocio'); }
 }
 // Conde 2026-08-28: fecha programada del ícono de reloj (activa el recordatorio "HOY seguimiento
 // cotización..." en Comercial) -- columna aparte de "seguimiento" (que es el texto libre).
 async function tacticalGuardarSeguimientoFechaOpp(id, fechaISO){
   const { error } = await tacticalSupabase.from('opps').update({ seguimiento_fecha: fechaISO||null }).eq('id', id);
-  if(error) console.error('Error guardando fecha de seguimiento de negocio:', error);
+  if(error){ console.error('Error guardando fecha de seguimiento de negocio:', error); tacticalAvisoErrorGuardado('Error guardando fecha de seguimiento de negocio'); }
 }
 async function tacticalOppsCargar(){
   const { data, error } = await tacticalSupabase.from('opps').select('*').order('created_at');
@@ -329,11 +329,11 @@ async function tacticalSyncOpps(lista){
   if(!lista || lista.length===0) return;
   const filas = lista.map(tacticalOppADb);
   const { error } = await tacticalSupabase.from('opps').upsert(filas);
-  if(error) console.error('Error guardando opps en Supabase:', error);
+  if(error){ console.error('Error guardando opps en Supabase:', error); tacticalAvisoErrorGuardado('Error guardando opps en Supabase'); }
 }
 async function tacticalEliminarOppRemoto(id){
   const { error } = await tacticalSupabase.from('opps').delete().eq('id', id);
-  if(error) console.error('Error eliminando opp en Supabase:', error);
+  if(error){ console.error('Error eliminando opp en Supabase:', error); tacticalAvisoErrorGuardado('Error eliminando opp en Supabase'); }
 }
 
 // El historial es append-only -- se guarda como snapshot completo (jsonb) del
@@ -353,18 +353,18 @@ async function tacticalAgregarHistorialRemoto(entry){
     opp_id: opp.id||null, snapshot: opp, estado, motivo: motivo||null,
     fecha_cierre: fechaCierre||new Date().toISOString(),
   });
-  if(error) console.error('Error guardando historial en Supabase:', error);
+  if(error){ console.error('Error guardando historial en Supabase:', error); tacticalAvisoErrorGuardado('Error guardando historial en Supabase'); }
 }
 async function tacticalEliminarHistorialRemoto(oppId){
   const { error } = await tacticalSupabase.from('historial_cierres').delete().eq('snapshot->>id', oppId);
-  if(error) console.error('Error eliminando historial en Supabase:', error);
+  if(error){ console.error('Error eliminando historial en Supabase:', error); tacticalAvisoErrorGuardado('Error eliminando historial en Supabase'); }
 }
 // Conde 2026-08-28: "botón de cambio para cambiar de comercial" en el Buscador de Cotizaciones --
 // para un negocio YA CERRADO el vendedor vive dentro del snapshot (JSON), no en su propia columna,
 // así que se reescribe el snapshot completo (ya se arma en JS con el vendedor corregido).
 async function tacticalCorregirVendedorHistorial(oppId, snapshotActualizado){
   const { error } = await tacticalSupabase.from('historial_cierres').update({ snapshot: snapshotActualizado }).eq('snapshot->>id', oppId);
-  if(error) console.error('Error corrigiendo vendedor en historial:', error);
+  if(error){ console.error('Error corrigiendo vendedor en historial:', error); tacticalAvisoErrorGuardado('Error corrigiendo vendedor en historial'); }
 }
 
 // ============ KANBAN (fichas de producción) ============
@@ -395,13 +395,13 @@ function tacticalFichaKanbanDeDb(r, lineas, checklist, fotos){
 // guardar un texto libre cada vez que se abre/cierra la vista previa de la Orden de Producción.
 async function tacticalGuardarNotasManualesOP(fichaId, texto){
   const { error } = await tacticalSupabase.from('kanban_fichas').update({ op_notas_manual: texto||null }).eq('id', fichaId);
-  if(error) console.error('Error guardando notas manuales de OP:', error);
+  if(error){ console.error('Error guardando notas manuales de OP:', error); tacticalAvisoErrorGuardado('Error guardando notas manuales de OP'); }
 }
 // Conde 2026-08-27 (módulo Comercial): mismo motivo que tacticalGuardarNotasManualesOP -- editar
 // "Observaciones" ahí reusa el campo "responsable" (📝 Notas) que ya tiene cada ficha, sin re-sincronizar líneas/checklist/fotos por un solo texto.
 async function tacticalGuardarNotasFicha(fichaId, texto){
   const { error } = await tacticalSupabase.from('kanban_fichas').update({ responsable: texto||null }).eq('id', fichaId);
-  if(error) console.error('Error guardando notas de ficha:', error);
+  if(error){ console.error('Error guardando notas de ficha:', error); tacticalAvisoErrorGuardado('Error guardando notas de ficha'); }
 }
 function tacticalLineaKanbanADb(fichaId, l){
   return {
@@ -456,15 +456,15 @@ async function tacticalSyncFichaKanban(f){
 }
 async function tacticalEliminarFichaKanbanRemoto(id){
   const { error } = await tacticalSupabase.from('kanban_fichas').delete().eq('id', id);
-  if(error) console.error('Error eliminando ficha kanban:', error);
+  if(error){ console.error('Error eliminando ficha kanban:', error); tacticalAvisoErrorGuardado('Error eliminando ficha kanban'); }
 }
 async function tacticalAgregarFotoFichaRemoto(fichaId, foto){
   const { error } = await tacticalSupabase.from('kanban_fotos').insert({ ficha_id: fichaId, url: foto.url, etiqueta: foto.etiqueta||null });
-  if(error) console.error('Error guardando foto de ficha kanban:', error);
+  if(error){ console.error('Error guardando foto de ficha kanban:', error); tacticalAvisoErrorGuardado('Error guardando foto de ficha kanban'); }
 }
 async function tacticalEliminarFotoFichaRemoto(fichaId, url){
   const { error } = await tacticalSupabase.from('kanban_fotos').delete().eq('ficha_id', fichaId).eq('url', url);
-  if(error) console.error('Error eliminando foto de ficha kanban:', error);
+  if(error){ console.error('Error eliminando foto de ficha kanban:', error); tacticalAvisoErrorGuardado('Error eliminando foto de ficha kanban'); }
 }
 
 // ============ B2C PEDIDOS (Módulo de Montajes Rompecabezas) ============
@@ -515,7 +515,7 @@ async function tacticalSyncB2CPedido(p){
   await tacticalSupabase.from('b2c_pedido_items').delete().eq('pedido_id', p.id);
   if(p.items && p.items.length){
     const { error } = await tacticalSupabase.from('b2c_pedido_items').insert(p.items.map(it=>tacticalB2CItemADb(p.id, it)));
-    if(error) console.error('Error guardando items de pedido B2C:', error);
+    if(error){ console.error('Error guardando items de pedido B2C:', error); tacticalAvisoErrorGuardado('Error guardando items de pedido B2C'); }
   }
 }
 // Conde 2026-08-28: "borrar los aprobados que fueron pruebas" -- borra el pedido y sus ítems.
@@ -534,7 +534,7 @@ async function tacticalEliminarB2CPedido(id){
 async function tacticalGuardarComercialB2C(pedidoId, campo, texto){
   const columna = campo==='pendiente' ? 'nota_comercial' : 'observaciones_comercial';
   const { error } = await tacticalSupabase.from('b2c_pedidos').update({ [columna]: texto||null }).eq('id', pedidoId);
-  if(error) console.error('Error guardando seguimiento comercial B2C:', error);
+  if(error){ console.error('Error guardando seguimiento comercial B2C:', error); tacticalAvisoErrorGuardado('Error guardando seguimiento comercial B2C'); }
 }
 
 // ============ COTIZACIONES CUADERNOS ============
@@ -571,11 +571,11 @@ async function tacticalCotizacionesCargar(){
 }
 async function tacticalSyncCotizacion(c){
   const { error } = await tacticalSupabase.from('cotizaciones_cuadernos').upsert(tacticalCotizacionADb(c));
-  if(error) console.error('Error guardando cotización en Supabase:', error);
+  if(error){ console.error('Error guardando cotización en Supabase:', error); tacticalAvisoErrorGuardado('Error guardando cotización en Supabase'); }
 }
 async function tacticalEliminarCotizacionRemoto(id){
   const { error } = await tacticalSupabase.from('cotizaciones_cuadernos').delete().eq('id', id);
-  if(error) console.error('Error eliminando cotización en Supabase:', error);
+  if(error){ console.error('Error eliminando cotización en Supabase:', error); tacticalAvisoErrorGuardado('Error eliminando cotización en Supabase'); }
 }
 
 // ============ COTIZACIONES DE LAS OTRAS 8 CALCULADORAS ============
@@ -663,11 +663,11 @@ async function tacticalTareasCargar(){
 }
 async function tacticalSyncTarea(t){
   const { error } = await tacticalSupabase.from('tareas').upsert(tacticalTareaADb(t));
-  if(error) console.error('Error guardando tarea en Supabase:', error);
+  if(error){ console.error('Error guardando tarea en Supabase:', error); tacticalAvisoErrorGuardado('Error guardando tarea en Supabase'); }
 }
 async function tacticalEliminarTareaRemoto(id){
   const { error } = await tacticalSupabase.from('tareas').delete().eq('id', id);
-  if(error) console.error('Error eliminando tarea en Supabase:', error);
+  if(error){ console.error('Error eliminando tarea en Supabase:', error); tacticalAvisoErrorGuardado('Error eliminando tarea en Supabase'); }
 }
 
 // ============ CONTADORES (numeración FV/CC/IN/CP/EG) ============
@@ -687,7 +687,7 @@ async function tacticalSiguienteNumero(tipo){
 }
 async function tacticalAvanzarContadorSiMayor(tipo, valor){
   const { error } = await tacticalSupabase.rpc('avanzar_contador_si_mayor', { p_tipo: tipo, p_valor: valor });
-  if(error) console.error('Error avanzando contador:', error);
+  if(error){ console.error('Error avanzando contador:', error); tacticalAvisoErrorGuardado('Error avanzando contador'); }
 }
 
 // ============ CONTABILIDAD ============
@@ -700,7 +700,7 @@ async function tacticalProveedoresCargar(){
 }
 async function tacticalSyncProveedor(p){
   const { error } = await tacticalSupabase.from('proveedores').upsert(tacticalProveedorADb(p));
-  if(error) console.error('Error guardando proveedor en Supabase:', error);
+  if(error){ console.error('Error guardando proveedor en Supabase:', error); tacticalAvisoErrorGuardado('Error guardando proveedor en Supabase'); }
 }
 
 // Ítems de Documento de Venta / Cuenta por Pagar: misma forma en ambas tablas hijas.
@@ -743,7 +743,7 @@ async function tacticalSyncDocVenta(d){
   await tacticalSupabase.from('documentos_venta_items').delete().eq('documento_id', d.id);
   if(d.items && d.items.length){
     const { error } = await tacticalSupabase.from('documentos_venta_items').insert(d.items.map(it=>tacticalItemADb('documento_id', d.id, it)));
-    if(error) console.error('Error guardando ítems de documento de venta:', error);
+    if(error){ console.error('Error guardando ítems de documento de venta:', error); tacticalAvisoErrorGuardado('Error guardando ítems de documento de venta'); }
   }
 }
 
@@ -772,11 +772,11 @@ async function tacticalPrefacturasCargar(){
 }
 async function tacticalSyncPrefactura(p){
   const { error } = await tacticalSupabase.from('prefacturas').upsert(tacticalPrefacturaADb(p));
-  if(error) console.error('Error guardando prefactura en Supabase:', error);
+  if(error){ console.error('Error guardando prefactura en Supabase:', error); tacticalAvisoErrorGuardado('Error guardando prefactura en Supabase'); }
 }
 async function tacticalEliminarPrefacturaRemoto(id){
   const { error } = await tacticalSupabase.from('prefacturas').delete().eq('id', id);
-  if(error) console.error('Error eliminando prefactura en Supabase:', error);
+  if(error){ console.error('Error eliminando prefactura en Supabase:', error); tacticalAvisoErrorGuardado('Error eliminando prefactura en Supabase'); }
 }
 
 function tacticalIngresoADb(i){
@@ -798,7 +798,7 @@ async function tacticalIngresosCargar(){
 }
 async function tacticalSyncIngreso(i){
   const { error } = await tacticalSupabase.from('ingresos').upsert(tacticalIngresoADb(i));
-  if(error) console.error('Error guardando ingreso en Supabase:', error);
+  if(error){ console.error('Error guardando ingreso en Supabase:', error); tacticalAvisoErrorGuardado('Error guardando ingreso en Supabase'); }
 }
 
 function tacticalCxpADb(c){
@@ -830,7 +830,7 @@ async function tacticalSyncCxp(c){
   await tacticalSupabase.from('cuentas_por_pagar_items').delete().eq('cxp_id', c.id);
   if(c.items && c.items.length){
     const { error } = await tacticalSupabase.from('cuentas_por_pagar_items').insert(c.items.map(it=>tacticalItemADb('cxp_id', c.id, it)));
-    if(error) console.error('Error guardando ítems de cuenta por pagar:', error);
+    if(error){ console.error('Error guardando ítems de cuenta por pagar:', error); tacticalAvisoErrorGuardado('Error guardando ítems de cuenta por pagar'); }
   }
 }
 
@@ -860,7 +860,7 @@ async function tacticalEgresosCargar(){
 }
 async function tacticalSyncEgreso(e){
   const { error } = await tacticalSupabase.from('egresos').upsert(tacticalEgresoADb(e));
-  if(error) console.error('Error guardando egreso en Supabase:', error);
+  if(error){ console.error('Error guardando egreso en Supabase:', error); tacticalAvisoErrorGuardado('Error guardando egreso en Supabase'); }
 }
 
 function tacticalGastoFijoADb(g, orden){ return { id: g.id, concepto: g.concepto||'', monto: g.monto||0, orden }; }
@@ -872,31 +872,31 @@ async function tacticalGastosFijosCargar(){
 }
 async function tacticalSyncGastoFijo(g, orden){
   const { error } = await tacticalSupabase.from('gastos_fijos_config').upsert(tacticalGastoFijoADb(g, orden));
-  if(error) console.error('Error guardando gasto fijo en Supabase:', error);
+  if(error){ console.error('Error guardando gasto fijo en Supabase:', error); tacticalAvisoErrorGuardado('Error guardando gasto fijo en Supabase'); }
 }
 async function tacticalEliminarGastoFijoRemoto(id){
   const { error } = await tacticalSupabase.from('gastos_fijos_config').delete().eq('id', id);
-  if(error) console.error('Error eliminando gasto fijo en Supabase:', error);
+  if(error){ console.error('Error eliminando gasto fijo en Supabase:', error); tacticalAvisoErrorGuardado('Error eliminando gasto fijo en Supabase'); }
 }
 // Conde 2026-08-21: "necesito editar y borrar" documentos de venta y cuentas por pagar --
 // documentos_venta_items/cuentas_por_pagar_items tienen "on delete cascade", así que borrar el
 // documento padre ya se lleva sus ítems solo, no hace falta borrarlos aparte.
 async function tacticalEliminarDocVentaRemoto(id){
   const { error } = await tacticalSupabase.from('documentos_venta').delete().eq('id', id);
-  if(error) console.error('Error eliminando documento de venta en Supabase:', error);
+  if(error){ console.error('Error eliminando documento de venta en Supabase:', error); tacticalAvisoErrorGuardado('Error eliminando documento de venta en Supabase'); }
 }
 async function tacticalEliminarCxpRemoto(id){
   const { error } = await tacticalSupabase.from('cuentas_por_pagar').delete().eq('id', id);
-  if(error) console.error('Error eliminando cuenta por pagar en Supabase:', error);
+  if(error){ console.error('Error eliminando cuenta por pagar en Supabase:', error); tacticalAvisoErrorGuardado('Error eliminando cuenta por pagar en Supabase'); }
 }
 // Conde 2026-08-21: "en comprobantes de egresos e ingresos permita editar y eliminar".
 async function tacticalEliminarEgresoRemoto(id){
   const { error } = await tacticalSupabase.from('egresos').delete().eq('id', id);
-  if(error) console.error('Error eliminando egreso en Supabase:', error);
+  if(error){ console.error('Error eliminando egreso en Supabase:', error); tacticalAvisoErrorGuardado('Error eliminando egreso en Supabase'); }
 }
 async function tacticalEliminarIngresoRemoto(id){
   const { error } = await tacticalSupabase.from('ingresos').delete().eq('id', id);
-  if(error) console.error('Error eliminando ingreso en Supabase:', error);
+  if(error){ console.error('Error eliminando ingreso en Supabase:', error); tacticalAvisoErrorGuardado('Error eliminando ingreso en Supabase'); }
 }
 
 // ============ CONTROL DE REPROCESOS ============
@@ -934,12 +934,12 @@ async function tacticalSyncReproceso(inc){
   await tacticalSupabase.from('reprocesos_items').delete().eq('reproceso_id', inc.id);
   if(inc.items && inc.items.length){
     const { error } = await tacticalSupabase.from('reprocesos_items').insert(inc.items.map(it=>tacticalReprocesoItemADb(inc.id, it)));
-    if(error) console.error('Error guardando ítems de reproceso:', error);
+    if(error){ console.error('Error guardando ítems de reproceso:', error); tacticalAvisoErrorGuardado('Error guardando ítems de reproceso'); }
   }
 }
 async function tacticalEliminarReprocesoRemoto(id){
   const { error } = await tacticalSupabase.from('reprocesos').delete().eq('id', id);
-  if(error) console.error('Error eliminando reproceso en Supabase:', error);
+  if(error){ console.error('Error eliminando reproceso en Supabase:', error); tacticalAvisoErrorGuardado('Error eliminando reproceso en Supabase'); }
 }
 
 // ============ FOTOTECA DE PRODUCTOS ============
@@ -979,7 +979,7 @@ async function tacticalSyncFototecaItem(item){
 }
 async function tacticalEliminarFototecaItemRemoto(clave){
   const { error } = await tacticalSupabase.from('fototeca_items').delete().eq('clave', clave);
-  if(error) console.error('Error eliminando ficha de fototeca en Supabase:', error);
+  if(error){ console.error('Error eliminando ficha de fototeca en Supabase:', error); tacticalAvisoErrorGuardado('Error eliminando ficha de fototeca en Supabase'); }
   delete tacticalFototecaCache[clave];
 }
 
@@ -1029,19 +1029,19 @@ async function tacticalSincronizarPreciosOverride(){
 }
 async function tacticalGuardarPreciosOverride(datos){
   const { error } = await tacticalSupabase.from('precios_override').upsert({ id: true, datos, actualizado_en: new Date().toISOString() });
-  if(error) console.error('Error guardando precios override en Supabase:', error);
+  if(error){ console.error('Error guardando precios override en Supabase:', error); tacticalAvisoErrorGuardado('Error guardando precios override en Supabase'); }
 }
 async function tacticalGuardarPreciosPromoOverride(datos){
   const { error } = await tacticalSupabase.from('precios_promo_override').upsert({ id: true, datos, actualizado_en: new Date().toISOString() });
-  if(error) console.error('Error guardando precios promo override en Supabase:', error);
+  if(error){ console.error('Error guardando precios promo override en Supabase:', error); tacticalAvisoErrorGuardado('Error guardando precios promo override en Supabase'); }
 }
 async function tacticalGuardarSustratosCustom(lista){
   const { error } = await tacticalSupabase.from('sustratos_custom').upsert({ id: true, datos: lista, actualizado_en: new Date().toISOString() });
-  if(error) console.error('Error guardando sustratos custom en Supabase:', error);
+  if(error){ console.error('Error guardando sustratos custom en Supabase:', error); tacticalAvisoErrorGuardado('Error guardando sustratos custom en Supabase'); }
 }
 async function tacticalGuardarAcabadosCustom(lista){
   const { error } = await tacticalSupabase.from('acabados_custom').upsert({ id: true, datos: lista, actualizado_en: new Date().toISOString() });
-  if(error) console.error('Error guardando acabados custom en Supabase:', error);
+  if(error){ console.error('Error guardando acabados custom en Supabase:', error); tacticalAvisoErrorGuardado('Error guardando acabados custom en Supabase'); }
 }
 
 // ============ RECOMENDACIONES DE PRODUCCIÓN (editables desde el Panel de Precios) ============
@@ -1087,13 +1087,13 @@ async function tacticalGuardarPedidoBorrador(pd){
   const session = await tacticalSesionActual();
   if(!session) return;
   const { error } = await tacticalSupabase.from('pedidos_borrador').upsert(tacticalPedidoBorradorADb(pd, session.user.id));
-  if(error) console.error('Error guardando pedido borrador:', error);
+  if(error){ console.error('Error guardando pedido borrador:', error); tacticalAvisoErrorGuardado('Error guardando pedido borrador'); }
 }
 async function tacticalEliminarPedidoBorrador(){
   const session = await tacticalSesionActual();
   if(!session) return;
   const { error } = await tacticalSupabase.from('pedidos_borrador').delete().eq('usuario_id', session.user.id);
-  if(error) console.error('Error eliminando pedido borrador:', error);
+  if(error){ console.error('Error eliminando pedido borrador:', error); tacticalAvisoErrorGuardado('Error eliminando pedido borrador'); }
 }
 
 function tacticalComparacionBorradorADb(comp, usuarioId){
@@ -1114,13 +1114,13 @@ async function tacticalGuardarComparacionBorrador(comp){
   const session = await tacticalSesionActual();
   if(!session) return;
   const { error } = await tacticalSupabase.from('comparaciones_borrador').upsert(tacticalComparacionBorradorADb(comp, session.user.id));
-  if(error) console.error('Error guardando comparación borrador:', error);
+  if(error){ console.error('Error guardando comparación borrador:', error); tacticalAvisoErrorGuardado('Error guardando comparación borrador'); }
 }
 async function tacticalEliminarComparacionBorrador(){
   const session = await tacticalSesionActual();
   if(!session) return;
   const { error } = await tacticalSupabase.from('comparaciones_borrador').delete().eq('usuario_id', session.user.id);
-  if(error) console.error('Error eliminando comparación borrador:', error);
+  if(error){ console.error('Error eliminando comparación borrador:', error); tacticalAvisoErrorGuardado('Error eliminando comparación borrador'); }
 }
 
 // ============ B2C CARRITO BORRADOR (Módulo de Montajes Rompecabezas) ============
@@ -1145,13 +1145,13 @@ async function tacticalGuardarB2CCarrito(car){
   const session = await tacticalSesionActual();
   if(!session) return;
   const { error } = await tacticalSupabase.from('b2c_carrito_borrador').upsert(tacticalB2CCarritoADb(car, session.user.id));
-  if(error) console.error('Error guardando carrito B2C:', error);
+  if(error){ console.error('Error guardando carrito B2C:', error); tacticalAvisoErrorGuardado('Error guardando carrito B2C'); }
 }
 async function tacticalEliminarB2CCarrito(){
   const session = await tacticalSesionActual();
   if(!session) return;
   const { error } = await tacticalSupabase.from('b2c_carrito_borrador').delete().eq('usuario_id', session.user.id);
-  if(error) console.error('Error eliminando carrito B2C:', error);
+  if(error){ console.error('Error eliminando carrito B2C:', error); tacticalAvisoErrorGuardado('Error eliminando carrito B2C'); }
 }
 
 // ============ PERSONAL (nombres editables para Tareas y Reprocesos) ============
@@ -1164,11 +1164,11 @@ async function tacticalPersonalCargar(){
 }
 async function tacticalSyncPersonal(p){
   const { error } = await tacticalSupabase.from('personal').upsert(tacticalPersonalADb(p));
-  if(error) console.error('Error guardando persona en Supabase:', error);
+  if(error){ console.error('Error guardando persona en Supabase:', error); tacticalAvisoErrorGuardado('Error guardando persona en Supabase'); }
 }
 async function tacticalEliminarPersonalRemoto(id){
   const { error } = await tacticalSupabase.from('personal').delete().eq('id', id);
-  if(error) console.error('Error eliminando persona en Supabase:', error);
+  if(error){ console.error('Error eliminando persona en Supabase:', error); tacticalAvisoErrorGuardado('Error eliminando persona en Supabase'); }
 }
 
 document.addEventListener('DOMContentLoaded', tacticalMostrarGateLogin);

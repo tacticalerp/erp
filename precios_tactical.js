@@ -14,6 +14,33 @@
   link.type = 'image/svg+xml';
   link.href = 'data:image/svg+xml,' + svg;
 })();
+// Conde 2026-08-28: "solucionar todo lo que pueda fallar en silencio... no quiero tener a toda
+// hora un registro de error" -- las ~50 funciones de guardado/borrado de tactical-supabase.js
+// solo dejaban el error en la consola (nadie se enteraba hasta que algo dependía de ese dato
+// después, como pasó con "editar cotización"). En vez de agregar una alerta a cada una de las 50
+// (habría que tocar decenas de botones distintos en 10 archivos), esto centraliza el aviso: un
+// toast chico que se autodesvanece, se puede cerrar con un clic, y NO se repite si el mismo error
+// vuelve a pasar dentro de los siguientes 15 segundos (para que una caída real de internet no
+// tapice la pantalla de toasts idénticos uno detrás de otro).
+let tacticalUltimoAvisoErrorGuardado = { msg: '', ts: 0 };
+function tacticalAvisoErrorGuardado(mensaje){
+  const ahora = Date.now();
+  if(tacticalUltimoAvisoErrorGuardado.msg === mensaje && (ahora - tacticalUltimoAvisoErrorGuardado.ts) < 15000) return;
+  tacticalUltimoAvisoErrorGuardado = { msg: mensaje, ts: ahora };
+  let cont = document.getElementById('tactical-toast-errores');
+  if(!cont){
+    cont = document.createElement('div');
+    cont.id = 'tactical-toast-errores';
+    cont.style.cssText = 'position:fixed; bottom:16px; left:50%; transform:translateX(-50%); z-index:999999; display:flex; flex-direction:column-reverse; gap:6px; align-items:center; pointer-events:none;';
+    document.body.appendChild(cont);
+  }
+  const toast = document.createElement('div');
+  toast.style.cssText = 'background:#7c2d12; color:#fff; padding:10px 16px; border-radius:8px; font-size:0.82rem; font-family:"Segoe UI",Tahoma,sans-serif; box-shadow:0 4px 16px rgba(0,0,0,0.35); max-width:min(420px,90vw); text-align:center; pointer-events:auto; cursor:pointer;';
+  toast.innerHTML = `⚠️ ${mensaje}. Revisa tu conexión o avisa a soporte si se repite.<br><span style="opacity:0.75; font-size:0.75rem;">(clic para cerrar)</span>`;
+  toast.onclick = () => toast.remove();
+  cont.appendChild(toast);
+  setTimeout(() => { if(toast.parentNode) toast.remove(); }, 9000);
+}
 // ==========================================
 // Conde 2026-08-21: "se están aprobando y se omite la fecha" -- el prompt() de texto libre para la
 // fecha de entrega de la Orden de Producción se podía cancelar o dejar vacío sin darse cuenta
