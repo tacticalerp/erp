@@ -314,6 +314,25 @@
       </div>
     </div>
 
+    <!-- Conde 2026-08-28: "quiero 2 casillas para anexar precio a mano, mi comodín para cuando
+         hay algún proceso particular que anexar" -- aplica una sola vez a la cotización completa
+         (no por ítem, ni por modo Volante/Imán), se suma directo al costo directo así que sí le
+         entra el % de utilidad/fondo de seguridad/IVA como al resto de los costos. -->
+    <div class="card">
+      <h2>Proceso adicional (opcional)</h2>
+      <div class="hint" style="margin-bottom:8px;">Tu comodín para sumar algo puntual que no está en las demás casillas.</div>
+      <div class="fila">
+        <div class="campo">
+          <label>Descripción:</label>
+          <input type="text" id="in-extraDesc" placeholder="Ej: laminado especial a mano">
+        </div>
+        <div class="campo chico">
+          <label>Costo (COP):</label>
+          <input type="number" id="in-extraCosto" value="0" min="0">
+        </div>
+      </div>
+    </div>
+
     <div class="card">
       <h2>5. Condiciones comerciales</h2>
       <div class="fila">
@@ -828,7 +847,9 @@ function cotizarVolante(p){
   const acabadosCustomSel = tacticalLeerAcabadosSeleccionados('volantes', 'chk-acab-custom');
   const acabadosCustomCosto = tacticalCostoAcabadosCustom(acabadosCustomSel, areaM2, p.cantidad);
 
-  const costoDirecto = detalleMaterial.costoTotal + detalleImpresion.total + costoRefile + costoEmpaque + costoPlegadoTotal + costoPlastificado + acabadosCustomCosto.costoTotal;
+  const extraDesc = (p.extraDesc||'').trim();
+  const extraCosto = p.extraCosto||0;
+  const costoDirecto = detalleMaterial.costoTotal + detalleImpresion.total + costoRefile + costoEmpaque + costoPlegadoTotal + costoPlastificado + acabadosCustomCosto.costoTotal + extraCosto;
 
   const disenoCop = disenoYPreprensa(costoDirecto);
   const fondoSeguridadPct = tramoFondoSeguridad(costoDirecto);
@@ -851,7 +872,7 @@ function cotizarVolante(p){
     tintasTiro:p.tintasTiro, tintasRetiro:p.tintasRetiro,
     plastificado:p.plastificado, carasPlastificado:p.carasPlastificado, costoPlastificado,
     acabadosCustomLineas: acabadosCustomCosto.lineas, acabadosCustomCosto: acabadosCustomCosto.costoTotal,
-    costoRefile, costoEmpaque, costoPlegadoTotal, costoDirecto,
+    costoRefile, costoEmpaque, costoPlegadoTotal, extraDesc, extraCosto, costoDirecto,
     disenoCop, fondoSeguridadPct, fondoSeguridadCop, sherpaCop, transporte,
     subtotal, precioVentaTotal, precioVentaUnitario, ivaTotal, precioFinalTotal,
     gananciaTotal, gananciaUnitaria,
@@ -913,7 +934,9 @@ function cotizarIman(p){
     detalleCorte = {via:'troquel', total:costoCorte};
   }
 
-  const costoDirecto = detalleMaterial.costoTotal + detalleImpresion.total + costoLaminaIman + costoCorte;
+  const extraDesc = (p.extraDesc||'').trim();
+  const extraCosto = p.extraCosto||0;
+  const costoDirecto = detalleMaterial.costoTotal + detalleImpresion.total + costoLaminaIman + costoCorte + extraCosto;
 
   const disenoCop = disenoYPreprensa(costoDirecto);
   const fondoSeguridadPct = tramoFondoSeguridad(costoDirecto);
@@ -933,7 +956,7 @@ function cotizarIman(p){
   return {
     esIman:true, usaDigital, detalleImpresion, detalleMaterial, gramaje, tintasTiro:p.tintasTiro,
     piezasPorLamina, nLaminas, costoLaminaIman, detalleCorte, costoCorte,
-    costoDirecto, disenoCop, fondoSeguridadPct, fondoSeguridadCop, sherpaCop, transporte,
+    extraDesc, extraCosto, costoDirecto, disenoCop, fondoSeguridadPct, fondoSeguridadCop, sherpaCop, transporte,
     subtotal, precioVentaTotal, precioVentaUnitario, ivaTotal, precioFinalTotal,
     gananciaTotal, gananciaUnitaria,
   };
@@ -1084,7 +1107,7 @@ function renderVolMultiItems(){
     if(box) box.innerHTML = tacticalRenderAcabadosCustomHtml('volantes', `multiitem-acab-${item.id}`);
   });
 }
-function cotizarVolanteMultiItem(items, cantidad, utilidadPct, comisionPct){
+function cotizarVolanteMultiItem(items, cantidad, utilidadPct, comisionPct, extraDesc, extraCosto){
   let costoDirectoTotal = 0;
   const detallesItems = items.map(item => {
     const r = cotizarVolante({
@@ -1101,6 +1124,10 @@ function cotizarVolanteMultiItem(items, cantidad, utilidadPct, comisionPct){
     costoDirectoTotal += costoItemDirecto;
     return { nombre: item.nombre||'Ítem sin nombre', item, resultado: r, acabadosCosto, costoTroquel, costoItemDirecto };
   });
+  // Conde 2026-08-28: el "comodín" de proceso adicional aplica UNA sola vez al kit completo, no
+  // por ítem (cada ítem ya tiene sus propios acabados/troquel arriba si hace falta algo puntual).
+  extraDesc = (extraDesc||'').trim(); extraCosto = extraCosto||0;
+  costoDirectoTotal += extraCosto;
 
   const disenoCop = disenoYPreprensa(costoDirectoTotal);
   const fondoSeguridadPct = tramoFondoSeguridad(costoDirectoTotal);
@@ -1119,7 +1146,7 @@ function cotizarVolanteMultiItem(items, cantidad, utilidadPct, comisionPct){
   const gananciaUnitaria = gananciaTotal/cantidad;
 
   return {
-    esMultiItem: true, detallesItems, costoDirecto: costoDirectoTotal,
+    esMultiItem: true, detallesItems, extraDesc, extraCosto, costoDirecto: costoDirectoTotal,
     disenoCop, fondoSeguridadPct, fondoSeguridadCop, sherpaCop, transporte,
     subtotal, precioVentaTotal, precioVentaUnitario, ivaTotal, precioFinalTotal,
     gananciaTotal, gananciaUnitaria, cantidad,
@@ -1134,7 +1161,9 @@ function calcularMultiItem(){
     const cantidad = tacticalLeerNumeroFormateado("in-cantidad");
     const utilidadPct = parseFloat(document.getElementById("in-utilidadPct").value)/100;
     const comisionPct = parseFloat(document.getElementById("in-comisionPct").value)/100;
-    const r = cotizarVolanteMultiItem(volMultiItems, cantidad, utilidadPct, comisionPct);
+    const extraDesc = document.getElementById("in-extraDesc").value;
+    const extraCosto = parseFloat(document.getElementById("in-extraCosto").value)||0;
+    const r = cotizarVolanteMultiItem(volMultiItems, cantidad, utilidadPct, comisionPct, extraDesc, extraCosto);
     document.getElementById("recomendaciones-contenido").innerHTML = '';
 
     let filas = `<table class="resultado-tabla">`;
@@ -1146,6 +1175,9 @@ function calcularMultiItem(){
       if(d.item.llevaTroquel) filas += `<tr class="detalle"><td colspan="2">Troquel nuevo: ${cop(d.costoTroquel)}</td></tr>`;
       filas += `<tr><td>Subtotal ${d.nombre}</td><td class="num">${cop(d.costoItemDirecto)}</td></tr>`;
     });
+    if(r.extraCosto>0){
+      filas += `<tr><td>${r.extraDesc||'Proceso adicional'}</td><td class="num">${cop(r.extraCosto)}</td></tr>`;
+    }
     filas += `<tr class="sub"><td>Costo directo total</td><td class="num">${cop(r.costoDirecto)}</td></tr>`;
     filas += `<tr><td>Diseño / Preprensa</td><td class="num">${cop(r.disenoCop)}</td></tr>`;
     filas += `<tr><td>Fondo de Seguridad (${(r.fondoSeguridadPct*100).toFixed(1)}%)</td><td class="num">${cop(r.fondoSeguridadCop)}</td></tr>`;
@@ -1217,6 +1249,8 @@ function calcular(saltarSugerencia){
       secciones: parseInt(document.getElementById("in-secciones").value)||2,
       plastificado: document.getElementById("in-plastificado").checked,
       carasPlastificado: parseInt(document.getElementById("in-carasPlastificado").value)||1,
+      extraDesc: document.getElementById("in-extraDesc").value,
+      extraCosto: parseFloat(document.getElementById("in-extraCosto").value)||0,
       utilidadPct: parseFloat(document.getElementById("in-utilidadPct").value)/100,
       comisionPct: parseFloat(document.getElementById("in-comisionPct").value)/100,
     };
@@ -1267,6 +1301,9 @@ function calcular(saltarSugerencia){
     r.acabadosCustomLineas.forEach(a => {
       filas += `<tr><td>${a.nombre}</td><td class="num">${cop(a.costo)}</td></tr>`;
     });
+    if(r.extraCosto>0){
+      filas += `<tr><td>${r.extraDesc||'Proceso adicional'}</td><td class="num">${cop(r.extraCosto)}</td></tr>`;
+    }
     filas += `<tr class="sub"><td>Costo directo total</td><td class="num">${cop(r.costoDirecto)}</td></tr>`;
     filas += `<tr><td>Diseño / Preprensa</td><td class="num">${cop(r.disenoCop)}</td></tr>`;
     filas += `<tr><td>Fondo de Seguridad (${(r.fondoSeguridadPct*100).toFixed(1)}%)</td><td class="num">${cop(r.fondoSeguridadCop)}</td></tr>`;
@@ -1303,6 +1340,8 @@ function calcularIman(){
       tintasTiro: parseInt(document.getElementById("in-tintasTiroIman").value)||0,
       corteTipo: document.getElementById("in-corteIman").value,
       costoTroquelManual: parseFloat(document.getElementById("in-costoTroquelIman").value)||0,
+      extraDesc: document.getElementById("in-extraDesc").value,
+      extraCosto: parseFloat(document.getElementById("in-extraCosto").value)||0,
       utilidadPct: parseFloat(document.getElementById("in-utilidadPct").value)/100,
       comisionPct: parseFloat(document.getElementById("in-comisionPct").value)/100,
     };
@@ -1322,6 +1361,9 @@ function calcularIman(){
     filas += `<tr><td>Impresión — ${viaImpresionTxt}</td><td class="num">${cop(r.detalleImpresion.total)}</td></tr>`;
     filas += `<tr><td>Lámina Imán C5 (${r.piezasPorLamina} pieza(s)/lámina, ${r.nLaminas} lámina(s))</td><td class="num">${cop(r.costoLaminaIman)}</td></tr>`;
     filas += `<tr><td>${viaCorteTxt}</td><td class="num">${cop(r.costoCorte)}</td></tr>`;
+    if(r.extraCosto>0){
+      filas += `<tr><td>${r.extraDesc||'Proceso adicional'}</td><td class="num">${cop(r.extraCosto)}</td></tr>`;
+    }
     filas += `<tr class="sub"><td>Costo directo total</td><td class="num">${cop(r.costoDirecto)}</td></tr>`;
     filas += `<tr><td>Diseño / Preprensa</td><td class="num">${cop(r.disenoCop)}</td></tr>`;
     filas += `<tr><td>Fondo de Seguridad (${(r.fondoSeguridadPct*100).toFixed(1)}%)</td><td class="num">${cop(r.fondoSeguridadCop)}</td></tr>`;
