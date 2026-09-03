@@ -360,7 +360,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="tactical-supabase.js?v=20260828f"></script>
-<script src="precios_tactical.js?v=20260828f"></script>
+<script src="precios_tactical.js?v=20260903a"></script>
 <script>
 /* ============ CONSTANTES REUTILIZADAS DEL MOTOR DE CUADERNOS (ya validadas) ============ */
 const SUSTRATOS = tacticalSeleccionarSustratos([
@@ -796,12 +796,16 @@ function cotizarBolsa(p){
 
   const precioVentaTotal = precioVentaDesdeSubtotal(subtotal, p.utilidadPct, p.comisionPct);
   const precioVentaUnitario = precioVentaTotal/p.cantidad;
-  const ivaTotal = precioVentaTotal*0.19;
+  // Conde 2026-09-02: cliente "Personalizado (Cuenta de Cobro)" no se le cobra ni se le
+  // recibe IVA -- antes se calculaba siempre el 19% sin importar el tipo de cliente.
+  const aplicaIva = p.tipoCliente !== 'personalizado';
+  const ivaTotal = aplicaIva ? precioVentaTotal*0.19 : 0;
   const precioFinalTotal = precioVentaTotal+ivaTotal;
   const gananciaTotal = precioVentaTotal - subtotal;
   const gananciaUnitaria = gananciaTotal/p.cantidad;
 
   return {
+    aplicaIva,
     troquel, anchoMontaje, altoMontaje, piezasBase, detalleImpresion, detalleMaterial,
     fondoPleno:p.fondoPleno, tipoAgarradera:p.tipoAgarradera,
     plastificado:p.plastificado, costoPlastificado,
@@ -906,6 +910,7 @@ function calcular(){
       costoUsoTroquel: parseFloat(document.getElementById("in-costoUsoTroquel").value)||0,
       utilidadPct: parseFloat(document.getElementById("in-utilidadPct").value)/100,
       comisionPct: parseFloat(document.getElementById("in-comisionPct").value)/100,
+      tipoCliente: document.getElementById("in-cli-tipo").value,
     };
     const r = cotizarBolsa(p);
     renderRecomendaciones(r);
@@ -941,8 +946,13 @@ function calcular(){
     filas += `<tr class="sub"><td>Subtotal</td><td class="num">${cop(r.subtotal)}</td></tr>`;
     filas += `<tr><td>Precio de venta (total pedido)</td><td class="num">${cop(r.precioVentaTotal)}</td></tr>`;
     filas += `<tr style="font-weight:bold; color:var(--rojo); font-size:1.05rem; border-top:2px solid var(--rojo);"><td>Precio de venta UNITARIO</td><td class="num">${cop(r.precioVentaUnitario)}</td></tr>`;
-    filas += `<tr><td>IVA (19%)</td><td class="num">${cop(r.ivaTotal)}</td></tr>`;
-    filas += `<tr style="font-weight:bold;"><td>Precio final total (con IVA)</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
+    if(r.aplicaIva){
+      filas += `<tr><td>IVA (19%)</td><td class="num">${cop(r.ivaTotal)}</td></tr>`;
+      filas += `<tr style="font-weight:bold;"><td>Precio final total (con IVA)</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
+    } else {
+      filas += `<tr style="color:var(--texto-suave); font-size:12px;"><td colspan="2">Cliente Personalizado (Cuenta de Cobro): no se calcula IVA.</td></tr>`;
+      filas += `<tr style="font-weight:bold;"><td>Precio final total</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
+    }
     filas += `<tr style="font-weight:bold; color:var(--verde); border-top:2px solid var(--verde);"><td>Ganancia total del pedido (utilidad+comisión, sin IVA)</td><td class="num">${cop(r.gananciaTotal)}</td></tr>`;
     filas += `<tr class="detalle"><td colspan="2">↳ Ganancia por unidad: ${cop(r.gananciaUnitaria)}</td></tr>`;
     filas += `</table>`;

@@ -390,7 +390,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="tactical-supabase.js?v=20260828f"></script>
-<script src="precios_tactical.js?v=20260828f"></script>
+<script src="precios_tactical.js?v=20260903a"></script>
 <script>
 /* ============ CONSTANTES REUTILIZADAS DEL MOTOR DE CUADERNOS (ya validadas) ============ */
 // Conde 2026-08-20: Volantes es la calculadora "comodín" -- debe ofrecer TODOS los papeles del
@@ -861,12 +861,16 @@ function cotizarVolante(p){
 
   const precioVentaTotal = precioVentaDesdeSubtotal(subtotal, p.utilidadPct, p.comisionPct);
   const precioVentaUnitario = precioVentaTotal/p.cantidad;
-  const ivaTotal = precioVentaTotal*0.19;
+  // Conde 2026-09-02: cliente "Personalizado (Cuenta de Cobro)" no se le cobra ni se le
+  // recibe IVA -- antes se calculaba siempre el 19% sin importar el tipo de cliente.
+  const aplicaIva = p.tipoCliente !== 'personalizado';
+  const ivaTotal = aplicaIva ? precioVentaTotal*0.19 : 0;
   const precioFinalTotal = precioVentaTotal+ivaTotal;
   const gananciaTotal = precioVentaTotal - subtotal;
   const gananciaUnitaria = gananciaTotal/p.cantidad;
 
   return {
+    aplicaIva,
     tamano, usaDigital, detalleImpresion, detalleMaterial,
     esPlegable:p.esPlegable, secciones:p.secciones, gramaje,
     tintasTiro:p.tintasTiro, tintasRetiro:p.tintasRetiro,
@@ -948,12 +952,16 @@ function cotizarIman(p){
 
   const precioVentaTotal = precioVentaDesdeSubtotal(subtotal, p.utilidadPct, p.comisionPct);
   const precioVentaUnitario = precioVentaTotal/p.cantidad;
-  const ivaTotal = precioVentaTotal*0.19;
+  // Conde 2026-09-02: cliente "Personalizado (Cuenta de Cobro)" no se le cobra ni se le
+  // recibe IVA -- antes se calculaba siempre el 19% sin importar el tipo de cliente.
+  const aplicaIva = p.tipoCliente !== 'personalizado';
+  const ivaTotal = aplicaIva ? precioVentaTotal*0.19 : 0;
   const precioFinalTotal = precioVentaTotal+ivaTotal;
   const gananciaTotal = precioVentaTotal - subtotal;
   const gananciaUnitaria = gananciaTotal/p.cantidad;
 
   return {
+    aplicaIva,
     esIman:true, usaDigital, detalleImpresion, detalleMaterial, gramaje, tintasTiro:p.tintasTiro,
     piezasPorLamina, nLaminas, costoLaminaIman, detalleCorte, costoCorte,
     extraDesc, extraCosto, costoDirecto, disenoCop, fondoSeguridadPct, fondoSeguridadCop, sherpaCop, transporte,
@@ -1107,7 +1115,7 @@ function renderVolMultiItems(){
     if(box) box.innerHTML = tacticalRenderAcabadosCustomHtml('volantes', `multiitem-acab-${item.id}`);
   });
 }
-function cotizarVolanteMultiItem(items, cantidad, utilidadPct, comisionPct, extraDesc, extraCosto){
+function cotizarVolanteMultiItem(items, cantidad, utilidadPct, comisionPct, extraDesc, extraCosto, tipoCliente){
   let costoDirectoTotal = 0;
   const detallesItems = items.map(item => {
     const r = cotizarVolante({
@@ -1140,7 +1148,10 @@ function cotizarVolanteMultiItem(items, cantidad, utilidadPct, comisionPct, extr
   const subtotal = costoDirectoTotal + disenoCop + fondoSeguridadCop + sherpaCop + transporte.total;
   const precioVentaTotal = precioVentaDesdeSubtotal(subtotal, utilidadPct, comisionPct);
   const precioVentaUnitario = precioVentaTotal/cantidad;
-  const ivaTotal = precioVentaTotal*0.19;
+  // Conde 2026-09-02: cliente "Personalizado (Cuenta de Cobro)" no se le cobra ni se le
+  // recibe IVA -- antes se calculaba siempre el 19% sin importar el tipo de cliente.
+  const aplicaIva = tipoCliente !== 'personalizado';
+  const ivaTotal = aplicaIva ? precioVentaTotal*0.19 : 0;
   const precioFinalTotal = precioVentaTotal+ivaTotal;
   const gananciaTotal = precioVentaTotal - subtotal;
   const gananciaUnitaria = gananciaTotal/cantidad;
@@ -1148,7 +1159,7 @@ function cotizarVolanteMultiItem(items, cantidad, utilidadPct, comisionPct, extr
   return {
     esMultiItem: true, detallesItems, extraDesc, extraCosto, costoDirecto: costoDirectoTotal,
     disenoCop, fondoSeguridadPct, fondoSeguridadCop, sherpaCop, transporte,
-    subtotal, precioVentaTotal, precioVentaUnitario, ivaTotal, precioFinalTotal,
+    subtotal, precioVentaTotal, precioVentaUnitario, aplicaIva, ivaTotal, precioFinalTotal,
     gananciaTotal, gananciaUnitaria, cantidad,
   };
 }
@@ -1163,7 +1174,8 @@ function calcularMultiItem(){
     const comisionPct = parseFloat(document.getElementById("in-comisionPct").value)/100;
     const extraDesc = document.getElementById("in-extraDesc").value;
     const extraCosto = parseFloat(document.getElementById("in-extraCosto").value)||0;
-    const r = cotizarVolanteMultiItem(volMultiItems, cantidad, utilidadPct, comisionPct, extraDesc, extraCosto);
+    const tipoCliente = document.getElementById("in-cli-tipo").value;
+    const r = cotizarVolanteMultiItem(volMultiItems, cantidad, utilidadPct, comisionPct, extraDesc, extraCosto, tipoCliente);
     document.getElementById("recomendaciones-contenido").innerHTML = '';
 
     let filas = `<table class="resultado-tabla">`;
@@ -1186,8 +1198,13 @@ function calcularMultiItem(){
     filas += `<tr class="sub"><td>Subtotal</td><td class="num">${cop(r.subtotal)}</td></tr>`;
     filas += `<tr><td>Precio de venta (total pedido)</td><td class="num">${cop(r.precioVentaTotal)}</td></tr>`;
     filas += `<tr style="font-weight:bold; color:var(--rojo); font-size:1.05rem; border-top:2px solid var(--rojo);"><td>Precio de venta UNITARIO</td><td class="num">${cop(r.precioVentaUnitario)}</td></tr>`;
-    filas += `<tr><td>IVA (19%)</td><td class="num">${cop(r.ivaTotal)}</td></tr>`;
-    filas += `<tr style="font-weight:bold;"><td>Precio final total (con IVA)</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
+    if(r.aplicaIva){
+      filas += `<tr><td>IVA (19%)</td><td class="num">${cop(r.ivaTotal)}</td></tr>`;
+      filas += `<tr style="font-weight:bold;"><td>Precio final total (con IVA)</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
+    } else {
+      filas += `<tr style="color:var(--texto-suave); font-size:12px;"><td colspan="2">Cliente Personalizado (Cuenta de Cobro): no se calcula IVA.</td></tr>`;
+      filas += `<tr style="font-weight:bold;"><td>Precio final total</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
+    }
     filas += `<tr style="font-weight:bold; color:var(--verde); border-top:2px solid var(--verde);"><td>Ganancia total del pedido (utilidad+comisión, sin IVA)</td><td class="num">${cop(r.gananciaTotal)}</td></tr>`;
     filas += `<tr class="detalle"><td colspan="2">↳ Ganancia por unidad: ${cop(r.gananciaUnitaria)}</td></tr>`;
     filas += `</table>`;
@@ -1253,6 +1270,7 @@ function calcular(saltarSugerencia){
       extraCosto: parseFloat(document.getElementById("in-extraCosto").value)||0,
       utilidadPct: parseFloat(document.getElementById("in-utilidadPct").value)/100,
       comisionPct: parseFloat(document.getElementById("in-comisionPct").value)/100,
+      tipoCliente: document.getElementById("in-cli-tipo").value,
     };
     const r = cotizarVolante(p);
 
@@ -1312,8 +1330,13 @@ function calcular(saltarSugerencia){
     filas += `<tr class="sub"><td>Subtotal</td><td class="num">${cop(r.subtotal)}</td></tr>`;
     filas += `<tr><td>Precio de venta (total pedido)</td><td class="num">${cop(r.precioVentaTotal)}</td></tr>`;
     filas += `<tr style="font-weight:bold; color:var(--rojo); font-size:1.05rem; border-top:2px solid var(--rojo);"><td>Precio de venta UNITARIO</td><td class="num">${cop(r.precioVentaUnitario)}</td></tr>`;
-    filas += `<tr><td>IVA (19%)</td><td class="num">${cop(r.ivaTotal)}</td></tr>`;
-    filas += `<tr style="font-weight:bold;"><td>Precio final total (con IVA)</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
+    if(r.aplicaIva){
+      filas += `<tr><td>IVA (19%)</td><td class="num">${cop(r.ivaTotal)}</td></tr>`;
+      filas += `<tr style="font-weight:bold;"><td>Precio final total (con IVA)</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
+    } else {
+      filas += `<tr style="color:var(--texto-suave); font-size:12px;"><td colspan="2">Cliente Personalizado (Cuenta de Cobro): no se calcula IVA.</td></tr>`;
+      filas += `<tr style="font-weight:bold;"><td>Precio final total</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
+    }
     filas += `<tr style="font-weight:bold; color:var(--verde); border-top:2px solid var(--verde);"><td>Ganancia total del pedido (utilidad+comisión, sin IVA)</td><td class="num">${cop(r.gananciaTotal)}</td></tr>`;
     filas += `<tr class="detalle"><td colspan="2">↳ Ganancia por unidad: ${cop(r.gananciaUnitaria)}</td></tr>`;
     filas += `</table>`;
@@ -1344,6 +1367,7 @@ function calcularIman(){
       extraCosto: parseFloat(document.getElementById("in-extraCosto").value)||0,
       utilidadPct: parseFloat(document.getElementById("in-utilidadPct").value)/100,
       comisionPct: parseFloat(document.getElementById("in-comisionPct").value)/100,
+      tipoCliente: document.getElementById("in-cli-tipo").value,
     };
     const r = cotizarIman(p);
     document.getElementById("recomendaciones-contenido").innerHTML = '';
@@ -1372,8 +1396,13 @@ function calcularIman(){
     filas += `<tr class="sub"><td>Subtotal</td><td class="num">${cop(r.subtotal)}</td></tr>`;
     filas += `<tr><td>Precio de venta (total pedido)</td><td class="num">${cop(r.precioVentaTotal)}</td></tr>`;
     filas += `<tr style="font-weight:bold; color:var(--rojo); font-size:1.05rem; border-top:2px solid var(--rojo);"><td>Precio de venta UNITARIO</td><td class="num">${cop(r.precioVentaUnitario)}</td></tr>`;
-    filas += `<tr><td>IVA (19%)</td><td class="num">${cop(r.ivaTotal)}</td></tr>`;
-    filas += `<tr style="font-weight:bold;"><td>Precio final total (con IVA)</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
+    if(r.aplicaIva){
+      filas += `<tr><td>IVA (19%)</td><td class="num">${cop(r.ivaTotal)}</td></tr>`;
+      filas += `<tr style="font-weight:bold;"><td>Precio final total (con IVA)</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
+    } else {
+      filas += `<tr style="color:var(--texto-suave); font-size:12px;"><td colspan="2">Cliente Personalizado (Cuenta de Cobro): no se calcula IVA.</td></tr>`;
+      filas += `<tr style="font-weight:bold;"><td>Precio final total</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
+    }
     filas += `<tr style="font-weight:bold; color:var(--verde); border-top:2px solid var(--verde);"><td>Ganancia total del pedido (utilidad+comisión, sin IVA)</td><td class="num">${cop(r.gananciaTotal)}</td></tr>`;
     filas += `<tr class="detalle"><td colspan="2">↳ Ganancia por unidad: ${cop(r.gananciaUnitaria)}</td></tr>`;
     filas += `</table>`;
@@ -1530,11 +1559,16 @@ function imprimirPDFCliente(datos){
   }).join('');
   // El desglose Subtotal/IVA se calcula siempre a partir del total (IVA plano del 19% en toda
   // la cotización) -- antes se saltaba en los pedidos multi-producto porque no se pasaba ivaTotal.
-  const subtotal = datos.total/1.19;
-  const ivaTotal = datos.total - subtotal;
-  const desgloseHtml = `<table class="doc-table" style="margin-top:6px;">
+  // Conde 2026-09-02: si el cliente es Personalizado (Cuenta de Cobro) no se cobra IVA -- no
+  // inventar un desglose de IVA a partir del total cuando aplicaIva===false.
+  const aplicaIva = datos.aplicaIva !== false;
+  const subtotal = aplicaIva ? datos.total/1.19 : datos.total;
+  const ivaTotal = aplicaIva ? datos.total - subtotal : 0;
+  const desgloseHtml = aplicaIva ? `<table class="doc-table" style="margin-top:6px;">
     <tr><td>Subtotal (sin IVA)</td><td style="text-align:right;">${cop(subtotal)}</td></tr>
     <tr><td>IVA (19%)</td><td style="text-align:right;">${cop(ivaTotal)}</td></tr>
+  </table>` : `<table class="doc-table" style="margin-top:6px;">
+    <tr><td colspan="2" style="font-size:11px; color:#6b7280;">Cliente Cuenta de Cobro -- no se calcula IVA.</td></tr>
   </table>`;
   const html = `
     <div class="doc-header">
@@ -1735,7 +1769,7 @@ async function guardarCotizacionClick(){
   imprimirPDFCliente({
     ot, fecha: new Date(), vendedor, cliente: {empresa: cli.empresa, encargado: cli.nombre, telefono: cli.wp, correo: cli.correo},
     lineas: [{desc, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), precioUnitario: ultimoResultado.precioVentaUnitario, fotoUrl: fotoParaCotizacion('volantes'), videoUrl: videoParaCotizacion('volantes')}],
-    ivaTotal: ultimoResultado.ivaTotal, total: Math.round(ultimoResultado.precioFinalTotal),
+    ivaTotal: ultimoResultado.ivaTotal, total: Math.round(ultimoResultado.precioFinalTotal), aplicaIva: ultimoResultado.aplicaIva,
   });
 }
 
@@ -1863,7 +1897,7 @@ async function iniciarOAgregarPedido(){
     pd = null;
   }
   if(!pd){
-    pd = { ot: await siguienteOT(), idCli: cli.id, nombreCli: tacticalNombreCliente(cli), vendedor, lineas: [], creado: new Date().toISOString() };
+    pd = { ot: await siguienteOT(), idCli: cli.id, nombreCli: tacticalNombreCliente(cli), vendedor, lineas: [], creado: new Date().toISOString(), aplicaIva: ultimoResultado.aplicaIva };
   }
 
   const desc = tacticalTituloCorto(`${ultimoParams.cantidad} ${ultimoResultado.esIman?'Imán':(ultimoParams.esPlegable?'Plegable':'Volante/Afiche')} ${ultimoParams.ancho}x${ultimoParams.alto}cm`, document.getElementById("in-descCliente").value);
@@ -1902,7 +1936,7 @@ function cerrarPedido(){
   imprimirPDFCliente({
     ot: pd.ot, fecha: new Date(), vendedor: pd.vendedor, cliente: {empresa: cliPd.empresa, encargado: cliPd.nombre, telefono: cliPd.wp, correo: cliPd.correo},
     lineas: pd.lineas.map(l=>({desc:l.desc, cantidad:l.cantidad, monto:l.monto, precioUnitario:l.precioUnitario})),
-    total: montoTotal,
+    total: montoTotal, aplicaIva: pd.aplicaIva,
   });
 }
 /* ============ COMPARACIÓN DE OPCIONES (varias variantes, precios SEPARADOS, el cliente
@@ -2014,7 +2048,7 @@ async function agregarOpcionComparacion(){
   }
 
   const titulo = tacticalTituloCorto(`${ultimoParams.cantidad} ${ultimoResultado.esIman?'Imán':(ultimoParams.esPlegable?'Plegable':'Volante/Afiche')} ${ultimoParams.ancho}x${ultimoParams.alto}cm`, document.getElementById("in-descCliente").value);
-  comp.opciones.push({ titulo, params: {cantidad: ultimoParams.cantidad}, resultado: {precioVentaUnitario: ultimoResultado.precioVentaUnitario, precioVentaTotal: ultimoResultado.precioVentaTotal, ivaTotal: ultimoResultado.ivaTotal, precioFinalTotal: ultimoResultado.precioFinalTotal}, fotoUrl: fotoParaCotizacion('volantes'), videoUrl: videoParaCotizacion('volantes') });
+  comp.opciones.push({ titulo, params: {cantidad: ultimoParams.cantidad}, resultado: {precioVentaUnitario: ultimoResultado.precioVentaUnitario, precioVentaTotal: ultimoResultado.precioVentaTotal, aplicaIva: ultimoResultado.aplicaIva, ivaTotal: ultimoResultado.ivaTotal, precioFinalTotal: ultimoResultado.precioFinalTotal}, fotoUrl: fotoParaCotizacion('volantes'), videoUrl: videoParaCotizacion('volantes') });
   fotoPersonalReiniciar();
   window.tacticalComparacionBorradorCache = comp; tacticalGuardarComparacionBorrador(comp);
   refrescarBannerComparacion();
@@ -2048,7 +2082,7 @@ function generarPDFComparativo(){
       <tr><td>Cantidad</td><td style="text-align:right;">${op.params.cantidad}</td></tr>
       <tr><td>Precio unitario</td><td style="text-align:right;">${cop(op.resultado.precioVentaUnitario)}</td></tr>
       <tr><td>Subtotal</td><td style="text-align:right;">${cop(op.resultado.precioVentaTotal)}</td></tr>
-      <tr><td>IVA (19%)</td><td style="text-align:right;">${cop(op.resultado.ivaTotal)}</td></tr>
+      ${op.resultado.aplicaIva!==false ? `<tr><td>IVA (19%)</td><td style="text-align:right;">${cop(op.resultado.ivaTotal)}</td></tr>` : `<tr><td colspan="2" style="font-size:11px; color:#6b7280;">Cliente Cuenta de Cobro -- no se calcula IVA.</td></tr>`}
     </table>
     ${mostrarFoto ? `<img src="${op.fotoUrl}" style="max-width:140px; max-height:140px; margin-bottom:4px; border:1px solid #d7dee5; border-radius:4px;">` : ''}
     ${mostrarVideo ? `<div style="margin-bottom:4px;"><a href="${op.videoUrl}" style="display:inline-block; background:#cc0000; color:#fff; text-decoration:none; padding:4px 10px; border-radius:4px; font-size:0.72rem; font-weight:bold;">▶ Ver video del producto</a></div>` : ''}

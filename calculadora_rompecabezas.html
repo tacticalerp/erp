@@ -312,7 +312,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="tactical-supabase.js?v=20260828f"></script>
-<script src="precios_tactical.js?v=20260828f"></script>
+<script src="precios_tactical.js?v=20260903a"></script>
 <script>
 /* ============ CONSTANTES REUTILIZADAS DEL MOTOR DE CUADERNOS (ya validadas) ============ */
 const SUSTRATOS = tacticalSeleccionarSustratos([
@@ -763,12 +763,16 @@ function cotizarRompecabezas(p){
 
   const precioVentaTotal = precioVentaDesdeSubtotal(subtotal, p.utilidadPct, p.comisionPct);
   const precioVentaUnitario = precioVentaTotal/p.cantidad;
-  const ivaTotal = precioVentaTotal*0.19;
+  // Conde 2026-09-02: cliente "Personalizado (Cuenta de Cobro)" no se le cobra ni se le
+  // recibe IVA -- antes se calculaba siempre el 19% sin importar el tipo de cliente.
+  const aplicaIva = p.tipoCliente !== 'personalizado';
+  const ivaTotal = aplicaIva ? precioVentaTotal*0.19 : 0;
   const precioFinalTotal = precioVentaTotal+ivaTotal;
   const gananciaTotal = precioVentaTotal - subtotal; // utilidad + comisión en pesos (sin IVA, que no es ganancia)
   const gananciaUnitaria = gananciaTotal/p.cantidad;
 
   return {
+    aplicaIva,
     troquel, conMarco, piezasFisicasImpresion, piezasColaminado, usaDigital, anchoMontaje, altoMontaje,
     detalleMaterial, detalleImpresion, detalleBaseMarco,
     costoPlastificado, costoColaminado, costoColaminadoManoObra, costoBackingMaterial, detalleBacking, backingEtiqueta,
@@ -913,6 +917,7 @@ function calcular(){
       cabeEnMoto: document.getElementById("in-cabeEnMoto").checked,
       utilidadPct: parseFloat(document.getElementById("in-utilidadPct").value)/100,
       comisionPct: parseFloat(document.getElementById("in-comisionPct").value)/100,
+      tipoCliente: document.getElementById("in-cli-tipo").value,
     };
     if(p.troquelEsNuevo && (!p.anchoNuevoCm || !p.altoNuevoCm)){
       alert("Para un troquel nuevo, ingresa el ancho y el alto reales (no se puede calcular el papel/cartón sin esa medida).");
@@ -960,8 +965,13 @@ function calcular(){
     // unitario se recalculan en cadena venta total, IVA, final y ganancia (el costo base -- subtotal --
     // no cambia, así que la ganancia sigue siendo un número real, no inflado).
     filas += `<tr style="font-weight:bold; color:var(--rojo); font-size:1.05rem; border-top:2px solid var(--rojo);"><td>Precio de venta UNITARIO <span style="font-weight:normal; font-size:11px; color:var(--texto-suave);">(editable)</span></td><td class="num"><input type="text" id="precio-unitario-input" value="${Math.round(r.precioVentaUnitario).toLocaleString('es-CO')}" style="width:130px; text-align:right; font-weight:bold; color:var(--rojo); font-size:1rem; border:1px solid var(--borde); border-radius:4px; padding:4px 6px;" onchange="ajustarPrecioManualRompecabezas(this.value)"></td></tr>`;
-    filas += `<tr><td>IVA (19%)</td><td class="num" id="celda-iva">${cop(r.ivaTotal)}</td></tr>`;
-    filas += `<tr style="font-weight:bold;"><td>Precio final total (con IVA)</td><td class="num" id="celda-final">${cop(r.precioFinalTotal)}</td></tr>`;
+    if(r.aplicaIva){
+      filas += `<tr><td>IVA (19%)</td><td class="num" id="celda-iva">${cop(r.ivaTotal)}</td></tr>`;
+      filas += `<tr style="font-weight:bold;"><td>Precio final total (con IVA)</td><td class="num" id="celda-final">${cop(r.precioFinalTotal)}</td></tr>`;
+    } else {
+      filas += `<tr style="color:var(--texto-suave); font-size:12px;"><td colspan="2">Cliente Personalizado (Cuenta de Cobro): no se calcula IVA.</td></tr>`;
+      filas += `<tr style="font-weight:bold;"><td>Precio final total</td><td class="num" id="celda-final">${cop(r.precioFinalTotal)}</td></tr>`;
+    }
     filas += `<tr style="font-weight:bold; color:var(--verde); border-top:2px solid var(--verde);"><td>Ganancia total del pedido (utilidad+comisión, sin IVA)</td><td class="num" id="celda-ganancia-total">${cop(r.gananciaTotal)}</td></tr>`;
     filas += `<tr class="detalle"><td colspan="2">↳ Ganancia por unidad: <span id="celda-ganancia-unit">${cop(r.gananciaUnitaria)}</span></td></tr>`;
     filas += `</table>`;
@@ -991,13 +1001,16 @@ function ajustarPrecioManualRompecabezas(valorTexto){
   const cantidad = ultimoParams.cantidad;
   r.precioVentaUnitario = nuevoUnitario;
   r.precioVentaTotal = nuevoUnitario * cantidad;
-  r.ivaTotal = Math.round(r.precioVentaTotal * 0.19);
+  // Conde 2026-09-02: cliente Personalizado (Cuenta de Cobro) no se le cobra IVA -- respetar
+  // r.aplicaIva (ya calculado en cotizarRompecabezas) también en el ajuste manual de precio.
+  r.ivaTotal = r.aplicaIva ? Math.round(r.precioVentaTotal * 0.19) : 0;
   r.precioFinalTotal = r.precioVentaTotal + r.ivaTotal;
   r.gananciaTotal = r.precioVentaTotal - r.subtotal;
   r.gananciaUnitaria = Math.round(r.gananciaTotal / cantidad);
   if(input) input.value = nuevoUnitario.toLocaleString('es-CO');
   document.getElementById('celda-venta-total').textContent = cop(r.precioVentaTotal);
-  document.getElementById('celda-iva').textContent = cop(r.ivaTotal);
+  const celdaIva = document.getElementById('celda-iva');
+  if(celdaIva) celdaIva.textContent = cop(r.ivaTotal);
   document.getElementById('celda-final').textContent = cop(r.precioFinalTotal);
   document.getElementById('celda-ganancia-total').textContent = cop(r.gananciaTotal);
   document.getElementById('celda-ganancia-unit').textContent = cop(r.gananciaUnitaria);
@@ -1145,9 +1158,14 @@ function imprimirPDFCliente(datos){
   }).join('');
   // El desglose Subtotal/IVA se calcula siempre a partir del total (IVA plano del 19% en toda
   // la cotización) -- antes se saltaba en los pedidos multi-producto porque no se pasaba ivaTotal.
-  const subtotal = datos.total/1.19;
-  const ivaTotal = datos.total - subtotal;
-  const desgloseHtml = `<table class="doc-table" style="margin-top:6px;">
+  // Conde 2026-09-02: si el cliente es Personalizado (Cuenta de Cobro) no se cobra IVA -- no
+  // inventar un desglose de IVA a partir del total cuando aplicaIva===false.
+  const aplicaIva = datos.aplicaIva !== false;
+  const subtotal = aplicaIva ? datos.total/1.19 : datos.total;
+  const ivaTotal = aplicaIva ? datos.total - subtotal : 0;
+  const desgloseHtml = !aplicaIva ? `<table class="doc-table" style="margin-top:6px;">
+    <tr><td colspan="2" style="font-size:11px; color:#6b7280;">Cliente Cuenta de Cobro -- no se calcula IVA.</td></tr>
+  </table>` : `<table class="doc-table" style="margin-top:6px;">
     <tr><td>Subtotal (sin IVA)</td><td style="text-align:right;">${cop(subtotal)}</td></tr>
     <tr><td>IVA (19%)</td><td style="text-align:right;">${cop(ivaTotal)}</td></tr>
   </table>`;
@@ -1320,7 +1338,7 @@ async function guardarCotizacionClick(){
   imprimirPDFCliente({
     ot, fecha: new Date(), vendedor, cliente: {empresa: cli.empresa, encargado: cli.nombre, telefono: cli.wp, correo: cli.correo},
     lineas: [{desc, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), precioUnitario: ultimoResultado.precioVentaUnitario, fotoUrl: fotoParaCotizacion('rompecabezas'), videoUrl: videoParaCotizacion('rompecabezas')}],
-    ivaTotal: ultimoResultado.ivaTotal, total: Math.round(ultimoResultado.precioFinalTotal),
+    ivaTotal: ultimoResultado.ivaTotal, total: Math.round(ultimoResultado.precioFinalTotal), aplicaIva: ultimoResultado.aplicaIva,
   });
 }
 
@@ -1435,7 +1453,7 @@ async function iniciarOAgregarPedido(){
     pd = null;
   }
   if(!pd){
-    pd = { ot: await siguienteOT(), idCli: cli.id, nombreCli: tacticalNombreCliente(cli), vendedor, lineas: [], creado: new Date().toISOString() };
+    pd = { ot: await siguienteOT(), idCli: cli.id, nombreCli: tacticalNombreCliente(cli), vendedor, lineas: [], creado: new Date().toISOString(), aplicaIva: ultimoResultado.aplicaIva };
   }
 
   const desc = tacticalTituloCorto(`${ultimoParams.cantidad} Rompecabezas ${ultimoResultado.troquel.id} (${ultimoResultado.troquel.fichas} fichas)`, document.getElementById("in-descCliente").value);
@@ -1478,7 +1496,7 @@ function cerrarPedido(){
   imprimirPDFCliente({
     ot: pd.ot, fecha: new Date(), vendedor: pd.vendedor, cliente: {empresa: cliPd.empresa, encargado: cliPd.nombre, telefono: cliPd.wp, correo: cliPd.correo},
     lineas: pd.lineas.map(l=>({desc:l.desc, cantidad:l.cantidad, monto:l.monto, precioUnitario:l.precioUnitario})),
-    total: montoTotal,
+    total: montoTotal, aplicaIva: pd.aplicaIva,
   });
 }
 /* ============ COMPARACIÓN DE OPCIONES (varias variantes, precios SEPARADOS, el cliente
@@ -1590,7 +1608,7 @@ async function agregarOpcionComparacion(){
   }
 
   const titulo = tacticalTituloCorto(`${ultimoParams.cantidad} Rompecabezas ${ultimoResultado.troquel.id} (${ultimoResultado.troquel.fichas} fichas)`, document.getElementById("in-descCliente").value);
-  comp.opciones.push({ titulo, params: {cantidad: ultimoParams.cantidad}, resultado: {precioVentaUnitario: ultimoResultado.precioVentaUnitario, precioVentaTotal: ultimoResultado.precioVentaTotal, ivaTotal: ultimoResultado.ivaTotal, precioFinalTotal: ultimoResultado.precioFinalTotal}, fotoUrl: fotoParaCotizacion('rompecabezas'), videoUrl: videoParaCotizacion('rompecabezas') });
+  comp.opciones.push({ titulo, params: {cantidad: ultimoParams.cantidad}, resultado: {precioVentaUnitario: ultimoResultado.precioVentaUnitario, precioVentaTotal: ultimoResultado.precioVentaTotal, aplicaIva: ultimoResultado.aplicaIva, ivaTotal: ultimoResultado.ivaTotal, precioFinalTotal: ultimoResultado.precioFinalTotal}, fotoUrl: fotoParaCotizacion('rompecabezas'), videoUrl: videoParaCotizacion('rompecabezas') });
   fotoPersonalReiniciar();
   window.tacticalComparacionBorradorCache = comp; tacticalGuardarComparacionBorrador(comp);
   refrescarBannerComparacion();
@@ -1624,7 +1642,7 @@ function generarPDFComparativo(){
       <tr><td>Cantidad</td><td style="text-align:right;">${op.params.cantidad}</td></tr>
       <tr><td>Precio unitario</td><td style="text-align:right;">${cop(op.resultado.precioVentaUnitario)}</td></tr>
       <tr><td>Subtotal</td><td style="text-align:right;">${cop(op.resultado.precioVentaTotal)}</td></tr>
-      <tr><td>IVA (19%)</td><td style="text-align:right;">${cop(op.resultado.ivaTotal)}</td></tr>
+      ${op.resultado.aplicaIva!==false ? `<tr><td>IVA (19%)</td><td style="text-align:right;">${cop(op.resultado.ivaTotal)}</td></tr>` : `<tr><td colspan="2" style="font-size:11px; color:#6b7280;">Cliente Cuenta de Cobro -- no se calcula IVA.</td></tr>`}
     </table>
     ${mostrarFoto ? `<img src="${op.fotoUrl}" style="max-width:140px; max-height:140px; margin-bottom:4px; border:1px solid #d7dee5; border-radius:4px;">` : ''}
     ${mostrarVideo ? `<div style="margin-bottom:4px;"><a href="${op.videoUrl}" style="display:inline-block; background:#cc0000; color:#fff; text-decoration:none; padding:4px 10px; border-radius:4px; font-size:0.72rem; font-weight:bold;">▶ Ver video del producto</a></div>` : ''}

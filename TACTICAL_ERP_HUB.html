@@ -1903,7 +1903,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="tactical-supabase.js?v=20260828f"></script>
-    <script src="precios_tactical.js?v=20260828f"></script>
+    <script src="precios_tactical.js?v=20260903a"></script>
     <script src="precios_promocionales.js"></script>
     <script>
         // NAVEGACIÓN SPA DEL HUB
@@ -4330,7 +4330,7 @@
           // Miniatura de foto (hoy solo la usa Rompecabezas B2C) -- guía visual rápida en producción,
           // se ve cuál es la foto del pedido sin tener que abrir nada más (Conde 2026-08-12).
           const primeraFoto = (f.lineas||[]).map(l=>l.fotoUrl).find(Boolean) || ((f.fotos||[])[0] ? f.fotos[0].url : null);
-          const fotoHtml = primeraFoto ? `<img src="${primeraFoto}" alt="${f.nombreCli}" title="${f.nombreCli}" style="width:110px; height:110px; object-fit:cover; border-radius:6px; float:left; margin:0 10px 6px 0; border:1px solid #e2e8f0;">` : '';
+          const fotoHtml = primeraFoto ? `<img src="${primeraFoto}" alt="${f.nombreCli}" title="Toca para ver completa" style="width:110px; height:110px; object-fit:cover; border-radius:6px; float:left; margin:0 10px 6px 0; border:1px solid #e2e8f0; cursor:zoom-in;" onclick="event.stopPropagation(); tacticalAmpliarImagen('${primeraFoto}','${f.nombreCli}')">` : '';
           // Título recortado a ~40 caracteres (no CSS ellipsis -- con tarjetas angostas de 300px el
           // ellipsis por ancho fallaba en textos muy largos) con clic para ver el texto completo,
           // guardando ambas versiones ya en el DOM para no depender de re-escapar el texto (Conde 2026-08-13).
@@ -4358,7 +4358,7 @@
           // título más corto (igual se puede tocar la tarjeta entera para ver el resto), sin la
           // etiqueta "Descripción", sin notas/entrega/aprobación -- y la fecha de entrega en una
           // pastilla corta ("📅 4d" en vez de la fecha completa) para que no se vaya a 2 líneas.
-          const fotoCompactaHtml = primeraFoto ? `<img src="${primeraFoto}" alt="${f.nombreCli}" title="${f.nombreCli}" style="width:56px; height:56px; object-fit:cover; border-radius:6px; float:left; margin:0 8px 4px 0; border:1px solid #e2e8f0;">` : '';
+          const fotoCompactaHtml = primeraFoto ? `<img src="${primeraFoto}" alt="${f.nombreCli}" title="Toca para ver completa" style="width:56px; height:56px; object-fit:cover; border-radius:6px; float:left; margin:0 8px 4px 0; border:1px solid #e2e8f0; cursor:zoom-in;" onclick="event.stopPropagation(); tacticalAmpliarImagen('${primeraFoto}','${f.nombreCli}')">` : '';
           const tituloCortoCompacto = cotTextoConNegrilla(tituloTexto.length > 26 ? tituloTexto.slice(0,26).trim() + '…' : tituloTexto);
           let dueCompactoHtml;
           if(f.fechaEntrega){
@@ -4417,9 +4417,9 @@
           // automática arriba) pero disponible en cualquier ficha (Conde 2026-08-12).
           const fotosGaleriaHtml = (f.fotos||[]).map((foto,i) => `
             <div class="kanban-foto-item">
-              <img src="${foto.url}" alt="${foto.etiqueta||''}" title="${foto.etiqueta||''}">
+              <img src="${foto.url}" alt="${foto.etiqueta||''}" title="Toca para ver completa" style="cursor:zoom-in;" onclick="event.stopPropagation(); tacticalAmpliarImagen('${foto.url}','${foto.etiqueta||''}')">
               <div class="kanban-foto-etiqueta">${foto.etiqueta||'Sin nombre'}</div>
-              <button class="kanban-foto-del" onclick="eliminarFotoFicha('${f.id}',${i})" title="Quitar esta imagen">×</button>
+              <button class="kanban-foto-del" onclick="event.stopPropagation(); eliminarFotoFicha('${f.id}',${i})" title="Quitar esta imagen">×</button>
             </div>`).join('');
           const fotosSectionHtml = `
             <div style="margin-top:10px;">
@@ -5268,7 +5268,7 @@
           verPDFGenerico({
             ot: opp.ot||'', fecha: fechaDeRegistro(opp) || new Date(), vendedor: opp.vendedor,
             cliente: {empresa: cli.empresa, encargado: cli.nombre, telefono: cli.wp, correo: cli.correo},
-            lineas, total: opp.monto,
+            lineas, total: opp.monto, aplicaIva: cli.tipo !== 'personalizado',
           });
         }
         function verPDFComparativoGuardado(opp){
@@ -5290,7 +5290,7 @@
               <tr><td>Cantidad</td><td style="text-align:right;">${op.params.cantidad}</td></tr>
               <tr><td>Precio unitario</td><td style="text-align:right;">${cotFormatoCop(op.resultado.precioVentaUnitario)}</td></tr>
               <tr><td>Subtotal</td><td style="text-align:right;">${cotFormatoCop(op.resultado.precioVentaTotal)}</td></tr>
-              <tr><td>IVA (19%)</td><td style="text-align:right;">${cotFormatoCop(op.resultado.ivaTotal)}</td></tr>
+              ${op.resultado.aplicaIva!==false ? `<tr><td>IVA (19%)</td><td style="text-align:right;">${cotFormatoCop(op.resultado.ivaTotal)}</td></tr>` : `<tr><td colspan="2" style="font-size:11px; color:#6b7280;">Cliente Cuenta de Cobro -- no se calcula IVA.</td></tr>`}
             </table>
             ${mostrarFoto ? `<img src="${op.fotoUrl}" style="max-width:140px; max-height:140px; margin-bottom:4px; border:1px solid #d7dee5; border-radius:4px;">` : ''}
             ${mostrarVideo ? `<div style="margin-bottom:4px;"><a href="${op.videoUrl}" style="display:inline-block; background:#cc0000; color:#fff; text-decoration:none; padding:4px 10px; border-radius:4px; font-size:0.72rem; font-weight:bold;">▶ Ver video del producto</a></div>` : ''}
@@ -5350,11 +5350,16 @@
             const unitario = l.precioUnitario!=null ? l.precioUnitario : (l.monto/cant/1.19);
             return `<tr><td><div style="display:flex; align-items:center; gap:6px;">${l.fotoUrl?`<img src="${l.fotoUrl}" style="width:90px; height:90px; object-fit:contain; background:#f8fafc; border:1px solid #cbd5e0; border-radius:4px; flex-shrink:0;">`:''}<div>${cotTextoConNegrilla(l.desc)}${l.videoUrl?`<br><a href="${l.videoUrl}" style="color:#cc0000; text-decoration:none; font-size:0.65rem; font-weight:bold;">▶ Ver video del producto</a>`:''}</div></div></td><td style="text-align:right;">${l.cantidad||'-'}</td><td style="text-align:right;">${cotFormatoCop(unitario)}</td><td style="text-align:right;">${cotFormatoCop(l.monto)}</td></tr>`;
           }).join('');
-          const subtotalPedido = datos.total/1.19;
-          const ivaTotalPedido = datos.total - subtotalPedido;
-          const desglosePedidoHtml = `<table class="doc-table" style="margin-top:6px;">
+          // Conde 2026-09-02: si el cliente es Personalizado (Cuenta de Cobro) no se cobra IVA -- no
+          // inventar un desglose de IVA a partir del total cuando aplicaIva===false.
+          const aplicaIvaPedido = datos.aplicaIva !== false;
+          const subtotalPedido = aplicaIvaPedido ? datos.total/1.19 : datos.total;
+          const ivaTotalPedido = aplicaIvaPedido ? datos.total - subtotalPedido : 0;
+          const desglosePedidoHtml = aplicaIvaPedido ? `<table class="doc-table" style="margin-top:6px;">
             <tr><td>Subtotal (sin IVA)</td><td style="text-align:right;">${cotFormatoCop(subtotalPedido)}</td></tr>
             <tr><td>IVA (19%)</td><td style="text-align:right;">${cotFormatoCop(ivaTotalPedido)}</td></tr>
+          </table>` : `<table class="doc-table" style="margin-top:6px;">
+            <tr><td colspan="2" style="font-size:11px; color:#6b7280;">Cliente Cuenta de Cobro -- no se calcula IVA.</td></tr>
           </table>`;
           const html = `
             <div class="doc-header">
@@ -6076,12 +6081,16 @@
           if(p.lineaProducto==="agenda_ejecutiva") transporteCop *= TRANSPORTE_AGENDA_EJECUTIVA_FACTOR;
           const subtotal = subtotalPreTransporte+transporteCop;
           const precioVenta=precioVentaDesdeSubtotal(subtotal,p.utilidadPct,p.ventasPct);
-          const iva=precioVenta*IVA_PCT;
+          // Conde 2026-09-02: cliente "Personalizado (Cuenta de Cobro)" no se le cobra ni se le
+          // recibe IVA -- antes se calculaba siempre el 19% sin importar el tipo de cliente.
+          const aplicaIva = p.tipoCliente !== 'personalizado';
+          const iva=aplicaIva ? precioVenta*IVA_PCT : 0;
           const precioFinal=precioVenta+iva;
           const precioVentaUnitario=precioVenta/p.cantidad;
           const gananciaTotal = precioVenta - subtotal; // utilidad + comisión en pesos (sin IVA, que no es ganancia)
           const gananciaUnitaria = gananciaTotal/p.cantidad;
           return {
+            aplicaIva,
             desgloseDirecto:desglose, detalleLineas, costoDirectoTotal:costoDirecto, costoDirectoUnitario:costoDirecto/p.cantidad,
             disenoCop, fondoSeguridadCop, fondoSeguridadPct, empaqueCop, sherpaCop, transporteCop, subtotal,
             utilidadPct:p.utilidadPct, ventasPct:p.ventasPct, precioVentaTotal:precioVenta, precioVentaUnitario,
@@ -6334,6 +6343,7 @@
               anilladoDosSecciones: document.getElementById("cot-anillado2Secciones").checked,
               utilidadPct: parseFloat(document.getElementById("cot-utilidadPct").value)/100,
               ventasPct: parseFloat(document.getElementById("cot-ventasPct").value)/100,
+              tipoCliente: document.getElementById("cot-cli-tipo").value,
             };
             const r = cotizarCuaderno(p);
             cotUltimoResultado = r; cotUltimoParams = p;
@@ -6397,8 +6407,13 @@
           filas += `<tr style="font-weight:bold; border-top:2px solid #cbd5e0;"><td>Subtotal</td><td style="text-align:right;">${cotFormatoCop(r.subtotal)}</td></tr>`;
           filas += `<tr><td>Precio de venta (total pedido)</td><td style="text-align:right;">${cotFormatoCop(r.precioVentaTotal)}</td></tr>`;
           filas += `<tr style="font-weight:bold; color:var(--primary); font-size:1.05rem; border-top:2px solid var(--primary);"><td>Precio de venta UNITARIO</td><td style="text-align:right;">${cotFormatoCop(r.precioVentaUnitario)}</td></tr>`;
-          filas += `<tr><td>IVA (19%)</td><td style="text-align:right;">${cotFormatoCop(r.ivaTotal)}</td></tr>`;
-          filas += `<tr style="font-weight:bold;"><td>Precio final total (con IVA)</td><td style="text-align:right;">${cotFormatoCop(r.precioFinalTotal)}</td></tr>`;
+          if(r.aplicaIva){
+            filas += `<tr><td>IVA (19%)</td><td style="text-align:right;">${cotFormatoCop(r.ivaTotal)}</td></tr>`;
+            filas += `<tr style="font-weight:bold;"><td>Precio final total (con IVA)</td><td style="text-align:right;">${cotFormatoCop(r.precioFinalTotal)}</td></tr>`;
+          } else {
+            filas += `<tr style="color:#718096; font-size:0.8rem;"><td colspan="2">Cliente Personalizado (Cuenta de Cobro): no se calcula IVA.</td></tr>`;
+            filas += `<tr style="font-weight:bold;"><td>Precio final total</td><td style="text-align:right;">${cotFormatoCop(r.precioFinalTotal)}</td></tr>`;
+          }
           filas += `<tr style="font-weight:bold; color:var(--ganado); border-top:2px solid var(--ganado);"><td>Ganancia total del pedido (utilidad+comisión, sin IVA)</td><td style="text-align:right;">${cotFormatoCop(r.gananciaTotal)}</td></tr>`;
           filas += `<tr style="color:#718096; font-size:0.85rem;"><td style="padding-left:12px;">↳ Ganancia por unidad</td><td style="text-align:right;">${cotFormatoCop(r.gananciaUnitaria)}</td></tr>`;
           filas += `</table>`;
@@ -6806,7 +6821,7 @@
             pd = null;
           }
           if(!pd){
-            pd = { ot: await cotSiguienteOT(), idCli: cli.id, nombreCli: tacticalNombreCliente(cli), vendedor, lineas: [], creado: new Date().toISOString() };
+            pd = { ot: await cotSiguienteOT(), idCli: cli.id, nombreCli: tacticalNombreCliente(cli), vendedor, lineas: [], creado: new Date().toISOString(), aplicaIva: cotUltimoResultado.aplicaIva };
           }
 
           const r = cotUltimoResultado, p = cotUltimoParams;
@@ -6855,7 +6870,7 @@
             verPDFGenerico({
               ot: pd.ot, fecha: new Date(), vendedor: pd.vendedor, cliente: {empresa: cliPd.empresa, encargado: cliPd.nombre, telefono: cliPd.wp, correo: cliPd.correo},
               lineas: [{desc:l.desc, cantidad:l.cantidad, monto:l.monto, precioUnitario:l.precioUnitario}],
-              total: montoTotal,
+              total: montoTotal, aplicaIva: pd.aplicaIva,
             });
             return;
           }
@@ -6871,7 +6886,7 @@
           verPDFGenerico({
             ot: pd.ot, fecha: new Date(), vendedor: pd.vendedor, cliente: {empresa: cliPd.empresa, encargado: cliPd.nombre, telefono: cliPd.wp, correo: cliPd.correo},
             lineas: pd.lineas.map(l=>({desc:l.desc, cantidad:l.cantidad, monto:l.monto, precioUnitario:l.precioUnitario})),
-            total: montoTotal,
+            total: montoTotal, aplicaIva: pd.aplicaIva,
           });
         }
         function cotCancelarPedido(){
@@ -6969,7 +6984,7 @@
                 <tr><th>Producto</th><td>${nombresLinea[p.lineaProducto]}</td><th>Cantidad</th><td>${p.cantidad} unidades</td></tr>
                 <tr><th>Tamaño</th><td>${p.anchoCm} x ${p.altoCm} cm</td><th>Tapa</th><td>${nombresTapa[p.tapaTipo]}</td></tr>
                 <tr><th>Precio unitario</th><td>${cotFormatoCop(r.precioVentaUnitario)}</td><th>Subtotal</th><td>${cotFormatoCop(r.precioVentaTotal)}</td></tr>
-                <tr><th>IVA (19%)</th><td colspan="3">${cotFormatoCop(r.ivaTotal)}</td></tr>
+                ${r.aplicaIva!==false ? `<tr><th>IVA (19%)</th><td colspan="3">${cotFormatoCop(r.ivaTotal)}</td></tr>` : `<tr><td colspan="4" style="font-size:11px; color:#6b7280;">Cliente Cuenta de Cobro -- no se calcula IVA.</td></tr>`}
               </table>
               ${mostrarFoto ? `<img src="${op.fotoUrl}" style="max-width:140px; max-height:140px; margin-bottom:4px; border:1px solid #d7dee5; border-radius:4px;">` : ''}
               ${mostrarVideo ? `<div style="margin-bottom:4px;"><a href="${op.videoUrl}" style="display:inline-block; background:#cc0000; color:#fff; text-decoration:none; padding:4px 10px; border-radius:4px; font-size:0.72rem; font-weight:bold;">▶ Ver video del producto</a></div>` : ''}
@@ -7042,7 +7057,7 @@
                 <tr><th>Producto</th><td>${nombresLinea[p.lineaProducto]}</td><th>Cantidad</th><td>${p.cantidad} unidades</td></tr>
                 <tr><th>Tamaño</th><td>${p.anchoCm} x ${p.altoCm} cm</td><th>Tapa</th><td>${nombresTapa[p.tapaTipo]}</td></tr>
                 <tr><th>Precio unitario</th><td>${cotFormatoCop(r.precioVentaUnitario)}</td><th>Subtotal</th><td>${cotFormatoCop(r.precioVentaTotal)}</td></tr>
-                <tr><th>IVA (19%)</th><td colspan="3">${cotFormatoCop(r.ivaTotal)}</td></tr>
+                ${r.aplicaIva!==false ? `<tr><th>IVA (19%)</th><td colspan="3">${cotFormatoCop(r.ivaTotal)}</td></tr>` : `<tr><td colspan="4" style="font-size:11px; color:#6b7280;">Cliente Cuenta de Cobro -- no se calcula IVA.</td></tr>`}
                 ${cot.desc ? `<tr><th>Descripción</th><td colspan="3">${cotTextoConNegrilla(cot.desc)}</td></tr>` : ''}
               </table>
             </div>

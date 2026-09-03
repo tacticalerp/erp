@@ -186,6 +186,27 @@ function tacticalPedirMotivoPerdidaFlotante(){
     };
   });
 }
+// Conde 2026-09-03: "al tocar la imagen del kanban se pueda ampliar... por ubicación es cuadrada
+// y varias son horizontales o verticales y se pierde el detalle que esté fuera del cuadro" -- las
+// miniaturas (ficha, tarjeta compacta, galería de referencia) usan object-fit:cover en un cuadro
+// fijo para verse parejas en la grilla, lo que recorta fotos que no son cuadradas. Esta ventana
+// flotante muestra la imagen completa (object-fit:contain, sin recorte) al tocarla. Compartida
+// (no solo Kanban) por si otra pantalla necesita lo mismo a futuro.
+function tacticalAmpliarImagen(url, etiqueta){
+  if(!url) return;
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed; inset:0; background:rgba(26,32,44,0.88); z-index:100000; display:flex; align-items:center; justify-content:center; padding:24px; cursor:zoom-out;';
+  overlay.innerHTML = `
+    <div style="max-width:92vw; max-height:92vh; display:flex; flex-direction:column; align-items:center; cursor:default;" onclick="event.stopPropagation();">
+      <img src="${url}" alt="${etiqueta||''}" style="max-width:92vw; max-height:82vh; object-fit:contain; border-radius:6px; box-shadow:0 12px 40px rgba(0,0,0,0.5); display:block;">
+      ${etiqueta ? `<div style="color:#fff; font-size:0.85rem; margin-top:10px; text-align:center;">${etiqueta}</div>` : ''}
+    </div>
+    <button type="button" title="Cerrar" style="position:absolute; top:16px; right:20px; background:rgba(255,255,255,0.15); border:none; color:#fff; width:36px; height:36px; border-radius:50%; font-size:1.3rem; cursor:pointer; line-height:1;">×</button>`;
+  overlay.onclick = () => overlay.remove();
+  overlay.querySelector('button').onclick = () => overlay.remove();
+  document.body.appendChild(overlay);
+}
+
 // precios_tactical.js
 // Fuente única de precios de insumos compartidos entre las 8 herramientas de Tactical ERP.
 // Se carga con <script src="precios_tactical.js"></script> ANTES del script principal de
@@ -860,6 +881,9 @@ const TACTICAL_SVG_ICONOS = {
   notebook: '<rect x="7" y="2" width="15" height="20" rx="1"></rect><circle cx="4" cy="5" r="1.2"></circle><circle cx="4" cy="9" r="1.2"></circle><circle cx="4" cy="13" r="1.2"></circle><circle cx="4" cy="17" r="1.2"></circle><circle cx="4" cy="21" r="1.2"></circle>',
   // Reloj -- botón de "programar seguimiento" en Comercial.
   clock: '<circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>',
+  // Conde 2026-09-01: burbuja de chat con carita de robot -- botón flotante de Bot Tactical.
+  // Pidió explícitamente un ícono "más sencillo" en vez del emoji 🤖, mismo estilo de línea delgada.
+  botChat: '<path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7l-4 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"></path><line x1="12" y1="4" x2="12" y2="1.5"></line><circle cx="12" cy="1" r="0.6"></circle><circle cx="9" cy="10" r="1"></circle><circle cx="15" cy="10" r="1"></circle><line x1="9" y1="14" x2="15" y2="14"></line>',
 };
 function ticon(nombre, opts){
   opts = opts || {};
