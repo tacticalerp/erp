@@ -44,6 +44,8 @@ const CORS_HEADERS = {
 // Datos técnicos REALES de Tactical (sacados directo del motor de cálculo del ERP -- precios_tactical.js
 // y las calculadoras, no son un valor genérico de la industria). Conde 2026-09-01: primer dato real
 // conectado al bot, para que no compita con la respuesta genérica que cualquier IA ya da gratis.
+// Conde 2026-09-03: sumó el catálogo de papeles/cartulinas (Panel de Precios) y los troqueles de
+// Cajas, Carpetas y Bolsas (Rompecabezas ya estaba desde el 09-01).
 // Si Conde ajusta alguno de estos valores en el motor de precios, hay que actualizarlo también acá a
 // mano -- no se leen automáticamente todavía (eso sería la siguiente mejora de este mismo mecanismo).
 const DATOS_TECNICOS_REALES = `
@@ -73,6 +75,100 @@ Láser Círculo:
 50f (diámetro 32cm) $73.000 | 110f (diámetro 32cm) $83.000 | 700f (diámetro 60cm) $219.000
 
 Nota importante sobre esta línea: los precios de Rompecabezas Láser SÍ son precio de lista fijo (no dependen de una fórmula variable), por eso se pueden dar directo. Aplica 20% de descuento automático en cada unidad PAR del pedido (2a, 4a, 6a...) si preguntan por varias unidades. El resto de líneas del ERP (Cuadernos, Volantes, Carpetas, Bolsas, Cajas, Cubo Rubik, Promocionales) NO tienen precio de lista fijo -- sus precios dependen de cantidad/material/tintas y requieren el motor de cálculo real, que todavía no está conectado a este bot.
+
+CATÁLOGO DE PAPELES Y CARTULINAS (precio por PLIEGO completo, en COP -- sacado de precios_tactical.js, PRECIOS_BASE_SUSTRATOS. "N/D" = ese gramaje no se maneja en ese tamaño de pliego. OJO: si Conde cambió alguno de estos precios desde el Panel de Precios del Hub, ese ajuste vive en el navegador de Conde y NO se refleja acá automáticamente -- si el precio se ve muy distinto a lo que él recuerda, acláraselo en vez de insistir en el valor de esta lista):
+Bond 60g: pliego 60x90 $177 | pliego 70x100 $230
+Bond 70g: pliego 60x90 $206 | pliego 70x100 $267
+Bond 75g: pliego 60x90 $221 | pliego 70x100 $287
+Bond 90g: pliego 60x90 $266 | pliego 70x100 $344
+Bond 115g: pliego 60x90 N/D | pliego 70x100 $459
+Propalcote 80g: pliego 60x90 N/D | pliego 70x100 $309
+Propalcote 90g: pliego 60x90 $267 | pliego 70x100 $348
+Propalcote 115g: pliego 60x90 $344 | pliego 70x100 $448
+Propalcote 150g: pliego 60x90 $473 | pliego 70x100 $613
+Propalcote 200g: pliego 60x90 $604 | pliego 70x100 $810
+Propalcote 240g: pliego 60x90 $807 | pliego 70x100 $1.050
+Propalcote 300g: pliego 60x90 $911 | pliego 70x100 $1.183
+Propalcote 350g: pliego 60x90 N/D | pliego 70x100 $1.382
+Cartulina C11 190g: pliego 60x90 N/D | pliego 70x100 $684
+Cartulina C12 205g: pliego 60x90 $581 | pliego 70x100 $753
+Cartulina C14 225g: pliego 60x90 $637 | pliego 70x100 $826
+Cartulina C16 255g: pliego 60x90 $723 | pliego 70x100 $937
+Cartulina C18 275g: pliego 60x90 $779 | pliego 70x100 $1.010
+Cartulina C20 305g: pliego 60x90 $864 | pliego 70x100 $1.121
+Cartulina C22 330g: pliego 60x90 N/D | pliego 70x100 $1.212
+Eart Pact 70g: pliego 60x90 $218 | pliego 70x100 $277
+Bristol Color 150g: pliego 60x90 N/D | pliego 70x100 $613
+Bristol Blanca 140g: pliego 60x90 N/D | pliego 70x100 $555
+Kraft Cartón 335g: pliego 60x90 N/D | pliego 70x100 $924
+Kraft 98g: pliego 60x90 N/D | pliego 70x100 $353
+Kraft 120g: pliego 60x90 N/D | pliego 70x100 $370
+Book Cream 56.2g: pliego 60x90 $185 | pliego 70x100 $218
+Adhesivo Ritrama Corriente 160g: pliego 60x90 N/D | pliego 70x100 $1.597
+Adhesivo Ritrama Seguridad 160g: pliego 60x90 N/D | pliego 70x100 $1.916
+Adhesivo Ritrama Vinilo Blanco 220g: pliego 60x90 N/D | pliego 70x100 $5.008
+Adhesivo Ritrama Transparente 160g: pliego 60x90 N/D | pliego 70x100 $5.008
+Adhesivo Ritrama Polipropileno 220g: pliego 60x90 N/D | pliego 70x100 $4.484
+Adhesivo Ritrama Bond 160g: pliego 60x90 N/D | pliego 70x100 $2.147
+Adhesivo Arclad PXH K80 160g: pliego 60x90 N/D | pliego 70x100 $1.479
+Adhesivo Arclad Corriente P3 160g: pliego 60x90 N/D | pliego 70x100 $1.672
+Adhesivo Arclad Hotmelt 160g: pliego 60x90 N/D | pliego 70x100 $2.013
+Adhesivo Arclad P4 160g: pliego 60x90 N/D | pliego 70x100 $2.269
+(Estos son precio de INSUMO -- lo que Tactical paga por el pliego de papel, no el precio de venta al cliente. Si preguntan "cuánto vale un cuaderno/caja/etc" con esto no alcanza, hace falta el motor de cálculo completo.)
+
+CATÁLOGO DE TROQUELES -- CAJAS (calculadora_cajas.html, TROQUELES_CAJAS. Medidas en cm: ancho x alto x largo es la medida de la caja armada; "montaje impreso" es el tamaño de la pieza ya troquelada/plana que hay que imprimir):
+CJB1-1: 7x1x15 -- montaje impreso 19.5x17 -- 1 cavidad
+CJB1-2: 12.5x3.7x20.5 -- montaje impreso 32.5x31.5 -- 1 cavidad
+CJB1-3: 14.5x4.2x15 -- montaje impreso 27x40.5 -- 1 cavidad
+CJB1-4: 19.5x1.3x12.5 -- montaje impreso 22.7x17.5 -- 1 cavidad
+CJB1-5: 8x4x8 -- montaje impreso 25x19 -- 1 cavidad
+CJB1-6: 7.5x7.5x7.5 -- montaje impreso 31x25 -- 1 cavidad
+CJB1-7: 6.3x6x6.3 -- montaje impreso 26x21 -- 1 cavidad
+CJB1-8: 7x15.3x7 -- montaje impreso 29.5x29.5 -- 1 cavidad
+CJB1-9: 22.5x3x15 -- montaje impreso 39.5x35 -- 1 cavidad
+CJB1-10: 20x4x13.5 -- montaje impreso 49.5x34.5 -- 1 cavidad
+CJB1-11: 4.5x4.7x4.5 -- montaje impreso 18.5x21 -- 1 cavidad
+CJB1-12: 23.7x9x8 -- montaje impreso 45x20 -- 1 cavidad
+CJB1-13: 5.8x5.8x5.8 -- montaje impreso 24.5x20 -- 1 cavidad
+CJB1-14: 25x15x7.5 -- montaje impreso 66.5x30.5 -- 1 cavidad
+CJB1-15: 6x24x6 -- montaje impreso 50x25.5 -- 2 cavidades (tubo, 2 cajas por golpe de troquel)
+CJB1-16: 4.3x9.5x4.3 -- montaje impreso 28x28 -- 1 cavidad (tiene una medida alternativa de 5.3cm con montaje 22x21cm -- confirmar con Conde cuál usar)
+CJB1-17: 9x2.5x9 -- montaje impreso 24x21.5 -- 1 cavidad
+CJB1-18: 8x2x17.8 -- montaje impreso 35x27 -- 3 cavidades (3 cajas por golpe de troquel)
+CJB1-19: 23.5x5.5x25 -- montaje impreso 67.5x48.5 -- 1 cavidad
+CJB1-20: 26x8x26 -- montaje impreso 77x52 -- 1 cavidad (excede medio pliego 50x70, necesita máquina de pliego completo -- cotizar manual con proveedor externo)
+CJB1-21: 15.5x4x11 -- montaje impreso 23x20 -- 3 cavidades (3 cajas por golpe de troquel, montaje alterno 50x14cm)
+
+CATÁLOGO DE TROQUELES -- CARPETAS (calculadora_carpetas.html, TROQUELES_CARPETAS. Medidas en cm; "ancho x alto" es la carpeta cerrada, "montaje impreso" el tamaño de la pieza plana a imprimir):
+CARP-001: 1 bolsillo (profundidad 8) -- 30x23 -- montaje impreso 46.5x38.5
+CARP-002: 2 bolsillos (profundidad 3.5) -- 30x22.5 -- montaje impreso 49x34
+CARP-003: 2 bolsillos (profundidad 10) -- 32x22.5 -- montaje impreso 56x45
+CARP-004: 1 bolsillo (profundidad 6.5) -- 30.5x23 -- montaje impreso 47.5x37
+CARP-005: 1 bolsillo (profundidad 10) -- 30x22.7 -- montaje impreso 47x40
+CARP-006: 1 bolsillo (profundidad 8) -- 33x23 -- montaje impreso 48x41
+CARP-007: 1 bolsillo (profundidad 5) -- 29x22.5 -- montaje impreso 47x34
+CARP-008: 1 bolsillo (profundidad 4) -- 30.5x23 -- montaje impreso 47.5x34.5
+CARP-009: 2 bolsillos (profundidad 10) -- 30.5x24.2 -- montaje impreso 51x40.8
+CARP-010: 1 bolsillo (profundidad 5) -- 28.3x22.2 -- montaje impreso 47.5x33.5
+CARP-011: 1 bolsillo (profundidad 3) -- 29x22.5 -- montaje impreso 69x32 (carpeta de 3 cuerpos)
+
+CATÁLOGO DE TROQUELES -- BOLSAS (calculadora_bolsas.html, TROQUELES_BOLSAS. Medidas en cm: ancho x alto x profundo es la bolsa armada; "montaje impreso" el tamaño de la pieza plana a imprimir; "por2" indica si el troquel corta 2 bolsas por golpe):
+BOLS-001: 33x25x13 -- montaje impreso 47.5x37 -- por2
+BOLS-002: 25x25x10 -- montaje impreso 34x36 -- por2
+BOLS-003: 21.5x37x9 -- montaje impreso 33x46.5 -- por2
+BOLS-004: 45x34x13 -- montaje impreso 60x46 -- por2
+BOLS-005: 27x33x6 -- montaje impreso 35x41 -- por2
+BOLS-006: 24x19x7 -- montaje impreso 63.5x22.5 -- 1 sola pieza (no por2)
+BOLS-007: 25x19x10 -- montaje impreso 38x31 -- por2 (trapecio 25/19.5cm, toma el ancho mayor)
+BOLS-008: 33x20.5x6 -- montaje impreso 41x30.5 -- por2
+BOLS-009: 30x33.5x13 -- montaje impreso 50.5x42.5 -- por2
+BOLS-010: 38x35x12 -- montaje impreso 52x45 -- por2
+BOLS-011: 30.5x53.5x16 -- montaje impreso 48x67.5 -- por2 (botellera)
+BOLS-012: 24x32x10 -- montaje impreso 50x70 -- 1 sola pieza
+BOLS-013: 21.5x30x12 -- montaje impreso 44x69 -- 1 sola pieza
+BOLS-014: 25x30x8.5 -- montaje impreso 68.5x49.5 -- 1 sola pieza
+BOLS-015: 25x35x8.5 -- montaje impreso 69x50 -- 1 sola pieza
+BOLS-016: 34.5x25x6 -- montaje impreso 56x50 -- por2
 `.trim();
 
 // System prompt de Bot Tactical: soporte técnico neutral, distinto a Derek (coach de Bezalel en
