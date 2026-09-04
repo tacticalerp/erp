@@ -518,12 +518,16 @@ function tacticalComprimirImagen(img, maxBytes){
 }
 
 /* ==========================================
-   ASISTENTE DE AYUDA (chat de preguntas frecuentes, sin IA)
-   Base de conocimiento + buscador por palabras clave, compartido entre el hub
-   y las 8 calculadoras (Conde 2026-08-14). No usa ningún servicio externo ni API key:
-   compara las palabras de la pregunta contra las keywords de cada respuesta.
+   ASISTENTE DE AYUDA (chat de preguntas frecuentes, sin IA) -- RETIRADO 2026-09-04
+   Conde: "unifica el bot con el boton de preguntas que solo exista un boton" -- esta base de
+   conocimiento se fusionó dentro de Bot Tactical (ver DATOS_TECNICOS_REALES en
+   supabase/functions/bot-tactical/index.ts), que ahora responde estas mismas preguntas con
+   lenguaje natural en vez de necesitar la palabra clave exacta. El botón "?" y su buscador de
+   este archivo ya no se usan en ningún HTML -- se deja este bloque comentado (no borrado) por si
+   hace falta volver a consultar el texto original de alguna respuesta.
    ========================================== */
-const TACTICAL_AYUDA_KB = [
+/*
+const TACTICAL_AYUDA_KB_RETIRADO = [
   { id:'cuadernos_tapa_troquelada', titulo:'Carátula troquelada (Cuadernos)',
     keywords:['caratula','tapa','troquelada','troquelado','troquel','ventana','calado','cuaderno'],
     respuesta:'En el Cotizador de Cuadernos, en la sección de datos de la tapa, marca la casilla <b>"Troquelado"</b> dentro de "Acabados de tapa" (junto a Plastificado, UV Parcial, Estampado, Colaminado, Fondo Pleno). El sistema suma automáticamente el costo de troquel por millar al total. Puedes combinar el troquelado con otros acabados marcando varias casillas a la vez.' },
@@ -626,6 +630,7 @@ function tacticalBuscarAyuda(pregunta){
   }).filter(r=>r.score>0).sort((a,b)=>b.score-a.score);
   return resultados.slice(0,3).map(r=>r.entry);
 }
+*/
 
 /* ==========================================
    PLANO DE CORTE (diagrama de cuadrícula para la Orden de Producción)

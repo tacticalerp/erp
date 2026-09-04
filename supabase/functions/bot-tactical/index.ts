@@ -740,6 +740,21 @@ const DATOS_TECNICOS_REALES = `
   (Esto es solo para calcular cuántas piezas caben por pasada de impresión -- el tamaño de pliego que se compra/corta sigue siendo el tamaño completo de arriba, sin este descuento.)
 - Carpetas: además del margen de pinza normal, se suma 1cm extra obligatorio al ALTO del montaje.
 
+PRECIOS DE IMPRESIÓN (precio de PROCESO/servicio de máquina, en COP -- sacado de precios_tactical.js. Aplican en Bolsas, Carpetas, Cajas, Rompecabezas, Volantes, Cubo Rubik y Cuadernos por igual, salvo donde se aclara lo contrario. Igual que el catálogo de papeles: si Conde ajustó alguno de estos valores desde el Panel de Precios, ese cambio vive en su navegador y no se refleja acá automáticamente):
+
+Offset (litografía) -- costo de PLANCHA/CTP, una vez por cada tinta distinta que lleve el trabajo, según el tamaño de máquina:
+Octavo: $9.000/plancha | Cuarto: $11.000/plancha | Medio pliego: $22.000/plancha
+
+Offset -- costo por MILLAR (cada 1.000 pasadas de impresión, por plancha):
+Octavo: $12.000/millar | Cuarto: $16.000/millar | Medio pliego (hasta 3 tintas): $25.000/millar | Medio pliego a policromía (4 tintas, full color): $100.000/millar plano (no se multiplica por plancha, ya incluye las 4)
+Nota: la "policromía" (4x0, full color) en Medio Pliego usa esta tarifa plana de $100.000/millar en vez de plancha x millar -- en los demás formatos y tiradas de menos de 4 tintas, el costo por millar SÍ se multiplica por el número de planchas/tintas.
+Tolerancia de merma de millar: si el excedente sobre un millar completo es de 180 unidades o menos, no se cobra el millar adicional (ej. 1.180 piezas = 1 millar, 1.200 piezas = 2 millares).
+Recargo por Fondo Pleno (plancha extra + recargo cuando el diseño cubre toda la pieza de un color de fondo): Octavo $50.000 | Cuarto $50.000 | Medio pliego $90.000.
+
+Digital ("impresora láser"/Konica, precio por CLIC -- una pasada de la hoja por la máquina) -- hay 2 tarifarios distintos, Cuadernos tiene su propio precio más barato que el resto de líneas:
+Cuadernos -- Carta: color $750 / negro $350 | Octavo: color $900 / negro $450 | Pliego máximo: color $1.000 / negro $550
+Resto de líneas (Bolsas, Carpetas, Cajas, Rompecabezas, Volantes, Cubo Rubik) -- Carta: color $1.000 / negro $250 | Octavo: color $1.400 / negro $350 | Pliego máximo: color $2.200 / negro $550
+
 CATÁLOGO DE ROMPECABEZAS (línea B2C -- sacado directo de modulo_montajes_rompecabezas.html):
 
 Troquelados (mayorista, mínimo 50 unidades -- SIN precio de lista fijo, siempre se cotiza con un asesor humano, no inventes un precio para esto):
@@ -852,6 +867,34 @@ BOLS-013: 21.5x30x12 -- montaje impreso 44x69 -- 1 sola pieza
 BOLS-014: 25x30x8.5 -- montaje impreso 68.5x49.5 -- 1 sola pieza
 BOLS-015: 25x35x8.5 -- montaje impreso 69x50 -- 1 sola pieza
 BOLS-016: 34.5x25x6 -- montaje impreso 56x50 -- por2
+
+PREGUNTAS FRECUENTES DE USO DEL ERP (Conde 2026-09-04: fusionadas acá desde el antiguo botón "Asistente de Ayuda" -- buscador de palabras clave sin IA que existía aparte, ahora retirado porque Bot Tactical cubre lo mismo con lenguaje natural. Responde estas dudas de "cómo hago esto en el sistema" con la info de abajo -- son sobre el USO del ERP, no sobre precios/producción):
+- Carátula troquelada (Cuadernos): en el Cotizador de Cuadernos, en los datos de la tapa, se marca la casilla "Troquelado" dentro de "Acabados de tapa" (junto a Plastificado, UV Parcial, Estampado, Colaminado, Fondo Pleno). Se puede combinar con otros acabados marcando varias casillas a la vez.
+- Tapa dura vs blanda (Cuadernos): al elegir la línea del cuaderno se puede elegir tapa dura, blanda o semidura. La línea "Escolar" oculta automáticamente la opción de tapa dura (solo maneja semidura/blanda).
+- Insertos con caucho / intercalados (Cuadernos): hay opción de insertos "intercalados" o "seguidos" -- intercalados suma automáticamente +50% de alce al costo por más operaciones de armado.
+- ¿Pedido o Comparación, cuál usar?: "Agregar a un pedido" es para cuando el cliente compra VARIOS productos distintos y se quiere UN SOLO total que los sume (ej: cuadernos + carpetas). "Agregar como opción a comparar" es para cuando el cliente no ha decidido y quiere ver 2+ opciones del MISMO pedido con precios SEPARADOS para elegir una -- no se suman entre sí.
+- Cómo armar una cotización comparativa: 1) calcular la primera opción y presionar "Agregar como opción a comparar". 2) cambiar los datos (ej. quitar insertos, cambiar cantidad) y presionar el mismo botón para la segunda opción. 3) con todas las opciones listas, presionar "Generar PDF comparativo" en el panel que aparece arriba -- el PDF muestra cada opción con su precio por separado.
+- Aprobar solo 1 opción de una comparativa: cuando el cliente ya eligió, buscar el negocio en el CRM y presionar "Ganado". Si tenía varias opciones comparativas, se abre un panel para elegir cuál ganó -- el sistema crea la ficha de Kanban y la Orden de Producción SOLO con los datos de esa opción.
+- Cómo generar la Orden de Producción: se genera al presionar "Guardar y Generar PDF Cliente" (crea el número de OT) o al cerrar un pedido / marcar "Ganado" un negocio del CRM. Se puede reimprimir después desde el Kanban o el buscador de cotizaciones.
+- Cambiar las condiciones comerciales de una cotización: en la sección "Condiciones Comerciales" del cotizador hay un cuadro de texto editable con las condiciones por defecto -- se pueden borrar/agregar/cambiar ANTES de guardar. Cada cotización guarda las suyas, no afecta a las demás.
+- Eliminar una cotización guardada: en el buscador de "Todas las Cotizaciones" (dentro del CRM), cada fila tiene un botón de eliminar junto al de "Ver PDF".
+- Mover o reordenar fichas del Kanban: se pueden arrastrar con el cursor -- soltar sobre otra columna cambia de estado, soltar sobre otra ficha de la MISMA columna la reordena (sube/baja).
+- Foto y video en una ficha del Kanban: cada ficha admite varias fotos (pegar con Ctrl+V o subir archivo dentro de la ficha expandida) -- la primera foto cargada se usa como miniatura de la tarjeta. Si el producto tiene video de YouTube cargado en la Fototeca, el botón "Ver video" aparece solo en el PDF.
+- Agregar un video (YouTube) a un producto: en el Hub, entrar a "Fototeca de Productos" -- cada ficha de línea tiene un campo para pegar el link de YouTube, independiente de la foto. Aparece automáticamente como botón en los PDF de esa línea.
+- Variante de foto por línea (ej. 4 tipos de cuaderno): en la Fototeca se puede crear una ficha nueva con "Crear nueva ficha", ponerle nombre (ej. "Cuaderno con caucho") y asignarla a la línea. Luego en el cotizador de esa línea aparece un selector "Variante de foto" para elegir cuál usar en esa cotización.
+- Foto personalizada solo para una cotización: debajo de la descripción para el cliente hay una zona "Foto personalizada para esta cotización" -- se puede pegar o subir una imagen que se usa SOLO ahí (no se guarda en la Fototeca ni afecta otras cotizaciones), tiene prioridad sobre la variante de foto y la foto automática.
+- Buscar o autocompletar un cliente existente: al escribir el nombre o identificación del cliente aparece una lista de sugerencias con los clientes ya guardados -- al elegir uno se autocompletan sus datos de contacto.
+- Asignar el vendedor a cargo de una cotización: en el formulario de cada cotizador hay un campo "Vendedor a cargo" con la lista de vendedores -- queda guardado en la cotización y permite filtrar el Dashboard y los Reportes por vendedor.
+- Ver el Dashboard por periodo: en "Inteligencia de Ventas (Dashboard)" hay un selector de periodo (Mensual/Trimestral/Semestral/Anual) con flechas para navegar periodos anteriores -- los KPIs se recalculan según el periodo elegido.
+- Un pedido con varios productos distintos: calcular el primer producto y presionar "Agregar a un pedido". Ir a otra calculadora (o la misma) para el siguiente producto del MISMO cliente y presionar de nuevo "Agregar a un pedido". Al final, "Cerrar pedido y guardar en CRM" genera UN total, UNA OT y una ficha de Kanban con todas las líneas.
+- Cambiar precios de insumos sin tocar código: en el Hub, "Panel de Precios" permite editar papeles, materiales y otros insumos base -- el cambio aplica automáticamente a las calculadoras porque todas leen del mismo archivo de precios compartido (aunque, como ya se explicó arriba, ese ajuste no llega automáticamente al conocimiento de este bot).
+- Un pedido de Rompecabezas con varios tamaños: en el módulo de Rompecabezas, configurar el primero y presionar "Agregar otro rompecabezas a este pedido" para sumar otro tamaño o forma al mismo carrito -- al guardar, todos quedan en una sola orden con una línea de Kanban por tamaño.
+- Aprobar un pedido de Rompecabezas (B2C): en la pestaña "Buscar / Aprobar Pedidos", buscar al cliente (nombre, celular o correo) y presionar "Aprobar (pagó)" en su fila -- crea la ficha de Kanban y calcula la fecha de entrega. Solo comercial y administrador ven esta pestaña.
+- Buscar un pedido de Rompecabezas ya guardado: en "Buscar / Aprobar Pedidos", sin escribir nada solo se muestran los últimos 45 días -- escribir algo busca en todo el histórico.
+- Cubo Rubik, caja y tintas: se puede marcar si el pedido lleva caja o no, y elegir las tintas de impresión de la caja -- el precio y la foto de referencia se ajustan solos.
+- Bolsas, caras iguales o diferentes: se indica si el diseño de ambas caras es igual o distinto -- si son diferentes, el sistema calcula material y pliegos para cada cara por separado.
+- Enviar la cotización por WhatsApp: después de generar el PDF hay un botón de WhatsApp que abre la app instalada con un mensaje ya redactado, listo para adjuntar el PDF y enviar.
+- Moverme entre herramientas sin perder lo que estoy haciendo: el botón redondo ☰ flotante (esquina inferior derecha) abre un menú directo al Hub Principal sin cerrar lo que se tenga abierto.
 `.trim();
 
 // System prompt de Bot Tactical: soporte técnico neutral, distinto a Derek (coach de Bezalel en

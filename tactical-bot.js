@@ -80,7 +80,7 @@
   // ticon() viene de precios_tactical.js (mismo sistema de íconos de línea delgada ya usado en todo
   // el ERP -- Conde pidió explícitamente un ícono simple en vez del emoji 🤖 original).
   document.body.insertAdjacentHTML('beforeend', `
-    <button id="tactical-bot-btn" title="Bot Tactical">${ticon('botChat', {size:26, color:'#fff', noMargin:true})}</button>
+    <button id="tactical-bot-btn" title="Bot Tactical (ayuda y cotizaciones)">${ticon('botChat', {size:26, color:'#fff', noMargin:true})}</button>
     <div id="tactical-bot-panel">
       <div id="tactical-bot-header">
         <span style="display:flex; align-items:center; gap:6px;">${ticon('botChat', {size:18, color:'#fff', noMargin:true})} Bot Tactical</span>
@@ -115,7 +115,7 @@
     if(panel.classList.contains('abierto')){
       const log = document.getElementById('tactical-bot-log');
       if(!log.dataset.iniciado){
-        botAgregarMensaje('bot', 'Hola, soy Bot Tactical. Puedo ayudarte con dudas técnicas de producción (sangrado, formatos, especificaciones). Por ahora no puedo crear tareas, cotizaciones ni consultar datos del sistema -- eso llega pronto.');
+        botAgregarMensaje('bot', 'Hola, soy Bot Tactical. Puedo ayudarte con dudas técnicas de producción (sangrado, formatos, especificaciones), con cómo usar el sistema (pedidos, comparativas, Kanban, fotos, etc.) y ya puedo cotizar Volantes/Afiches/Plegables de verdad. Por ahora no puedo crear tareas ni cotizar las demás líneas -- eso llega pronto.');
         log.dataset.iniciado = '1';
       }
       document.getElementById('tactical-bot-input').focus();

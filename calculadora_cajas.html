@@ -329,7 +329,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="tactical-supabase.js?v=20260828f"></script>
-<script src="precios_tactical.js?v=20260903a"></script>
+<script src="tactical-bot.js?v=20260904a"></script>
+<script src="precios_tactical.js?v=20260904a"></script>
 <script>
 /* ============ CONSTANTES REUTILIZADAS DEL MOTOR DE CUADERNOS (ya validadas en el hub) ============ */
 // Conde 2026-08-06: "calibres de cote desde los 200 gramos y toda la gama de cartulinas".
@@ -1506,69 +1507,10 @@ function tacticalIrHub(vista){
   }
 }
 </script>
-<style>
-  #tactical-ayuda-btn{ position:fixed; bottom:76px; right:16px; z-index:99999; width:50px; height:50px; border-radius:50%; background:#0d9488; color:#fff; border:none; box-shadow:0 4px 12px rgba(0,0,0,0.28); font-size:22px; cursor:pointer; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
-  #tactical-ayuda-panel{ display:none; position:fixed; bottom:134px; right:16px; z-index:99999; width:320px; max-width:calc(100vw - 32px); height:420px; max-height:calc(100vh - 160px); background:#fff; border:1px solid #d7dee5; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.25); flex-direction:column; overflow:hidden; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
-  #tactical-ayuda-panel.abierto{ display:flex; }
-  #tactical-ayuda-header{ background:#0d9488; color:#fff; padding:10px 14px; font-size:14px; font-weight:600; display:flex; justify-content:space-between; align-items:center; }
-  #tactical-ayuda-header span.cerrar{ cursor:pointer; font-size:16px; }
-  #tactical-ayuda-log{ flex:1; overflow-y:auto; padding:10px; background:#f8fafc; }
-  .tactical-ayuda-msg{ margin-bottom:8px; padding:8px 10px; border-radius:8px; font-size:12.5px; line-height:1.4; max-width:88%; word-wrap:break-word; }
-  .tactical-ayuda-msg-bot{ background:#e6f4f1; color:#0f172a; margin-right:auto; }
-  .tactical-ayuda-msg-user{ background:#1e3a5f; color:#fff; margin-left:auto; text-align:right; }
-  #tactical-ayuda-inputrow{ display:flex; border-top:1px solid #e2e8f0; padding:8px; gap:6px; }
-  #tactical-ayuda-input{ flex:1; border:1px solid #cbd5e0; border-radius:6px; padding:7px 9px; font-size:12.5px; }
-  #tactical-ayuda-enviar{ background:#0d9488; color:#fff; border:none; border-radius:6px; padding:0 12px; font-size:13px; cursor:pointer; }
-</style>
-<button id="tactical-ayuda-btn" onclick="tacticalToggleAyuda()" title="Asistente de Ayuda">?</button>
-<div id="tactical-ayuda-panel">
-  <div id="tactical-ayuda-header">
-    <span>Asistente de Ayuda</span>
-    <span class="cerrar" onclick="tacticalToggleAyuda()">X</span>
-  </div>
-  <div id="tactical-ayuda-log"></div>
-  <div id="tactical-ayuda-inputrow">
-    <input type="text" id="tactical-ayuda-input" placeholder="Escribe tu pregunta..." onkeydown="if(event.key==='Enter') tacticalAyudaEnviar();">
-    <button id="tactical-ayuda-enviar" onclick="tacticalAyudaEnviar()">Enviar</button>
-  </div>
-</div>
-<script>
-function tacticalToggleAyuda(){
-  const panel = document.getElementById('tactical-ayuda-panel');
-  panel.classList.toggle('abierto');
-  if(panel.classList.contains('abierto')){
-    const log = document.getElementById('tactical-ayuda-log');
-    if(!log.dataset.iniciado){
-      tacticalAyudaAgregarMensaje('bot', 'Hola, soy el asistente de ayuda de la herramienta. Preguntame como hacer algo, por ejemplo: "como pido la caratula troquelada?" o "como comparo 2 opciones?".');
-      log.dataset.iniciado = '1';
-    }
-    document.getElementById('tactical-ayuda-input').focus();
-  }
-}
-function tacticalAyudaAgregarMensaje(tipo, textoHtml){
-  const log = document.getElementById('tactical-ayuda-log');
-  const div = document.createElement('div');
-  div.className = 'tactical-ayuda-msg tactical-ayuda-msg-' + tipo;
-  if(tipo === 'user'){ div.textContent = textoHtml; }
-  else { div.innerHTML = textoHtml; }
-  log.appendChild(div);
-  log.scrollTop = log.scrollHeight;
-}
-function tacticalAyudaEnviar(){
-  const input = document.getElementById('tactical-ayuda-input');
-  const pregunta = input.value.trim();
-  if(!pregunta) return;
-  tacticalAyudaAgregarMensaje('user', pregunta);
-  input.value = '';
-  const resultados = tacticalBuscarAyuda(pregunta);
-  if(!resultados.length){
-    tacticalAyudaAgregarMensaje('bot', 'No encontre una respuesta exacta para eso. Prueba con otras palabras clave (ej: "pedido", "comparacion", "Kanban", "foto", "condiciones", "vendedor", "OT"), o preguntale directamente a Helver.');
-  } else {
-    resultados.forEach(function(r){
-      tacticalAyudaAgregarMensaje('bot', '<b>' + r.titulo + '</b><br>' + r.respuesta);
-    });
-  }
-}
-</script>
+<!-- Conde 2026-09-04: "unifica el bot con el boton de preguntas que solo exista un boton" -- el
+     Asistente de Ayuda (buscador de palabras clave, sin IA) se fusiona con Bot Tactical, que ya
+     conoce estas mismas respuestas (ver DATOS_TECNICOS_REALES en supabase/functions/bot-tactical)
+     y además entiende lenguaje natural en vez de necesitar la palabra clave exacta. Un solo botón,
+     cargado arriba junto a tactical-supabase.js (tactical-bot.js). -->
 </body>
 </html>
