@@ -5228,6 +5228,15 @@
             const { estado, motivo, fechaCierre, _historialRowId, ...snapshot } = cerrado;
             tacticalCorregirVendedorHistorial(id, snapshot);
           }
+          // Conde 2026-09-04: "al cambiar el comercial asignado se actualice en la seccion de
+          // comercial, pase al nuevo comercial asignado y se borre del comercial anterior" -- una vez
+          // el negocio ya se aprobó, la ficha de Kanban guarda su PROPIA copia de "vendedor" (no una
+          // referencia viva al negocio), y era la que se mostraba en "Corporativo en producción" --
+          // sin esto, cambiar el comercial acá no movía nada ahí, seguía viéndose en el vendedor viejo.
+          if(target.ot){
+            const fichasVinculadas = db_kanban.filter(f => f.ot === target.ot);
+            fichasVinculadas.forEach(f => { f.vendedor = nuevo; tacticalSyncFichaKanban(f); });
+          }
           renderBuscadorCotizaciones();
           if(typeof renderComercial === 'function') renderComercial();
         }
@@ -7636,7 +7645,12 @@
             else cont.insertBefore(secCorporativo, secPersonalizados);
           }
 
+          // Conde 2026-09-04: "al marcar como despachado o que en kanban pase a posventa ese cliente
+          // desaparezca de la lista" -- en la práctica el comercial casi nunca arrastra la ficha del
+          // Kanban a Postventa, solo escribe "despachado" a mano en la casilla "Pendiente" -- por eso
+          // el filtro de Postventa solo no bastaba, se agrega este segundo disparador.
           let personalizados = esNorely ? db_b2cPedidos.filter(p => {
+            if((p.notaComercial||'').toLowerCase().includes('despachado')) return false; // marcado a mano -- sale de la vista
             const ficha = p.idKanban ? db_kanban.find(f=>f.id===p.idKanban) : null;
             return !(ficha && ficha.columna==='postventa'); // ya entregado -- sale de la vista
           }) : [];
