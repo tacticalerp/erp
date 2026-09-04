@@ -1903,7 +1903,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="tactical-supabase.js?v=20260828f"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
-    <script src="precios_tactical.js?v=20260904a"></script>
+    <script src="precios_tactical.js?v=20260904b"></script>
     <script src="precios_promocionales.js"></script>
     <script>
         // NAVEGACIÓN SPA DEL HUB
@@ -5203,6 +5203,7 @@
                 <div style="display:flex; gap:4px;">
                   <button class="btn-action" style="padding:5px 8px;" onclick="verPDFCotizacionGuardada('${o.id}')" title="Ver PDF">${ticon('printer')}</button>
                   ${(o.etapa && (o.linea==='cuadernos' || LINEA_A_CALCULADORA_ARCHIVO[o.linea])) ? `<button class="btn-action" style="padding:5px 8px; color:#d97706; border-color:#d97706;" onclick="tacticalAbrirEdicionCotizacion('${o.id}','${o.linea}','${o.ot||''}')" title="Ver el desglose y crear una nueva versión con cambios, sin borrar esta">✏️</button>` : ''}
+                  ${(o.etapa && o.linea==='multi' && Array.isArray(o.lineas) && o.lineas.length) ? `<button class="btn-action" style="padding:5px 8px; color:#d97706; border-color:#d97706;" onclick="tacticalAbrirEdicionMulti('${o.id}')" title="Elegir cuál de los productos de este pedido editar">✏️</button>` : ''}
                   <button class="btn-action" style="padding:5px 8px; color:#2563eb; border-color:#2563eb;" onclick="buscadorCambiarVendedor('${o.id}')" title="Cambiar de comercial">${ticon('refresh')}</button>
                   <button class="btn-action" style="padding:5px 8px; color:var(--peligro); border-color:var(--peligro);" onclick="eliminarCotizacionRegistro('${o.id}')" title="Eliminar">${ticon('trash')}</button>
                 </div>
@@ -6512,9 +6513,63 @@
           if(!archivo) return;
           window.open(`${archivo}?ot=${encodeURIComponent(ot)}`, '_blank');
         }
+        // Conde 2026-09-04: "necesito poder editar las cotizaciones que son de varios productos, no
+        // me lo permite" -- un pedido multi-producto (linea:'multi') no tiene una sola calculadora
+        // dueña, así que primero hay que elegir CUÁL de sus líneas editar. Cada línea se abre igual
+        // que una cotización normal de esa calculadora (?otedit=<idPedido>&lineaidx=<N> en vez de
+        // ?ot=..., ver tacticalCargarLineaPedidoParaEditar en precios_tactical.js) -- al guardar crea
+        // una cotización NUEVA e independiente para ese producto, el pedido original no se toca.
+        function tacticalAbrirEdicionMulti(id){
+          const target = db_opps.find(o => o.id === id) || db_historial_cierres.find(o => o.id === id);
+          if(!target || !Array.isArray(target.lineas) || !target.lineas.length){ alert('No se encontraron los productos de este pedido.'); return; }
+          const overlay = document.createElement('div');
+          overlay.style.cssText = 'position:fixed; inset:0; background:rgba(26,32,44,0.6); z-index:99999; display:flex; align-items:center; justify-content:center; padding:20px;';
+          const filasHtml = target.lineas.map((l,idx) => {
+            const editable = !!(l.params && l.resultado) && (l.linea==='cuadernos' || LINEA_A_CALCULADORA_ARCHIVO[l.linea]);
+            return `<button type="button" ${editable?`onclick="tacticalElegirLineaMulti('${id}',${idx})"`:'disabled'} style="display:flex; justify-content:space-between; align-items:center; gap:10px; width:100%; text-align:left; padding:10px 12px; margin-bottom:6px; border:1px solid #cbd5e0; border-radius:6px; background:${editable?'#fff':'#f1f5f9'}; cursor:${editable?'pointer':'not-allowed'}; font-size:0.85rem; color:${editable?'#1a202c':'#a0aec0'};">
+              <span>${cotTextoConNegrilla(l.desc||'(sin descripción)')}</span>
+              <span style="flex-shrink:0; font-weight:700; color:${editable?'#d97706':'#a0aec0'};">${editable?ticon('edit',{size:14,noMargin:true}):'No editable'}</span>
+            </button>`;
+          }).join('');
+          overlay.innerHTML = `
+            <div style="background:#fff; border-radius:10px; padding:22px; max-width:440px; width:100%; max-height:80vh; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.35); font-family:'Segoe UI', Tahoma, sans-serif;">
+              <div style="font-weight:800; font-size:1.02rem; color:#1a202c; margin-bottom:4px;">¿Cuál producto de este pedido quieres editar?</div>
+              <div style="font-size:0.78rem; color:#718096; margin-bottom:14px;">Se abre esa línea igual que cualquier cotización -- al guardar se crea una versión nueva de ESE producto, sin tocar el resto del pedido. Las líneas en gris son de antes de que se guardara el detalle por producto y ya no se pueden reabrir.</div>
+              ${filasHtml}
+              <button type="button" onclick="document.getElementById('tactical-edicion-multi-overlay').remove();" style="width:100%; margin-top:6px; padding:9px; border:1px solid #cbd5e0; background:#fff; color:#4a5568; border-radius:6px; font-weight:700; cursor:pointer;">Cancelar</button>
+            </div>`;
+          overlay.id = 'tactical-edicion-multi-overlay';
+          document.body.appendChild(overlay);
+        }
+        async function tacticalElegirLineaMulti(idPedido, lineaIdx){
+          const overlay = document.getElementById('tactical-edicion-multi-overlay');
+          if(overlay) overlay.remove();
+          const target = db_opps.find(o => o.id === idPedido) || db_historial_cierres.find(o => o.id === idPedido);
+          const linea = target && target.lineas && target.lineas[lineaIdx];
+          if(!linea) return;
+          if(linea.linea === 'cuadernos'){
+            const cot = await tacticalCargarLineaPedidoParaEditar(idPedido, lineaIdx);
+            if(!cot){ alert('No se pudo abrir esta línea para editar.'); return; }
+            showView('cotizador');
+            initCotizador();
+            cotPoblarFormularioEdicion(cot);
+            return;
+          }
+          const archivo = LINEA_A_CALCULADORA_ARCHIVO[linea.linea];
+          if(!archivo) return;
+          window.open(`${archivo}?otedit=${encodeURIComponent(idPedido)}&lineaidx=${lineaIdx}`, '_blank');
+        }
         function cotCargarCotizacionGuardada(id){
           const cot = db_cotizaciones.find(c => c.id === id);
           if(!cot){ alert('No se encontró el detalle guardado de esta cotización (puede ser muy antigua, de antes de que se empezara a guardar el desglose).'); return; }
+          cotPoblarFormularioEdicion(cot);
+        }
+        // Conde 2026-09-04: "necesito poder editar las cotizaciones que son de varios productos" --
+        // separado de cotCargarCotizacionGuardada(id) (que busca en db_cotizaciones por id) para que
+        // también se pueda editar una línea puntual de un pedido multi-producto, cuyo objeto "cot" se
+        // arma al vuelo desde Supabase (tacticalCargarLineaPedidoParaEditar) en vez de vivir en
+        // db_cotizaciones -- misma lógica de siempre, solo que ahora recibe el objeto ya armado.
+        function cotPoblarFormularioEdicion(cot){
           const p = cot.params;
 
           showView('cotizador');

@@ -272,7 +272,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="tactical-supabase.js?v=20260828f"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
-<script src="precios_tactical.js?v=20260904a"></script>
+<script src="precios_tactical.js?v=20260904b"></script>
 <script>
 /* ============ CONSTANTES REUTILIZADAS DEL MOTOR YA VALIDADO ============ */
 const SUSTRATOS = tacticalSeleccionarSustratos(["Propalcote__300"], 'cubo_rubik');
@@ -1099,7 +1099,15 @@ function cotCancelarEdicion(){
   if(banner) banner.style.display = 'none';
 }
 async function tacticalCargarEdicionDesdeURL(){
-  const ot = new URLSearchParams(window.location.search).get('ot');
+  const url = new URLSearchParams(window.location.search);
+  const otedit = url.get('otedit');
+  if(otedit){
+    const cot = await tacticalCargarLineaPedidoParaEditar(otedit, parseInt(url.get('lineaidx'))||0);
+    if(!cot){ alert('No se pudo abrir esta línea del pedido para editar (puede ser muy antigua, de antes de que se empezara a guardar el detalle por producto).'); return; }
+    cargarCotizacionGuardada(cot);
+    return;
+  }
+  const ot = url.get('ot');
   if(!ot) return;
   const cots = await tacticalCotizacionesCalcCargar('cubo_rubik', ot);
   if(!cots.length){ alert(`No se encontró el desglose guardado de la cotización ${ot} (puede ser muy antigua, de antes de que se empezara a guardar).`); return; }
@@ -1156,7 +1164,7 @@ async function iniciarOAgregarPedido(){
   const desc = tacticalTituloCorto(`${ultimoParams.cantidad} Cubo Rubik (${ultimoParams.caras} caras)${ultimoParams.conCaja?` con caja ${ultimoParams.tintasCaja}x0`:''}`, document.getElementById("in-descCliente").value);
   const maquina = ultimoResultado.usaDigital ? 'digital' : 'cuarto';
   const recomendaciones = RECOMENDACIONES_PRODUCCION.filter(reg=>reg.aplica(ultimoResultado)).map(reg=>reg.texto);
-  pd.lineas.push({ linea:'cubo_rubik', desc, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), precioUnitario: ultimoResultado.precioVentaUnitario, maquina, material: null, nPliegos: null, recomendaciones, fotoUrl: fotoParaCotizacion(ultimoParams.conCaja ? 'cubo_rubik_con_caja' : 'cubo_rubik_sin_caja'), videoUrl: videoParaCotizacion(ultimoParams.conCaja ? 'cubo_rubik_con_caja' : 'cubo_rubik_sin_caja') });
+  pd.lineas.push({ linea:'cubo_rubik', desc, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), precioUnitario: ultimoResultado.precioVentaUnitario, maquina, material: null, nPliegos: null, recomendaciones, fotoUrl: fotoParaCotizacion(ultimoParams.conCaja ? 'cubo_rubik_con_caja' : 'cubo_rubik_sin_caja'), videoUrl: videoParaCotizacion(ultimoParams.conCaja ? 'cubo_rubik_con_caja' : 'cubo_rubik_sin_caja'), params: ultimoParams, resultado: ultimoResultado });
   fotoPersonalReiniciar();
   window.tacticalPedidoBorradorCache = pd; tacticalGuardarPedidoBorrador(pd);
   refrescarBannerPedido();

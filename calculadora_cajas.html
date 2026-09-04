@@ -329,7 +329,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="tactical-supabase.js?v=20260828f"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
-<script src="precios_tactical.js?v=20260904a"></script>
+<script src="precios_tactical.js?v=20260904b"></script>
 <script>
 /* ============ CONSTANTES REUTILIZADAS DEL MOTOR DE CUADERNOS (ya validadas en el hub) ============ */
 // Conde 2026-08-06: "calibres de cote desde los 200 gramos y toda la gama de cartulinas".
@@ -1189,7 +1189,15 @@ function cotCancelarEdicion(){
   if(banner) banner.style.display = 'none';
 }
 async function tacticalCargarEdicionDesdeURL(){
-  const ot = new URLSearchParams(window.location.search).get('ot');
+  const url = new URLSearchParams(window.location.search);
+  const otedit = url.get('otedit');
+  if(otedit){
+    const cot = await tacticalCargarLineaPedidoParaEditar(otedit, parseInt(url.get('lineaidx'))||0);
+    if(!cot){ alert('No se pudo abrir esta línea del pedido para editar (puede ser muy antigua, de antes de que se empezara a guardar el detalle por producto).'); return; }
+    cargarCotizacionGuardada(cot);
+    return;
+  }
+  const ot = url.get('ot');
   if(!ot) return;
   const cots = await tacticalCotizacionesCalcCargar('cajas', ot);
   if(!cots.length){ alert(`No se encontró el desglose guardado de la cotización ${ot} (puede ser muy antigua, de antes de que se empezara a guardar).`); return; }
@@ -1256,7 +1264,7 @@ async function iniciarOAgregarPedido(){
     planoCorte = ultimoResultado.detalleMaterial.planoCorte || null;
   }
   const recomendaciones = RECOMENDACIONES_PRODUCCION.filter(reg=>reg.aplica(ultimoResultado)).map(reg=>typeof reg.texto==='function'?reg.texto(ultimoResultado):reg.texto);
-  pd.lineas.push({ linea:'cajas', desc, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), precioUnitario: ultimoResultado.precioVentaUnitario, maquina, material, nPliegos, planoCorte, recomendaciones, fotoUrl: fotoParaCotizacion('cajas'), videoUrl: videoParaCotizacion('cajas') });
+  pd.lineas.push({ linea:'cajas', desc, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), precioUnitario: ultimoResultado.precioVentaUnitario, maquina, material, nPliegos, planoCorte, recomendaciones, fotoUrl: fotoParaCotizacion('cajas'), videoUrl: videoParaCotizacion('cajas'), params: ultimoParams, resultado: ultimoResultado });
   fotoPersonalReiniciar();
   window.tacticalPedidoBorradorCache = pd; tacticalGuardarPedidoBorrador(pd);
   refrescarBannerPedido();

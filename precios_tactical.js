@@ -633,6 +633,50 @@ function tacticalBuscarAyuda(pregunta){
 */
 
 /* ==========================================
+   EDITAR UNA LÍNEA DE UN PEDIDO MULTI-PRODUCTO (Conde 2026-09-04: "necesito poder editar las
+   cotizaciones que son de varios productos, no me lo permite")
+   Un pedido armado con "Agregar a un pedido" (linea:'multi') no tiene una sola calculadora dueña,
+   así que no se puede reabrir con el mecanismo de siempre (?ot=..., que busca en la tabla
+   cotizaciones_calculadoras -- ahí nunca se guardó nada porque el pedido junta líneas de varias
+   calculadoras distintas). En vez de eso, el Buscador manda a la calculadora de esa línea
+   puntual ?otedit=<idDelPedido>&lineaidx=<N> -- este helper busca esa línea dentro del pedido
+   guardado (columna JSON "lineas" de opps, o snapshot.lineas si ya está en el histórico de
+   cierres) y arma el mismo objeto "cot" que ya espera cargarCotizacionGuardada() de cada
+   calculadora (mismo patrón que la edición de una cotización normal). Devuelve null si esa línea
+   es de antes de que la calculadora guardara params/resultado por línea -- no hay nada que
+   reabrir, hay que avisarlo con honestidad en vez de abrir un formulario vacío.
+   ========================================== */
+async function tacticalCargarLineaPedidoParaEditar(idPedido, lineaIdx){
+  let lineas = null, ot = null, vendedor = null, idCliente = null, nombreCliFallback = '';
+  const { data: opp } = await tacticalSupabase.from('opps').select('*').eq('id', idPedido).maybeSingle();
+  if(opp){
+    lineas = opp.lineas; ot = opp.ot; vendedor = opp.vendedor; idCliente = opp.id_cliente; nombreCliFallback = opp.nombre_cli||'';
+  } else {
+    const { data: hist } = await tacticalSupabase.from('historial_cierres').select('snapshot').eq('snapshot->>id', idPedido).maybeSingle();
+    if(hist && hist.snapshot){
+      lineas = hist.snapshot.lineas; ot = hist.snapshot.ot; vendedor = hist.snapshot.vendedor;
+      idCliente = hist.snapshot.idCli; nombreCliFallback = hist.snapshot.nombreCli||'';
+    }
+  }
+  if(!Array.isArray(lineas) || !lineas[lineaIdx]) return null;
+  const linea = lineas[lineaIdx];
+  if(!linea.params || !linea.resultado) return null;
+
+  let cliente = {empresa: nombreCliFallback, encargado:'', telefono:'', correo:''};
+  if(idCliente){
+    const { data: cli } = await tacticalSupabase.from('clientes').select('*').eq('id', idCliente).maybeSingle();
+    if(cli) cliente = {empresa: cli.empresa||'', encargado: cli.nombre||'', telefono: cli.telefono||'', correo: cli.correo||''};
+  }
+  return {
+    // id sintético (no corresponde a ninguna fila real) -- guardarCotizacionClick() de cada
+    // calculadora ya sabe seguir funcionando aunque no encuentre este id en db_opps, cae de
+    // respaldo al OT original (cotEditandoOtOriginal) para armar la versión nueva.
+    id: idPedido+'__linea'+lineaIdx, ot, cliente, vendedor,
+    desc: linea.desc, params: linea.params, resultado: linea.resultado, condicionesComerciales: null,
+  };
+}
+
+/* ==========================================
    PLANO DE CORTE (diagrama de cuadrícula para la Orden de Producción)
    Toma el objeto planoCorte que ya devuelve costoMaterialPliegos() en cada motor
    ({piezaAncho, piezaAlto, pliegoAncho, pliegoAlto, columnas, filas, rotado, piezasPorPliego})
