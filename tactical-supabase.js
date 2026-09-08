@@ -291,6 +291,10 @@ function tacticalOppADb(o){
     opciones_comparativa: o.opcionesComparativa||null,
     cot_params: o.cotParams||null, cot_resultado: o.cotResultado||null,
     seguimiento: o.seguimiento||null, seguimiento_fecha: o.seguimientoFecha||null,
+    // Conde 2026-09-08: "la foto que esta en la cotizacion hecha a mano al ser aprobada sea la que
+    // quede en el kanban" -- sin guardar esto en la base de datos, la foto solo sobrevivía si se
+    // aprobaba en la MISMA sesión del navegador donde se cotizó (se perdía con cualquier recarga).
+    foto_url: o.fotoUrl||null, video_url: o.videoUrl||null,
   };
 }
 function tacticalOppDeDb(r){
@@ -303,6 +307,7 @@ function tacticalOppDeDb(r){
     opcionesComparativa: r.opciones_comparativa, cotParams: r.cot_params, cotResultado: r.cot_resultado,
     seguimiento: r.seguimiento||'',
     seguimientoFecha: r.seguimiento_fecha||'',
+    fotoUrl: r.foto_url||null, videoUrl: r.video_url||null,
     fecha: r.created_at,
   };
 }

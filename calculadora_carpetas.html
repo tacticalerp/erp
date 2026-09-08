@@ -332,7 +332,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="tactical-supabase.js?v=20260828f"></script>
+<script src="tactical-supabase.js?v=20260908a"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
 <script src="precios_tactical.js?v=20260904b"></script>
 <script>
@@ -1118,7 +1118,7 @@ async function guardarCotizacionClick(){
     planoCorte = ultimoResultado.detalleMaterial.planoCorte || null;
   }
   const recomendaciones = RECOMENDACIONES_PRODUCCION.filter(reg=>reg.aplica(ultimoResultado)).map(reg=>typeof reg.texto==='function'?reg.texto(ultimoResultado):reg.texto);
-  const opp = { id: crypto.randomUUID(), ot, idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'carpetas', cantidad: ultimoParams.cantidad, maquina, material, nPliegos, planoCorte, recomendaciones };
+  const opp = { id: crypto.randomUUID(), ot, idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'carpetas', cantidad: ultimoParams.cantidad, maquina, material, nPliegos, planoCorte, recomendaciones, fotoUrl: fotoParaCotizacion('carpetas'), videoUrl: videoParaCotizacion('carpetas') };
   db_opps.push(opp);
   tacticalSyncOpps(db_opps);
 

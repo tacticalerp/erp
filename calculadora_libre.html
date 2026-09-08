@@ -235,7 +235,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="tactical-supabase.js?v=20260828f"></script>
+<script src="tactical-supabase.js?v=20260908a"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
 <script src="precios_tactical.js?v=20260904b"></script>
 <script>
@@ -587,7 +587,7 @@ async function guardarCotizacionClick(){
   tacticalSyncClientes(db_clientes);
 
   if(!ultimoOT) ultimoOT = await siguienteOT();
-  const opp = { id: crypto.randomUUID(), ot: ultimoOT, idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc: ultimoResultado.descripcion, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'manual', cantidad: ultimoParams.cantidad, maquina: null, material: null, nPliegos: null };
+  const opp = { id: crypto.randomUUID(), ot: ultimoOT, idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc: ultimoResultado.descripcion, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'manual', cantidad: ultimoParams.cantidad, maquina: null, material: null, nPliegos: null, fotoUrl: fotoParaCotizacion(), videoUrl: videoParaCotizacion() };
   db_opps.push(opp);
   tacticalSyncOpps(db_opps);
 

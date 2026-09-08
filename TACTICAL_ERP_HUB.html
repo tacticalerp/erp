@@ -1901,7 +1901,7 @@
     <div id="print-area" style="display:none;"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="tactical-supabase.js?v=20260828f"></script>
+    <script src="tactical-supabase.js?v=20260908a"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
     <script src="precios_tactical.js?v=20260904b"></script>
     <script src="precios_promocionales.js"></script>
@@ -3842,6 +3842,23 @@
             ficha.fotos.splice(idx,1);
             renderKanban();
         }
+        // Conde 2026-09-08: "si hay una foto de portada tambien la pueda eliminar" -- la "portada"
+        // (primeraFoto en renderFichaKanbanHtml) puede venir de 2 lugares distintos: la línea de la
+        // cotización (f.lineas[i].fotoUrl, ej. la elegida en Cotización Manual al aprobarla) o la
+        // galería de "Imágenes de referencia" (f.fotos[0]) -- se limpia la que corresponda.
+        function eliminarFotoPortadaFicha(fichaId){
+            const ficha = db_kanban.find(x=>x.id===fichaId);
+            if(!ficha) return;
+            const idxLinea = (ficha.lineas||[]).findIndex(l=>l.fotoUrl);
+            if(idxLinea > -1){
+                if(!confirm('¿Quitar la foto de portada de esta ficha?')) return;
+                ficha.lineas[idxLinea].fotoUrl = null;
+                tacticalSyncFichaKanban(ficha);
+                renderKanban();
+            } else if(ficha.fotos && ficha.fotos.length){
+                eliminarFotoFicha(fichaId, 0); // ya confirma internamente
+            }
+        }
         // Fototeca de Productos (Conde 2026-08-12): foto fija por línea, reutilizada automáticamente
         // en el PDF de cualquier cotización de esa línea. Cubo Rubik tiene 2 variantes porque cambia
         // la forma física del producto (con caja / sin caja); las demás líneas usan 1 foto genérica.
@@ -4330,7 +4347,13 @@
           // Miniatura de foto (hoy solo la usa Rompecabezas B2C) -- guía visual rápida en producción,
           // se ve cuál es la foto del pedido sin tener que abrir nada más (Conde 2026-08-12).
           const primeraFoto = (f.lineas||[]).map(l=>l.fotoUrl).find(Boolean) || ((f.fotos||[])[0] ? f.fotos[0].url : null);
-          const fotoHtml = primeraFoto ? `<img src="${primeraFoto}" alt="${f.nombreCli}" title="Toca para ver completa" style="width:110px; height:110px; object-fit:cover; border-radius:6px; float:left; margin:0 10px 6px 0; border:1px solid #e2e8f0; cursor:zoom-in;" onclick="event.stopPropagation(); tacticalAmpliarImagen('${primeraFoto}','${f.nombreCli}')">` : '';
+          // Conde 2026-09-08: "si hay una foto de portada tambien la pueda eliminar" -- antes no
+          // había forma de quitarla si venía de la línea de la cotización (fotoUrl), solo las de la
+          // galería de "Imágenes de referencia" tenían botón de borrar.
+          const fotoHtml = primeraFoto ? `<div style="position:relative; float:left; width:110px; margin:0 10px 6px 0;">
+              <img src="${primeraFoto}" alt="${f.nombreCli}" title="Toca para ver completa" style="width:110px; height:110px; object-fit:cover; border-radius:6px; border:1px solid #e2e8f0; cursor:zoom-in; display:block;" onclick="event.stopPropagation(); tacticalAmpliarImagen('${primeraFoto}','${f.nombreCli}')">
+              <button type="button" onclick="event.stopPropagation(); eliminarFotoPortadaFicha('${f.id}')" title="Quitar esta foto de portada" style="position:absolute; top:-7px; right:-7px; background:var(--peligro); color:#fff; border:none; border-radius:50%; width:19px; height:19px; font-size:12px; line-height:1; cursor:pointer; padding:0;">×</button>
+            </div>` : '';
           // Título recortado a ~40 caracteres (no CSS ellipsis -- con tarjetas angostas de 300px el
           // ellipsis por ancho fallaba en textos muy largos) con clic para ver el texto completo,
           // guardando ambas versiones ya en el DOM para no depender de re-escapar el texto (Conde 2026-08-13).

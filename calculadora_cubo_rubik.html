@@ -272,7 +272,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="tactical-supabase.js?v=20260828f"></script>
+<script src="tactical-supabase.js?v=20260908a"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
 <script src="precios_tactical.js?v=20260904b"></script>
 <script>
@@ -1030,7 +1030,7 @@ async function guardarCotizacionClick(){
   // clasifica la máquina de impresión (digital vs litográfico en Cuarto de Pliego).
   const maquina = ultimoResultado.usaDigital ? 'digital' : 'cuarto';
   const recomendaciones = RECOMENDACIONES_PRODUCCION.filter(reg=>reg.aplica(ultimoResultado)).map(reg=>reg.texto);
-  const opp = { id: crypto.randomUUID(), ot, idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'cubo_rubik', cantidad: ultimoParams.cantidad, maquina, material: null, nPliegos: null, recomendaciones };
+  const opp = { id: crypto.randomUUID(), ot, idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'cubo_rubik', cantidad: ultimoParams.cantidad, maquina, material: null, nPliegos: null, recomendaciones, fotoUrl: fotoParaCotizacion(ultimoParams.conCaja ? 'cubo_rubik_con_caja' : 'cubo_rubik_sin_caja'), videoUrl: videoParaCotizacion(ultimoParams.conCaja ? 'cubo_rubik_con_caja' : 'cubo_rubik_sin_caja') };
   db_opps.push(opp);
   tacticalSyncOpps(db_opps);
 
