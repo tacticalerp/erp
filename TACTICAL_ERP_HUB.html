@@ -5960,9 +5960,20 @@
             for(const l of lineasImpresion){ if(l.rol==="taco"){ l.anchoCm=p.anchoCm-0.5; l.altoCm=p.altoCm-0.5; } }
           }
           const desglose={}, detalleLineas={};
+          // Conde 2026-09-08: dos líneas con el MISMO nombre (el caso real: dos insertos que se
+          // dejaron con el nombre por defecto "Insertos") colisionaban en desglose/detalleLineas --
+          // la segunda sobreescribía la clave de la primera y el costo COMPLETO de la primera
+          // (material + impresión + acabados, ~$2.000.000 en el pedido que reportó Conde)
+          // desaparecía del "Costo directo total" y por lo tanto del precio de venta. Ahora cada
+          // línea repetida recibe un sufijo (" 2", " 3", ...) para que TODAS sumen y TODAS se
+          // muestren en el desglose. "Guardas" se reserva de entrada porque esa fila se agrega
+          // aparte más abajo.
+          const clavesUsadas={Guardas:1};
           for(const l of lineasImpresion){
             const r=procesarLineaImpresion(l,p.anchoCm,p.altoCm,p.cantidad);
-            const clave=l.nombre||l.rol||"linea";
+            let clave=l.nombre||l.rol||"linea";
+            if(clavesUsadas[clave]){ clave=clave+" "+(++clavesUsadas[clave]); }
+            else { clavesUsadas[clave]=1; }
             desglose["linea_"+clave]=r.costoTotal;
             r.rol=l.rol;
             detalleLineas[clave]=r;
