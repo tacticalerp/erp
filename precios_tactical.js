@@ -77,6 +77,21 @@ function tacticalPedirFechaFlotante(titulo){
     };
   });
 }
+
+// Conde 2026-09-10: "un boton... que refresque las calculadoras pues hago una cotizacion y debo
+// salir y entrar para que quede en blanco y generar una nueva cotizacion". Recarga la página
+// quitando cualquier ?ot=/?otedit= de la URL (para no volver a abrir la cotización que se estaba
+// editando) pero conservando el # de la vista -- en el Hub eso hace que vuelva al cotizador de
+// Cuadernos y no a la pantalla de inicio. Es "salir y entrar" en un clic. Un pedido de varios
+// productos en curso NO se pierde: vive en localStorage y se restaura solo al recargar.
+function tacticalNuevaCotizacion(hashDestino){
+  if(!confirm('¿Empezar una cotización nueva? Se borra lo que tengas en pantalla (cliente, producto y resultado). Lo que ya guardaste en el CRM no se toca, y un pedido de varios productos en curso tampoco.')) return;
+  // hashDestino: en el Hub se pasa 'cotizador' para que al recargar vuelva al cotizador de
+  // Cuadernos (irAVistaDesdeHash lo lee) -- las 8 calculadoras standalone no pasan nada y quedan
+  // en su misma página sin ?ot=.
+  const hash = hashDestino ? ('#' + hashDestino) : window.location.hash;
+  window.location.href = window.location.pathname + hash;
+}
 // Conde 2026-08-28 (módulo Comercial): "que se aclare para evitar aprobaciones erradas" -- ventana
 // flotante genérica de sí/no, mismo patrón visual que tacticalPedirFechaFlotante de arriba. Usada
 // para los botones ✓/✕ de aprobar/cancelar una cotización directo desde la tabla (evita que un

@@ -1411,6 +1411,7 @@
                     </div>
                     <div id="cot-resultado" class="accordion-content active">
                         <button class="btn-submit" onclick="cotCalcular()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="8" y1="11" x2="8" y2="11"></line><line x1="12" y1="11" x2="12" y2="11"></line><line x1="16" y1="11" x2="16" y2="11"></line><line x1="8" y1="15" x2="8" y2="15"></line><line x1="12" y1="15" x2="12" y2="15"></line><line x1="16" y1="15" x2="16" y2="19"></line><line x1="8" y1="19" x2="8" y2="19"></line><line x1="12" y1="19" x2="12" y2="19"></line></svg>Calcular Cotización</button>
+                        <button class="btn-submit" style="background:#64748b; margin-left:8px;" onclick="tacticalNuevaCotizacion('cotizador')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>Nueva cotización (limpiar todo)</button>
                         <div id="cot-resultado-contenido" style="margin-top:15px;"></div>
                         <div class="form-group" style="margin-top:10px;"><label>Descripción para el cliente (editable — útil para distinguir varios cuadernos parecidos dentro de un mismo pedido). Tip: escribe <strong>**así**</strong> para resaltar en negrilla en el PDF:</label><textarea id="cot-descCliente" class="tactical-campo-dictado" rows="1" style="width:100%; box-sizing:border-box; resize:vertical; overflow:hidden; font-family:inherit; font-size:inherit; padding:8px; line-height:1.4;" oninput="this.style.height='auto'; this.style.height=(this.scrollHeight+2)+'px';"></textarea></div>
                         <div class="form-group" style="margin-top:10px;"><label>Foto para el PDF/comparativa:</label><select id="cot-fotoElegida"></select></div>
@@ -1903,7 +1904,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="tactical-supabase.js?v=20260908a"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
-    <script src="precios_tactical.js?v=20260904b"></script>
+    <script src="precios_tactical.js?v=20260910a"></script>
     <script src="precios_promocionales.js"></script>
     <script>
         // NAVEGACIÓN SPA DEL HUB

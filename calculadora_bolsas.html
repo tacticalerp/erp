@@ -326,6 +326,7 @@
     </div>
 
     <button class="btn-primario" onclick="calcular()">Calcular Cotización</button>
+    <button class="btn-primario" style="background:#64748b; margin-top:8px;" onclick="tacticalNuevaCotizacion()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>Nueva cotización (limpiar todo)</button>
   </div>
 
   <div class="col-resultado">
@@ -362,7 +363,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="tactical-supabase.js?v=20260908a"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
-<script src="precios_tactical.js?v=20260904b"></script>
+<script src="precios_tactical.js?v=20260910a"></script>
 <script>
 /* ============ CONSTANTES REUTILIZADAS DEL MOTOR DE CUADERNOS (ya validadas) ============ */
 const SUSTRATOS = tacticalSeleccionarSustratos([
