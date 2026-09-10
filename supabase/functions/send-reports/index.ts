@@ -347,19 +347,29 @@ async function oportunidadesEstancadasFilas(minDias = 5): Promise<string[]> {
     .map((o: any) => `<strong>${o.nombre_cli}</strong> -- ${o.descripcion} (${diasDesde(o.created_at)} días sin cerrar)`);
 }
 
-async function financieroDelMes(): Promise<{ ventasFacturadas: number; ingresos: number; gastosFijos: number; gastosVariables: number; utilidadNeta: number }> {
-  const hoy = new Date(); const desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().slice(0, 10);
+const MESES_ES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+async function financieroDelMes(): Promise<{ ventasFacturadas: number; ingresos: number; gastosFijos: number; gastosVariables: number; utilidadNeta: number; etiquetaMes: string }> {
+  // Conde 2026-09-10: el informe mensual se dispara en los primeros días del mes nuevo pero debe
+  // resumir el mes que ACABA de terminar, no lo poco que lleva el mes en curso (bug anterior:
+  // `desde = 1º del mes actual` sin tope superior -> sumaba 1-2 días de septiembre y lo llamaba
+  // "resumen del mes"). Rango correcto = [1º del mes pasado, 1º de este mes).
+  const hoy = new Date();
+  const desde = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1).toISOString().slice(0, 10);
+  const hasta = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().slice(0, 10);
+  const mesPasado = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+  const etiquetaMes = `${MESES_ES[mesPasado.getMonth()]} de ${mesPasado.getFullYear()}`;
   const [dv, ing, egF, egV] = await Promise.all([
-    supabase.from("documentos_venta").select("total_documento").gte("fecha", desde),
-    supabase.from("ingresos").select("valor").gte("fecha", desde),
-    supabase.from("egresos").select("monto").gte("fecha", desde).eq("categoria", "fijo"),
-    supabase.from("egresos").select("monto").gte("fecha", desde).eq("categoria", "variable"),
+    supabase.from("documentos_venta").select("total_documento").gte("fecha", desde).lt("fecha", hasta),
+    supabase.from("ingresos").select("valor").gte("fecha", desde).lt("fecha", hasta),
+    supabase.from("egresos").select("monto").gte("fecha", desde).lt("fecha", hasta).eq("categoria", "fijo"),
+    supabase.from("egresos").select("monto").gte("fecha", desde).lt("fecha", hasta).eq("categoria", "variable"),
   ]);
   const ventasFacturadas = (dv.data || []).reduce((s: number, d: any) => s + Number(d.total_documento), 0);
   const ingresos = (ing.data || []).reduce((s: number, d: any) => s + Number(d.valor), 0);
   const gastosFijos = (egF.data || []).reduce((s: number, d: any) => s + Number(d.monto), 0);
   const gastosVariables = (egV.data || []).reduce((s: number, d: any) => s + Number(d.monto), 0);
-  return { ventasFacturadas, ingresos, gastosFijos, gastosVariables, utilidadNeta: ingresos - (gastosFijos + gastosVariables) };
+  return { ventasFacturadas, ingresos, gastosFijos, gastosVariables, utilidadNeta: ingresos - (gastosFijos + gastosVariables), etiquetaMes };
 }
 
 // ---------------------------------------------------------------------
@@ -402,8 +412,8 @@ const INFORMES: Record<string, Record<string, () => Promise<{ asunto: string; se
     mensual: async () => {
       const fin = await financieroDelMes();
       const cartera = await carteraVencida();
-      return { asunto: "📆 Informe mensual -- Contabilidad", secciones: [
-        { titulo: "Resumen financiero del mes", filas: [
+      return { asunto: `📆 Informe mensual -- Contabilidad (${fin.etiquetaMes})`, secciones: [
+        { titulo: `Resumen financiero de ${fin.etiquetaMes}`, filas: [
           `Ventas facturadas: ${cop(fin.ventasFacturadas)}`,
           `Ingresos cobrados: ${cop(fin.ingresos)}`,
           `Gastos fijos: ${cop(fin.gastosFijos)}`,

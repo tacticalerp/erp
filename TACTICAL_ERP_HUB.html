@@ -1545,6 +1545,13 @@
                         <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>Tablero Financiero (Tiempo Real)</span><span class="arrow" id="arrow-cont-tablero">▼</span>
                     </div>
                     <div id="cont-tablero" class="accordion-content active">
+                        <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:14px; padding:10px; background:var(--light-gray); border-radius:6px; border:1px solid #cbd5e0;">
+                            <button class="btn-action" onclick="contTableroNavegar(-1)" title="Mes anterior">◀</button>
+                            <span id="cont-tablero-periodo-etiqueta" style="font-weight:bold; min-width:180px; text-align:center; display:inline-block;"></span>
+                            <button class="btn-action" onclick="contTableroNavegar(1)" title="Mes siguiente">▶</button>
+                            <button class="btn-action" id="cont-tablero-btn-hoy" onclick="contTableroMesActual()" style="display:none;">Volver al mes actual</button>
+                            <span style="font-size:0.8rem; color:#718096; flex-basis:100%;">Ventas facturadas, ingresos, gastos y utilidad son del mes elegido. Cartera vencida y punto de equilibrio son siempre al día de hoy.</span>
+                        </div>
                         <div class="dash-grid" id="cont-tablero-kpis"></div>
                         <div class="card-grid" style="margin-top:15px;">
                             <div class="data-card">
@@ -9224,15 +9231,34 @@
         }
 
         /* ---- TABLERO FINANCIERO ---- */
+        // Conde 2026-09-10: selector de período (◀ ▶ por mes) -- el día 1 el Tablero se reseteaba
+        // solo a ~$0 aunque el mes pasado siguiera en conciliación. Ahora se puede navegar hacia
+        // atrás para revisar agosto mientras se cuadra septiembre. offset 0 = mes en curso; no deja
+        // ir al futuro. Punto de equilibrio y cartera vencida se dejan SIEMPRE al día de hoy (son
+        // "estado actual", no "resumen del mes X").
+        let contTableroPeriodoOffset = 0;
+        function contTableroNavegar(dir){
+            contTableroPeriodoOffset = Math.min(0, contTableroPeriodoOffset + dir);
+            renderContTablero();
+        }
+        function contTableroMesActual(){ contTableroPeriodoOffset = 0; renderContTablero(); }
         function renderContTablero(){
-            const hoy = new Date();
-            const mesActual = hoy.getMonth(), anioActual = hoy.getFullYear();
-            const enMesActual = (fechaISO) => { if(!fechaISO) return false; const d = new Date(fechaISO); return d.getMonth()===mesActual && d.getFullYear()===anioActual; };
+            const {inicio: periodoInicio, fin: periodoFin, etiqueta: periodoEtiqueta} = periodoRango('mensual', contTableroPeriodoOffset);
+            const enPeriodo = (fechaISO) => {
+                if(!fechaISO) return false;
+                const s = String(fechaISO);
+                const d = s.length <= 10 ? new Date(s + 'T00:00:00') : new Date(s);
+                return !isNaN(d) && d >= periodoInicio && d < periodoFin;
+            };
+            const elEtq = document.getElementById('cont-tablero-periodo-etiqueta');
+            if(elEtq) elEtq.textContent = periodoEtiqueta + (contTableroPeriodoOffset === 0 ? ' (mes actual)' : '');
+            const btnHoy = document.getElementById('cont-tablero-btn-hoy');
+            if(btnHoy) btnHoy.style.display = contTableroPeriodoOffset === 0 ? 'none' : 'inline-block';
 
-            const ventasFacturadasMes = db_docventa.filter(d => enMesActual(d.fecha)).reduce((s,d)=>s+d.totalDocumento,0);
-            const ingresosCobradosMes = db_ingresos.filter(i => enMesActual(i.fecha)).reduce((s,i)=>s+i.valor,0);
-            const gastosFijosMes = db_egresos.filter(e => enMesActual(e.fecha) && e.categoria==='fijo').reduce((s,e)=>s+e.monto,0);
-            const gastosVariablesMes = db_egresos.filter(e => enMesActual(e.fecha) && e.categoria==='variable').reduce((s,e)=>s+e.monto,0);
+            const ventasFacturadasMes = db_docventa.filter(d => enPeriodo(d.fecha)).reduce((s,d)=>s+d.totalDocumento,0);
+            const ingresosCobradosMes = db_ingresos.filter(i => enPeriodo(i.fecha)).reduce((s,i)=>s+i.valor,0);
+            const gastosFijosMes = db_egresos.filter(e => enPeriodo(e.fecha) && e.categoria==='fijo').reduce((s,e)=>s+e.monto,0);
+            const gastosVariablesMes = db_egresos.filter(e => enPeriodo(e.fecha) && e.categoria==='variable').reduce((s,e)=>s+e.monto,0);
 
             let sumaMargen=0, sumaVentas=0;
             const margenPorLinea = {};
