@@ -1611,6 +1611,7 @@
                                 </select>
                             </div>
                             <div class="form-group"><label>N° de Documento:</label><input type="text" id="doc-numero" placeholder="Ej: FV-0001 / CC-0001" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase(); this.dataset.auto=''"></div>
+                            <div class="form-group"><label>Fecha del documento:</label><input type="date" id="doc-fecha"><span style="font-size:0.78rem; color:#718096;">Se puede fechar en el mes pasado (facturas que llegan tarde, cierre de mes).</span></div>
                             <div class="form-group"><label>Valor Envío (no es ingreso, pass-through transportadora):</label><input type="text" inputmode="numeric" id="doc-valorEnvio" value="0" oninput="contFormatearMiles(this)"></div>
                             <div class="form-group">
                                 <label>Condición de Pago:</label>
@@ -1654,6 +1655,7 @@
                                 <input type="text" id="ing-cliente-filtro" placeholder="Escribe para buscar..." oninput="tacticalFiltrarSelectClientes('ing-cliente-filtro','ing-cliente',true)" style="margin-bottom:4px;">
                                 <select id="ing-cliente"></select></div>
                             <div class="form-group"><label>N° de Comprobante:</label><input type="text" id="ing-numero" placeholder="Ej: IN-0001" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase(); this.dataset.auto=''"></div>
+                            <div class="form-group"><label>Fecha del comprobante:</label><input type="date" id="ing-fecha"><span style="font-size:0.78rem; color:#718096;">Se puede fechar en el mes pasado (abonos que caen tarde, cierre de mes).</span></div>
                             <div class="form-group"><label>Valor Recibido:</label><input type="text" inputmode="numeric" id="ing-valor" value="0" oninput="contFormatearMiles(this)"></div>
                             <div class="form-group">
                                 <label>Medio de Pago:</label>
@@ -1710,8 +1712,9 @@
                     </div>
                     <div id="cont-egreso" class="accordion-content">
                         <div class="form-grid">
-                            <div class="form-group" style="flex-basis:100%;"><label>Cuenta(s) por Pagar a pagar (opcional — Ctrl/Cmd+clic para elegir varias del MISMO proveedor):</label><select id="egr-cxp" multiple size="5" onchange="contAutocompletarEgresoDesdeCxp()"></select></div>
+                            <div class="form-group" style="flex-basis:100%;"><label>Cuenta(s) por Pagar a pagar (opcional — Ctrl/Cmd+clic para elegir varias del MISMO proveedor):</label><select id="egr-cxp" multiple size="5" onchange="contAutocompletarEgresoDesdeCxp()"></select><span style="font-size:0.78rem; color:#718096;">Anticipos a proveedores o pagos que no vienen de una factura ya registrada: deja este campo sin marcar y llena beneficiario, monto y concepto.</span></div>
                             <div class="form-group"><label>N° de Comprobante:</label><input type="text" id="egr-numero" placeholder="Ej: EG-0001" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase(); this.dataset.auto=''"></div>
+                            <div class="form-group"><label>Fecha del comprobante:</label><input type="date" id="egr-fecha"><span style="font-size:0.78rem; color:#718096;">Se puede fechar en el mes pasado (pagos que caen tarde, cierre de mes).</span></div>
                             <div class="form-group"><label>Beneficiario:</label><input type="text" id="egr-beneficiario" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
                             <div class="form-group"><label>Concepto:</label><input type="text" id="egr-concepto" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
                             <div class="form-group"><label>Monto:</label><input type="text" inputmode="numeric" id="egr-monto" value="0" oninput="contFormatearMiles(this)"></div>
@@ -8110,6 +8113,28 @@
         }
         function contHoy(){ return new Date().toISOString().slice(0,10); }
         function contSumarDias(fechaISO, dias){ const d = new Date(fechaISO); d.setDate(d.getDate()+dias); return d.toISOString().slice(0,10); }
+        // Conde 2026-09-10: los comprobantes (Egreso / Ingreso / Documento de Venta) ahora llevan un
+        // campo de FECHA editable -- antes se guardaban siempre con la fecha de hoy. Esto permite
+        // registrar comprobantes del mes anterior durante TODO el mes en curso (anticipos a
+        // proveedores, facturas que llegan tarde, conciliación de cierre de mes). Se acepta sin
+        // aviso cualquier fecha desde el día 1 del mes PASADO hasta hoy; fechas más viejas o futuras
+        // piden confirmación (atajo de dedazo) pero se permiten. Devuelve la fecha 'AAAA-MM-DD', o
+        // null si el usuario canceló la confirmación (en ese caso el que llama debe abortar el guardado).
+        function contFechaComprobante(inputId){
+            const el = document.getElementById(inputId);
+            let val = (el && el.value) ? el.value : contHoy();
+            if(!/^\d{4}-\d{2}-\d{2}$/.test(val)) val = contHoy();
+            const hoy = contHoy();
+            const d = new Date(val + 'T00:00:00');
+            const h = new Date(hoy + 'T00:00:00');
+            const inicioMesPasado = new Date(h.getFullYear(), h.getMonth() - 1, 1);
+            if(d > h){
+                if(!confirm(`La fecha ${val} es posterior a hoy (${hoy}). ¿Guardar el comprobante con esa fecha de todas formas?`)) return null;
+            } else if(d < inicioMesPasado){
+                if(!confirm(`La fecha ${val} es de hace más de un mes. Normalmente solo se registran comprobantes del mes actual o del mes pasado. ¿Es correcta?`)) return null;
+            }
+            return val;
+        }
 
         /* ---- SEPARADOR DE MILES en campos de dinero ---- */
         function contFormatearMiles(input){
@@ -8407,13 +8432,16 @@
 
             if(!cli || items.length===0 || valorBruto<=0){ alert("Debe seleccionar cliente y agregar al menos un ítem con valor mayor a 0."); return; }
 
+            const fechaDoc = contFechaComprobante('doc-fecha');
+            if(fechaDoc === null) return;
+
             // El IVA ya no se calcula automático -- es la suma del IVA que se escribió en cada ítem
             // (Conde 2026-08-20, columna IVA por ítem, 100% manual).
             const iva = items.reduce((s,i)=>s+i.iva,0);
             const reteiva = (tipoDoc === 'factura' && aplicaReteiva) ? Math.round(iva*0.15) : 0;
             const totalDocumento = valorBruto + iva - reteiva;
             const totalCobrar = totalDocumento + valorEnvio;
-            const fechaVencimiento = condicionPago === 'credito30' ? contSumarDias(contHoy(),30) : (condicionPago === 'credito1' ? contSumarDias(contHoy(),1) : (condicionPago === 'contado' ? contHoy() : ''));
+            const fechaVencimiento = condicionPago === 'credito30' ? contSumarDias(fechaDoc,30) : (condicionPago === 'credito1' ? contSumarDias(fechaDoc,1) : (condicionPago === 'contado' ? fechaDoc : ''));
 
             if(docVentaEditandoId){
                 const idx = db_docventa.findIndex(d => d.id === docVentaEditandoId);
@@ -8423,7 +8451,7 @@
                 const yaCobrado = anterior.totalCobrar - anterior.saldoPendiente;
                 const nuevoSaldoPendiente = Math.max(0, totalCobrar - yaCobrado);
                 const docActualizado = {
-                    ...anterior, tipoDoc, idCli, descripcion, items, valorBruto, iva, reteiva, valorEnvio,
+                    ...anterior, fecha: fechaDoc, tipoDoc, idCli, descripcion, items, valorBruto, iva, reteiva, valorEnvio,
                     totalDocumento, totalCobrar, condicionPago, fechaVencimiento, vendedor,
                     saldoPendiente: nuevoSaldoPendiente,
                     estado: nuevoSaldoPendiente<=0 ? 'pagada' : (nuevoSaldoPendiente<totalCobrar ? 'abonado_parcial' : 'pendiente'),
@@ -8443,7 +8471,7 @@
 
                 const doc = {
                     id: crypto.randomUUID(), numero,
-                    tipoDoc, fecha: contHoy(), idCli, idCot: null, idOpp: null, descripcion, items,
+                    tipoDoc, fecha: fechaDoc, idCli, idCot: null, idOpp: null, descripcion, items,
                     valorBruto, iva, reteiva, valorEnvio, totalDocumento, totalCobrar,
                     condicionPago, fechaVencimiento, saldoPendiente: totalCobrar, estado: 'pendiente', vendedor,
                 };
@@ -8464,6 +8492,7 @@
             contLimpiarItemsDoc();
             document.getElementById('doc-valorEnvio').value = '0';
             document.getElementById('doc-numero').value = ''; document.getElementById('doc-numero').dataset.auto = '';
+            document.getElementById('doc-fecha').value = contHoy();
             renderContabilidad();
         }
 
@@ -8513,6 +8542,7 @@
             contLlenarSelectClienteDoc();
             document.getElementById('doc-cliente').value = doc.idCli;
             document.getElementById('doc-tipoDoc').value = doc.tipoDoc;
+            document.getElementById('doc-fecha').value = doc.fecha ? String(doc.fecha).slice(0,10) : contHoy();
             document.getElementById('doc-valorEnvio').value = (doc.valorEnvio||0).toLocaleString('es-CO');
             document.getElementById('doc-condicionPago').value = doc.condicionPago;
             document.getElementById('doc-aplicaReteiva').checked = !!doc.reteiva;
@@ -8541,6 +8571,7 @@
         function cancelarEdicionDocVenta(){
             docVentaEditandoId = null;
             contLimpiarItemsDoc();
+            document.getElementById('doc-fecha').value = contHoy();
             document.getElementById('doc-valorEnvio').value = '0';
             document.getElementById('doc-btn-guardar').textContent = '+ Registrar Documento de Venta';
             document.getElementById('doc-btn-cancelar-edicion').style.display = 'none';
@@ -8672,6 +8703,9 @@
             if(docs.length===0 && !idClienteManual){ alert("Selecciona un documento de venta, o un cliente si este abono no tiene factura."); return; }
             if(docs.length===0 && !concepto){ alert("Escribe un concepto para este abono sin factura."); return; }
 
+            const fechaComprobante = contFechaComprobante('ing-fecha');
+            if(fechaComprobante === null) return;
+
             const idCli = docs.length ? docs[0].idCli : idClienteManual;
             const numerosTxt = docs.map(d=>d.numero).join(', ');
 
@@ -8681,7 +8715,7 @@
                 const anterior = db_ingresos[idx];
                 contRevertirEfectoIngreso(anterior);
                 const ingresoActualizado = {
-                    ...anterior, idCli, idDocVenta: docs.length ? docs[0].id : null, idsDocVenta, valor,
+                    ...anterior, fecha: fechaComprobante, idCli, idDocVenta: docs.length ? docs[0].id : null, idsDocVenta, valor,
                     concepto: concepto || (docs.length>1 ? `Pago facturas ${numerosTxt}` : `Pago factura ${numerosTxt}`),
                     medioPago, referenciaSoporte,
                 };
@@ -8696,7 +8730,7 @@
                 if(esManual) contActualizarContadorDesdeNumero('ingreso', numero);
 
                 const ingreso = {
-                    id: crypto.randomUUID(), numero, fecha: contHoy(),
+                    id: crypto.randomUUID(), numero, fecha: fechaComprobante,
                     idCli, idDocVenta: docs.length ? docs[0].id : null, idsDocVenta, valor,
                     concepto: concepto || (docs.length>1 ? `Pago facturas ${numerosTxt}` : `Pago factura ${numerosTxt}`),
                     medioPago, referenciaSoporte,
@@ -8707,6 +8741,7 @@
 
                 document.getElementById('ing-valor').value = '0'; document.getElementById('ing-concepto').value = ''; document.getElementById('ing-referencia').value = '';
                 document.getElementById('ing-numero').value = ''; document.getElementById('ing-numero').dataset.auto = '';
+                document.getElementById('ing-fecha').value = contHoy();
                 document.getElementById('ing-cliente-filtro').value = '';
                 document.getElementById('ing-cliente').value = '';
                 [...document.getElementById('ing-docventa').options].forEach(o=>o.selected=false);
@@ -8736,6 +8771,7 @@
             tacticalPoblarSelectClientes('ing-cliente', '', true);
             document.getElementById('ing-cliente').value = idsDoc.length===0 ? (i.idCli||'') : '';
             document.getElementById('ing-numero').value = i.numero; document.getElementById('ing-numero').dataset.auto = '';
+            document.getElementById('ing-fecha').value = i.fecha || contHoy();
             document.getElementById('ing-valor').value = (i.valor||0).toLocaleString('es-CO');
             document.getElementById('ing-medioPago').value = i.medioPago;
             document.getElementById('ing-concepto').value = i.concepto;
@@ -8748,6 +8784,7 @@
             ingresoEditandoId = null;
             document.getElementById('ing-valor').value = '0'; document.getElementById('ing-concepto').value = ''; document.getElementById('ing-referencia').value = '';
             document.getElementById('ing-numero').value = ''; document.getElementById('ing-numero').dataset.auto = '';
+            document.getElementById('ing-fecha').value = contHoy();
             document.getElementById('ing-cliente-filtro').value = ''; document.getElementById('ing-cliente').value = '';
             document.getElementById('ing-btn-guardar').textContent = '+ Registrar Comprobante de Ingreso';
             document.getElementById('ing-btn-cancelar-edicion').style.display = 'none';
@@ -8995,12 +9032,15 @@
 
             if(!beneficiario || monto<=0){ alert("Debe ingresar el beneficiario y un monto mayor a 0."); return; }
 
+            const fechaComprobante = contFechaComprobante('egr-fecha');
+            if(fechaComprobante === null) return;
+
             if(egresoEditandoId){
                 const idx = db_egresos.findIndex(x => x.id === egresoEditandoId);
                 if(idx===-1){ alert("Este comprobante ya no existe (puede que se haya eliminado)."); cancelarEdicionEgreso(); return; }
                 const anterior = db_egresos[idx];
                 contRevertirEfectoEgreso(anterior);
-                const egresoActualizado = { ...anterior, beneficiario, concepto, monto, categoria, medioPago, referenciaSoporte, idsCxp };
+                const egresoActualizado = { ...anterior, fecha: fechaComprobante, beneficiario, concepto, monto, categoria, medioPago, referenciaSoporte, idsCxp };
                 contAplicarEfectoEgreso(egresoActualizado, idsCxp, monto);
                 db_egresos[idx] = egresoActualizado;
                 tacticalSyncEgreso(egresoActualizado);
@@ -9012,7 +9052,7 @@
                 if(esManual) contActualizarContadorDesdeNumero('egreso', numero);
 
                 const nuevoEgreso = {
-                    id: crypto.randomUUID(), numero, fecha: contHoy(),
+                    id: crypto.randomUUID(), numero, fecha: fechaComprobante,
                     beneficiario, concepto, monto, categoria, medioPago, referenciaSoporte, idsCxp,
                 };
                 db_egresos.push(nuevoEgreso);
@@ -9022,6 +9062,7 @@
                 document.getElementById('egr-beneficiario').value=''; document.getElementById('egr-concepto').value=''; document.getElementById('egr-monto').value='0'; document.getElementById('egr-referencia').value='';
                 [...document.getElementById('egr-cxp').options].forEach(o=>o.selected=false);
                 document.getElementById('egr-numero').value=''; document.getElementById('egr-numero').dataset.auto='';
+                document.getElementById('egr-fecha').value = contHoy();
             }
             renderContabilidad();
         }
@@ -9043,6 +9084,7 @@
             });
             [...sel.options].forEach(o => o.selected = idsCxp.includes(o.value));
             document.getElementById('egr-numero').value = e.numero; document.getElementById('egr-numero').dataset.auto = '';
+            document.getElementById('egr-fecha').value = e.fecha || contHoy();
             document.getElementById('egr-beneficiario').value = e.beneficiario;
             document.getElementById('egr-concepto').value = e.concepto;
             document.getElementById('egr-monto').value = (e.monto||0).toLocaleString('es-CO');
@@ -9057,6 +9099,7 @@
             egresoEditandoId = null;
             document.getElementById('egr-beneficiario').value=''; document.getElementById('egr-concepto').value=''; document.getElementById('egr-monto').value='0'; document.getElementById('egr-referencia').value='';
             document.getElementById('egr-numero').value=''; document.getElementById('egr-numero').dataset.auto='';
+            document.getElementById('egr-fecha').value = contHoy();
             document.getElementById('egr-btn-guardar').textContent = '+ Registrar Comprobante de Egreso';
             document.getElementById('egr-btn-cancelar-edicion').style.display = 'none';
             renderContabilidad(); // repuebla egr-cxp limpio (quita la opción temporal "ya pagada por este egreso")
@@ -9269,6 +9312,7 @@
 
         /* ---- ORQUESTADOR DEL MÓDULO ---- */
         function renderContabilidad(){
+            ['egr-fecha','ing-fecha','doc-fecha'].forEach(id => { const el = document.getElementById(id); if(el && !el.value) el.value = contHoy(); });
             contLlenarSelectClienteDoc();
             contLlenarSelectVendedorDoc();
             contLlenarDatalistProveedores();
