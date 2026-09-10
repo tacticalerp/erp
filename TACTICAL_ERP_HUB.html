@@ -1128,7 +1128,7 @@
                         </div>
                         <div class="dash-grid" style="margin-bottom:20px;">
                             <div class="kpi-box" style="border-color:var(--info);"><div class="kpi-label">Dinero en Seguimiento</div><div class="kpi-value" id="kpi-pipeline">$0</div></div>
-                            <div class="kpi-box" style="border-color:var(--ganado);"><div class="kpi-label">Ventas Ganadas</div><div class="kpi-value" id="kpi-ganadas" style="color:var(--ganado);">$0</div></div>
+                            <div class="kpi-box" style="border-color:var(--ganado);"><div class="kpi-label">Ventas Ganadas</div><div class="kpi-value" id="kpi-ganadas" style="color:var(--ganado);">$0</div><div id="kpi-ganadas-neto" style="font-size:0.8rem; color:#64748b; margin-top:3px;"></div></div>
                             <div class="kpi-box" style="border-color:var(--peligro);"><div class="kpi-label">Tasa de Cierre</div><div class="kpi-value" id="kpi-tasa" style="color:var(--dark);">0%</div></div>
                         </div>
                         <!-- Conde 2026-08-28: "dejemos el motivo de la pérdida solo en Reportes, que será lo
@@ -5168,6 +5168,17 @@
         function crmCambiarTipo(v){ crmPeriodoTipo = v; crmPeriodoOffset = 0; renderDashboard(); renderBuscadorCotizaciones(); }
         function crmNavegar(dir){ crmPeriodoOffset += dir; renderDashboard(); renderBuscadorCotizaciones(); }
 
+        // Conde 2026-09-10: el neto real de la empresa NO incluye IVA (es plata de la DIAN, no
+        // nuestra). opp.monto guarda el precio CON IVA (precioFinalTotal); la excepción son los
+        // clientes "Personalizado (Cuenta de Cobro)", que nunca llevan IVA. Este helper estima el
+        // neto: divide /1.19 salvo que el cliente sea personalizado. Es un ESTIMADO -- opp.monto no
+        // guarda el desglose de IVA, se deduce del tipo de cliente actual.
+        function montoNetoSinIva(registro){
+            const monto = registro.monto || 0;
+            const cli = db_clientes.find(c => c.id === registro.idCli);
+            if(cli && cli.tipo === 'personalizado') return monto;
+            return monto / 1.19;
+        }
         function renderDashboard() {
             const {inicio, fin, etiqueta} = periodoRango(crmPeriodoTipo, crmPeriodoOffset);
             const elEtq = document.getElementById('crm-periodo-etiqueta');
@@ -5184,6 +5195,9 @@
             let perdidas = cierresPeriodo.filter(h => h.estado === 'perdido');
             let totalGanado = ganadas.reduce((sum, o) => sum + o.monto, 0);
             document.getElementById('kpi-ganadas').innerText = "$" + totalGanado.toLocaleString();
+            const netoGanado = ganadas.reduce((sum, o) => sum + montoNetoSinIva(o), 0);
+            const elNeto = document.getElementById('kpi-ganadas-neto');
+            if(elNeto) elNeto.textContent = ganadas.length ? ("≈ $" + Math.round(netoGanado).toLocaleString() + " sin IVA (neto)") : "";
 
             let totalCerrados = ganadas.length + perdidas.length;
             let tasa = totalCerrados === 0 ? 0 : Math.round((ganadas.length / totalCerrados) * 100);
@@ -7947,11 +7961,12 @@
           const totalCerrados = ganadas.length+perdidas.length;
           const tasaCierre = totalCerrados===0?0:Math.round((ganadas.length/totalCerrados)*100);
           const valorGanado = ganadas.reduce((s,o)=>s+o.monto,0);
+          const valorGanadoNeto = ganadas.reduce((s,o)=>s+montoNetoSinIva(o),0);
           const ticketProm = ganadas.length===0?0:Math.round(valorGanado/ganadas.length);
           document.getElementById('rep-comercial-kpis').innerHTML = `
             <div class="kpi-box"><div class="kpi-label">Cotizaciones Generadas</div><div class="kpi-value">${totalCot}</div></div>
             <div class="kpi-box" style="border-color:var(--ganado);"><div class="kpi-label">Tasa de Cierre</div><div class="kpi-value" style="color:var(--ganado);">${tasaCierre}%</div></div>
-            <div class="kpi-box" style="border-color:var(--primary);"><div class="kpi-label">Valor Ganado</div><div class="kpi-value" style="color:var(--primary);">${cotFormatoCop(valorGanado)}</div></div>
+            <div class="kpi-box" style="border-color:var(--primary);"><div class="kpi-label">Valor Ganado</div><div class="kpi-value" style="color:var(--primary);">${cotFormatoCop(valorGanado)}</div>${ganadas.length?`<div style="font-size:0.8rem; color:#64748b; margin-top:3px;">≈ ${cotFormatoCop(Math.round(valorGanadoNeto))} sin IVA (neto)</div>`:''}</div>
             <div class="kpi-box"><div class="kpi-label">Ticket Promedio (Ganado)</div><div class="kpi-value">${cotFormatoCop(ticketProm)}</div></div>
           `;
           const clientesEnFiltro = new Set(todasCotizaciones.map(c=>c.idCli));
