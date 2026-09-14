@@ -2467,14 +2467,22 @@
             // que quepan todos los elementos de la fila en una sola línea.
             container.innerHTML = list.map(n => `<span class="emp-chip">${n}<button type="button" onclick="taskQuitarResponsable(this)" title="Quitar a ${n} de esta tarea">×</button></span>`).join('');
             const select = container.nextElementSibling;
-            const disponibles = empleadosPorArea(area).filter(e => !list.includes(e));
-            // Conde 2026-08-24: "sigo sin poder agregar responsable" -- la causa más probable es que
-            // la persona no tiene marcada esta área en "Gestionar Personal" (por eso empleadosPorArea
-            // no la trae), y el desplegable se veía igual de vacío que uno roto, sin avisar nada. Este
-            // mensaje hace evidente la diferencia entre "no hay nadie configurado" y "no funciona".
+            let disponibles = empleadosPorArea(area).filter(e => !list.includes(e));
+            // Conde 2026-09-14: "quiero que en lugar del aviso aparezca el listado de personas para
+            // asignar a los que no tienen" -- antes, si nadie tenía esta área marcada en "Gestionar
+            // Personal", el desplegable quedaba sin nadie para elegir (solo un aviso). Ahora, en ese
+            // caso, se cae a TODO el personal registrado (sin filtrar por área) para que de todas
+            // formas se pueda asignar a alguien -- el título del desplegable avisa que es la lista
+            // completa, no la filtrada por esta área.
+            let esFallbackTodos = false;
+            if(disponibles.length === 0){
+                disponibles = nombresTodoPersonal().filter(e => !list.includes(e));
+                esFallbackTodos = disponibles.length > 0;
+            }
+            select.title = esFallbackTodos ? `Nadie tiene "${area}" marcada en Gestionar Personal -- se muestra todo el personal` : '';
             select.innerHTML = disponibles.length
                 ? '<option value="">+ Asignar</option>' + disponibles.map(e=>`<option value="${e}">${e}</option>`).join('')
-                : '<option value="">(nadie en Gestionar Personal tiene esta área marcada)</option>';
+                : '<option value="">(no hay personal registrado en Gestionar Personal)</option>';
             // Conde 2026-08-24 (4ta vuelta): "coloca el responsable solo las primeras 4 letras del
             // nombre al estar reducido" -- en cuanto hay alguien asignado, la vista reducida muestra
             // este resumen corto (".resp-corto") en vez de la lista completa de chips; se recalcula
