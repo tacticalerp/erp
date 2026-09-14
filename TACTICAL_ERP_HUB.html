@@ -1128,7 +1128,7 @@
                         </div>
                         <div class="dash-grid" style="margin-bottom:20px;">
                             <div class="kpi-box" style="border-color:var(--info);"><div class="kpi-label">Dinero en Seguimiento</div><div class="kpi-value" id="kpi-pipeline">$0</div></div>
-                            <div class="kpi-box" style="border-color:var(--ganado);"><div class="kpi-label">Ventas Ganadas</div><div class="kpi-value" id="kpi-ganadas" style="color:var(--ganado);">$0</div><div id="kpi-ganadas-neto" style="font-size:0.8rem; color:#64748b; margin-top:3px;"></div></div>
+                            <div class="kpi-box" style="border-color:var(--ganado);"><div class="kpi-label">Ventas Ganadas</div><div class="kpi-value" id="kpi-ganadas" style="color:var(--ganado);">$0</div><div id="kpi-ganadas-neto" style="font-size:0.8rem; color:#64748b; margin-top:3px;"></div><span id="kpi-ganadas-toggle" style="font-size:0.78rem; color:var(--ganado); cursor:pointer; text-decoration:underline;" onclick="const d=this.nextElementSibling; const abrir=d.style.display==='none'; d.style.display=abrir?'block':'none'; this.textContent=abrir?'Ocultar detalle ▴':'¿De dónde viene esto? ▾';">¿De dónde viene esto? ▾</span><div id="kpi-ganadas-detalle" style="display:none; margin-top:6px; text-align:left; max-height:220px; overflow-y:auto; font-size:0.78rem; color:#4a5568;"></div></div>
                             <div class="kpi-box" style="border-color:var(--peligro);"><div class="kpi-label">Tasa de Cierre</div><div class="kpi-value" id="kpi-tasa" style="color:var(--dark);">0%</div></div>
                         </div>
                         <!-- Conde 2026-08-28: "dejemos el motivo de la pérdida solo en Reportes, que será lo
@@ -5197,6 +5197,17 @@
             if(cli && cli.tipo === 'personalizado') return monto;
             return monto / 1.19;
         }
+        // Conde 2026-09-14: "coloca aqui tambien de donde viene esto y desgloseme a que
+        // cotizaciones se refiere" -- lista, para el desplegable de "Ventas Ganadas"/"Valor Ganado",
+        // cada cotización ganada que compone la suma: fecha de cierre, cliente, OT y descripción.
+        function contDetalleVentasGanadasHtml(cierres){
+            if(!cierres.length) return '<div style="color:#a0aec0; font-style:italic;">Sin ventas ganadas en este período.</div>';
+            return [...cierres].sort((a,b) => (fechaDeRegistro(b)||0) - (fechaDeRegistro(a)||0)).map(h => {
+                const fecha = fechaDeRegistro(h);
+                const fechaTxt = fecha ? fecha.toLocaleDateString('es-CO') : '-';
+                return `<div style="padding:3px 0; border-bottom:1px solid #edf2f7;">${fechaTxt} — <strong>${h.nombreCli||'-'}</strong>${h.ot?` (${h.ot})`:''}: ${tacticalTruncar(h.desc||'', 45)} — ${cotFormatoCop(h.monto)}</div>`;
+            }).join('');
+        }
         function renderDashboard() {
             const {inicio, fin, etiqueta} = periodoRango(crmPeriodoTipo, crmPeriodoOffset);
             const elEtq = document.getElementById('crm-periodo-etiqueta');
@@ -5216,6 +5227,8 @@
             const netoGanado = ganadas.reduce((sum, o) => sum + montoNetoSinIva(o), 0);
             const elNeto = document.getElementById('kpi-ganadas-neto');
             if(elNeto) elNeto.textContent = ganadas.length ? ("≈ $" + Math.round(netoGanado).toLocaleString() + " sin IVA (neto)") : "";
+            const elDetalleGanadas = document.getElementById('kpi-ganadas-detalle');
+            if(elDetalleGanadas) elDetalleGanadas.innerHTML = contDetalleVentasGanadasHtml(ganadas);
 
             let totalCerrados = ganadas.length + perdidas.length;
             let tasa = totalCerrados === 0 ? 0 : Math.round((ganadas.length / totalCerrados) * 100);
@@ -8042,7 +8055,7 @@
           document.getElementById('rep-comercial-kpis').innerHTML = `
             <div class="kpi-box"><div class="kpi-label">Cotizaciones Generadas</div><div class="kpi-value">${totalCot}</div></div>
             <div class="kpi-box" style="border-color:var(--ganado);"><div class="kpi-label">Tasa de Cierre</div><div class="kpi-value" style="color:var(--ganado);">${tasaCierre}%</div></div>
-            <div class="kpi-box" style="border-color:var(--primary);"><div class="kpi-label">Valor Ganado</div><div class="kpi-value" style="color:var(--primary);">${cotFormatoCop(valorGanado)}</div>${ganadas.length?`<div style="font-size:0.8rem; color:#64748b; margin-top:3px;">≈ ${cotFormatoCop(Math.round(valorGanadoNeto))} sin IVA (neto)</div>`:''}</div>
+            <div class="kpi-box" style="border-color:var(--primary);"><div class="kpi-label">Valor Ganado</div><div class="kpi-value" style="color:var(--primary);">${cotFormatoCop(valorGanado)}</div>${ganadas.length?`<div style="font-size:0.8rem; color:#64748b; margin-top:3px;">≈ ${cotFormatoCop(Math.round(valorGanadoNeto))} sin IVA (neto)</div>`:''}<span style="font-size:0.78rem; color:var(--primary); cursor:pointer; text-decoration:underline;" onclick="const d=this.nextElementSibling; const abrir=d.style.display==='none'; d.style.display=abrir?'block':'none'; this.textContent=abrir?'Ocultar detalle ▴':'¿De dónde viene esto? ▾';">¿De dónde viene esto? ▾</span><div style="display:none; margin-top:6px; text-align:left; max-height:220px; overflow-y:auto; font-size:0.78rem; color:#4a5568;">${contDetalleVentasGanadasHtml(ganadas)}</div></div>
             <div class="kpi-box"><div class="kpi-label">Ticket Promedio (Ganado)</div><div class="kpi-value">${cotFormatoCop(ticketProm)}</div></div>
           `;
           const clientesEnFiltro = new Set(todasCotizaciones.map(c=>c.idCli));
