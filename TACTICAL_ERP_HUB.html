@@ -5302,7 +5302,38 @@
           if(typeof renderComercial === 'function') renderComercial();
         }
         function eliminarCotizacionRegistro(id){
-          if(!confirm('¿Eliminar esta cotización del registro? Esta acción no se puede deshacer.')) return;
+          const cerradoPrevio = db_historial_cierres.find(o => o.id === id);
+          const esVentaGanadaConLtv = cerradoPrevio && cerradoPrevio.estado === 'ganado';
+
+          // Conde 2026-09-14: "se debe eliminar de todas partes, no puede aparecer en las ventas
+          // anuales ni en cotizaciones aprobadas ni en ningún lugar" -- una venta GANADA no vive
+          // solo en el historial del CRM: marcar Ganado también crea una ficha de Kanban (ligada
+          // por "ot") y una prefactura (ligada por "idOpp"), y esa prefactura puede haberse
+          // convertido ya en un Documento de Venta real. Se busca toda la cadena para borrarla
+          // junto con el registro, no solo el CRM (que es lo único que borraba antes).
+          let fichasVinculadas = [], prefacturasVinculadas = [], docsVinculados = [], docsConPagoBloqueados = [];
+          if(esVentaGanadaConLtv){
+            fichasVinculadas = db_kanban.filter(f => cerradoPrevio.ot && f.ot === cerradoPrevio.ot);
+            prefacturasVinculadas = db_prefacturas.filter(p => p.idOpp === id);
+            prefacturasVinculadas.forEach(p => {
+              if(!p.idDocVenta) return;
+              const doc = db_docventa.find(d => d.id === p.idDocVenta);
+              if(!doc) return;
+              const tienePago = doc.saldoPendiente < doc.totalCobrar;
+              (tienePago ? docsConPagoBloqueados : docsVinculados).push(doc);
+            });
+          }
+
+          let aviso = '';
+          if(esVentaGanadaConLtv){
+            aviso += '\n\nEsta era una venta GANADA -- se le restará su monto de "Compras Acumuladas (LTV)" al cliente.';
+            if(fichasVinculadas.length) aviso += `\n\nTambién se borrará ${fichasVinculadas.length===1?'la ficha de Kanban vinculada':'las '+fichasVinculadas.length+' fichas de Kanban vinculadas'} (OT ${cerradoPrevio.ot||'-'}).`;
+            if(prefacturasVinculadas.length) aviso += `\n\nY ${prefacturasVinculadas.length===1?'la prefactura vinculada':'las '+prefacturasVinculadas.length+' prefacturas vinculadas'}.`;
+            if(docsVinculados.length) aviso += `\n\nY ${docsVinculados.length===1?'el Documento de Venta vinculado (sin pagos registrados)':'los '+docsVinculados.length+' Documentos de Venta vinculados (sin pagos registrados)'}.`;
+            if(docsConPagoBloqueados.length) aviso += `\n\n⚠️ OJO: hay ${docsConPagoBloqueados.length} Documento(s) de Venta con pagos YA registrados (${docsConPagoBloqueados.map(d=>d.numero).join(', ')}) -- esos NO se borran automático por seguridad contable. Bórralos a mano desde Contabilidad después de reversar sus Comprobantes de Ingreso.`;
+          }
+          if(!confirm(`¿Eliminar esta cotización del registro? Esta acción no se puede deshacer.${aviso}`)) return;
+
           const iOpp = db_opps.findIndex(o => o.id === id);
           if(iOpp > -1){
             db_opps.splice(iOpp, 1);
@@ -5310,6 +5341,16 @@
           } else {
             const iCerrado = db_historial_cierres.findIndex(o => o.id === id);
             if(iCerrado > -1){
+              // Conde 2026-09-14: "como elimino esa venta pues no fue real" -- marcar Ganado le suma
+              // el monto al LTV del cliente (cerrarNegocio, "cli.ltv += opp.monto"), pero borrar el
+              // registro nunca lo restaba: el cliente seguía mostrando compras que ya no existían.
+              if(esVentaGanadaConLtv){
+                const cli = db_clientes.find(c => c.id === cerradoPrevio.idCli);
+                if(cli){
+                  cli.ltv = Math.max(0, (cli.ltv||0) - (cerradoPrevio.monto||0));
+                  tacticalSyncClientes(db_clientes);
+                }
+              }
               db_historial_cierres.splice(iCerrado, 1);
               tacticalEliminarHistorialRemoto(id);
             }
@@ -5319,7 +5360,24 @@
             db_cotizaciones.splice(iCot, 1);
             tacticalEliminarCotizacionRemoto(id);
           }
+          fichasVinculadas.forEach(f => {
+            db_kanban = db_kanban.filter(x => x.id !== f.id);
+            tacticalEliminarFichaKanbanRemoto(f.id);
+          });
+          prefacturasVinculadas.forEach(p => {
+            db_prefacturas = db_prefacturas.filter(x => x.id !== p.id);
+            tacticalEliminarPrefacturaRemoto(p.id);
+          });
+          docsVinculados.forEach(d => {
+            db_docventa = db_docventa.filter(x => x.id !== d.id);
+            tacticalEliminarDocVentaRemoto(d.id);
+          });
           renderBuscadorCotizaciones();
+          if(esVentaGanadaConLtv){
+            if(typeof renderClientes === 'function') renderClientes();
+            if(typeof renderKanban === 'function') renderKanban();
+            if(typeof renderContabilidad === 'function') renderContabilidad();
+          }
         }
         function verPDFCotizacionGuardada(id){
           const todas = [...db_opps, ...db_historial_cierres];
