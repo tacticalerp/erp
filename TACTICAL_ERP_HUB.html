@@ -2149,10 +2149,26 @@
         // para que 2 personas puedan editar tareas distintas al mismo tiempo
         // sin que el guardado de una le borre el cambio a la otra.
         let db_historico = [];
+        // Conde 2026-09-14: "este informe no debe incluir los sabados ni domingos pues no son dias
+        // laborales" -- cuenta días hábiles (lunes a viernes) ESTRICTAMENTE entre "inicio" y "fin",
+        // sin contar el día de inicio (mismo criterio que el conteo de calendario que reemplaza),
+        // saltándose sábados y domingos.
+        function tacticalDiasHabilesEntre(inicio, fin){
+            let dias = 0;
+            const cursor = new Date(inicio); cursor.setHours(0,0,0,0);
+            const limite = new Date(fin); limite.setHours(0,0,0,0);
+            while(cursor < limite){
+                cursor.setDate(cursor.getDate() + 1);
+                const dow = cursor.getDay();
+                if(dow !== 0 && dow !== 6) dias++;
+            }
+            return dias;
+        }
         function tareaDiasRetraso(fechaOrigenIso){
             const origen = new Date(fechaOrigenIso); origen.setHours(0,0,0,0);
             const hoy = new Date(); hoy.setHours(0,0,0,0);
-            return Math.max(0, Math.round((hoy - origen) / 86400000));
+            if(hoy <= origen) return 0;
+            return tacticalDiasHabilesEntre(origen, hoy);
         }
         // Conde 2026-08-24 (4ta vuelta): "desde 22 de agosto no solo D 22Ago" -- formato compacto
         // "D DDMES" (D de "Desde") en vez del texto largo, para que quepan más tareas en pantalla.
@@ -2348,12 +2364,17 @@
             // td-detalle, oculto salvo que la fila tenga la clase "tarea-expandida" (la flecha la
             // pone taskToggleExpandir). En pantallas grandes esto no cambia nada -- las reglas que
             // ocultan/expanden viven dentro del @media(max-width:768px) de #view-tareas.
+            // Conde 2026-09-14: "elimina de aquí el boton dictado por voz, de todo el plan de
+            // tareas" -- task-desc e input-aclaracion tenían class="tactical-campo-dictado"
+            // (precios_tactical.js la detecta e inyecta el botón 🎤 solo). Se quitó de los 2 únicos
+            // campos de Plan de Tareas que la tenían; el resto del ERP (Reprocesos, Cotizador,
+            // Kanban, Panel de Precios, etc.) la conserva.
             tr.innerHTML = `
                 <td class="td-tarea">
                     ${delayBadge}
                     <button type="button" class="task-toggle" onclick="taskToggleExpandir(this)" title="Ver más detalles">▶</button>
-                    <input type="text" style="width:95%; font-weight:bold;" placeholder="Escriba la tarea..." value="${tacticalEscAttr(desc)}" class="task-desc tactical-campo-dictado" oninput="taskActualizarDictadoVisible(this)" onchange="guardarFila(this.closest('tr'))">
-                    <input type="text" class="input-aclaracion td-detalle td-detalle-desktop tactical-campo-dictado" style="display: ${displayAclaracion};" placeholder="💡 Motivo del retraso externo..." value="${tacticalEscAttr(aclaracion)}" onchange="guardarFila(this.closest('tr'))">
+                    <input type="text" style="width:95%; font-weight:bold;" placeholder="Escriba la tarea..." value="${tacticalEscAttr(desc)}" class="task-desc" onchange="guardarFila(this.closest('tr'))">
+                    <input type="text" class="input-aclaracion td-detalle td-detalle-desktop" style="display: ${displayAclaracion};" placeholder="💡 Motivo del retraso externo..." value="${tacticalEscAttr(aclaracion)}" onchange="guardarFila(this.closest('tr'))">
                 </td>
                 <td class="td-detalle td-detalle-desktop"><input type="text" class="task-espec" placeholder="${inputPlaceholder}" value="${tacticalEscAttr(espec)}" onchange="guardarFila(this.closest('tr'))"></td>
                 <td class="td-responsable${assignedList.length ? ' resp-colapsable' : ''}">
@@ -2388,24 +2409,8 @@
             `;
             tbody.appendChild(tr);
             taskRenderChips(tr.querySelector('.task-emp-list'), area);
-            // Conde 2026-08-24: dictado por voz también al escribir una tarea nueva -- addTask crea
-            // filas en vivo (no existen todavía cuando tacticalInicializarDictado() corrió una sola
-            // vez en DOMContentLoaded), así que se vuelve a llamar acá; es segura de repetir (usa
-            // dataset.dictadoListo como guardia, no duplica el botón en los campos ya armados).
-            if(typeof tacticalInicializarDictado === 'function') tacticalInicializarDictado();
-            taskActualizarDictadoVisible(tr.querySelector('.task-desc'));
             taskActualizarEntregaTexto(tr);
             taskReordenarTabla(area);
-        }
-
-        // Conde 2026-08-24 (4ta vuelta): "oculta dictar por voz si ya se lleno la tarea" -- el
-        // botón 🎤 (inyectado como hermano del campo por tacticalInicializarDictado, en
-        // precios_tactical.js) solo tiene sentido mientras la tarea está vacía; en celular además se
-        // oculta siempre por CSS (ver @media max-width:768px), sin espacio para él.
-        function taskActualizarDictadoVisible(input){
-            const btn = input && input.nextElementSibling;
-            if(!btn || !btn.classList.contains('tactical-dictado-btn')) return;
-            btn.style.display = input.value.trim() ? 'none' : '';
         }
         // "que al escribir la fecha automaticamente tome 2026" -- al enfocar un campo de fecha
         // límite vacío, se precarga con el día/mes de hoy pero año 2026, para no tener que teclear
