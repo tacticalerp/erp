@@ -9316,6 +9316,23 @@
             document.getElementById('cont-total-gastosfijos').innerText = `Total Gastos Fijos: ${cotFormatoCop(total)} / mes`;
         }
 
+        // Conde 2026-09-14: "como se de donde llego esas ventas?" -- desglose que se despliega
+        // debajo de "Ventas Facturadas (mes)" / "Ingresos Cobrados (mes, caja)" en el Tablero
+        // Financiero, con cada Documento de Venta / Comprobante de Ingreso que compone esa suma.
+        function contDetalleDocVentaHtml(docs){
+            if(!docs.length) return '<div style="color:#a0aec0; font-style:italic;">Sin documentos de venta en este período.</div>';
+            return docs.map(d => {
+                const cli = db_clientes.find(c => c.id === d.idCli);
+                return `<div style="padding:3px 0; border-bottom:1px solid #edf2f7;">${d.fecha||'-'} — <strong>${d.numero}</strong> — ${cli?cli.empresa:'Cliente eliminado'}: ${cotFormatoCop(d.totalDocumento)}</div>`;
+            }).join('');
+        }
+        function contDetalleIngresosHtml(ingresos){
+            if(!ingresos.length) return '<div style="color:#a0aec0; font-style:italic;">Sin ingresos cobrados en este período.</div>';
+            return ingresos.map(i => {
+                const cli = db_clientes.find(c => c.id === i.idCli);
+                return `<div style="padding:3px 0; border-bottom:1px solid #edf2f7;">${i.fecha||'-'} — <strong>${i.numero}</strong> — ${cli?cli.empresa:(i.concepto||'Sin cliente')}: ${cotFormatoCop(i.valor)}</div>`;
+            }).join('');
+        }
         /* ---- TABLERO FINANCIERO ---- */
         // Conde 2026-09-10: selector de período (◀ ▶ por mes) -- el día 1 el Tablero se reseteaba
         // solo a ~$0 aunque el mes pasado siguiera en conciliación. Ahora se puede navegar hacia
@@ -9341,8 +9358,12 @@
             const btnHoy = document.getElementById('cont-tablero-btn-hoy');
             if(btnHoy) btnHoy.style.display = contTableroPeriodoOffset === 0 ? 'none' : 'inline-block';
 
-            const ventasFacturadasMes = db_docventa.filter(d => enPeriodo(d.fecha)).reduce((s,d)=>s+d.totalDocumento,0);
-            const ingresosCobradosMes = db_ingresos.filter(i => enPeriodo(i.fecha)).reduce((s,i)=>s+i.valor,0);
+            // Conde 2026-09-14: "como se de donde llego esas ventas?" -- se guardan los registros
+            // filtrados (no solo la suma) para poder mostrar el detalle debajo del KPI.
+            const docsVentaMes = db_docventa.filter(d => enPeriodo(d.fecha)).sort((a,b) => String(b.fecha||'').localeCompare(String(a.fecha||'')));
+            const ventasFacturadasMes = docsVentaMes.reduce((s,d)=>s+d.totalDocumento,0);
+            const ingresosMesArr = db_ingresos.filter(i => enPeriodo(i.fecha)).sort((a,b) => String(b.fecha||'').localeCompare(String(a.fecha||'')));
+            const ingresosCobradosMes = ingresosMesArr.reduce((s,i)=>s+i.valor,0);
             const gastosFijosMes = db_egresos.filter(e => enPeriodo(e.fecha) && e.categoria==='fijo').reduce((s,e)=>s+e.monto,0);
             const gastosVariablesMes = db_egresos.filter(e => enPeriodo(e.fecha) && e.categoria==='variable').reduce((s,e)=>s+e.monto,0);
 
@@ -9397,8 +9418,8 @@
             const utilidadNetaMes = ingresosCobradosMes - (gastosFijosMes + gastosVariablesMes);
 
             document.getElementById('cont-tablero-kpis').innerHTML = `
-                <div class="kpi-box" style="border-color:var(--info);"><div class="kpi-label">Ventas Facturadas (mes)</div><div class="kpi-value">${cotFormatoCop(ventasFacturadasMes)}</div></div>
-                <div class="kpi-box" style="border-color:var(--ganado);"><div class="kpi-label">Ingresos Cobrados (mes, caja)</div><div class="kpi-value" style="color:var(--ganado);">${cotFormatoCop(ingresosCobradosMes)}</div></div>
+                <div class="kpi-box" style="border-color:var(--info);"><div class="kpi-label">Ventas Facturadas (mes)</div><div class="kpi-value">${cotFormatoCop(ventasFacturadasMes)}</div><span style="font-size:0.78rem; color:var(--info); cursor:pointer; text-decoration:underline;" onclick="const d=this.nextElementSibling; const abrir=d.style.display==='none'; d.style.display=abrir?'block':'none'; this.textContent=abrir?'Ocultar detalle ▴':'¿De dónde salió esto? ▾';">¿De dónde salió esto? ▾</span><div style="display:none; margin-top:6px; text-align:left; max-height:180px; overflow-y:auto; font-size:0.78rem; color:#4a5568;">${contDetalleDocVentaHtml(docsVentaMes)}</div></div>
+                <div class="kpi-box" style="border-color:var(--ganado);"><div class="kpi-label">Ingresos Cobrados (mes, caja)</div><div class="kpi-value" style="color:var(--ganado);">${cotFormatoCop(ingresosCobradosMes)}</div><span style="font-size:0.78rem; color:var(--ganado); cursor:pointer; text-decoration:underline;" onclick="const d=this.nextElementSibling; const abrir=d.style.display==='none'; d.style.display=abrir?'block':'none'; this.textContent=abrir?'Ocultar detalle ▴':'¿De dónde salió esto? ▾';">¿De dónde salió esto? ▾</span><div style="display:none; margin-top:6px; text-align:left; max-height:180px; overflow-y:auto; font-size:0.78rem; color:#4a5568;">${contDetalleIngresosHtml(ingresosMesArr)}</div></div>
                 <div class="kpi-box" style="border-color:${colorSemaforo};"><div class="kpi-label">Punto de Equilibrio (meta mes)</div><div class="kpi-value" style="color:${colorSemaforo};">${cotFormatoCop(puntoEquilibrio)}</div></div>
                 <div class="kpi-box" style="border-color:${colorSemaforo};"><div class="kpi-label">% Cumplimiento Punto Equilibrio</div><div class="kpi-value" style="color:${colorSemaforo};">${cumplimientoPct}%</div></div>
                 <div class="kpi-box" style="border-color:var(--peligro);"><div class="kpi-label">Cartera CxC Vencida</div><div class="kpi-value" style="color:var(--peligro);">${cotFormatoCop(carteraVencida)}</div></div>
