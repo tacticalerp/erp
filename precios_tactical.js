@@ -90,7 +90,17 @@ function tacticalNuevaCotizacion(hashDestino){
   // Cuadernos (irAVistaDesdeHash lo lee) -- las 8 calculadoras standalone no pasan nada y quedan
   // en su misma página sin ?ot=.
   const hash = hashDestino ? ('#' + hashDestino) : window.location.hash;
-  window.location.href = window.location.pathname + hash;
+  const destino = window.location.pathname + hash;
+  // Conde 2026-09-15: "da el aviso que se limpia todo pero en realidad no sucede, sigue con los
+  // datos en las casillas" -- cuando la cotización en pantalla nunca se abrió con ?ot=/?otedit=
+  // (el caso más común: una cotización nueva desde cero), la URL actual YA es idéntica a "destino"
+  // (mismo pathname, mismo hash, sin query string) -- asignar location.href a una URL IDÉNTICA a
+  // la actual es un no-op en la mayoría de navegadores, no recarga nada. Se compara primero: si
+  // de verdad hay algo que quitar (venía de editar una cotización, o cambia de hash), se navega
+  // normal; si no cambia nada, se fuerza un reload real con location.reload().
+  const actual = window.location.pathname + window.location.search + window.location.hash;
+  if(actual === destino) window.location.reload();
+  else window.location.href = destino;
 }
 // Conde 2026-08-28 (módulo Comercial): "que se aclare para evitar aprobaciones erradas" -- ventana
 // flotante genérica de sí/no, mismo patrón visual que tacticalPedirFechaFlotante de arriba. Usada
