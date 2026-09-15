@@ -1428,6 +1428,7 @@
                         <div id="cot-ot-nota" style="display:none; margin-top:10px; padding:8px 12px; background:#eef2f7; border-left:4px solid var(--primary); border-radius:4px; font-size:0.9rem;"></div>
                         <div id="cot-edicion-banner" style="display:none; margin-top:10px; padding:8px 12px; background:#fff7e6; border-left:4px solid #d97706; border-radius:4px; font-size:0.9rem;"></div>
                         <div id="cot-pedido-banner" style="display:none; margin-top:10px; padding:8px 12px; background:#eafaf0; border-left:4px solid var(--ganado); border-radius:4px; font-size:0.9rem;"></div>
+                        <div id="cot-pedido-edicion-linea-aviso" style="display:none; margin-top:10px; padding:8px 12px; background:#fff7e6; border-left:4px solid #d97706; border-radius:4px; font-size:0.9rem;"></div>
                         <div id="cot-comparacion-banner" style="display:none; margin-top:10px; padding:8px 12px; background:#f3ecfb; border-left:4px solid #805ad5; border-radius:4px; font-size:0.9rem;"></div>
                     </div>
                 </div>
@@ -6991,6 +6992,73 @@
 
         /* ============ PEDIDO MULTI-PRODUCTO (varias líneas, un solo cliente/OT) ============ */
         function cotPedidoActivo(){ return window.tacticalPedidoBorradorCache || null; }
+        // Conde 2026-09-15: "suprimir o editar los pdf o la cotizacion antes de ser convertida en
+        // pdf, de las cotizaciones de varios elementos... 1 quedo mal y es muy desgastante hacer de
+        // nuevo las 5" -- antes solo se podía "Cerrar pedido" o "Cancelar pedido" completo; no había
+        // forma de ver, corregir o quitar UNA sola línea del pedido en curso antes de cerrarlo.
+        // cotPedidoLineaEditando guarda el índice de la línea que se está corrigiendo (null = modo
+        // normal, agregar una línea nueva). Mismo mecanismo que ya existe en las 6 calculadoras
+        // standalone, adaptado al prefijo "cot" y a ticon() en vez de emoji (convención del Hub).
+        let cotPedidoLineaEditando = null;
+        function cotPedidoCancelarEdicionLinea(){
+          cotPedidoLineaEditando = null;
+          const aviso = document.getElementById('cot-pedido-edicion-linea-aviso');
+          if(aviso) aviso.style.display = 'none';
+        }
+        function cotPedidoLineasListaHtml(pd){
+          return pd.lineas.map((l,idx) => `
+            <div style="display:flex; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid #d5ecd9;">
+              <div style="flex:1; min-width:0;">${idx+1}. ${l.desc} — ${cotFormatoCop(l.monto)}</div>
+              <button type="button" class="btn-action" style="flex-shrink:0;" onclick="cotPedidoEditarLinea(${idx})" title="Corregir esta línea sin rehacer las demás">${ticon('edit')}Editar</button>
+              <button type="button" class="btn-action" style="flex-shrink:0; color:var(--peligro); border-color:var(--peligro);" onclick="cotPedidoQuitarLinea(${idx})" title="Quitar solo esta línea del pedido">${ticon('trash')}Quitar</button>
+            </div>`).join('');
+        }
+        function cotPedidoToggleLineas(){
+          const pd = cotPedidoActivo(); if(!pd) return;
+          const d = document.getElementById('cot-pedido-lineas-detalle');
+          const t = document.getElementById('cot-pedido-lineas-toggle-txt');
+          if(!d || !t) return;
+          const abrir = d.style.display === 'none';
+          d.style.display = abrir ? 'block' : 'none';
+          t.textContent = abrir ? 'Ocultar productos ▴' : `Ver los ${pd.lineas.length} productos agregados ▾`;
+        }
+        function cotPedidoEditarLinea(idx){
+          const pd = cotPedidoActivo();
+          if(!pd || !pd.lineas[idx]) return;
+          const linea = pd.lineas[idx];
+          if(!linea.params || !linea.resultado){ alert('Esta línea es muy antigua y no guardó los datos necesarios para volver a cargarla en el formulario -- quítala y créala de nuevo si tiene un error.'); return; }
+          cotPoblarFormularioEdicion({
+            params: linea.params, resultado: linea.resultado, desc: linea.desc, id: null, ot: pd.ot, vendedor: pd.vendedor,
+            cliente: {
+              empresa: document.getElementById('cot-cli-empresa').value,
+              encargado: document.getElementById('cot-cli-encargado').value,
+              telefono: document.getElementById('cot-cli-telefono').value,
+              correo: document.getElementById('cot-cli-correo').value,
+            },
+            condicionesComerciales: null,
+          });
+          // cotPoblarFormularioEdicion está pensada para editar una cotización YA GUARDADA (crea una
+          // versión OT-XXXX-B nueva) -- acá no aplica, solo repuebla el formulario para corregir esta
+          // línea del pedido en curso, así que se cancela ese modo de edición enseguida.
+          cotCancelarEdicion();
+          cotPedidoLineaEditando = idx;
+          const aviso = document.getElementById('cot-pedido-edicion-linea-aviso');
+          if(aviso){
+            aviso.style.display = 'block';
+            aviso.innerHTML = `${ticon('edit')}Corrigiendo la línea <strong>${idx+1}</strong> del pedido en curso -- al calcular y presionar "Agregar a un pedido" de nuevo, se <strong>REEMPLAZA</strong> esa línea (no se agrega una nueva). <button type="button" class="btn-action" onclick="cotPedidoCancelarEdicionLinea()">Cancelar corrección</button>`;
+          }
+          document.getElementById('view-cotizador').scrollIntoView({behavior:'smooth'});
+        }
+        function cotPedidoQuitarLinea(idx){
+          const pd = cotPedidoActivo();
+          if(!pd || !pd.lineas[idx]) return;
+          if(!confirm(`¿Quitar la línea ${idx+1} ("${pd.lineas[idx].desc}") del pedido en curso? Las demás líneas no se tocan.`)) return;
+          pd.lineas.splice(idx, 1);
+          if(cotPedidoLineaEditando === idx) cotPedidoCancelarEdicionLinea();
+          else if(cotPedidoLineaEditando !== null && idx < cotPedidoLineaEditando) cotPedidoLineaEditando--;
+          window.tacticalPedidoBorradorCache = pd; tacticalGuardarPedidoBorrador(pd);
+          cotRefrescarBannerPedido();
+        }
         function cotRefrescarBannerPedido(){
           const pd = cotPedidoActivo();
           const el = document.getElementById('cot-pedido-banner');
@@ -6999,6 +7067,8 @@
           const total = pd.lineas.reduce((s,l)=>s+l.monto,0);
           el.style.display = 'block';
           el.innerHTML = `${ticon('package')}Pedido en curso <b>${pd.ot}</b> — ${pd.nombreCli} — ${pd.lineas.length} producto(s), ${cotFormatoCop(total)}<br>
+            <span id="cot-pedido-lineas-toggle-txt" style="cursor:pointer; text-decoration:underline; font-size:0.85rem;" onclick="cotPedidoToggleLineas()">Ver los ${pd.lineas.length} productos agregados ▾</span>
+            <div id="cot-pedido-lineas-detalle" style="display:none; margin-top:6px;">${cotPedidoLineasListaHtml(pd)}</div>
             <button type="button" class="btn-submit" style="margin-top:6px; background:var(--ganado); display:inline-block; width:auto;" onclick="cotCerrarPedido()">${ticon('check')}Cerrar pedido y guardar en CRM</button>
             <button type="button" class="btn-submit" style="margin-top:6px; background:var(--peligro); display:inline-block; width:auto;" onclick="cotCancelarPedido()">${ticon('x')}Cancelar pedido</button>`;
         }
@@ -7043,13 +7113,23 @@
           // mostrar) -- sin esto, un pedido de un solo producto no se podía reabrir para editar
           // (el motor no tenía con qué recalcular). Ver cotCerrarPedido: con 1 sola línea, el
           // pedido se guarda igual que una cotización directa usando estos mismos datos.
-          pd.lineas.push({ linea:'cuadernos', desc, cantidad: p.cantidad, monto: Math.round(r.precioFinalTotal), precioUnitario: r.precioVentaUnitario, maquina: null, material: null, nPliegos: null, planoCorteLineas, fotoUrl: cotFotoElegidaUrl(), videoUrl: cotVideoElegidoUrl(), params: p, resultado: r });
+          const nuevaLinea = { linea:'cuadernos', desc, cantidad: p.cantidad, monto: Math.round(r.precioFinalTotal), precioUnitario: r.precioVentaUnitario, maquina: null, material: null, nPliegos: null, planoCorteLineas, fotoUrl: cotFotoElegidaUrl(), videoUrl: cotVideoElegidoUrl(), params: p, resultado: r };
+          let mensajePedido;
+          if(cotPedidoLineaEditando !== null && pd.lineas[cotPedidoLineaEditando]){
+            pd.lineas[cotPedidoLineaEditando] = nuevaLinea;
+            mensajePedido = `Línea ${cotPedidoLineaEditando+1} del pedido ${pd.ot} actualizada.`;
+            cotPedidoCancelarEdicionLinea();
+          } else {
+            pd.lineas.push(nuevaLinea);
+            mensajePedido = `Agregado al pedido ${pd.ot}. Ahora tiene ${pd.lineas.length} producto(s).`;
+          }
           window.tacticalPedidoBorradorCache = pd; tacticalGuardarPedidoBorrador(pd);
           cotRefrescarBannerPedido();
-          alert(`Agregado al pedido ${pd.ot}. Ahora tiene ${pd.lineas.length} producto(s).`);
+          alert(mensajePedido);
         }
         function cotCerrarPedido(){
           const pd = cotPedidoActivo();
+          cotPedidoCancelarEdicionLinea();
           if(!pd || pd.lineas.length===0){ window.tacticalPedidoBorradorCache = null; tacticalEliminarPedidoBorrador(); cotRefrescarBannerPedido(); return; }
           const montoTotal = pd.lineas.reduce((s,l)=>s+l.monto,0);
           const cliPd = db_clientes.find(c=>c.id===pd.idCli) || {empresa:pd.nombreCli, nombre:'', wp:'', correo:''};
@@ -7106,6 +7186,7 @@
           if(!pd) return;
           if(!confirm(`¿Cancelar el pedido ${pd.ot} en curso? Se perderán las ${pd.lineas.length} línea(s) agregadas (no borra cotizaciones individuales ya guardadas aparte).`)) return;
           window.tacticalPedidoBorradorCache = null; tacticalEliminarPedidoBorrador();
+          cotPedidoCancelarEdicionLinea();
           cotRefrescarBannerPedido();
         }
 

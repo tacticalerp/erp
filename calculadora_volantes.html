@@ -381,6 +381,7 @@
       </div>
       <div id="cot-ot-nota" style="display:none; margin-top:10px; padding:8px 12px; background:#eef2f7; border-left:4px solid var(--azul); border-radius:4px; font-size:0.9rem;"></div>
       <div id="pedido-banner" style="display:none; margin-top:10px; padding:8px 12px; background:#eafaf0; border-left:4px solid var(--verde); border-radius:4px; font-size:0.85rem;"></div>
+      <div id="pedido-edicion-linea-aviso" style="display:none; margin-top:10px; padding:8px 12px; background:#fff3cd; border-left:4px solid #f0d98c; border-radius:4px; font-size:0.85rem;">✏️ Corrigiendo la línea <strong id="pedido-edicion-linea-num"></strong> del pedido en curso -- al calcular y presionar "Agregar a un pedido" de nuevo, se <strong>REEMPLAZA</strong> esa línea (no se agrega una nueva). <button type="button" class="btn-action" onclick="pedidoCancelarEdicionLinea()">Cancelar corrección</button></div>
       <div id="comparacion-banner" style="display:none; margin-top:10px; padding:8px 12px; background:#f3ecfb; border-left:4px solid #805ad5; border-radius:4px; font-size:0.85rem;"></div>
     </div>
     <div class="card" id="card-recomendaciones">
@@ -1866,6 +1867,70 @@ async function tacticalCargarEdicionDesdeURL(){
 
 /* ============ PEDIDO MULTI-PRODUCTO (varias líneas, un solo cliente/OT) ============ */
 function pedidoActivo(){ return window.tacticalPedidoBorradorCache || null; }
+// Conde 2026-09-15: "suprimir o editar los pdf o la cotizacion antes de ser convertida en pdf, de
+// las cotizaciones de varios elementos... 1 quedo mal y es muy desgastante hacer de nuevo las 5" --
+// antes solo se podía "Cerrar pedido" o "Cancelar pedido" completo; no había forma de ver, corregir
+// o quitar UNA sola línea del pedido en curso antes de cerrarlo. pedidoLineaEditando guarda el
+// índice de la línea que se está corrigiendo (null = modo normal, agregar una línea nueva).
+let pedidoLineaEditando = null;
+function pedidoCancelarEdicionLinea(){
+  pedidoLineaEditando = null;
+  const aviso = document.getElementById('pedido-edicion-linea-aviso');
+  if(aviso) aviso.style.display = 'none';
+}
+function pedidoLineasListaHtml(pd){
+  return pd.lineas.map((l,idx) => `
+    <div style="display:flex; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid #d5ecd9;">
+      <div style="flex:1; min-width:0;">${idx+1}. ${l.desc} — ${cop(l.monto)}</div>
+      <button type="button" class="btn-action" style="flex-shrink:0;" onclick="pedidoEditarLinea(${idx})" title="Corregir esta línea sin rehacer las demás">✏️ Editar</button>
+      <button type="button" class="btn-action" style="flex-shrink:0; color:var(--rojo); border-color:var(--rojo);" onclick="pedidoQuitarLinea(${idx})" title="Quitar solo esta línea del pedido">🗑️ Quitar</button>
+    </div>`).join('');
+}
+function pedidoToggleLineas(){
+  const pd = pedidoActivo(); if(!pd) return;
+  const d = document.getElementById('pedido-lineas-detalle');
+  const t = document.getElementById('pedido-lineas-toggle-txt');
+  if(!d || !t) return;
+  const abrir = d.style.display === 'none';
+  d.style.display = abrir ? 'block' : 'none';
+  t.textContent = abrir ? 'Ocultar productos ▴' : `Ver los ${pd.lineas.length} productos agregados ▾`;
+}
+function pedidoEditarLinea(idx){
+  const pd = pedidoActivo();
+  if(!pd || !pd.lineas[idx]) return;
+  const linea = pd.lineas[idx];
+  if(!linea.params || !linea.resultado){ alert('Esta línea es muy antigua y no guardó los datos necesarios para volver a cargarla en el formulario -- quítala y créala de nuevo si tiene un error.'); return; }
+  cargarCotizacionGuardada({
+    params: linea.params, resultado: linea.resultado, desc: linea.desc, id: null, ot: pd.ot, vendedor: pd.vendedor,
+    cliente: {
+      empresa: document.getElementById('in-cli-empresa').value,
+      encargado: document.getElementById('in-cli-encargado').value,
+      telefono: document.getElementById('in-cli-telefono').value,
+      correo: document.getElementById('in-cli-correo').value,
+    },
+    condicionesComerciales: null,
+  });
+  // cargarCotizacionGuardada está pensada para editar una cotización YA GUARDADA (crea una versión
+  // OT-XXXX-B nueva) -- acá no aplica, solo repuebla el formulario para corregir esta línea del
+  // pedido en curso, así que se cancela ese modo de edición enseguida.
+  cotCancelarEdicion();
+  pedidoLineaEditando = idx;
+  const aviso = document.getElementById('pedido-edicion-linea-aviso');
+  const num = document.getElementById('pedido-edicion-linea-num');
+  if(num) num.textContent = idx+1;
+  if(aviso) aviso.style.display = 'block';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+function pedidoQuitarLinea(idx){
+  const pd = pedidoActivo();
+  if(!pd || !pd.lineas[idx]) return;
+  if(!confirm(`¿Quitar la línea ${idx+1} ("${pd.lineas[idx].desc}") del pedido en curso? Las demás líneas no se tocan.`)) return;
+  pd.lineas.splice(idx, 1);
+  if(pedidoLineaEditando === idx) pedidoCancelarEdicionLinea();
+  else if(pedidoLineaEditando !== null && idx < pedidoLineaEditando) pedidoLineaEditando--;
+  window.tacticalPedidoBorradorCache = pd; tacticalGuardarPedidoBorrador(pd);
+  refrescarBannerPedido();
+}
 function refrescarBannerPedido(){
   const pd = pedidoActivo();
   const el = document.getElementById('pedido-banner');
@@ -1874,6 +1939,8 @@ function refrescarBannerPedido(){
   const total = pd.lineas.reduce((s,l)=>s+l.monto,0);
   el.style.display = 'block';
   el.innerHTML = `📦 Pedido en curso <b>${pd.ot}</b> — ${pd.nombreCli} — ${pd.lineas.length} producto(s), ${cop(total)}<br>
+    <span id="pedido-lineas-toggle-txt" style="cursor:pointer; text-decoration:underline; font-size:0.82rem;" onclick="pedidoToggleLineas()">Ver los ${pd.lineas.length} productos agregados ▾</span>
+    <div id="pedido-lineas-detalle" style="display:none; margin-top:6px;">${pedidoLineasListaHtml(pd)}</div>
     <button type="button" style="margin-top:6px; background:var(--verde); color:#fff;" onclick="cerrarPedido()">✅ Cerrar pedido y guardar en CRM</button>
     <button type="button" style="margin-top:6px; background:var(--rojo); color:#fff;" onclick="cancelarPedido()">✕ Cancelar pedido</button>`;
 }
@@ -1924,14 +1991,24 @@ async function iniciarOAgregarPedido(){
     planoCorte = ultimoResultado.detalleMaterial.planoCorte || null;
   }
   const recomendaciones = RECOMENDACIONES_PRODUCCION.filter(reg=>reg.aplica(ultimoResultado)).map(reg=>typeof reg.texto==='function'?reg.texto(ultimoResultado):reg.texto);
-  pd.lineas.push({ linea:'volantes', desc, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), precioUnitario: ultimoResultado.precioVentaUnitario, maquina, material, nPliegos, planoCorte, recomendaciones, fotoUrl: fotoParaCotizacion('volantes'), videoUrl: videoParaCotizacion('volantes'), params: ultimoParams, resultado: ultimoResultado });
+  const nuevaLinea = { linea:'volantes', desc, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), precioUnitario: ultimoResultado.precioVentaUnitario, maquina, material, nPliegos, planoCorte, recomendaciones, fotoUrl: fotoParaCotizacion('volantes'), videoUrl: videoParaCotizacion('volantes'), params: ultimoParams, resultado: ultimoResultado };
+  let mensajePedido;
+  if(pedidoLineaEditando !== null && pd.lineas[pedidoLineaEditando]){
+    pd.lineas[pedidoLineaEditando] = nuevaLinea;
+    mensajePedido = `Línea ${pedidoLineaEditando+1} del pedido ${pd.ot} actualizada.`;
+    pedidoCancelarEdicionLinea();
+  } else {
+    pd.lineas.push(nuevaLinea);
+    mensajePedido = `Agregado al pedido ${pd.ot}. Ahora tiene ${pd.lineas.length} producto(s).`;
+  }
   fotoPersonalReiniciar();
   window.tacticalPedidoBorradorCache = pd; tacticalGuardarPedidoBorrador(pd);
   refrescarBannerPedido();
-  alert(`Agregado al pedido ${pd.ot}. Ahora tiene ${pd.lineas.length} producto(s).`);
+  alert(mensajePedido);
 }
 function cerrarPedido(){
   const pd = pedidoActivo();
+  pedidoCancelarEdicionLinea();
   if(!pd || pd.lineas.length===0){ window.tacticalPedidoBorradorCache = null; tacticalEliminarPedidoBorrador(); refrescarBannerPedido(); return; }
   const montoTotal = pd.lineas.reduce((s,l)=>s+l.monto,0);
   const cantidadTotal = pd.lineas.reduce((s,l)=>s+(l.cantidad||0),0);
@@ -2134,6 +2211,7 @@ function cancelarPedido(){
   if(!pd) return;
   if(!confirm(`¿Cancelar el pedido ${pd.ot} en curso? Se perderán las ${pd.lineas.length} línea(s) agregadas (no borra cotizaciones individuales ya guardadas aparte).`)) return;
   window.tacticalPedidoBorradorCache = null; tacticalEliminarPedidoBorrador();
+  pedidoCancelarEdicionLinea();
   refrescarBannerPedido();
 }
 
