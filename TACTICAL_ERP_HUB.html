@@ -140,10 +140,6 @@
           white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         #view-tareas .badge-delay, #view-tareas .tactical-dictado-btn { flex-shrink: 0; }
-        /* !important necesario -- el campo trae style="display:block" inline cuando hay retraso
-           (ver addTask), y un estilo inline siempre le gana a una regla externa sin !important. */
-        #view-tareas .input-aclaracion { display: none !important; flex-basis: 100%; order: 5; }
-        #view-tareas tr.tarea-expandida .input-aclaracion { display: block !important; }
         #view-tareas td.td-responsable { flex-shrink: 0; gap: 4px; flex-wrap: wrap; max-width: 45%; }
         #view-tareas .task-emp-add { width: auto !important; max-width: 62px !important; font-size: 9.5px; }
         #view-tareas td.td-detalle:not(.td-detalle-desktop) { flex-shrink: 0; }
@@ -441,7 +437,6 @@
             #view-tareas .task-desc { font-size: 13.5px; font-family: 'Arial Narrow', 'Helvetica Neue Condensed', Arial, sans-serif; }
             #view-tareas .badge-delay { font-size: 9px; padding: 1px 5px; }
             #view-tareas .tactical-dictado-btn { display: none !important; }
-            #view-tareas .input-aclaracion { font-size: 10.5px !important; color: #c53030; }
             #view-tareas .emp-chip { font-size: 9.5px; padding: 1px 5px; }
             #view-tareas .task-espec { font-size: 10.5px; color: #718096; }
             #view-tareas .task-origin-txt, #view-tareas .task-entrega-txt { font-size: 9.5px; }
@@ -2309,7 +2304,10 @@
             const espec = tr.querySelector('.task-espec').value;
             const emp = taskLeerResponsables(tr);
             const status = tr.querySelector('.status-select').value;
-            const aclaracion = tr.querySelector('.input-aclaracion').value;
+            // Conde 2026-09-16: "quita tambien ese texto de motivo... asi quedara solo un
+            // recuadro" -- se quitó el campo de texto (.input-aclaracion) de la fila; ya no hay de
+            // dónde leerlo, queda vacío siempre.
+            const aclaracion = '';
             const fechaLimite = tr.querySelector('.task-fecha-limite').value || null;
             tacticalSyncTarea({
                 id: tr.dataset.id, area, desc, espec, emp, status, aclaracion, fechaLimite,
@@ -2327,7 +2325,7 @@
             if(desc.trim() === ''){ tr.remove(); return; }
             const espec = tr.querySelector('.task-espec').value;
             const emp = taskLeerResponsables(tr);
-            const aclaracion = tr.querySelector('.input-aclaracion').value;
+            const aclaracion = '';
             const fechaLimite = tr.querySelector('.task-fecha-limite').value || null;
             const fechaOrigen = tr.dataset.fechaOrigen;
             tacticalSyncTarea({
@@ -2369,10 +2367,6 @@
             const assignedList = Array.isArray(assigned) ? assigned.filter(Boolean) : (assigned ? [assigned] : []);
 
             let delayBadge = diasRetraso > 0 ? `<div class="badge-delay" title="Retraso: ${diasRetraso} día(s)">⚠️ ${diasRetraso}</div><br>` : '';
-            // Conde 2026-09-16: "hay tareas que no se avanzan por falta de informacion o porque hay
-            // otras en prioridad" -- el campo de motivo ahora se abre con el retraso automático O al
-            // marcar Urgente (antes era "Causa Externa"), para anotar por qué está frenada.
-            let displayAclaracion = (diasRetraso > 0 || status === 'urgente') ? 'block' : 'none';
             let inputPlaceholder = area === 'diseno' ? 'Cant. y tipo de impresión...' : (area === 'produccion' ? 'Dirección proveedor...' : 'Notas...');
 
             // Conde 2026-08-23: "solo veremos tarea y responsable, si queremos mas informacion se
@@ -2382,16 +2376,19 @@
             // pone taskToggleExpandir). En pantallas grandes esto no cambia nada -- las reglas que
             // ocultan/expanden viven dentro del @media(max-width:768px) de #view-tareas.
             // Conde 2026-09-14: "elimina de aquí el boton dictado por voz, de todo el plan de
-            // tareas" -- task-desc e input-aclaracion tenían class="tactical-campo-dictado"
-            // (precios_tactical.js la detecta e inyecta el botón 🎤 solo). Se quitó de los 2 únicos
-            // campos de Plan de Tareas que la tenían; el resto del ERP (Reprocesos, Cotizador,
-            // Kanban, Panel de Precios, etc.) la conserva.
+            // tareas" -- task-desc tenía class="tactical-campo-dictado" (precios_tactical.js la
+            // detecta e inyecta el botón 🎤 solo). Se quitó del único campo de Plan de Tareas que la
+            // tenía; el resto del ERP (Reprocesos, Cotizador, Kanban, Panel de Precios, etc.) la
+            // conserva.
+            // Conde 2026-09-16: "quita tambien ese texto de motivo... asi quedara solo un recuadro y
+            // otro sera eliminado" -- se quitó el campo .input-aclaracion completo (antes "Motivo del
+            // retraso externo" / "Motivo urgente o retrasada"); el único recuadro de detalle que
+            // queda es "Cant. y tipo de impresión" (.task-espec, en su propia celda más abajo).
             tr.innerHTML = `
                 <td class="td-tarea">
                     ${delayBadge}
                     <button type="button" class="task-toggle" onclick="taskToggleExpandir(this)" title="Ver más detalles">▶</button>
                     <input type="text" style="width:95%; font-weight:bold;" placeholder="Escriba la tarea..." value="${tacticalEscAttr(desc)}" class="task-desc" onchange="guardarFila(this.closest('tr'))">
-                    <input type="text" class="input-aclaracion td-detalle td-detalle-desktop" style="display: ${displayAclaracion};" placeholder="💡 Motivo (por qué está urgente o retrasada)..." value="${tacticalEscAttr(aclaracion)}" onchange="guardarFila(this.closest('tr'))">
                 </td>
                 <td class="td-detalle td-detalle-desktop"><input type="text" class="task-espec" placeholder="${inputPlaceholder}" value="${tacticalEscAttr(espec)}" onchange="guardarFila(this.closest('tr'))"></td>
                 <td class="td-responsable${assignedList.length ? ' resp-colapsable' : ''}">
@@ -2573,9 +2570,6 @@
             selectElement.title = TACTICAL_ESTADO_LABELS[selectElement.value] || '';
             const tr = selectElement.closest('tr');
             tr.classList.toggle('tarea-urgente', selectElement.value === 'urgente');
-            const aclInput = tr.querySelector('.input-aclaracion');
-            if (selectElement.value === 'urgente') aclInput.style.display = 'block';
-            else if (!tr.querySelector('.badge-delay')) aclInput.style.display = 'none';
             if(selectElement.value === 'listo' || selectElement.value === 'finalizado'){
                 archivarTarea(tr, selectElement.value);
             } else {
