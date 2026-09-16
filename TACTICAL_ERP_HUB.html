@@ -1491,6 +1491,7 @@
                             </div>
                             <div class="data-card">
                                 <div class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>Ventas por Cliente (en el período elegido)</div>
+                                <p style="font-size:0.78rem; color:#94a3b8; margin:2px 0 6px;">Ranking por monto -- "Ver compras" desglosa qué compró y en qué mes.</p>
                                 <div id="rep-ventas-cliente" style="font-size:0.9rem; line-height:1.6; margin-top:8px; max-height:260px; overflow-y:auto;"></div>
                             </div>
                             <div class="data-card">
@@ -5222,6 +5223,18 @@
                 return `<div style="padding:3px 0; border-bottom:1px solid #edf2f7;">${fechaTxt} — <strong>${h.nombreCli||'-'}</strong>${h.ot?` (${h.ot})`:''}: ${tacticalTruncar(h.desc||'', 45)} — ${cotFormatoCop(h.monto)}</div>`;
             }).join('');
         }
+        // Conde 2026-09-16: "ayudame creando esa opcion de ver compras por clientes y por periodo"
+        // -- mismo desglose que contDetalleVentasGanadasHtml, pero para UN cliente ya agrupado (no
+        // repite el nombre en cada línea) -- fecha con mes+año, descripción y monto de cada compra.
+        const TACTICAL_MESES_LARGOS = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+        function contDetalleComprasClienteHtml(compras){
+            if(!compras || !compras.length) return '<div style="color:#a0aec0; font-style:italic;">Sin compras en este período.</div>';
+            return [...compras].sort((a,b) => (fechaDeRegistro(b)||0) - (fechaDeRegistro(a)||0)).map(g => {
+                const fecha = fechaDeRegistro(g);
+                const fechaTxt = fecha ? `${TACTICAL_MESES_LARGOS[fecha.getMonth()]} ${fecha.getFullYear()}` : '-';
+                return `<div style="padding:2px 0; border-bottom:1px solid #edf2f7;">${fechaTxt} — ${tacticalTruncar(g.desc||'', 50)}${g.ot?` (${g.ot})`:''}: <strong>${cotFormatoCop(g.monto)}</strong></div>`;
+            }).join('');
+        }
         function renderDashboard() {
             const {inicio, fin, etiqueta} = periodoRango(crmPeriodoTipo, crmPeriodoOffset);
             const elEtq = document.getElementById('crm-periodo-etiqueta');
@@ -8175,13 +8188,27 @@
           // Conde 2026-08-20: "consolidado de ventas por cliente y por producto" -- a diferencia del
           // Top Clientes de arriba (que es LTV histórico, sin importar el período elegido), esto usa
           // SOLO lo realmente vendido (ganadas) DENTRO del rango de fechas elegido.
+          // Conde 2026-09-16: "ayudame creando esa opcion de ver compras por clientes y por periodo"
+          // -- ya rankeaba por monto dentro del período, pero no mostraba QUÉ compró cada cliente.
+          // Ahora cada cliente tiene un "Ver compras ▾" que despliega cada cotización ganada suya
+          // (mes, descripción, monto), reusando el mismo patrón de detalle del Tablero/Ventas Ganadas.
           const ventasPorCliente = {};
-          ganadas.forEach(g=>{ if(!g.idCli) return; ventasPorCliente[g.idCli] = (ventasPorCliente[g.idCli]||0) + (g.monto||0); });
+          const comprasPorCliente = {};
+          ganadas.forEach(g=>{
+            if(!g.idCli) return;
+            ventasPorCliente[g.idCli] = (ventasPorCliente[g.idCli]||0) + (g.monto||0);
+            (comprasPorCliente[g.idCli] = comprasPorCliente[g.idCli] || []).push(g);
+          });
           const filasVentasCliente = Object.keys(ventasPorCliente)
-            .map(idCli => ({ nombre: (db_clientes.find(c=>c.id===idCli)||{}).empresa || 'Cliente eliminado', total: ventasPorCliente[idCli] }))
+            .map(idCli => ({ nombre: (db_clientes.find(c=>c.id===idCli)||{}).empresa || 'Cliente eliminado', total: ventasPorCliente[idCli], compras: comprasPorCliente[idCli] }))
             .sort((a,b)=>b.total-a.total);
           document.getElementById('rep-ventas-cliente').innerHTML = filasVentasCliente.length
-            ? filasVentasCliente.map(f=>`• ${f.nombre}: <strong>${cotFormatoCop(f.total)}</strong>`).join('<br>')
+            ? filasVentasCliente.map(f => `
+                <div style="padding:4px 0; border-bottom:1px solid #edf2f7;">
+                  • ${f.nombre}: <strong>${cotFormatoCop(f.total)}</strong>
+                  <span style="font-size:0.78rem; color:var(--primary); cursor:pointer; text-decoration:underline; margin-left:6px;" onclick="const d=this.nextElementSibling; const abrir=d.style.display==='none'; d.style.display=abrir?'block':'none'; this.textContent=abrir?'Ocultar ▴':'Ver compras ▾';">Ver compras ▾</span>
+                  <div style="display:none; margin-top:4px; padding-left:12px; font-size:0.82rem; color:#4a5568;">${contDetalleComprasClienteHtml(f.compras)}</div>
+                </div>`).join('')
             : '<span style="color:#a0aec0; font-style:italic;">Sin ventas ganadas en este período.</span>';
 
           // Ventas en $ por producto: un pedido multi-producto (lineas:[...]) solo trae UN monto total
