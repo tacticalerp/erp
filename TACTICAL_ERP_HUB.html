@@ -246,10 +246,17 @@
         .status-pendiente { background-color: var(--pendiente); color: #744210; }
         .status-proceso { background-color: var(--proceso); color: white; }
         .status-externo { background-color: var(--externo); color: white; }
+        .status-urgente { background-color: var(--peligro); color: white; }
         .status-listo { background-color: var(--listo); color: white; }
         .status-finalizado { background-color: var(--finalizado); color: white; }
 
         .badge-delay { display: inline-block; background: var(--peligro); color: white; padding: 3px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; margin-bottom: 5px; }
+        /* Conde 2026-09-16: "coloca una que sea urgente y esa que cree un borde rojo o algo
+           claramente distintivo" -- cada fila de #view-tareas ya es una "tarjeta" con su propio
+           border (ver "#view-tareas tr" más abajo, con !important) -- hay que igualar esa
+           especificidad + !important para poder pintarle un borde rojo grueso encima cuando está
+           Urgente, en vez de intentar bordear un <td> (esas quedan con "border:none!important"). */
+        #view-tareas tr.tarea-urgente { background: #fff5f5 !important; border: 2px solid var(--peligro) !important; }
         .task-fecha-limite { display: block; font-size: 0.75rem; padding: 2px 4px; margin-top: 3px; width: auto; height: auto; color: #718096; }
         .badge-escape { background: #fff5f5; color: var(--primary); border: 1px solid #feb2b2; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; display: inline-block; margin-top: 4px; }
         .badge-supplier { background: #f3e8ff; color: var(--externo); border: 1px solid #d6bcfa; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; display: inline-block; margin-top: 4px; }
@@ -2341,13 +2348,19 @@
         function tacticalEscAttr(s){
           return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;');
         }
-        const TACTICAL_ESTADO_LABELS = { pendiente:'Pendiente', proceso:'En Proceso', externo:'Causa Externa', listo:'Listo', finalizado:'Finalizado' };
+        const TACTICAL_ESTADO_LABELS = { pendiente:'Pendiente', urgente:'Urgente', listo:'Listo', finalizado:'Finalizado' };
         function addTask(area, desc = '', espec = '', assigned = '', status = 'pendiente', id = null, fechaOrigen = null, orden = null, aclaracion = '', fechaLimite = null) {
+            // Conde 2026-09-16: "elimina causa externa... tambien elimina en proceso" -- ninguna de
+            // las 2 hacía nada más que cambiar de color; se quitaron del desplegable. Tareas viejas
+            // que ya tenían guardado 'proceso' o 'externo' se normalizan a 'pendiente' acá mismo (se
+            // ven limpias sin romper nada; si se tocan y se guardan, quedan en 'pendiente' de una vez).
+            if(status === 'proceso' || status === 'externo') status = 'pendiente';
             const tbody = document.querySelector(`#table-${area} tbody`);
             const tr = document.createElement('tr');
             tr.dataset.id = id || crypto.randomUUID();
             tr.dataset.fechaOrigen = fechaOrigen || new Date().toISOString();
             tr.dataset.orden = orden != null ? orden : Date.now();
+            tr.classList.toggle('tarea-urgente', status === 'urgente');
             const dateStr = tareaOrigenTexto(tr.dataset.fechaOrigen);
             const diasRetraso = tareaDiasRetraso(tr.dataset.fechaOrigen);
 
@@ -2356,7 +2369,10 @@
             const assignedList = Array.isArray(assigned) ? assigned.filter(Boolean) : (assigned ? [assigned] : []);
 
             let delayBadge = diasRetraso > 0 ? `<div class="badge-delay" title="Retraso: ${diasRetraso} día(s)">⚠️ ${diasRetraso}</div><br>` : '';
-            let displayAclaracion = (diasRetraso > 0 || status === 'externo') ? 'block' : 'none';
+            // Conde 2026-09-16: "hay tareas que no se avanzan por falta de informacion o porque hay
+            // otras en prioridad" -- el campo de motivo ahora se abre con el retraso automático O al
+            // marcar Urgente (antes era "Causa Externa"), para anotar por qué está frenada.
+            let displayAclaracion = (diasRetraso > 0 || status === 'urgente') ? 'block' : 'none';
             let inputPlaceholder = area === 'diseno' ? 'Cant. y tipo de impresión...' : (area === 'produccion' ? 'Dirección proveedor...' : 'Notas...');
 
             // Conde 2026-08-23: "solo veremos tarea y responsable, si queremos mas informacion se
@@ -2375,7 +2391,7 @@
                     ${delayBadge}
                     <button type="button" class="task-toggle" onclick="taskToggleExpandir(this)" title="Ver más detalles">▶</button>
                     <input type="text" style="width:95%; font-weight:bold;" placeholder="Escriba la tarea..." value="${tacticalEscAttr(desc)}" class="task-desc" onchange="guardarFila(this.closest('tr'))">
-                    <input type="text" class="input-aclaracion td-detalle td-detalle-desktop" style="display: ${displayAclaracion};" placeholder="💡 Motivo del retraso externo..." value="${tacticalEscAttr(aclaracion)}" onchange="guardarFila(this.closest('tr'))">
+                    <input type="text" class="input-aclaracion td-detalle td-detalle-desktop" style="display: ${displayAclaracion};" placeholder="💡 Motivo (por qué está urgente o retrasada)..." value="${tacticalEscAttr(aclaracion)}" onchange="guardarFila(this.closest('tr'))">
                 </td>
                 <td class="td-detalle td-detalle-desktop"><input type="text" class="task-espec" placeholder="${inputPlaceholder}" value="${tacticalEscAttr(espec)}" onchange="guardarFila(this.closest('tr'))"></td>
                 <td class="td-responsable${assignedList.length ? ' resp-colapsable' : ''}">
@@ -2386,14 +2402,16 @@
                 <td class="td-detalle">
                     <!-- Conde 2026-09-14: "no tienen descripción, solo usamos el verde" -- se quitó
                          🏁 Finalizado (hacía exactamente lo mismo que ✅ Listo: archivar la tarea al
-                         Histórico, sin ningún campo ni comportamiento distinto -- puro duplicado). A
-                         las 4 que quedan se les agregó title por <option> (tooltip al pasar el mouse
-                         sobre cada una en la lista desplegada), en vez de texto visible, para no
-                         ensanchar la columna. -->
+                         Histórico, sin ningún campo ni comportamiento distinto -- puro duplicado).
+                         Conde 2026-09-16: "elimina causa externa... tambien elimina en proceso" --
+                         ninguna de las 2 hacía nada más que cambiar de color, "como se usa queda la
+                         tarea y se resuelve, no se hace nada más con este listado". En su lugar,
+                         🚨 Urgente SÍ hace algo distinto: le pone un borde rojo bien visible a toda
+                         la fila (ver .tarea-urgente en el CSS) para las tareas que no avanzan por
+                         falta de información o por otras prioridades. -->
                     <select class="status-select status-${status}" title="${TACTICAL_ESTADO_LABELS[status]||''}" onchange="evaluarEstadoFila(this)">
                         <option value="pendiente" title="Pendiente -- todavía no se ha empezado" ${status === 'pendiente' ? 'selected' : ''}>⏳</option>
-                        <option value="proceso" title="En Proceso -- se está trabajando en ella ahora" ${status === 'proceso' ? 'selected' : ''}>🔄</option>
-                        <option value="externo" title="Causa Externa -- bloqueada por algo que no depende de nosotros (abre el motivo del retraso)" ${status === 'externo' ? 'selected' : ''}>⚠️</option>
+                        <option value="urgente" title="Urgente -- no avanza por falta de información o por otras prioridades (resalta la fila en rojo)" ${status === 'urgente' ? 'selected' : ''}>🚨</option>
                         <option value="listo" title="Listo -- termina la tarea y la archiva al Histórico" ${status === 'listo' ? 'selected' : ''}>✅</option>
                     </select>
                 </td>
@@ -2554,8 +2572,9 @@
             selectElement.className = 'status-select status-' + selectElement.value;
             selectElement.title = TACTICAL_ESTADO_LABELS[selectElement.value] || '';
             const tr = selectElement.closest('tr');
+            tr.classList.toggle('tarea-urgente', selectElement.value === 'urgente');
             const aclInput = tr.querySelector('.input-aclaracion');
-            if (selectElement.value === 'externo') aclInput.style.display = 'block';
+            if (selectElement.value === 'urgente') aclInput.style.display = 'block';
             else if (!tr.querySelector('.badge-delay')) aclInput.style.display = 'none';
             if(selectElement.value === 'listo' || selectElement.value === 'finalizado'){
                 archivarTarea(tr, selectElement.value);
