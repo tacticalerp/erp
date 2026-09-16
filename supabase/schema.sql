@@ -316,7 +316,7 @@ create table public.tareas (
   descripcion text not null,
   especificaciones text,
   responsables jsonb not null default '[]'::jsonb,  -- array de nombres
-  status text not null default 'pendiente' check (status in ('pendiente','proceso','externo','listo','finalizado')),
+  status text not null default 'pendiente' check (status in ('pendiente','proceso','externo','urgente','listo','finalizado')), -- 'proceso'/'externo' quedan solo por compatibilidad con filas viejas (Conde 2026-09-16: ya no se pueden elegir desde el ERP)
   aclaracion text,
   fecha_origen timestamptz not null default now(), -- desde cuándo cuenta el retraso (se reinicia al "Reabrir")
   orden double precision not null default extract(epoch from now()), -- prioridad manual dentro de su área (🔼🔽)
