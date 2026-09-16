@@ -1450,6 +1450,44 @@
                 <div style="font-size:0.8rem; color:#a0aec0; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px;">Para tener en cuenta</div>
                 <div id="radar-informativo" style="display:flex; flex-direction:column; gap:10px; margin-bottom:24px;"></div>
 
+                <!-- Conde 2026-09-16: "informacion financiera de otros periodos... quiero ver como
+                     va la empresa, ventas por linea, por fecha, por años, comparativos por mes en
+                     todos los años que tengas informacion... convertir esos informes en graficos" --
+                     histórico 2011-2026 (migracion_historico_financiero.sql) + comparativo en vivo
+                     contra lo que el ERP ya factura este año. -->
+                <div class="accordion-item">
+                    <div class="accordion-header active" id="head-rep-historico" onclick="toggleSection('rep-historico')">
+                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>Tendencia Histórica (2011-2026)</span><span class="arrow" id="arrow-rep-historico">▼</span>
+                    </div>
+                    <div id="rep-historico" class="accordion-content active">
+                        <p style="font-size:0.85rem; color:#718096; margin-top:0;">Ventas y estados financieros de años anteriores que subiste, comparados con lo que el ERP ya factura en vivo este año.</p>
+                        <div id="th-sin-datos" style="display:none; padding:12px; background:#fff3cd; border-left:4px solid #f0d98c; border-radius:4px; font-size:0.88rem; margin-bottom:12px;">Todavía no hay datos históricos cargados -- corre <code>migracion_historico_financiero.sql</code> en el SQL Editor de Supabase y refresca esta página.</div>
+                        <div class="dash-grid" id="th-kpis"></div>
+                        <div class="card-grid" style="margin-top:15px;">
+                            <div class="data-card" style="grid-column:1/-1;">
+                                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                                    <div class="card-title" style="margin:0;">Comparativo mensual: el mismo mes, año contra año</div>
+                                    <select id="th-mes" onchange="renderTendenciaHistorica()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;"></select>
+                                </div>
+                                <div style="position:relative; height:260px; margin-top:10px;"><canvas id="th-chart-mes"></canvas></div>
+                            </div>
+                            <div class="data-card" style="grid-column:1/-1;">
+                                <div class="card-title">Ingresos facturados y Utilidad Neta por año (Tactical Marketing, canal formal)</div>
+                                <div style="position:relative; height:300px; margin-top:10px;"><canvas id="th-chart-anual"></canvas></div>
+                            </div>
+                            <div class="data-card">
+                                <div class="card-title">Balance General (2021-2025, estados financieros formales)</div>
+                                <div style="position:relative; height:260px; margin-top:10px;"><canvas id="th-chart-balance"></canvas></div>
+                            </div>
+                            <div class="data-card">
+                                <div class="card-title">Margen de utilidad neta % por año</div>
+                                <div style="position:relative; height:260px; margin-top:10px;"><canvas id="th-chart-margen"></canvas></div>
+                            </div>
+                        </div>
+                        <p style="font-size:0.78rem; color:#94a3b8; margin-top:10px;">El desglose por línea de producto (Cuadernos, Rompecabezas, Volantes...) solo existe desde agosto de 2026, cuando el ERP se migró a Supabase -- antes de eso los cuadros de Conde/Fany solo llevaban el total facturado, sin separar por producto. "Ventas por Producto" en Ventas y Comercial (abajo) sí tiene ese desglose, pero solo desde ago-2026.</p>
+                    </div>
+                </div>
+
                 <div class="accordion-item">
                     <div class="accordion-header active" id="head-rep-comercial" onclick="toggleSection('rep-comercial')">
                         <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>Ventas y Comercial</span><span class="arrow" id="arrow-rep-comercial">▼</span>
@@ -1916,7 +1954,9 @@
     <div id="print-area" style="display:none;"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="tactical-supabase.js?v=20260908a"></script>
+    <!-- Conde 2026-09-16: "convertir esos informes en graficos" (Tendencia Histórica en Reportes) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script src="tactical-supabase.js?v=20260916a"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
     <script src="precios_tactical.js?v=20260915a"></script>
     <script src="precios_promocionales.js"></script>
@@ -2113,6 +2153,7 @@
                 subTitle.innerText = "Recomendaciones de hoy + Indicadores de Ventas, Producción, Calidad y Tareas (2026)";
                 if (typeof renderRadar === 'function') renderRadar();
                 if (typeof renderReportes === 'function') renderReportes();
+                if (typeof renderTendenciaHistorica === 'function') renderTendenciaHistorica();
             } else if (viewId === 'contabilidad') {
                 navContainer.style.display = 'block';
                 mainTitle.innerText = "CONTABILIDAD";
@@ -2272,6 +2313,12 @@
                 content.classList.remove('active'); header.classList.remove('active'); arrow.innerText = '►';
             } else {
                 content.classList.add('active'); header.classList.add('active'); arrow.innerText = '▼';
+                // Conde 2026-09-16 (Tendencia Histórica): los gráficos de Chart.js que se crearon
+                // mientras este acordeón estaba colapsado (o la vista todavía no era visible) quedan
+                // con tamaño 0 -- .resize() los recalcula contra el tamaño real que ya tienen ahora.
+                if (sectionId === 'rep-historico') {
+                    [thChartMes, thChartAnual, thChartBalance, thChartMargen].forEach(c => { if (c) c.resize(); });
+                }
             }
         }
 
@@ -3025,6 +3072,9 @@
         // llena con tacticalClientesCargar() apenas hay sesión (ver window.tacticalOnLogin
         // más abajo). Opps/historial siguen en localStorage por ahora (siguiente tanda).
         let db_clientes = [];
+        // Conde 2026-09-16: histórico financiero 2011-2026 (ventas/estados financieros de años
+        // pasados que Conde pasó) -- cargado de migracion_historico_financiero.sql, solo lectura.
+        let db_historicoAnual = [], db_historicoMensual = [], db_historicoBalance = [];
         // Opps/historial migrados a Supabase 2026-08-18 -- mismo patrón que Clientes:
         // arrancan vacíos y se llenan en window.tacticalOnLogin. OJO: las 8 calculadoras
         // standalone TODAVÍA escriben oportunidades directo a localStorage (siguiente
@@ -3048,6 +3098,9 @@
             tacticalSyncFichaKanban(f);
           });
           db_cotizaciones = await tacticalCotizacionesCargar();
+          db_historicoAnual = await tacticalHistoricoAnualCargar();
+          db_historicoMensual = await tacticalHistoricoMensualCargar();
+          db_historicoBalance = await tacticalHistoricoBalanceCargar();
           const tareas = await tacticalTareasCargar();
           db_historico = tareas.historico;
           tareas.activas.forEach(t => addTask(t.area, t.desc, t.espec, t.emp, t.status, t.id, t.fechaOrigen, t.orden, t.aclaracion, t.fechaLimite));
@@ -3085,6 +3138,9 @@
           }
           if(document.getElementById('view-contabilidad') && document.getElementById('view-contabilidad').classList.contains('active-view')){
             renderContabilidad();
+          }
+          if(document.getElementById('view-reportes') && document.getElementById('view-reportes').classList.contains('active-view')){
+            renderTendenciaHistorica();
           }
           // Conde 2026-08-23: limpieza de fotos antiguas (Kanban entregado + B2C aprobado, +4
           // meses) -- solo administrador, máximo 1 vez cada 24h (ver tacticalPurgaFotosSiToca en
@@ -8107,6 +8163,126 @@
 
           urgenteEl.innerHTML = urgente || '<p style="color:#a0aec0; font-style:italic;">Todo tranquilo por ahora -- no hay nada urgente que atender.</p>';
           infoEl.innerHTML = info || '<p style="color:#a0aec0; font-style:italic;">Todavía no hay suficientes datos para mostrar algo aquí.</p>';
+        }
+        /* ============ TENDENCIA HISTÓRICA (2011-2026) ============
+           Conde 2026-09-16: "quiero que analices todos los informes... ventas por linea, por
+           fecha, por años, comparativos por mes en todos los años... convertir esos informes en
+           graficos". Lee db_historicoAnual/db_historicoMensual/db_historicoBalance (cargados de
+           migracion_historico_financiero.sql) y los cruza con lo que el ERP YA factura en vivo
+           este año (db_docventa), para que el mes en curso se compare solo contra años anteriores
+           sin tener que actualizar nada a mano cuando termine el mes. */
+        const TH_MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        let thMesSeleccionado = new Date().getMonth() + 1;
+        let thChartMes = null, thChartAnual = null, thChartBalance = null, thChartMargen = null;
+        // Ventas facturadas de un mes/año puntual, canal Tactical (formal). Para el año en curso
+        // prioriza la data VIVA del ERP (documentos_venta) si ese mes ya tiene algo facturado ahí;
+        // si no (meses de antes de la migración a Supabase, o simplemente sin ventas todavía), cae
+        // al histórico cargado. Devuelve null si de verdad no hay dato para ese mes/año.
+        function thIngresosMes(anio, mes){
+          const enPeriodo = (fechaISO) => {
+            if(!fechaISO) return false;
+            const s = String(fechaISO);
+            const d = s.length <= 10 ? new Date(s + 'T00:00:00') : new Date(s);
+            return !isNaN(d) && d.getFullYear() === anio && (d.getMonth() + 1) === mes;
+          };
+          const vivo = db_docventa.filter(d => enPeriodo(d.fecha)).reduce((s, d) => s + (d.totalDocumento || 0), 0);
+          if (vivo > 0) return vivo;
+          const h = db_historicoMensual.find(r => r.anio === anio && r.mes === mes && r.canal === 'tactical');
+          return h ? h.ingresos : null;
+        }
+        function renderTendenciaHistorica(){
+          if (!document.getElementById('rep-historico')) return;
+          const hayDatos = db_historicoAnual.length > 0 || db_historicoMensual.length > 0;
+          const avisoEl = document.getElementById('th-sin-datos');
+          if (avisoEl) avisoEl.style.display = hayDatos ? 'none' : 'block';
+          if (!hayDatos) return;
+
+          const selMes = document.getElementById('th-mes');
+          if (selMes && !selMes.dataset.poblado) {
+            TH_MESES.forEach((m, i) => { const opt = document.createElement('option'); opt.value = i + 1; opt.textContent = m; selMes.appendChild(opt); });
+            selMes.value = thMesSeleccionado;
+            selMes.dataset.poblado = '1';
+          }
+          const mes = selMes ? (parseInt(selMes.value) || thMesSeleccionado) : thMesSeleccionado;
+          thMesSeleccionado = mes;
+
+          const anioActual = new Date().getFullYear();
+          const anualesTactical = db_historicoAnual.filter(r => r.canal === 'tactical').sort((a, b) => a.anio - b.anio);
+          const mejorAnio = anualesTactical.reduce((m, r) => (!m || r.ingresos > m.ingresos) ? r : m, null);
+          const conMargen = anualesTactical.filter(r => r.utilidadNeta != null && r.ingresos > 0);
+          const margenProm = conMargen.length ? conMargen.reduce((s, r) => s + r.utilidadNeta / r.ingresos, 0) / conMargen.length * 100 : 0;
+          const kpisEl = document.getElementById('th-kpis');
+          if (kpisEl) {
+            kpisEl.innerHTML = `
+              <div class="kpi-box" style="border-color:var(--primary);"><div class="kpi-label">Mejor año histórico (facturado)</div><div class="kpi-value" style="font-size:1.4rem;">${mejorAnio ? mejorAnio.anio : '-'}</div><div style="font-size:0.8rem; color:#64748b;">${mejorAnio ? cotFormatoCop(mejorAnio.ingresos) : ''}</div></div>
+              <div class="kpi-box" style="border-color:var(--ganado);"><div class="kpi-label">Margen de utilidad promedio (años con dato)</div><div class="kpi-value" style="font-size:1.4rem;">${Math.round(margenProm)}%</div></div>
+              <div class="kpi-box"><div class="kpi-label">Años con datos disponibles</div><div class="kpi-value" style="font-size:1.4rem;">${anualesTactical.length}</div><div style="font-size:0.8rem; color:#64748b;">${anualesTactical.length ? anualesTactical[0].anio : ''}–${anioActual}</div></div>
+            `;
+          }
+
+          if (typeof Chart === 'undefined') return; // CDN bloqueado o sin internet -- KPIs igual se ven
+
+          const aniosDisponibles = [...new Set(db_historicoMensual.map(r => r.anio))].sort((a, b) => a - b);
+          if (!aniosDisponibles.includes(anioActual)) aniosDisponibles.push(anioActual);
+          const filasMes = aniosDisponibles.map(anio => ({ anio, valor: thIngresosMes(anio, mes) })).filter(f => f.valor != null);
+          const ctxMes = document.getElementById('th-chart-mes');
+          if (ctxMes) {
+            if (thChartMes) thChartMes.destroy();
+            thChartMes = new Chart(ctxMes, {
+              type: 'bar',
+              data: { labels: filasMes.map(f => String(f.anio)), datasets: [{ label: `Ventas facturadas en ${TH_MESES[mes - 1]}`, data: filasMes.map(f => f.valor), backgroundColor: filasMes.map(f => f.anio === anioActual ? '#1e3a5f' : '#cbd5e0') }] },
+              options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => cotFormatoCop(ctx.parsed.y) } } }, scales: { y: { ticks: { callback: (v) => cotFormatoCop(v) } } } }
+            });
+          }
+
+          const ctxAnual = document.getElementById('th-chart-anual');
+          if (ctxAnual) {
+            if (thChartAnual) thChartAnual.destroy();
+            thChartAnual = new Chart(ctxAnual, {
+              data: {
+                labels: anualesTactical.map(r => String(r.anio)), datasets: [
+                  { type: 'bar', label: 'Ingresos facturados', data: anualesTactical.map(r => r.ingresos), backgroundColor: '#94a3d8', yAxisID: 'y' },
+                  { type: 'line', label: 'Utilidad Neta', data: anualesTactical.map(r => r.utilidadNeta), borderColor: '#16a34a', backgroundColor: '#16a34a', yAxisID: 'y', tension: 0.2 },
+                ]
+              },
+              options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + cotFormatoCop(ctx.parsed.y) } } }, scales: { y: { ticks: { callback: (v) => cotFormatoCop(v) } } } }
+            });
+          }
+
+          const ctxBal = document.getElementById('th-chart-balance');
+          if (ctxBal) {
+            if (thChartBalance) thChartBalance.destroy();
+            const bal = [...db_historicoBalance].sort((a, b) => a.anio - b.anio);
+            thChartBalance = new Chart(ctxBal, {
+              type: 'bar',
+              data: {
+                labels: bal.map(r => String(r.anio)), datasets: [
+                  { label: 'Activos', data: bal.map(r => r.totalActivos), backgroundColor: '#3b82f6' },
+                  { label: 'Pasivos', data: bal.map(r => r.totalPasivos), backgroundColor: '#ef4444' },
+                  { label: 'Patrimonio', data: bal.map(r => r.totalPatrimonio), backgroundColor: '#16a34a' },
+                ]
+              },
+              options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + cotFormatoCop(ctx.parsed.y) } } }, scales: { y: { ticks: { callback: (v) => cotFormatoCop(v) } } } }
+            });
+          }
+
+          const ctxMargen = document.getElementById('th-chart-margen');
+          if (ctxMargen) {
+            if (thChartMargen) thChartMargen.destroy();
+            thChartMargen = new Chart(ctxMargen, {
+              type: 'line',
+              data: { labels: conMargen.map(r => String(r.anio)), datasets: [{ label: 'Margen de utilidad neta', data: conMargen.map(r => Math.round(r.utilidadNeta / r.ingresos * 1000) / 10), borderColor: '#d97706', backgroundColor: '#fde68a', fill: true, tension: 0.2 }] },
+              options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ctx.parsed.y + '%' } } }, scales: { y: { ticks: { callback: (v) => v + '%' } } } }
+            });
+          }
+
+          // Conde -- si esta función corrió justo cuando la vista/acordeón todavía no tenía tamaño
+          // real (recién se marcó visible, el navegador no ha repintado todavía), los 4 gráficos
+          // quedan creados con 0x0. Un resize() en el siguiente frame los recalcula ya con el
+          // tamaño correcto -- barato de hacer siempre, así que no hace falta detectar el caso.
+          requestAnimationFrame(() => {
+            [thChartMes, thChartAnual, thChartBalance, thChartMargen].forEach(c => { if (c) c.resize(); });
+          });
         }
         let repPeriodoTipo = 'mensual', repPeriodoOffset = 0;
         function repCambiarTipo(v){ repPeriodoTipo = v; repPeriodoOffset = 0; renderReportes(); }

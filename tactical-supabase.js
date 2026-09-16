@@ -1176,4 +1176,33 @@ async function tacticalEliminarPersonalRemoto(id){
   if(error){ console.error('Error eliminando persona en Supabase:', error); tacticalAvisoErrorGuardado('Error eliminando persona en Supabase'); }
 }
 
+// ============ HISTÓRICO FINANCIERO (2011-2026, cargado desde migracion_historico_financiero.sql
+// -- Conde 2026-09-16: "quiero darte la informacion financiera de otros periodos... organices,
+// guardes, compares"). Solo lectura desde el ERP -- estas tablas se llenan con la migración, no
+// con un formulario, así que no hace falta ADb/sync, solo los *Cargar(). ============
+function tacticalHistoricoAnualDeDb(r){
+  return { id: r.id, anio: r.anio, canal: r.canal, ingresos: Number(r.ingresos)||0, costoVentas: r.costo_ventas==null?null:Number(r.costo_ventas), gastosAdmin: r.gastos_admin==null?null:Number(r.gastos_admin), utilidadNeta: r.utilidad_neta==null?null:Number(r.utilidad_neta), fuente: r.fuente, nota: r.nota };
+}
+async function tacticalHistoricoAnualCargar(){
+  const { data, error } = await tacticalSupabase.from('historico_financiero_anual').select('*').order('anio');
+  if(error){ console.error('Error cargando historico_financiero_anual de Supabase:', error); return []; }
+  return data.map(tacticalHistoricoAnualDeDb);
+}
+function tacticalHistoricoMensualDeDb(r){
+  return { id: r.id, anio: r.anio, mes: r.mes, canal: r.canal, ingresos: Number(r.ingresos)||0, costoVentas: r.costo_ventas==null?null:Number(r.costo_ventas), gastosAdmin: r.gastos_admin==null?null:Number(r.gastos_admin), utilidadNeta: r.utilidad_neta==null?null:Number(r.utilidad_neta), fuente: r.fuente };
+}
+async function tacticalHistoricoMensualCargar(){
+  const { data, error } = await tacticalSupabase.from('historico_financiero_mensual').select('*').order('anio').order('mes');
+  if(error){ console.error('Error cargando historico_financiero_mensual de Supabase:', error); return []; }
+  return data.map(tacticalHistoricoMensualDeDb);
+}
+function tacticalHistoricoBalanceDeDb(r){
+  return { id: r.id, anio: r.anio, totalActivos: Number(r.total_activos)||0, totalPasivos: Number(r.total_pasivos)||0, totalPatrimonio: Number(r.total_patrimonio)||0, ingresos: Number(r.ingresos)||0, costoVentas: Number(r.costo_ventas)||0, gastosAdmin: Number(r.gastos_admin)||0, utilidadNeta: Number(r.utilidad_neta)||0 };
+}
+async function tacticalHistoricoBalanceCargar(){
+  const { data, error } = await tacticalSupabase.from('historico_balance_anual').select('*').order('anio');
+  if(error){ console.error('Error cargando historico_balance_anual de Supabase:', error); return []; }
+  return data.map(tacticalHistoricoBalanceDeDb);
+}
+
 document.addEventListener('DOMContentLoaded', tacticalMostrarGateLogin);
