@@ -1462,6 +1462,12 @@
                     <div id="rep-historico" class="accordion-content active">
                         <p style="font-size:0.85rem; color:#718096; margin-top:0;">Ventas y estados financieros de años anteriores que subiste, comparados con lo que el ERP ya factura en vivo este año.</p>
                         <div id="th-sin-datos" style="display:none; padding:12px; background:#fff3cd; border-left:4px solid #f0d98c; border-radius:4px; font-size:0.88rem; margin-bottom:12px;">Todavía no hay datos históricos cargados -- corre <code>migracion_historico_financiero.sql</code> en el SQL Editor de Supabase y refresca esta página.</div>
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:10px; background:var(--light-gray); border-radius:6px; border:1px solid #cbd5e0; margin-bottom:14px;">
+                            <span style="font-size:0.85rem; font-weight:bold; color:#4a5568;">Ver desde</span>
+                            <select id="th-anio-desde" onchange="renderTendenciaHistorica()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;"></select>
+                            <span style="font-size:0.85rem; font-weight:bold; color:#4a5568;">hasta</span>
+                            <select id="th-anio-hasta" onchange="renderTendenciaHistorica()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;"></select>
+                        </div>
                         <div class="dash-grid" id="th-kpis"></div>
                         <div class="card-grid" style="margin-top:15px;">
                             <div class="data-card" style="grid-column:1/-1;">
@@ -1472,8 +1478,13 @@
                                 <div style="position:relative; height:260px; margin-top:10px;"><canvas id="th-chart-mes"></canvas></div>
                             </div>
                             <div class="data-card" style="grid-column:1/-1;">
-                                <div class="card-title">Ingresos facturados y Utilidad Neta por año (Tactical Marketing, canal formal)</div>
+                                <div class="card-title">Ingresos facturados y Utilidad Neta por año -- canal Tactical (formal/SIIGO)</div>
                                 <div style="position:relative; height:300px; margin-top:10px;"><canvas id="th-chart-anual"></canvas></div>
+                            </div>
+                            <div class="data-card" style="grid-column:1/-1;">
+                                <div class="card-title">Ingresos por año -- canal Personalizado (Rompecabezas B2C / Cuenta de Cobro)</div>
+                                <p style="font-size:0.78rem; color:#94a3b8; margin:2px 0 6px;">Sin factura SIIGO, por eso vive aparte del canal formal de arriba. Varios años solo tienen datos parciales (ver el detalle al pasar el mouse).</p>
+                                <div style="position:relative; height:260px; margin-top:10px;"><canvas id="th-chart-personalizado"></canvas></div>
                             </div>
                             <div class="data-card">
                                 <div class="card-title">Balance General (2021-2025, estados financieros formales)</div>
@@ -1482,6 +1493,14 @@
                             <div class="data-card">
                                 <div class="card-title">Margen de utilidad neta % por año</div>
                                 <div style="position:relative; height:260px; margin-top:10px;"><canvas id="th-chart-margen"></canvas></div>
+                            </div>
+                            <div class="data-card" style="grid-column:1/-1;">
+                                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                                    <div class="card-title" style="margin:0;">Mejores Clientes Históricos (según reportes de SIIGO)</div>
+                                    <select id="th-cliente-periodo" onchange="renderTendenciaHistorica()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;"></select>
+                                </div>
+                                <p style="font-size:0.78rem; color:#94a3b8; margin:2px 0 6px;">Los que ya están registrados como cliente en el CRM salen marcados -- útil para ver cuáles clientes grandes de antes siguen comprando hoy. El total de este listado puede no cuadrar centavo a centavo contra "Ventas Facturadas" del Tablero -- son dos reportes de SIIGO distintos, no siempre con el mismo criterio.</p>
+                                <div id="th-clientes-lista" style="font-size:0.88rem; line-height:1.7; max-height:340px; overflow-y:auto;"></div>
                             </div>
                         </div>
                         <p style="font-size:0.78rem; color:#94a3b8; margin-top:10px;">El desglose por línea de producto (Cuadernos, Rompecabezas, Volantes...) solo existe desde agosto de 2026, cuando el ERP se migró a Supabase -- antes de eso los cuadros de Conde/Fany solo llevaban el total facturado, sin separar por producto. "Ventas por Producto" en Ventas y Comercial (abajo) sí tiene ese desglose, pero solo desde ago-2026.</p>
@@ -1956,7 +1975,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Conde 2026-09-16: "convertir esos informes en graficos" (Tendencia Histórica en Reportes) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-    <script src="tactical-supabase.js?v=20260916a"></script>
+    <script src="tactical-supabase.js?v=20260916b"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
     <script src="precios_tactical.js?v=20260915a"></script>
     <script src="precios_promocionales.js"></script>
@@ -3074,7 +3093,7 @@
         let db_clientes = [];
         // Conde 2026-09-16: histórico financiero 2011-2026 (ventas/estados financieros de años
         // pasados que Conde pasó) -- cargado de migracion_historico_financiero.sql, solo lectura.
-        let db_historicoAnual = [], db_historicoMensual = [], db_historicoBalance = [];
+        let db_historicoAnual = [], db_historicoMensual = [], db_historicoBalance = [], db_historicoVentasCliente = [];
         // Opps/historial migrados a Supabase 2026-08-18 -- mismo patrón que Clientes:
         // arrancan vacíos y se llenan en window.tacticalOnLogin. OJO: las 8 calculadoras
         // standalone TODAVÍA escriben oportunidades directo a localStorage (siguiente
@@ -3101,6 +3120,7 @@
           db_historicoAnual = await tacticalHistoricoAnualCargar();
           db_historicoMensual = await tacticalHistoricoMensualCargar();
           db_historicoBalance = await tacticalHistoricoBalanceCargar();
+          db_historicoVentasCliente = await tacticalHistoricoVentasClienteCargar();
           const tareas = await tacticalTareasCargar();
           db_historico = tareas.historico;
           tareas.activas.forEach(t => addTask(t.area, t.desc, t.espec, t.emp, t.status, t.id, t.fechaOrigen, t.orden, t.aclaracion, t.fechaLimite));
@@ -8173,7 +8193,25 @@
            sin tener que actualizar nada a mano cuando termine el mes. */
         const TH_MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
         let thMesSeleccionado = new Date().getMonth() + 1;
-        let thChartMes = null, thChartAnual = null, thChartBalance = null, thChartMargen = null;
+        let thChartMes = null, thChartAnual = null, thChartPersonalizado = null, thChartBalance = null, thChartMargen = null;
+        // Conde 2026-09-16: "cruzalos con el CRM actual" -- normaliza un nombre de empresa para
+        // poder comparar "INDUSTRIA ELECTRICA NEW LINE S.A.S" (SIIGO) contra "New Line" (CRM) sin
+        // que la puntuación/razón social exacta arruine la comparación. No pretende ser perfecto,
+        // solo agarrar los casos obvios -- por eso también exige mínimo 5 letras para evitar falsos
+        // positivos con nombres cortos.
+        function thNormalizarNombre(s){
+          return String(s||'').toUpperCase()
+            .replace(/\b(S\.?A\.?S\.?|S\.?A\.?|LTDA\.?|E\.?U\.?|SAS|LTDA|EU|Y CIA|& CIA)\b/g, '')
+            .replace(/[^A-Z0-9]/g, '');
+        }
+        function thBuscarClienteCrm(nombreHistorico){
+          const norm = thNormalizarNombre(nombreHistorico);
+          if(norm.length < 5) return null;
+          return db_clientes.find(c => {
+            const cn = thNormalizarNombre(c.empresa);
+            return cn.length >= 5 && (cn === norm || cn.includes(norm) || norm.includes(cn));
+          }) || null;
+        }
         // Ventas facturadas de un mes/año puntual, canal Tactical (formal). Para el año en curso
         // prioriza la data VIVA del ERP (documentos_venta) si ese mes ya tiene algo facturado ahí;
         // si no (meses de antes de la migración a Supabase, o simplemente sin ventas todavía), cae
@@ -8197,6 +8235,7 @@
           if (avisoEl) avisoEl.style.display = hayDatos ? 'none' : 'block';
           if (!hayDatos) return;
 
+          const anioActual = new Date().getFullYear();
           const selMes = document.getElementById('th-mes');
           if (selMes && !selMes.dataset.poblado) {
             TH_MESES.forEach((m, i) => { const opt = document.createElement('option'); opt.value = i + 1; opt.textContent = m; selMes.appendChild(opt); });
@@ -8206,24 +8245,47 @@
           const mes = selMes ? (parseInt(selMes.value) || thMesSeleccionado) : thMesSeleccionado;
           thMesSeleccionado = mes;
 
-          const anioActual = new Date().getFullYear();
-          const anualesTactical = db_historicoAnual.filter(r => r.canal === 'tactical').sort((a, b) => a.anio - b.anio);
+          // Conde 2026-09-16: "quiero que aqui veamos el historico que yo seleccione de que año a
+          // que año" -- un solo rango (Desde/Hasta) que filtra todos los gráficos de esta sección a
+          // la vez. Por defecto muestra TODO lo que haya (mínimo año disponible -> año actual), para
+          // no cambiar lo que ya se veía si nadie toca el filtro.
+          const todosLosAnios = [...new Set([...db_historicoAnual.map(r => r.anio), ...db_historicoMensual.map(r => r.anio), anioActual])].sort((a, b) => a - b);
+          const selDesde = document.getElementById('th-anio-desde');
+          const selHasta = document.getElementById('th-anio-hasta');
+          if (selDesde && selHasta && !selDesde.dataset.poblado) {
+            todosLosAnios.forEach(a => {
+              selDesde.appendChild(new Option(a, a));
+              selHasta.appendChild(new Option(a, a));
+            });
+            selDesde.value = todosLosAnios[0];
+            selHasta.value = anioActual;
+            selDesde.dataset.poblado = '1'; selHasta.dataset.poblado = '1';
+          }
+          let anioDesde = selDesde ? parseInt(selDesde.value) : todosLosAnios[0];
+          let anioHasta = selHasta ? parseInt(selHasta.value) : anioActual;
+          if (anioDesde > anioHasta) { [anioDesde, anioHasta] = [anioHasta, anioDesde]; } // si los cruza, se intercambian solos en vez de mostrar vacío
+
+          const enRango = (r) => r.anio >= anioDesde && r.anio <= anioHasta;
+          const anualesTactical = db_historicoAnual.filter(r => r.canal === 'tactical' && enRango(r)).sort((a, b) => a.anio - b.anio);
+          const anualesPersonalizado = db_historicoAnual.filter(r => r.canal === 'personalizado' && enRango(r)).sort((a, b) => a.anio - b.anio);
           const mejorAnio = anualesTactical.reduce((m, r) => (!m || r.ingresos > m.ingresos) ? r : m, null);
           const conMargen = anualesTactical.filter(r => r.utilidadNeta != null && r.ingresos > 0);
           const margenProm = conMargen.length ? conMargen.reduce((s, r) => s + r.utilidadNeta / r.ingresos, 0) / conMargen.length * 100 : 0;
           const kpisEl = document.getElementById('th-kpis');
           if (kpisEl) {
             kpisEl.innerHTML = `
-              <div class="kpi-box" style="border-color:var(--primary);"><div class="kpi-label">Mejor año histórico (facturado)</div><div class="kpi-value" style="font-size:1.4rem;">${mejorAnio ? mejorAnio.anio : '-'}</div><div style="font-size:0.8rem; color:#64748b;">${mejorAnio ? cotFormatoCop(mejorAnio.ingresos) : ''}</div></div>
+              <div class="kpi-box" style="border-color:var(--primary);"><div class="kpi-label">Mejor año en el rango (facturado)</div><div class="kpi-value" style="font-size:1.4rem;">${mejorAnio ? mejorAnio.anio : '-'}</div><div style="font-size:0.8rem; color:#64748b;">${mejorAnio ? cotFormatoCop(mejorAnio.ingresos) : ''}</div></div>
               <div class="kpi-box" style="border-color:var(--ganado);"><div class="kpi-label">Margen de utilidad promedio (años con dato)</div><div class="kpi-value" style="font-size:1.4rem;">${Math.round(margenProm)}%</div></div>
-              <div class="kpi-box"><div class="kpi-label">Años con datos disponibles</div><div class="kpi-value" style="font-size:1.4rem;">${anualesTactical.length}</div><div style="font-size:0.8rem; color:#64748b;">${anualesTactical.length ? anualesTactical[0].anio : ''}–${anioActual}</div></div>
+              <div class="kpi-box"><div class="kpi-label">Años con datos en el rango</div><div class="kpi-value" style="font-size:1.4rem;">${anualesTactical.length}</div><div style="font-size:0.8rem; color:#64748b;">${anioDesde}–${anioHasta}</div></div>
             `;
           }
 
-          if (typeof Chart === 'undefined') return; // CDN bloqueado o sin internet -- KPIs igual se ven
+          renderThClientesHistoricos();
 
-          const aniosDisponibles = [...new Set(db_historicoMensual.map(r => r.anio))].sort((a, b) => a - b);
-          if (!aniosDisponibles.includes(anioActual)) aniosDisponibles.push(anioActual);
+          if (typeof Chart === 'undefined') return; // CDN bloqueado o sin internet -- KPIs y clientes igual se ven
+
+          const aniosDisponibles = [...new Set(db_historicoMensual.map(r => r.anio))].filter(a => a >= anioDesde && a <= anioHasta).sort((a, b) => a - b);
+          if (anioActual >= anioDesde && anioActual <= anioHasta && !aniosDisponibles.includes(anioActual)) aniosDisponibles.push(anioActual);
           const filasMes = aniosDisponibles.map(anio => ({ anio, valor: thIngresosMes(anio, mes) })).filter(f => f.valor != null);
           const ctxMes = document.getElementById('th-chart-mes');
           if (ctxMes) {
@@ -8249,10 +8311,27 @@
             });
           }
 
+          const ctxPer = document.getElementById('th-chart-personalizado');
+          if (ctxPer) {
+            if (thChartPersonalizado) thChartPersonalizado.destroy();
+            thChartPersonalizado = new Chart(ctxPer, {
+              type: 'bar',
+              data: { labels: anualesPersonalizado.map(r => String(r.anio)), datasets: [{ label: 'Ingresos canal Personalizado', data: anualesPersonalizado.map(r => r.ingresos), backgroundColor: '#f0a35c' }] },
+              options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { callbacks: {
+                  label: (ctx) => cotFormatoCop(ctx.parsed.y),
+                  afterLabel: (ctx) => anualesPersonalizado[ctx.dataIndex] && anualesPersonalizado[ctx.dataIndex].nota ? anualesPersonalizado[ctx.dataIndex].nota : '',
+                } } },
+                scales: { y: { ticks: { callback: (v) => cotFormatoCop(v) } } }
+              }
+            });
+          }
+
           const ctxBal = document.getElementById('th-chart-balance');
           if (ctxBal) {
             if (thChartBalance) thChartBalance.destroy();
-            const bal = [...db_historicoBalance].sort((a, b) => a.anio - b.anio);
+            const bal = [...db_historicoBalance].filter(enRango).sort((a, b) => a.anio - b.anio);
             thChartBalance = new Chart(ctxBal, {
               type: 'bar',
               data: {
@@ -8281,8 +8360,35 @@
           // quedan creados con 0x0. Un resize() en el siguiente frame los recalcula ya con el
           // tamaño correcto -- barato de hacer siempre, así que no hace falta detectar el caso.
           requestAnimationFrame(() => {
-            [thChartMes, thChartAnual, thChartBalance, thChartMargen].forEach(c => { if (c) c.resize(); });
+            [thChartMes, thChartAnual, thChartPersonalizado, thChartBalance, thChartMargen].forEach(c => { if (c) c.resize(); });
           });
+        }
+        // Conde 2026-09-16: "los datos de ventas por clientes en el historico si los tienes de
+        // otros años" -- lista de mejores clientes por período (SIIGO), cruzada contra el CRM
+        // actual por nombre (thBuscarClienteCrm). No depende de Chart.js -- se llama desde
+        // renderTendenciaHistorica() antes del "if (typeof Chart === 'undefined') return", así que
+        // se ve aunque el CDN de gráficos esté bloqueado.
+        function renderThClientesHistoricos(){
+          const cont = document.getElementById('th-clientes-lista');
+          if (!cont) return;
+          const selPeriodo = document.getElementById('th-cliente-periodo');
+          if (selPeriodo && !selPeriodo.dataset.poblado) {
+            const periodos = [...new Set(db_historicoVentasCliente.map(r => r.periodoEtiqueta))];
+            periodos.forEach(p => selPeriodo.appendChild(new Option(p, p)));
+            if (periodos.length) selPeriodo.value = periodos[periodos.length - 1];
+            selPeriodo.dataset.poblado = '1';
+          }
+          if (!db_historicoVentasCliente.length) {
+            cont.innerHTML = '<span style="color:#a0aec0; font-style:italic;">Sin datos de clientes históricos cargados todavía -- corre migracion_historico_ventas_cliente.sql.</span>';
+            return;
+          }
+          const periodo = selPeriodo ? selPeriodo.value : db_historicoVentasCliente[0].periodoEtiqueta;
+          const filas = db_historicoVentasCliente.filter(r => r.periodoEtiqueta === periodo).sort((a, b) => b.valor - a.valor).slice(0, 20);
+          cont.innerHTML = filas.map((r, idx) => {
+            const cli = thBuscarClienteCrm(r.nombreCliente);
+            const badge = cli ? `<span style="font-size:0.75rem; background:var(--ganado); color:#fff; padding:1px 7px; border-radius:10px; margin-left:6px;" title="Ya es cliente en el CRM -- compras acumuladas (LTV) actuales">${ticon('check',{noMargin:true,color:'#fff'})}Cliente activo (LTV ${cotFormatoCop(cli.ltv||0)})</span>` : '';
+            return `<div style="padding:3px 0; border-bottom:1px solid #edf2f7;">${idx+1}. ${r.nombreCliente}${r.nit ? ` <span style="color:#a0aec0; font-size:0.78rem;">(${r.nit})</span>` : ''}: <strong>${cotFormatoCop(r.valor)}</strong>${r.numFacturas ? ` — ${r.numFacturas} factura(s)` : ''}${badge}</div>`;
+          }).join('');
         }
         let repPeriodoTipo = 'mensual', repPeriodoOffset = 0;
         function repCambiarTipo(v){ repPeriodoTipo = v; repPeriodoOffset = 0; renderReportes(); }

@@ -1204,5 +1204,13 @@ async function tacticalHistoricoBalanceCargar(){
   if(error){ console.error('Error cargando historico_balance_anual de Supabase:', error); return []; }
   return data.map(tacticalHistoricoBalanceDeDb);
 }
+function tacticalHistoricoVentaClienteDeDb(r){
+  return { id: r.id, periodoEtiqueta: r.periodo_etiqueta, anio: r.anio, nit: r.nit, nombreCliente: r.nombre_cliente, valor: Number(r.valor)||0, numFacturas: r.num_facturas, idClienteCrm: r.id_cliente_crm };
+}
+async function tacticalHistoricoVentasClienteCargar(){
+  const { data, error } = await tacticalSupabase.from('historico_ventas_cliente').select('*').order('valor', { ascending: false });
+  if(error){ console.error('Error cargando historico_ventas_cliente de Supabase:', error); return []; }
+  return data.map(tacticalHistoricoVentaClienteDeDb);
+}
 
 document.addEventListener('DOMContentLoaded', tacticalMostrarGateLogin);
