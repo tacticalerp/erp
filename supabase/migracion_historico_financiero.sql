@@ -100,6 +100,16 @@ create policy "autenticados_escriben_historico_clientes" on public.historico_ven
   using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 create index if not exists idx_historico_ventas_cliente_crm on public.historico_ventas_cliente(id_cliente_crm);
 
+-- En este proyecto los permisos de tabla NO son automáticos -- cada tabla nueva necesita su
+-- GRANT explícito al rol 'authenticated' además de las políticas RLS de arriba, si no, el ERP
+-- (que entra como 'authenticated') recibe "permission denied" aunque el SQL Editor sí vea los
+-- datos (corre como superusuario, sin pasar por RLS/GRANT). Ver migracion_permisos_completa_
+-- authenticated.sql -- este mismo error ya pasó 4 veces antes con otras tablas.
+grant select, insert, update, delete on public.historico_financiero_anual to authenticated;
+grant select, insert, update, delete on public.historico_financiero_mensual to authenticated;
+grant select, insert, update, delete on public.historico_balance_anual to authenticated;
+grant select, insert, update, delete on public.historico_ventas_cliente to authenticated;
+
 -- ============================================================================
 -- 2. DATOS ANUALES 2011-2025 (base caja informal, Cuadro Financiero Tactical)
 --    canal 'tactical' = razón social formal (Claroscuro+Helver en 2011, Tactical MG después)
