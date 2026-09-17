@@ -1215,6 +1215,12 @@ function calcularMultiItem(){
     cont.innerHTML = filas;
     ultimoResultado = r;
     ultimoParams = { cantidad, utilidadPct, comisionPct, items: volMultiItems.map(i=>({...i})) };
+    // Conde 2026-09-17: "vi un OT repetido/duplicado en 2 cotizaciones distintas" -- guardar una
+    // cotización, cambiar el formulario para OTRO producto (sin pasar por "Nueva cotización") y
+    // volver a guardar reusaba el mismo ultimoOT porque nunca se limpiaba solo. Cuadernos (Hub) ya
+    // lo hacía bien: recalcular resetea el OT, así cada cotización nueva que de verdad se calculó
+    // de cero saca su propio número -- se replica el mismo criterio acá.
+    ultimoOT = null;
     const campoDescCli = document.getElementById("in-descCliente");
     campoDescCli.value = `${cantidad} Kit (${r.detallesItems.map(d=>d.nombre).join(' + ')})`;
     campoDescCli.style.height = 'auto'; campoDescCli.style.height = (campoDescCli.scrollHeight+2)+'px';
@@ -1346,6 +1352,12 @@ function calcular(saltarSugerencia){
     filas += `</table>`;
     cont.innerHTML = filas;
     ultimoResultado = r; ultimoParams = p;
+    // Conde 2026-09-17: "vi un OT repetido/duplicado en 2 cotizaciones distintas" -- guardar una
+    // cotización, cambiar el formulario para OTRO producto (sin pasar por "Nueva cotización") y
+    // volver a guardar reusaba el mismo ultimoOT porque nunca se limpiaba solo. Cuadernos (Hub) ya
+    // lo hacía bien: recalcular resetea el OT, así cada cotización nueva que de verdad se calculó
+    // de cero saca su propio número -- se replica el mismo criterio acá.
+    ultimoOT = null;
     const campoDescCli = document.getElementById("in-descCliente");
     campoDescCli.value = `${p.cantidad} ${p.esPlegable?'Plegable':'Volante/Afiche'} ${p.ancho}x${p.alto}cm`;
     campoDescCli.style.height = 'auto'; campoDescCli.style.height = (campoDescCli.scrollHeight+2)+'px';
@@ -1412,6 +1424,12 @@ function calcularIman(){
     filas += `</table>`;
     cont.innerHTML = filas;
     ultimoResultado = r; ultimoParams = p;
+    // Conde 2026-09-17: "vi un OT repetido/duplicado en 2 cotizaciones distintas" -- guardar una
+    // cotización, cambiar el formulario para OTRO producto (sin pasar por "Nueva cotización") y
+    // volver a guardar reusaba el mismo ultimoOT porque nunca se limpiaba solo. Cuadernos (Hub) ya
+    // lo hacía bien: recalcular resetea el OT, así cada cotización nueva que de verdad se calculó
+    // de cero saca su propio número -- se replica el mismo criterio acá.
+    ultimoOT = null;
     const campoDescCli = document.getElementById("in-descCliente");
     campoDescCli.value = `${p.cantidad} Imán ${p.ancho}x${p.alto}cm`;
     campoDescCli.style.height = 'auto'; campoDescCli.style.height = (campoDescCli.scrollHeight+2)+'px';

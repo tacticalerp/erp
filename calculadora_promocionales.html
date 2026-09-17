@@ -512,6 +512,12 @@ function calcular(){
     filas += `</table>`;
     cont.innerHTML = filas;
     ultimoResultado = r; ultimoParams = p;
+    // Conde 2026-09-17: "vi un OT repetido/duplicado en 2 cotizaciones distintas" -- guardar una
+    // cotización, cambiar el formulario para OTRO producto (sin pasar por "Nueva cotización") y
+    // volver a guardar reusaba el mismo ultimoOT porque nunca se limpiaba solo. Cuadernos (Hub) ya
+    // lo hacía bien: recalcular resetea el OT, así cada cotización nueva que de verdad se calculó
+    // de cero saca su propio número -- se replica el mismo criterio acá.
+    ultimoOT = null;
     document.getElementById("cot-ot-nota").style.display = "none";
   } catch(err){
     cont.innerHTML = `<div class="error-box">Error: ${err.message}</div>`;
