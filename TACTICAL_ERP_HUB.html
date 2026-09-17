@@ -7263,7 +7263,7 @@
             alert(`Pedido ${pd.ot} guardado en el CRM — 1 producto, total ${cotFormatoCop(montoTotal)}.`);
             verPDFGenerico({
               ot: pd.ot, fecha: new Date(), vendedor: pd.vendedor, cliente: {empresa: cliPd.empresa, encargado: cliPd.nombre, telefono: cliPd.wp, correo: cliPd.correo},
-              lineas: [{desc:l.desc, cantidad:l.cantidad, monto:l.monto, precioUnitario:l.precioUnitario}],
+              lineas: [{desc:l.desc, cantidad:l.cantidad, monto:l.monto, precioUnitario:l.precioUnitario, fotoUrl:l.fotoUrl, videoUrl:l.videoUrl}],
               total: montoTotal, aplicaIva: pd.aplicaIva,
             });
             return;
@@ -7279,7 +7279,7 @@
 
           verPDFGenerico({
             ot: pd.ot, fecha: new Date(), vendedor: pd.vendedor, cliente: {empresa: cliPd.empresa, encargado: cliPd.nombre, telefono: cliPd.wp, correo: cliPd.correo},
-            lineas: pd.lineas.map(l=>({desc:l.desc, cantidad:l.cantidad, monto:l.monto, precioUnitario:l.precioUnitario})),
+            lineas: pd.lineas.map(l=>({desc:l.desc, cantidad:l.cantidad, monto:l.monto, precioUnitario:l.precioUnitario, fotoUrl:l.fotoUrl, videoUrl:l.videoUrl})),
             total: montoTotal, aplicaIva: pd.aplicaIva,
           });
         }

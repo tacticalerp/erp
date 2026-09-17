@@ -230,6 +230,7 @@
       </div>
       <div id="cot-ot-nota" style="display:none; margin-top:10px; padding:8px 12px; background:#eef2f7; border-left:4px solid var(--azul); border-radius:4px; font-size:0.9rem;"></div>
       <div id="pedido-banner" style="display:none; margin-top:10px; padding:8px 12px; background:#eafaf0; border-left:4px solid var(--verde); border-radius:4px; font-size:0.85rem;"></div>
+      <div id="pedido-edicion-linea-aviso" style="display:none; margin-top:10px; padding:8px 12px; background:#fff3cd; border-left:4px solid #f0d98c; border-radius:4px; font-size:0.85rem;">✏️ Corrigiendo la línea <strong id="pedido-edicion-linea-num"></strong> del pedido en curso -- al calcular y presionar "Agregar a un pedido" de nuevo, se <strong>REEMPLAZA</strong> esa línea (no se agrega una nueva). <button type="button" class="btn-action" onclick="pedidoCancelarEdicionLinea()">Cancelar corrección</button></div>
       <div id="comparacion-banner" style="display:none; margin-top:10px; padding:8px 12px; background:#f3ecfb; border-left:4px solid #805ad5; border-radius:4px; font-size:0.85rem;"></div>
     </div>
   </div>
@@ -408,7 +409,7 @@ function imprimirPDFCliente(datos){
   const filasLineas = datos.lineas.map(l => {
     const cant = l.cantidad || 1;
     const unitario = l.precioUnitario!=null ? l.precioUnitario : (l.monto/cant/1.19);
-    return `<tr><td><div style="display:flex; align-items:center; gap:6px;">${l.fotoUrl?`<img src="${l.fotoUrl}" style="width:90px; height:90px; object-fit:contain; background:#f8fafc; border:1px solid #d7dee5; border-radius:4px; flex-shrink:0;">`:''}<div>${cotTextoConNegrilla(l.desc)}</div></div></td><td style="text-align:right;">${l.cantidad||'-'}</td><td style="text-align:right;">${cop(unitario)}</td><td style="text-align:right;">${cop(l.monto)}</td></tr>`;
+    return `<tr><td><div style="display:flex; align-items:center; gap:6px;">${l.fotoUrl?`<img src="${l.fotoUrl}" style="width:90px; height:90px; object-fit:contain; background:#f8fafc; border:1px solid #d7dee5; border-radius:4px; flex-shrink:0;">`:''}<div>${cotTextoConNegrilla(l.desc)}${l.videoUrl?`<br><a href="${l.videoUrl}" style="color:#cc0000; text-decoration:none; font-size:0.65rem; font-weight:bold;">▶ Ver video del producto</a>`:''}</div></div></td><td style="text-align:right;">${l.cantidad||'-'}</td><td style="text-align:right;">${cop(unitario)}</td><td style="text-align:right;">${cop(l.monto)}</td></tr>`;
   }).join('');
   // El desglose Subtotal/IVA se calcula siempre a partir del total (IVA plano del 19% en toda
   // la cotización) -- antes se saltaba en los pedidos multi-producto porque no se pasaba ivaTotal.
@@ -606,6 +607,71 @@ async function guardarCotizacionClick(){
 
 /* ============ PEDIDO MULTI-PRODUCTO (varias líneas, un solo cliente/OT) ============ */
 function pedidoActivo(){ return window.tacticalPedidoBorradorCache || null; }
+// Conde 2026-09-17: "no en todas las calculadoras puedo editar cuando son varios producto" --
+// Libre tenía el pedido multi-producto pero SIN el editar/quitar 1 línea que ya tienen las otras
+// 6 calculadoras + Cuadernos (ver [[project_pedido_editar_linea_en_curso_2026_09_15]]). Libre no
+// usa cargarCotizacionGuardada (no tiene motor de cálculo real, ver nota de "Libre queda excluida
+// a propósito" en [[project_editar_cotizacion_cuadernos_2026_08_24]]), así que aquí se repueblan
+// los 3 campos directamente en vez de reusar ese patrón.
+let pedidoLineaEditando = null;
+function pedidoCancelarEdicionLinea(){
+  pedidoLineaEditando = null;
+  const aviso = document.getElementById('pedido-edicion-linea-aviso');
+  if(aviso) aviso.style.display = 'none';
+}
+function pedidoLineasListaHtml(pd){
+  return pd.lineas.map((l,idx) => `
+    <div style="display:flex; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid #d5ecd9;">
+      <div style="flex:1; min-width:0;">${idx+1}. ${l.desc} — ${cop(l.monto)}</div>
+      <button type="button" class="btn-action" style="flex-shrink:0;" onclick="pedidoEditarLinea(${idx})" title="Corregir esta línea sin rehacer las demás">✏️ Editar</button>
+      <button type="button" class="btn-action" style="flex-shrink:0; color:var(--rojo); border-color:var(--rojo);" onclick="pedidoQuitarLinea(${idx})" title="Quitar solo esta línea del pedido">🗑️ Quitar</button>
+    </div>`).join('');
+}
+function pedidoToggleLineas(){
+  const pd = pedidoActivo(); if(!pd) return;
+  const d = document.getElementById('pedido-lineas-detalle');
+  const t = document.getElementById('pedido-lineas-toggle-txt');
+  if(!d || !t) return;
+  const abrir = d.style.display === 'none';
+  d.style.display = abrir ? 'block' : 'none';
+  t.textContent = abrir ? 'Ocultar productos ▴' : `Ver los ${pd.lineas.length} productos agregados ▾`;
+}
+function pedidoEditarLinea(idx){
+  const pd = pedidoActivo();
+  if(!pd || !pd.lineas[idx]) return;
+  const linea = pd.lineas[idx];
+  const descEl = document.getElementById('in-descripcion');
+  descEl.value = linea.desc || '';
+  descEl.style.height = 'auto'; descEl.style.height = (descEl.scrollHeight+2)+'px';
+  const cantEl = document.getElementById('in-cantidad');
+  cantEl.value = String(linea.cantidad || 1);
+  tacticalFormatearMiles(cantEl);
+  document.getElementById('in-precioVentaUnitario').value = linea.precioUnitario || 0;
+  fotoPersonalizadaActual = linea.fotoUrl || null;
+  const zona = document.getElementById('fotoPersonal-zona');
+  if(zona){
+    zona.innerHTML = linea.fotoUrl
+      ? `<img src="${linea.fotoUrl}" style="max-width:100%; max-height:90px;"><br><span style="font-size:0.72rem; color:var(--rojo); cursor:pointer;" onclick="event.stopPropagation(); fotoPersonalQuitar();">🗑️ Quitar foto personalizada</span>`
+      : '📎 Clic aquí y pega (Ctrl+V) o sube un archivo';
+  }
+  calcular();
+  pedidoLineaEditando = idx;
+  const aviso = document.getElementById('pedido-edicion-linea-aviso');
+  const num = document.getElementById('pedido-edicion-linea-num');
+  if(num) num.textContent = idx+1;
+  if(aviso) aviso.style.display = 'block';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+function pedidoQuitarLinea(idx){
+  const pd = pedidoActivo();
+  if(!pd || !pd.lineas[idx]) return;
+  if(!confirm(`¿Quitar la línea ${idx+1} ("${pd.lineas[idx].desc}") del pedido en curso? Las demás líneas no se tocan.`)) return;
+  pd.lineas.splice(idx, 1);
+  if(pedidoLineaEditando === idx) pedidoCancelarEdicionLinea();
+  else if(pedidoLineaEditando !== null && idx < pedidoLineaEditando) pedidoLineaEditando--;
+  window.tacticalPedidoBorradorCache = pd; tacticalGuardarPedidoBorrador(pd);
+  refrescarBannerPedido();
+}
 function refrescarBannerPedido(){
   const pd = pedidoActivo();
   const el = document.getElementById('pedido-banner');
@@ -614,6 +680,8 @@ function refrescarBannerPedido(){
   const total = pd.lineas.reduce((s,l)=>s+l.monto,0);
   el.style.display = 'block';
   el.innerHTML = `📦 Pedido en curso <b>${pd.ot}</b> — ${pd.nombreCli} — ${pd.lineas.length} producto(s), ${cop(total)}<br>
+    <span id="pedido-lineas-toggle-txt" style="cursor:pointer; text-decoration:underline; font-size:0.82rem;" onclick="pedidoToggleLineas()">Ver los ${pd.lineas.length} productos agregados ▾</span>
+    <div id="pedido-lineas-detalle" style="display:none; margin-top:6px;">${pedidoLineasListaHtml(pd)}</div>
     <button type="button" style="margin-top:6px; background:var(--verde); color:#fff;" onclick="cerrarPedido()">✅ Cerrar pedido y guardar en CRM</button>
     <button type="button" style="margin-top:6px; background:var(--rojo); color:#fff;" onclick="cancelarPedido()">✕ Cancelar pedido</button>`;
 }
@@ -651,14 +719,24 @@ async function iniciarOAgregarPedido(){
     pd = { ot: await siguienteOT(), idCli: cli.id, nombreCli: tacticalNombreCliente(cli), vendedor, lineas: [], creado: new Date().toISOString(), aplicaIva: ultimoResultado.aplicaIva };
   }
 
-  pd.lineas.push({ linea:'manual', desc: ultimoResultado.descripcion, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), precioUnitario: ultimoResultado.precioVentaUnitario, maquina: null, material: null, nPliegos: null, fotoUrl: fotoParaCotizacion(), videoUrl: videoParaCotizacion() });
+  const nuevaLinea = { linea:'manual', desc: ultimoResultado.descripcion, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), precioUnitario: ultimoResultado.precioVentaUnitario, maquina: null, material: null, nPliegos: null, fotoUrl: fotoParaCotizacion(), videoUrl: videoParaCotizacion() };
+  let mensajePedido;
+  if(pedidoLineaEditando !== null && pd.lineas[pedidoLineaEditando]){
+    pd.lineas[pedidoLineaEditando] = nuevaLinea;
+    mensajePedido = `Línea ${pedidoLineaEditando+1} del pedido ${pd.ot} actualizada.`;
+    pedidoCancelarEdicionLinea();
+  } else {
+    pd.lineas.push(nuevaLinea);
+    mensajePedido = `Agregado al pedido ${pd.ot}. Ahora tiene ${pd.lineas.length} producto(s).`;
+  }
   fotoPersonalReiniciar();
   window.tacticalPedidoBorradorCache = pd; tacticalGuardarPedidoBorrador(pd);
   refrescarBannerPedido();
-  alert(`Agregado al pedido ${pd.ot}. Ahora tiene ${pd.lineas.length} producto(s).`);
+  alert(mensajePedido);
 }
 function cerrarPedido(){
   const pd = pedidoActivo();
+  pedidoCancelarEdicionLinea();
   if(!pd || pd.lineas.length===0){ window.tacticalPedidoBorradorCache = null; tacticalEliminarPedidoBorrador(); refrescarBannerPedido(); return; }
   const montoTotal = pd.lineas.reduce((s,l)=>s+l.monto,0);
   const cantidadTotal = pd.lineas.reduce((s,l)=>s+(l.cantidad||0),0);
@@ -673,7 +751,7 @@ function cerrarPedido(){
   const cliPd = db_clientes.find(c=>c.id===pd.idCli) || {empresa:pd.nombreCli, nombre:'', wp:'', correo:''};
   imprimirPDFCliente({
     ot: pd.ot, fecha: new Date(), vendedor: pd.vendedor, cliente: {empresa: cliPd.empresa, encargado: cliPd.nombre, telefono: cliPd.wp, correo: cliPd.correo},
-    lineas: pd.lineas.map(l=>({desc:l.desc, cantidad:l.cantidad, monto:l.monto, precioUnitario:l.precioUnitario})),
+    lineas: pd.lineas.map(l=>({desc:l.desc, cantidad:l.cantidad, monto:l.monto, precioUnitario:l.precioUnitario, fotoUrl:l.fotoUrl, videoUrl:l.videoUrl})),
     total: montoTotal, aplicaIva: pd.aplicaIva,
   });
 }
