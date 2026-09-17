@@ -5602,8 +5602,9 @@
             // fila" -- con varios productos en un pedido (sobre todo si no se muestra el TOTAL
             // consolidado, ver mostrarTotal) el cliente necesita identificar el precio completo de
             // CADA producto en su propia fila, no solo en el desglose general de abajo.
-            const ivaLinea = l.monto - unitario*cant;
-            return `<tr><td><div style="display:flex; align-items:center; gap:6px;">${l.fotoUrl?`<img src="${l.fotoUrl}" style="width:90px; height:90px; object-fit:contain; background:#f8fafc; border:1px solid #cbd5e0; border-radius:4px; flex-shrink:0;">`:''}<div>${cotTextoConNegrilla(l.desc)}${l.videoUrl?`<br><a href="${l.videoUrl}" style="color:#cc0000; text-decoration:none; font-size:0.65rem; font-weight:bold;">▶ Ver video del producto</a>`:''}</div></div></td><td style="text-align:right;">${l.cantidad||'-'}</td><td style="text-align:right;">${cotFormatoCop(unitario)}</td><td style="text-align:right;">${cotFormatoCop(ivaLinea)}</td><td style="text-align:right;">${cotFormatoCop(l.monto)}</td></tr>`;
+            const subtotalLinea = unitario*cant;
+            const ivaLinea = l.monto - subtotalLinea;
+            return `<tr><td><div style="display:flex; align-items:center; gap:6px;">${l.fotoUrl?`<img src="${l.fotoUrl}" style="width:90px; height:90px; object-fit:contain; background:#f8fafc; border:1px solid #cbd5e0; border-radius:4px; flex-shrink:0;">`:''}<div>${cotTextoConNegrilla(l.desc)}${l.videoUrl?`<br><a href="${l.videoUrl}" style="color:#cc0000; text-decoration:none; font-size:0.65rem; font-weight:bold;">▶ Ver video del producto</a>`:''}</div></div></td><td style="text-align:right;">${l.cantidad||'-'}</td><td style="text-align:right;">${cotFormatoCop(unitario)}</td><td style="text-align:right;">${cotFormatoCop(subtotalLinea)}</td><td style="text-align:right;">${cotFormatoCop(ivaLinea)}</td><td style="text-align:right;">${cotFormatoCop(l.monto)}</td></tr>`;
           }).join('');
           // Conde 2026-09-02: si el cliente es Personalizado (Cuenta de Cobro) no se cobra IVA -- no
           // inventar un desglose de IVA a partir del total cuando aplicaIva===false.
@@ -5633,7 +5634,7 @@
             </div>
             <div class="doc-section-title">Productos Cotizados</div>
             <table class="doc-table">
-              <tr><th>Descripción</th><th>Cantidad</th><th>Valor Unitario (sin IVA)</th><th>IVA</th><th>Valor Total</th></tr>
+              <tr><th>Descripción</th><th>Cantidad</th><th>Valor Unitario (sin IVA)</th><th>Subtotal (sin IVA)</th><th>IVA</th><th>Valor Total</th></tr>
               ${filasLineas}
             </table>
             ${desglosePedidoHtml}
