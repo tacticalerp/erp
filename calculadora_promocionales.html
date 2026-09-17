@@ -644,10 +644,14 @@ function imprimirPDFCliente(datos){
   // la cotización) -- antes se saltaba en los pedidos multi-producto porque no se pasaba ivaTotal.
   // Conde 2026-09-02: si el cliente es Personalizado (Cuenta de Cobro) no se cobra IVA -- no
   // inventar un desglose de IVA a partir del total cuando aplicaIva===false.
+  // Conde 2026-09-17: "pregunta si sumas el total o si se borra" -- en un pedido de varias líneas
+  // que son variaciones del mismo producto (tamaños, por ejemplo) no siempre tiene sentido un TOTAL
+  // que las sume todas; cerrarPedido() pregunta y pasa mostrarTotal=false cuando Conde dice que no.
+  const mostrarTotal = datos.mostrarTotal !== false;
   const aplicaIva = datos.aplicaIva !== false;
   const subtotal = aplicaIva ? datos.total/1.19 : datos.total;
   const ivaTotal = aplicaIva ? datos.total - subtotal : 0;
-  const desgloseHtml = aplicaIva ? `<table class="doc-table" style="margin-top:6px;">
+  const desgloseHtml = !mostrarTotal ? '' : aplicaIva ? `<table class="doc-table" style="margin-top:6px;">
     <tr><td>Subtotal (sin IVA)</td><td style="text-align:right;">${cop(subtotal)}</td></tr>
     <tr><td>IVA (19%)</td><td style="text-align:right;">${cop(ivaTotal)}</td></tr>
   </table>` : `<table class="doc-table" style="margin-top:6px;">
@@ -669,7 +673,7 @@ function imprimirPDFCliente(datos){
       ${filasLineas}
     </table>
     ${desgloseHtml}
-    <div class="doc-total-box">TOTAL: ${cop(datos.total)} COP</div>
+    ${mostrarTotal ? `<div class="doc-total-box">TOTAL: ${cop(datos.total)} COP</div>` : ''}
     <div class="doc-cta">✅ <strong>Para aprobar esta cotización</strong>, responde confirmando el número <strong>${datos.ot||''}</strong> por WhatsApp al ${TACTICAL_INFO.telefono} o al correo ${TACTICAL_INFO.correo}. Iniciamos producción con orden de compra, anticipo y archivos aprobados.</div>
     <div class="doc-section-title">Condiciones Comerciales</div>
     <div class="doc-condiciones"><ul>${leerCondicionesComerciales().map(c=>`<li>${c}</li>`).join('')}</ul></div>
@@ -1003,11 +1007,16 @@ function cerrarPedido(){
   refrescarBannerPedido();
   alert(`Pedido ${pd.ot} guardado en el CRM — ${pd.lineas.length} producto(s), total ${cop(montoTotal)}.`);
 
+  // Conde 2026-09-17: "pregunta si sumas el total o si se borra" -- varias líneas del mismo pedido
+  // suelen ser variaciones del mismo producto (tamaños, por ejemplo), no productos distintos para
+  // sumar. El total en el CRM (montoTotal arriba) siempre queda igual; esto solo decide si el PDF
+  // que ve el cliente muestra o no un TOTAL consolidado al final.
+  const mostrarTotal = pd.lineas.length <= 1 ? true : confirm(`Este pedido tiene ${pd.lineas.length} productos.\n\n¿El PDF debe mostrar un TOTAL que sume todas las líneas?\n\nAceptar = sí, un solo total al final.\nCancelar = no, cada producto queda solo con su propio precio (útil cuando son variaciones del mismo producto, ej. tamaños distintos).`);
   const cliPd = db_clientes.find(c=>c.id===pd.idCli) || {empresa:pd.nombreCli, nombre:'', wp:'', correo:''};
   imprimirPDFCliente({
     ot: pd.ot, fecha: new Date(), vendedor: pd.vendedor, cliente: {empresa: cliPd.empresa, encargado: cliPd.nombre, telefono: cliPd.wp, correo: cliPd.correo},
     lineas: pd.lineas.map(l=>({desc:l.desc, cantidad:l.cantidad, monto:l.monto, precioUnitario:l.precioUnitario, fotoUrl:l.fotoUrl})),
-    total: montoTotal, aplicaIva: pd.aplicaIva,
+    total: montoTotal, aplicaIva: pd.aplicaIva, mostrarTotal,
   });
 }
 /* ============ COMPARACIÓN DE OPCIONES (varias variantes, precios SEPARADOS, el cliente
