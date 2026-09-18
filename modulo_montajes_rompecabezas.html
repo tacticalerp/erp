@@ -75,6 +75,10 @@
   .status-pendiente{background:#fff3cd;color:var(--warn);}
   .status-aprobado{background:#eafaf0;color:var(--ok);}
   footer{padding:12px 20px;font-size:12px;color:var(--muted);border-top:1px solid var(--border);}
+  /* Conde 2026-09-18: "que se active al hacer clic sobre el recuadro y se oscurezca el contorno
+     para que el usuario sepa que se activo y es momento de darle ctrl V" -- mismo criterio que ya
+     tenía .fototeca-paste-zone en el Hub, replicado acá. */
+  #fotoZona-pegar:focus{ border-color:var(--danger) !important; background:#2a1a1a !important; outline:none; }
 </style>
 </head>
 <body>

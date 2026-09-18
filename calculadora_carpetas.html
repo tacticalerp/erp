@@ -59,6 +59,10 @@
   .placeholder{color:var(--texto-suave); font-size:13.5px; text-align:center; padding:30px 10px;}
   .error-box{background:#fde8e8; color:var(--rojo); border:1px solid #f3b4b4; border-radius:6px; padding:10px 12px; font-size:13px; margin-bottom:12px;}
   .warn-box{background:#fff3cd; color:#7a5b00; border:1px solid #f0d98c; border-radius:6px; padding:8px 12px; font-size:12.5px; margin-bottom:8px;}
+  /* Conde 2026-09-18: "que se active al hacer clic sobre el recuadro y se oscurezca el contorno
+     para que el usuario sepa que se activo y es momento de darle ctrl V" -- mismo criterio que ya
+     tenía .fototeca-paste-zone en el Hub, replicado acá. */
+  #fotoPersonal-zona:focus{ border-color:var(--rojo) !important; background:#fff5f5 !important; outline:none; }
   @media (max-width:900px){ .col-resultado{position:static;} }
 
   /* IMPRESIÓN (PDF Cliente) */
