@@ -746,6 +746,15 @@ function renderCanvas(){
   const ctx = canvas.getContext('2d');
   const shape = templateActivo ? templateActivo.shape : null;
 
+  // Conde 2026-09-18: "la foto que descarga el montaje esta muy pesada" -- se exportaba como PNG
+  // (sin pérdida, pésimo para una foto real: ~630KB en la prueba) en vez de JPEG (~50KB, misma
+  // calidad visible). Para Corazón/Círculo las esquinas fuera de la silueta quedan transparentes a
+  // propósito -- como JPEG no soporta transparencia, se rellenan de blanco ANTES de dibujar (si no,
+  // esas esquinas saldrían negras al exportar). Rectangular/Portarretrato/Troquel ya llenan todo el
+  // lienzo, este fondo blanco no les cambia nada.
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, cW, cH);
+
   // Foto: se recorta a la silueta REAL (corazón: misma silueta exacta que CORAZON_CLIP_NORM /
   // los <clipPath> del <body>, una por talla; círculo: geométricamente exacto) -- así la foto
   // exportada queda igual de recortada que la previsualización en pantalla, no una forma aproximada.
@@ -805,7 +814,7 @@ function nombreArchivoMontaje(){
   const nombre = (document.getElementById('cliNombre').value.trim() || 'Cliente').replace(/[\\/:*?"<>|]/g,'').trim().replace(/\s+/g,'_');
   const medida = itemActivo ? `${itemActivo.w}x${itemActivo.h}cm` : '';
   const fichas = itemActivo ? `${itemActivo.fichas}fichas` : '';
-  return [nombre, medida, fichas].filter(Boolean).join('_') + '.png';
+  return [nombre, medida, fichas].filter(Boolean).join('_') + '.jpg';
 }
 
 document.getElementById('btnDescargar').addEventListener('click', ()=>{
@@ -813,7 +822,7 @@ document.getElementById('btnDescargar').addEventListener('click', ()=>{
   const canvas = renderCanvas();
   const link = document.createElement('a');
   link.download = nombreArchivoMontaje();
-  link.href = canvas.toDataURL('image/png');
+  link.href = canvas.toDataURL('image/jpeg', 0.9);
   link.click();
 });
 
@@ -866,8 +875,8 @@ document.getElementById('btnWhatsapp').addEventListener('click', async ()=>{
   if(img.natW && navigator.canShare){
     try{
       const canvas = renderCanvas();
-      const blob = await new Promise(res=>canvas.toBlob(res,'image/png'));
-      const filePng = new File([blob], nombreArchivoMontaje(), {type:'image/png'});
+      const blob = await new Promise(res=>canvas.toBlob(res,'image/jpeg',0.9));
+      const filePng = new File([blob], nombreArchivoMontaje(), {type:'image/jpeg'});
       if(navigator.canShare({files:[filePng]})){
         await navigator.share({files:[filePng], text: textoResumenPedido()});
         return;
