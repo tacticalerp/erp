@@ -1175,7 +1175,14 @@ function tacticalIrHub(vista){
   if(typeof showView === 'function'){
     showView(vista);
   } else {
-    window.open('TACTICAL_ERP_HUB.html#'+vista, 'tactical_hub');
+    // Conde 2026-09-18: "cuando estoy en una calculadora y voy a regresar a otras calculadoras me
+    // saca al hub" -- antes intentaba abrir/enfocar una pestaña APARTE con window.open(url,
+    // 'tactical_hub') para dejar la calculadora abierta de fondo, pero en la práctica terminaba
+    // reemplazando la pestaña actual de todas formas (comportamiento de ventana con nombre poco
+    // predecible entre navegadores). Se cambia a navegación simple en la MISMA pestaña, igual que
+    // cuando el Hub abre una calculadora (location.href), para que sea consistente en los 2
+    // sentidos.
+    location.href = 'TACTICAL_ERP_HUB.html#'+vista;
   }
 }
 </script>
