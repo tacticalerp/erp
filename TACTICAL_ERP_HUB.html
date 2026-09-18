@@ -3658,9 +3658,13 @@
             tacticalSyncClientes(db_clientes);
           }
           const ot = await cotSiguienteOT();
+          // Conde 2026-09-18: "quiero la informacion inicie con la cantidad, ej. 200 sticker para
+          // arreglar" -- la cantidad ya se capturaba en su propio campo (kb-cantidad) pero nunca se
+          // agregaba al título de la ficha, así que no se veía en la tarjeta del Kanban.
+          const tituloConCantidad = `${cantidad.toLocaleString('es-CO')} ${desc}`;
           const ficha = {
             id: crypto.randomUUID(), ot, idCli: cli.id, nombreCli: tacticalNombreCliente(cli),
-            titulo: desc, cantidad, columna: 'aprobada', lineas: [{linea, desc, cantidad}],
+            titulo: tituloConCantidad, cantidad, columna: 'aprobada', lineas: [{linea, desc, cantidad}],
             checklist: generarChecklistParaFicha({linea, lineas:null}), urgente:false, fechaEntrega,
             fechaCreacion: new Date().toISOString(), responsable:'', origen:'manual',
           };
@@ -4502,7 +4506,8 @@
           // etiqueta "Descripción", sin notas/entrega/aprobación -- y la fecha de entrega en una
           // pastilla corta ("📅 4d" en vez de la fecha completa) para que no se vaya a 2 líneas.
           const fotoCompactaHtml = primeraFoto ? `<img src="${primeraFoto}" alt="${f.nombreCli}" title="Toca para ver completa" style="width:56px; height:56px; object-fit:cover; border-radius:6px; float:left; margin:0 8px 4px 0; border:1px solid #e2e8f0; cursor:zoom-in;" onclick="event.stopPropagation(); tacticalAmpliarImagen('${primeraFoto}','${f.nombreCli}')">` : '';
-          const tituloCortoCompacto = cotTextoConNegrilla(tituloTexto.length > 26 ? tituloTexto.slice(0,26).trim() + '…' : tituloTexto);
+          // Conde 2026-09-18: "que el texto tenga unos 15 o 20 caracteres mas" -- subido de 26 a 45.
+          const tituloCortoCompacto = cotTextoConNegrilla(tituloTexto.length > 45 ? tituloTexto.slice(0,45).trim() + '…' : tituloTexto);
           let dueCompactoHtml;
           if(f.fechaEntrega){
             const dias = kanbanDiasHasta(f.fechaEntrega);
