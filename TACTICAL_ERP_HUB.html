@@ -528,7 +528,12 @@
          Cubre toda la pantalla hasta que haya una sesión válida -- ver
          tactical-supabase.js. Agregado 2026-08-18 (migración a la nube). -->
     <style>
-        body.tactical-bloqueado > .container{ display:none; }
+        /* Conde 2026-09-19: auditoría encontró que el botón flotante #tactical-quicknav (y
+           cualquier otro elemento que cuelgue directo de <body> fuera de .container) quedaba
+           visible en la pantalla de login -- esta regla solo ocultaba .container, no "todo menos
+           el login" como sí hacen las 8 calculadoras (`> *:not(#tactical-login-overlay)`). Se
+           iguala al mismo criterio para que nada se cuele antes de iniciar sesión. */
+        body.tactical-bloqueado > *:not(#tactical-login-overlay){ display:none; }
         /* display:flex por DEFECTO (no display:none) -- así queda bloqueado con
            solo CSS, antes incluso de que corra el JavaScript. Si algo falla al
            verificar la sesión, el peor caso es que se quede pegado en esta
@@ -1978,7 +1983,7 @@
     <script src="tactical-supabase.js?v=20260916b"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
     <script src="precios_tactical.js?v=20260915a"></script>
-    <script src="precios_promocionales.js"></script>
+    <script src="precios_promocionales.js?v=20260919a"></script>
     <script>
         // NAVEGACIÓN SPA DEL HUB
         // Conde 2026-08-20: antes estas 4 vistas se protegían con 2 contraseñas fijas escritas en
@@ -9914,8 +9919,6 @@
 
 <style>
   #tactical-quicknav{ position:fixed; bottom:16px; right:16px; z-index:99999; display:flex; flex-direction:column; align-items:flex-end; gap:8px; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
-  #tactical-quicknav-menu{ display:none; background:#fff; border:1px solid #d7dee5; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.18); padding:8px; flex-direction:column; gap:2px; min-width:210px; max-height:70vh; overflow-y:auto; }
-  #tactical-quicknav-menu.abierto{ display:flex; }
   #tactical-quicknav-btn{ width:50px; height:50px; border-radius:50%; background:#cc0000; color:#fff; border:none; box-shadow:0 4px 12px rgba(0,0,0,0.28); font-size:21px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
 </style>
 <!-- Conde 2026-08-25: "reemplaza el hamburguesa por uno que SOLO navegue al Hub" -- antes abría un
