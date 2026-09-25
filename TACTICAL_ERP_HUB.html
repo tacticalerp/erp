@@ -1501,6 +1501,19 @@
                                 <div style="position:relative; height:260px; margin-top:10px;"><canvas id="th-chart-mes"></canvas></div>
                             </div>
                             <div class="data-card" style="grid-column:1/-1;">
+                                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                                    <div class="card-title" style="margin:0;">Comparativo por período (ej. Ene-Ago) -- año contra año</div>
+                                    <div style="display:flex; align-items:center; gap:6px;">
+                                        <select id="th-periodo-mes-desde" onchange="renderTendenciaHistorica()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;"></select>
+                                        <span style="font-size:0.85rem; color:#4a5568;">a</span>
+                                        <select id="th-periodo-mes-hasta" onchange="renderTendenciaHistorica()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;"></select>
+                                    </div>
+                                </div>
+                                <p style="font-size:0.78rem; color:#94a3b8; margin:2px 0 6px;">Suma acumulada del rango de meses elegido (ej. Enero a Agosto), comparada año contra año -- el mes en curso usa la venta ya facturada en vivo si hay más que en el histórico.</p>
+                                <div style="position:relative; height:260px; margin-top:10px;"><canvas id="th-chart-periodo"></canvas></div>
+                                <div id="th-periodo-resumen" style="margin-top:12px; font-size:0.88rem;"></div>
+                            </div>
+                            <div class="data-card" style="grid-column:1/-1;">
                                 <div class="card-title">Ingresos facturados y Utilidad Neta por año -- canal Tactical (formal/SIIGO)</div>
                                 <div style="position:relative; height:300px; margin-top:10px;"><canvas id="th-chart-anual"></canvas></div>
                             </div>
@@ -8370,7 +8383,7 @@
            sin tener que actualizar nada a mano cuando termine el mes. */
         const TH_MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
         let thMesSeleccionado = new Date().getMonth() + 1;
-        let thChartMes = null, thChartAnual = null, thChartPersonalizado = null, thChartBalance = null, thChartMargen = null;
+        let thChartMes = null, thChartAnual = null, thChartPersonalizado = null, thChartBalance = null, thChartMargen = null, thChartPeriodo = null;
         // Conde 2026-09-16: "cruzalos con el CRM actual" -- normaliza un nombre de empresa para
         // poder comparar "INDUSTRIA ELECTRICA NEW LINE S.A.S" (SIIGO) contra "New Line" (CRM) sin
         // que la puntuación/razón social exacta arruine la comparación. No pretende ser perfecto,
@@ -8404,6 +8417,22 @@
           if (vivo > 0) return vivo;
           const h = db_historicoMensual.find(r => r.anio === anio && r.mes === mes && r.canal === 'tactical');
           return h ? h.ingresos : null;
+        }
+        // Conde 2026-09-25: "quiero visualizar meses puntuales de años puntuales... solo esta por
+        // año completo pero no por meses exactos" -- suma un rango de meses (ej. Ene-Ago) por año,
+        // para comparar el mismo período parcial entre años en vez de esperar al año completo.
+        function thIngresosPeriodo(anio, mesDesde, mesHasta, canal){
+          let total = 0, huboDato = false;
+          for(let m = mesDesde; m <= mesHasta; m++){
+            if(canal === 'tactical'){
+              const v = thIngresosMes(anio, m);
+              if(v != null){ total += v; huboDato = true; }
+            } else {
+              const h = db_historicoMensual.find(r => r.anio === anio && r.mes === m && r.canal === canal);
+              if(h){ total += h.ingresos; huboDato = true; }
+            }
+          }
+          return huboDato ? total : null;
         }
         function renderTendenciaHistorica(){
           if (!document.getElementById('rep-historico')) return;
@@ -8481,6 +8510,48 @@
             });
           }
 
+          const selPerDesde = document.getElementById('th-periodo-mes-desde');
+          const selPerHasta = document.getElementById('th-periodo-mes-hasta');
+          if (selPerDesde && selPerHasta && !selPerDesde.dataset.poblado) {
+            TH_MESES.forEach((m, i) => { selPerDesde.appendChild(new Option(m, i + 1)); selPerHasta.appendChild(new Option(m, i + 1)); });
+            selPerDesde.value = 1; selPerHasta.value = 8; // Ene-Ago por defecto -- el rango que más se pregunta
+            selPerDesde.dataset.poblado = '1'; selPerHasta.dataset.poblado = '1';
+          }
+          let mesPerDesde = selPerDesde ? parseInt(selPerDesde.value) : 1;
+          let mesPerHasta = selPerHasta ? parseInt(selPerHasta.value) : 8;
+          if (mesPerDesde > mesPerHasta) { [mesPerDesde, mesPerHasta] = [mesPerHasta, mesPerDesde]; }
+          const filasPeriodo = aniosDisponibles.map(anio => ({
+            anio,
+            tactical: thIngresosPeriodo(anio, mesPerDesde, mesPerHasta, 'tactical'),
+            personalizado: thIngresosPeriodo(anio, mesPerDesde, mesPerHasta, 'personalizado'),
+          })).filter(f => f.tactical != null || f.personalizado != null);
+          const ctxPeriodo = document.getElementById('th-chart-periodo');
+          if (ctxPeriodo) {
+            if (thChartPeriodo) thChartPeriodo.destroy();
+            thChartPeriodo = new Chart(ctxPeriodo, {
+              type: 'bar',
+              data: {
+                labels: filasPeriodo.map(f => String(f.anio)), datasets: [
+                  { label: 'Tactical', data: filasPeriodo.map(f => f.tactical), backgroundColor: filasPeriodo.map(f => f.anio === anioActual ? '#1e3a5f' : '#94a3d8') },
+                  { label: 'Personalizado', data: filasPeriodo.map(f => f.personalizado), backgroundColor: '#f0a35c' },
+                ]
+              },
+              options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + cotFormatoCop(ctx.parsed.y) } } }, scales: { y: { ticks: { callback: (v) => cotFormatoCop(v) } } } }
+            });
+          }
+          const resumenPeriodoEl = document.getElementById('th-periodo-resumen');
+          if (resumenPeriodoEl) {
+            let filas = '';
+            filasPeriodo.forEach((f, i) => {
+              const total = (f.tactical || 0) + (f.personalizado || 0);
+              const prevTotal = i > 0 ? (filasPeriodo[i - 1].tactical || 0) + (filasPeriodo[i - 1].personalizado || 0) : null;
+              const delta = prevTotal ? ((total - prevTotal) / prevTotal * 100) : null;
+              const deltaTxt = delta == null ? '' : ` <span style="color:${delta >= 0 ? '#16a34a' : '#dc2626'}; font-weight:bold;">(${delta >= 0 ? '+' : ''}${Math.round(delta)}% vs ${filasPeriodo[i - 1].anio})</span>`;
+              filas += `<div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid #edf2f7;"><span>${TH_MESES[mesPerDesde - 1]}-${TH_MESES[mesPerHasta - 1]} ${f.anio}</span><span><strong>${cotFormatoCop(total)}</strong>${deltaTxt}</span></div>`;
+            });
+            resumenPeriodoEl.innerHTML = filas || '<span style="color:#a0aec0;">Sin datos para este rango de meses.</span>';
+          }
+
           const ctxAnual = document.getElementById('th-chart-anual');
           if (ctxAnual) {
             if (thChartAnual) thChartAnual.destroy();
@@ -8544,7 +8615,7 @@
           // quedan creados con 0x0. Un resize() en el siguiente frame los recalcula ya con el
           // tamaño correcto -- barato de hacer siempre, así que no hace falta detectar el caso.
           requestAnimationFrame(() => {
-            [thChartMes, thChartAnual, thChartPersonalizado, thChartBalance, thChartMargen].forEach(c => { if (c) c.resize(); });
+            [thChartMes, thChartPeriodo, thChartAnual, thChartPersonalizado, thChartBalance, thChartMargen].forEach(c => { if (c) c.resize(); });
           });
         }
         // Conde 2026-09-16: "los datos de ventas por clientes en el historico si los tienes de
