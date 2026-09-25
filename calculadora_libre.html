@@ -200,6 +200,14 @@
       </div>
       <div class="hint">Ingresa el precio ya negociado o cotizado con el cliente/proveedor, POR UNIDAD — esta calculadora lo multiplica por la cantidad y suma el IVA, no recalcula costos.</div>
       <div style="margin-top:10px; border-top:1px solid var(--borde); padding-top:8px;">
+        <label style="font-weight:600; font-size:0.85rem;">Extra / Ajuste adicional (opcional -- algo puntual aparte del producto principal, con su propio precio):</label>
+        <div class="fila" style="margin-top:6px;">
+          <div class="campo" style="flex:2;"><input type="text" id="in-extraDesc" placeholder="Descripción del extra"></div>
+          <div class="campo chico"><input type="number" id="in-extraCantidad" placeholder="Cant." min="0"></div>
+          <div class="campo chico"><input type="number" id="in-extraValorUnitario" placeholder="Valor unitario"></div>
+        </div>
+      </div>
+      <div style="margin-top:10px; border-top:1px solid var(--borde); padding-top:8px;">
         <div onclick="toggleCondicionesComerciales()" style="cursor:pointer; font-size:0.8rem; color:var(--azul); font-weight:600; user-select:none;">
           <span id="condicionesComerciales-flecha">▸</span> Ajustar condiciones comerciales de esta cotización
         </div>
@@ -256,13 +264,23 @@ function cotTextoConNegrilla(txt){
 
 function cotizarLibre(p){
   const precioVentaUnitario = p.precioVentaUnitario;
-  const precioVentaTotal = precioVentaUnitario*p.cantidad;
+  const precioVentaProducto = precioVentaUnitario*p.cantidad;
+  // Conde 2026-09-25: "Extra / Ajuste adicional" -- algo puntual aparte del producto principal.
+  // Se cobra como si fuera un producto completo: entra al total ANTES del IVA para que el 19%
+  // también se le aplique, igual que al producto principal.
+  const extraCantidad = p.extraCantidad||0;
+  const extraValorUnitario = p.extraValorUnitario||0;
+  const extraSubtotal = extraCantidad*extraValorUnitario;
+  const precioVentaTotal = precioVentaProducto + extraSubtotal;
   // Conde 2026-09-02: cliente "Personalizado (Cuenta de Cobro)" no se le cobra ni se le
   // recibe IVA -- antes se calculaba siempre el 19% sin importar el tipo de cliente.
   const aplicaIva = p.tipoCliente !== 'personalizado';
   const ivaTotal = aplicaIva ? precioVentaTotal*0.19 : 0;
   const precioFinalTotal = precioVentaTotal+ivaTotal;
-  return { descripcion:p.descripcion, cantidad:p.cantidad, precioVentaTotal, precioVentaUnitario, aplicaIva, ivaTotal, precioFinalTotal };
+  return {
+    descripcion:p.descripcion, cantidad:p.cantidad, precioVentaTotal, precioVentaUnitario, aplicaIva, ivaTotal, precioFinalTotal,
+    extraDescripcion: p.extraDescripcion||'', extraCantidad, extraValorUnitario, extraSubtotal,
+  };
 }
 
 function calcular(){
@@ -273,6 +291,9 @@ function calcular(){
       cantidad: tacticalLeerNumeroFormateado("in-cantidad")||1,
       precioVentaUnitario: parseFloat(document.getElementById("in-precioVentaUnitario").value)||0,
       tipoCliente: document.getElementById("in-cli-tipo").value,
+      extraDescripcion: document.getElementById("in-extraDesc").value.trim(),
+      extraCantidad: parseFloat(document.getElementById("in-extraCantidad").value)||0,
+      extraValorUnitario: parseFloat(document.getElementById("in-extraValorUnitario").value)||0,
     };
     if(!p.descripcion){ throw new Error("Escribe una descripción del producto o servicio."); }
     if(p.precioVentaUnitario<=0){ throw new Error("Ingresa un precio de venta mayor a 0."); }
@@ -281,6 +302,9 @@ function calcular(){
     let filas = `<table class="resultado-tabla">`;
     filas += `<tr><td colspan="2">${r.descripcion}</td></tr>`;
     filas += `<tr><td>Cantidad</td><td class="num">${r.cantidad}</td></tr>`;
+    if(r.extraCantidad > 0){
+      filas += `<tr><td>${cotTextoConNegrilla(r.extraDescripcion||'Extra adicional')} (${r.extraCantidad} x ${cop(r.extraValorUnitario)})</td><td class="num">${cop(r.extraSubtotal)}</td></tr>`;
+    }
     filas += `<tr><td>Precio de venta (total, sin IVA)</td><td class="num">${cop(r.precioVentaTotal)}</td></tr>`;
     filas += `<tr style="font-weight:bold; color:var(--rojo); font-size:1.05rem; border-top:2px solid var(--rojo);"><td>Precio de venta UNITARIO</td><td class="num">${cop(r.precioVentaUnitario)}</td></tr>`;
     if(r.aplicaIva){
@@ -618,9 +642,14 @@ async function guardarCotizacionClick(){
   nota.style.display = 'block';
   nota.innerText = `📋 Cotización guardada en el CRM como ${ultimoOT} — cliente: ${cli.empresa}.`;
 
+  // Conde 2026-09-25: si hay "Extra / Ajuste adicional", sale como su propia línea del PDF.
+  const lineasPdf = [{desc: ultimoResultado.descripcion, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioVentaUnitario*ultimoParams.cantidad*(ultimoResultado.aplicaIva?1.19:1)), precioUnitario: ultimoResultado.precioVentaUnitario, fotoUrl: fotoParaCotizacion(), videoUrl: videoParaCotizacion()}];
+  if(ultimoResultado.extraCantidad > 0){
+    lineasPdf.push({desc: ultimoResultado.extraDescripcion||'Extra adicional', cantidad: ultimoResultado.extraCantidad, monto: Math.round(ultimoResultado.extraSubtotal*(ultimoResultado.aplicaIva?1.19:1)), precioUnitario: ultimoResultado.extraValorUnitario});
+  }
   imprimirPDFCliente({
     ot: ultimoOT, fecha: new Date(), vendedor, cliente: {empresa: cli.empresa, encargado: cli.nombre, telefono: cli.wp, correo: cli.correo},
-    lineas: [{desc: ultimoResultado.descripcion, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), precioUnitario: ultimoResultado.precioVentaUnitario, fotoUrl: fotoParaCotizacion(), videoUrl: videoParaCotizacion()}],
+    lineas: lineasPdf,
     ivaTotal: ultimoResultado.ivaTotal, total: Math.round(ultimoResultado.precioFinalTotal), aplicaIva: ultimoResultado.aplicaIva,
   });
 }
@@ -739,7 +768,7 @@ async function iniciarOAgregarPedido(){
     pd = { ot: await siguienteOT(), idCli: cli.id, nombreCli: tacticalNombreCliente(cli), vendedor, lineas: [], creado: new Date().toISOString(), aplicaIva: ultimoResultado.aplicaIva };
   }
 
-  const nuevaLinea = { linea:'manual', desc: ultimoResultado.descripcion, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), precioUnitario: ultimoResultado.precioVentaUnitario, maquina: null, material: null, nPliegos: null, fotoUrl: fotoParaCotizacion(), videoUrl: videoParaCotizacion() };
+  const nuevaLinea = { linea:'manual', desc: ultimoResultado.descripcion, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioFinalTotal), precioUnitario: ultimoResultado.precioVentaUnitario, maquina: null, material: null, nPliegos: null, fotoUrl: fotoParaCotizacion(), videoUrl: videoParaCotizacion(), resultado: ultimoResultado };
   let mensajePedido;
   if(pedidoLineaEditando !== null && pd.lineas[pedidoLineaEditando]){
     pd.lineas[pedidoLineaEditando] = nuevaLinea;
@@ -774,9 +803,19 @@ function cerrarPedido(){
   // que ve el cliente muestra o no un TOTAL consolidado al final.
   const mostrarTotal = pd.lineas.length <= 1 ? true : confirm(`Este pedido tiene ${pd.lineas.length} productos.\n\n¿El PDF debe mostrar un TOTAL que sume todas las líneas?\n\nAceptar = sí, un solo total al final.\nCancelar = no, cada producto queda solo con su propio precio (útil cuando son variaciones del mismo producto, ej. tamaños distintos).`);
   const cliPd = db_clientes.find(c=>c.id===pd.idCli) || {empresa:pd.nombreCli, nombre:'', wp:'', correo:''};
+  // Conde 2026-09-25: si alguna línea del pedido tenía "Extra / Ajuste adicional", se separa en su
+  // propia fila del PDF (mismo criterio que guardarCotizacionClick).
   imprimirPDFCliente({
     ot: pd.ot, fecha: new Date(), vendedor: pd.vendedor, cliente: {empresa: cliPd.empresa, encargado: cliPd.nombre, telefono: cliPd.wp, correo: cliPd.correo},
-    lineas: pd.lineas.map(l=>({desc:l.desc, cantidad:l.cantidad, monto:l.monto, precioUnitario:l.precioUnitario, fotoUrl:l.fotoUrl, videoUrl:l.videoUrl})),
+    lineas: pd.lineas.flatMap(l=>{
+      const base = {desc:l.desc, cantidad:l.cantidad, monto:l.monto, precioUnitario:l.precioUnitario, fotoUrl:l.fotoUrl, videoUrl:l.videoUrl};
+      if(l.resultado && l.resultado.extraCantidad > 0){
+        const aplicaIvaL = l.resultado.aplicaIva;
+        base.monto = Math.round(l.precioUnitario*l.cantidad*(aplicaIvaL?1.19:1));
+        return [base, {desc: l.resultado.extraDescripcion||'Extra adicional', cantidad: l.resultado.extraCantidad, monto: Math.round(l.resultado.extraSubtotal*(aplicaIvaL?1.19:1)), precioUnitario: l.resultado.extraValorUnitario}];
+      }
+      return [base];
+    }),
     total: montoTotal, aplicaIva: pd.aplicaIva, mostrarTotal,
   });
 }
