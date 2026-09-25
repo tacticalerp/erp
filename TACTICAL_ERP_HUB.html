@@ -1415,6 +1415,10 @@
                         <div class="form-grid">
                             <div class="form-group"><label>% Utilidad:</label><input type="number" id="cot-utilidadPct" value="40" step="1"></div>
                             <div class="form-group"><label>% Ventas:</label><input type="number" id="cot-ventasPct" value="2" step="1"></div>
+                            <div class="form-group" style="flex-basis:100%;"><label>Extra / Ajuste adicional (opcional -- algo puntual que pida el cliente y no esté en el catálogo):</label></div>
+                            <div class="form-group" style="flex:2;"><input type="text" id="cot-extraDesc" placeholder="Descripción del extra"></div>
+                            <div class="form-group"><input type="number" id="cot-extraCantidad" placeholder="Cant." min="0"></div>
+                            <div class="form-group"><input type="number" id="cot-extraValorUnitario" placeholder="Valor unitario"></div>
                             <div class="form-group" style="flex-basis:100%;"><label>Plazo de entrega:</label><input type="text" id="cot-plazoEntrega" value="15 días hábiles luego de aprobado montaje digital y anticipo"></div>
                             <div class="form-group" style="flex-basis:100%;"><label>Validez de la oferta:</label><input type="text" id="cot-validezOferta" placeholder="Ej: 30 días calendario desde la fecha de emisión"></div>
                             <div class="form-group" style="flex-basis:100%;"><label>Condiciones comerciales (editable — una por línea; ajusta forma de pago u otras según el cliente):</label><textarea id="cot-condicionesComerciales" class="tactical-campo-dictado" rows="5" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e0; border-radius:4px; font-family:inherit; font-size:0.9rem;"></textarea></div>
@@ -6526,13 +6530,21 @@
           let transporteCop = costoTransporte(subtotalPreTransporte, p.lineaProducto);
           if(p.lineaProducto==="agenda_ejecutiva") transporteCop *= TRANSPORTE_AGENDA_EJECUTIVA_FACTOR;
           const subtotal = subtotalPreTransporte+transporteCop;
-          const precioVenta=precioVentaDesdeSubtotal(subtotal,p.utilidadPct,p.ventasPct);
+          // Conde 2026-09-25: "Extra / Ajuste adicional" -- algo puntual que pide el cliente y no
+          // está en el catálogo. Se cobra como si fuera un producto completo: Conde escribe
+          // directamente el valor de venta, y entra al total ANTES del IVA para que el 19%
+          // también se le aplique (mismo patrón ya aplicado en las 8 calculadoras standalone).
+          const extraCantidad = p.extraCantidad||0;
+          const extraValorUnitario = p.extraValorUnitario||0;
+          const extraSubtotal = extraCantidad*extraValorUnitario;
+          const precioVentaProducto=precioVentaDesdeSubtotal(subtotal,p.utilidadPct,p.ventasPct);
+          const precioVentaUnitario=precioVentaProducto/p.cantidad; // sin el extra -- unitario real del producto de catálogo
+          const precioVenta=precioVentaProducto+extraSubtotal;
           // Conde 2026-09-02: cliente "Personalizado (Cuenta de Cobro)" no se le cobra ni se le
           // recibe IVA -- antes se calculaba siempre el 19% sin importar el tipo de cliente.
           const aplicaIva = p.tipoCliente !== 'personalizado';
           const iva=aplicaIva ? precioVenta*IVA_PCT : 0;
           const precioFinal=precioVenta+iva;
-          const precioVentaUnitario=precioVenta/p.cantidad;
           const gananciaTotal = precioVenta - subtotal; // utilidad + comisión en pesos (sin IVA, que no es ganancia)
           const gananciaUnitaria = gananciaTotal/p.cantidad;
           return {
@@ -6542,6 +6554,7 @@
             utilidadPct:p.utilidadPct, ventasPct:p.ventasPct, precioVentaTotal:precioVenta, precioVentaUnitario,
             ivaTotal:iva, precioFinalTotal:precioFinal, catClave, tamanoMaquinaCaratula, detalleTapaCarton,
             gananciaTotal, gananciaUnitaria,
+            extraDescripcion: p.extraDescripcion||'', extraCantidad, extraValorUnitario, extraSubtotal,
           };
         }
 
@@ -6790,6 +6803,9 @@
               utilidadPct: parseFloat(document.getElementById("cot-utilidadPct").value)/100,
               ventasPct: parseFloat(document.getElementById("cot-ventasPct").value)/100,
               tipoCliente: document.getElementById("cot-cli-tipo").value,
+              extraDescripcion: document.getElementById("cot-extraDesc").value.trim(),
+              extraCantidad: parseFloat(document.getElementById("cot-extraCantidad").value)||0,
+              extraValorUnitario: parseFloat(document.getElementById("cot-extraValorUnitario").value)||0,
             };
             const r = cotizarCuaderno(p);
             cotUltimoResultado = r; cotUltimoParams = p;
@@ -6851,6 +6867,9 @@
           filas += `<tr><td>Sherpa (muestra de color)</td><td style="text-align:right;">${cotFormatoCop(r.sherpaCop)}</td></tr>`;
           filas += `<tr><td>Transporte</td><td style="text-align:right;">${cotFormatoCop(r.transporteCop)}</td></tr>`;
           filas += `<tr style="font-weight:bold; border-top:2px solid #cbd5e0;"><td>Subtotal</td><td style="text-align:right;">${cotFormatoCop(r.subtotal)}</td></tr>`;
+          if(r.extraCantidad > 0){
+            filas += `<tr><td>${cotTextoConNegrilla(r.extraDescripcion||'Extra adicional')} (${r.extraCantidad} x ${cotFormatoCop(r.extraValorUnitario)})</td><td style="text-align:right;">${cotFormatoCop(r.extraSubtotal)}</td></tr>`;
+          }
           filas += `<tr><td>Precio de venta (total pedido)</td><td style="text-align:right;">${cotFormatoCop(r.precioVentaTotal)}</td></tr>`;
           filas += `<tr style="font-weight:bold; color:var(--primary); font-size:1.05rem; border-top:2px solid var(--primary);"><td>Precio de venta UNITARIO</td><td style="text-align:right;">${cotFormatoCop(r.precioVentaUnitario)}</td></tr>`;
           if(r.aplicaIva){
@@ -7050,6 +7069,9 @@
           document.getElementById('cot-anillado2Secciones').checked = !!p.anilladoDosSecciones;
           document.getElementById('cot-utilidadPct').value = Math.round(p.utilidadPct*100);
           document.getElementById('cot-ventasPct').value = Math.round(p.ventasPct*100);
+          document.getElementById('cot-extraDesc').value = p.extraDescripcion || '';
+          document.getElementById('cot-extraCantidad').value = p.extraCantidad || '';
+          document.getElementById('cot-extraValorUnitario').value = p.extraValorUnitario || '';
 
           const [caratula, taco, ...insertos] = p.lineasImpresion;
           if(caratula) cotLlenarLineaEnForm('cotcaratula', caratula);
@@ -7446,11 +7468,21 @@
             window.tacticalPedidoBorradorCache = null; tacticalEliminarPedidoBorrador();
             cotRefrescarBannerPedido();
             alert(`Pedido ${pd.ot} guardado en el CRM — 1 producto, total ${cotFormatoCop(montoTotal)}.`);
-            verPDFGenerico({
-              ot: pd.ot, fecha: new Date(), vendedor: pd.vendedor, cliente: {empresa: cliPd.empresa, encargado: cliPd.nombre, telefono: cliPd.wp, correo: cliPd.correo},
-              lineas: [{desc:l.desc, cantidad:l.cantidad, monto:l.monto, precioUnitario:l.precioUnitario, fotoUrl:l.fotoUrl, videoUrl:l.videoUrl}],
-              total: montoTotal, aplicaIva: pd.aplicaIva,
-            });
+            // Conde 2026-09-25: si la línea tenía "Extra / Ajuste adicional", se separa en su propia
+            // fila del PDF (mismo criterio que las 8 calculadoras standalone).
+            {
+              const lineasPdf1 = [{desc:l.desc, cantidad:l.cantidad, monto:l.monto, precioUnitario:l.precioUnitario, fotoUrl:l.fotoUrl, videoUrl:l.videoUrl}];
+              if(l.resultado && l.resultado.extraCantidad > 0){
+                const aplicaIvaL = l.resultado.aplicaIva;
+                lineasPdf1[0].monto = Math.round(l.precioUnitario*l.cantidad*(aplicaIvaL?1.19:1));
+                lineasPdf1.push({desc: l.resultado.extraDescripcion||'Extra adicional', cantidad: l.resultado.extraCantidad, monto: Math.round(l.resultado.extraSubtotal*(aplicaIvaL?1.19:1)), precioUnitario: l.resultado.extraValorUnitario});
+              }
+              verPDFGenerico({
+                ot: pd.ot, fecha: new Date(), vendedor: pd.vendedor, cliente: {empresa: cliPd.empresa, encargado: cliPd.nombre, telefono: cliPd.wp, correo: cliPd.correo},
+                lineas: lineasPdf1,
+                total: montoTotal, aplicaIva: pd.aplicaIva,
+              });
+            }
             return;
           }
           const cantidadTotal = pd.lineas.reduce((s,l)=>s+(l.cantidad||0),0);
@@ -7467,9 +7499,19 @@
           // distintos para sumar. El total en el CRM (montoTotal arriba) siempre queda igual; esto
           // solo decide si el PDF que ve el cliente muestra o no un TOTAL consolidado al final.
           const mostrarTotalCierre = confirm(`Este pedido tiene ${pd.lineas.length} productos.\n\n¿El PDF debe mostrar un TOTAL que sume todas las líneas?\n\nAceptar = sí, un solo total al final.\nCancelar = no, cada producto queda solo con su propio precio (útil cuando son variaciones del mismo producto, ej. tamaños distintos).`);
+          // Conde 2026-09-25: si alguna línea del pedido tenía "Extra / Ajuste adicional", se separa
+          // en su propia fila del PDF (mismo criterio que las 8 calculadoras standalone).
           verPDFGenerico({
             ot: pd.ot, fecha: new Date(), vendedor: pd.vendedor, cliente: {empresa: cliPd.empresa, encargado: cliPd.nombre, telefono: cliPd.wp, correo: cliPd.correo},
-            lineas: pd.lineas.map(l=>({desc:l.desc, cantidad:l.cantidad, monto:l.monto, precioUnitario:l.precioUnitario, fotoUrl:l.fotoUrl, videoUrl:l.videoUrl})),
+            lineas: pd.lineas.flatMap(l=>{
+              const base = {desc:l.desc, cantidad:l.cantidad, monto:l.monto, precioUnitario:l.precioUnitario, fotoUrl:l.fotoUrl, videoUrl:l.videoUrl};
+              if(l.resultado && l.resultado.extraCantidad > 0){
+                const aplicaIvaL = l.resultado.aplicaIva;
+                base.monto = Math.round(l.precioUnitario*l.cantidad*(aplicaIvaL?1.19:1));
+                return [base, {desc: l.resultado.extraDescripcion||'Extra adicional', cantidad: l.resultado.extraCantidad, monto: Math.round(l.resultado.extraSubtotal*(aplicaIvaL?1.19:1)), precioUnitario: l.resultado.extraValorUnitario}];
+              }
+              return [base];
+            }),
             total: montoTotal, aplicaIva: pd.aplicaIva, mostrarTotal: mostrarTotalCierre,
           });
         }
@@ -7569,6 +7611,7 @@
                 <tr><th>Producto</th><td>${nombresLinea[p.lineaProducto]}</td><th>Cantidad</th><td>${p.cantidad} unidades</td></tr>
                 <tr><th>Tamaño</th><td>${p.anchoCm} x ${p.altoCm} cm</td><th>Tapa</th><td>${nombresTapa[p.tapaTipo]}</td></tr>
                 <tr><th>Precio unitario</th><td>${cotFormatoCop(r.precioVentaUnitario)}</td><th>Subtotal</th><td>${cotFormatoCop(r.precioVentaTotal)}</td></tr>
+                ${r.extraCantidad>0 ? `<tr><th>${cotTextoConNegrilla(r.extraDescripcion||'Extra adicional')}</th><td>${r.extraCantidad} x ${cotFormatoCop(r.extraValorUnitario)}</td><th>Subtotal extra</th><td>${cotFormatoCop(r.extraSubtotal)}</td></tr>` : ''}
                 ${r.aplicaIva!==false ? `<tr><th>IVA (19%)</th><td colspan="3">${cotFormatoCop(r.ivaTotal)}</td></tr>` : `<tr><td colspan="4" style="font-size:11px; color:#6b7280;">Cliente Cuenta de Cobro -- no se calcula IVA.</td></tr>`}
               </table>
               ${mostrarFoto ? `<img src="${op.fotoUrl}" style="max-width:140px; max-height:140px; margin-bottom:4px; border:1px solid #d7dee5; border-radius:4px;">` : ''}
@@ -7642,6 +7685,7 @@
                 <tr><th>Producto</th><td>${nombresLinea[p.lineaProducto]}</td><th>Cantidad</th><td>${p.cantidad} unidades</td></tr>
                 <tr><th>Tamaño</th><td>${p.anchoCm} x ${p.altoCm} cm</td><th>Tapa</th><td>${nombresTapa[p.tapaTipo]}</td></tr>
                 <tr><th>Precio unitario</th><td>${cotFormatoCop(r.precioVentaUnitario)}</td><th>Subtotal</th><td>${cotFormatoCop(r.precioVentaTotal)}</td></tr>
+                ${r.extraCantidad>0 ? `<tr><th>${cotTextoConNegrilla(r.extraDescripcion||'Extra adicional')}</th><td>${r.extraCantidad} x ${cotFormatoCop(r.extraValorUnitario)}</td><th>Subtotal extra</th><td>${cotFormatoCop(r.extraSubtotal)}</td></tr>` : ''}
                 ${r.aplicaIva!==false ? `<tr><th>IVA (19%)</th><td colspan="3">${cotFormatoCop(r.ivaTotal)}</td></tr>` : `<tr><td colspan="4" style="font-size:11px; color:#6b7280;">Cliente Cuenta de Cobro -- no se calcula IVA.</td></tr>`}
                 ${cot.desc ? `<tr><th>Descripción</th><td colspan="3">${cotTextoConNegrilla(cot.desc)}</td></tr>` : ''}
               </table>
