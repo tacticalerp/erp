@@ -1485,6 +1485,11 @@
                             <select id="th-anio-desde" onchange="renderTendenciaHistorica()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;"></select>
                             <span style="font-size:0.85rem; font-weight:bold; color:#4a5568;">hasta</span>
                             <select id="th-anio-hasta" onchange="renderTendenciaHistorica()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;"></select>
+                            <span style="font-size:0.85rem; font-weight:bold; color:#4a5568; margin-left:10px;">Fuente</span>
+                            <select id="th-fuente" onchange="renderTendenciaHistorica()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;">
+                                <option value="caja_informal">Caja informal (cuadro de Fany)</option>
+                                <option value="formal_accrual">Formal auditada (NIIF)</option>
+                            </select>
                         </div>
                         <div class="dash-grid" id="th-kpis"></div>
                         <div class="card-grid" style="margin-top:15px;">
@@ -8437,7 +8442,14 @@
           let anioHasta = selHasta ? parseInt(selHasta.value) : anioActual;
           if (anioDesde > anioHasta) { [anioDesde, anioHasta] = [anioHasta, anioDesde]; } // si los cruza, se intercambian solos en vez de mostrar vacío
 
-          const enRango = (r) => r.anio >= anioDesde && r.anio <= anioHasta;
+          // Conde 2026-09-25: "muestra un selector para elegir cual ver" -- ahora coexisten 2
+          // fuentes para el mismo año/canal (caja informal del cuadro de Fany vs los Estados
+          // Financieros formales NIIF, 2013-2020) -- sin este filtro el gráfico mostraría las 2
+          // barras pisadas en el mismo año. El canal Personalizado nunca tuvo estados financieros
+          // formales propios, así que con "formal_accrual" seleccionado queda vacío a propósito.
+          const selFuente = document.getElementById('th-fuente');
+          const fuenteSel = selFuente ? selFuente.value : 'caja_informal';
+          const enRango = (r) => r.anio >= anioDesde && r.anio <= anioHasta && r.fuente === fuenteSel;
           const anualesTactical = db_historicoAnual.filter(r => r.canal === 'tactical' && enRango(r)).sort((a, b) => a.anio - b.anio);
           const anualesPersonalizado = db_historicoAnual.filter(r => r.canal === 'personalizado' && enRango(r)).sort((a, b) => a.anio - b.anio);
           const mejorAnio = anualesTactical.reduce((m, r) => (!m || r.ingresos > m.ingresos) ? r : m, null);
