@@ -191,7 +191,7 @@
         <!-- Conde 2026-08-25: "aqui no esta la opcion de pegar con ctrl V" -- este módulo (B2C) solo
              tenía el botón nativo de subir archivo; las calculadoras internas ya tenían también una
              zona para pegar (Ctrl+V) directo desde el portapapeles. Mismo patrón acá. -->
-        <div id="fotoZona-pegar" tabindex="0" style="min-height:44px; border:2px dashed var(--border); border-radius:6px; display:flex; align-items:center; justify-content:center; text-align:center; padding:8px; cursor:pointer; background:var(--bg); color:var(--muted); font-size:12.5px; margin-bottom:8px;" onpaste="fotoZonaPegar(event)" onclick="document.getElementById('fileInput').click()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>Clic aquí y pega (Ctrl+V) o sube un archivo</div>
+        <div id="fotoZona-pegar" tabindex="0" style="min-height:44px; border:2px dashed var(--border); border-radius:6px; display:flex; align-items:center; justify-content:center; text-align:center; padding:8px; cursor:pointer; background:var(--bg); color:var(--muted); font-size:12.5px; margin-bottom:8px;" onpaste="fotoZonaPegar(event)" onclick="document.getElementById('fileInput').click()" onmouseenter="this.focus()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>Clic aquí y pega (Ctrl+V) o sube un archivo</div>
         <input type="file" id="fileInput" accept="image/*" style="display:none;">
         <div class="note" style="margin-top:8px;">Arrastra la foto para reposicionarla. Usa el zoom para ajustarla al corte.</div>
       </div>
@@ -1059,7 +1059,7 @@ function renderBusqueda(){
     const fechaTxt = new Date(p.fecha).toLocaleDateString('es-CO');
     const totalTxt = p.total!=null ? cop(p.total) : 'A cotizar';
     const items = pedidoItems(p);
-    const prodTxt = items.map(it => `${it.cantidad}x ${it.linea==='laser'?'Láser':'Troquel'}${it.forma?' - '+it.forma:''} ${it.medida}cm (${it.fichas}f)`).join('<br>');
+    const prodTxt = items.map(it => `${it.cantidad}x ${it.linea==='laser'?'Láser':'Troquel'}${it.forma&&LASER_FORMAS[it.forma]?' - '+LASER_FORMAS[it.forma].label:''} ${it.medida}cm (${it.fichas}f)`).join('<br>');
     const pillCls = p.estado==='aprobado' ? 'status-aprobado' : 'status-pendiente';
     const accion = (p.estado==='pendiente'
       ? `<button class="btn ok" style="padding:5px 10px;width:auto;" onclick="aprobarPedido('${p.id}')">✅ Aprobar (pagó)</button>`
@@ -1158,12 +1158,17 @@ async function aprobarPedido(id){
   // Conde 2026-08-20: el título de la ficha es solo la descripción del producto -- el nombre del
   // cliente ya va en "nombreCli" (mismo criterio que las demás calculadoras), ponerlo aquí también
   // lo duplicaba en textos que arman los dos juntos (ej. la tarea automática "Facturar a...").
+  // Conde 2026-09-25: "no hay una aclaracion de que tipo de opcion es la que se debe fabricar" --
+  // el título de la ficha solo decía fichas+medida, sin decir si es Portarretrato/Corazón/Círculo
+  // (Rectangular no hace falta aclararlo, es la forma por defecto y la más obvia).
+  const formaTitulo = items[0].forma && LASER_FORMAS[items[0].forma] && items[0].forma !== 'rectangular'
+    ? ` (${LASER_FORMAS[items[0].forma].label})` : '';
   const titulo = items.length > 1
     ? `${items.length} rompecabezas (${pedido.cantidad} unidades)`
-    : `${items[0].fichas} fichas — ${items[0].medida}cm`;
+    : `${items[0].fichas} fichas — ${items[0].medida}cm${formaTitulo}`;
   const lineasFicha = items.map(it => ({
     linea:'rompecabezas',
-    desc: `${it.cantidad}x ${it.linea==='laser'?'Láser':'Troquel'}${it.forma?' - '+it.forma:''} ${it.medida}cm (${it.fichas}f)`,
+    desc: `${it.cantidad}x ${it.linea==='laser'?'Láser':'Troquel'}${it.forma&&LASER_FORMAS[it.forma]?' - '+LASER_FORMAS[it.forma].label:''} ${it.medida}cm (${it.fichas}f)`,
     cantidad: it.cantidad, fotoUrl: it.fotoThumb||null,
   }));
   const ficha = {
