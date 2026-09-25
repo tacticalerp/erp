@@ -9234,7 +9234,10 @@
             if(!doc) return;
             // Conde 2026-08-21: "de cliente ya pagadas no las deje eliminar ni editar" -- mismo
             // candado que CxP.
-            if(doc.estado==='pagada'){ alert('Este documento ya está pagado -- no se puede editar, por seguridad de la información contable.'); return; }
+            // Conde 2026-09-25: candado suavizado a confirm() "mientras nos adaptamos al manejo
+            // de la herramienta" (factura 1482 quedó pagada con un dato incorrecto y no había
+            // forma de corregirla) -- ya no bloquea, solo advierte.
+            if(doc.estado==='pagada' && !confirm('Este documento ya está pagado. ¿Seguro que quieres editarlo?\n\nRecuerda que ya se registraron cobros contra este documento.')) return;
             docVentaEditandoId = id;
             document.getElementById('doc-cliente-filtro').value = '';
             contLlenarSelectClienteDoc();
@@ -9277,7 +9280,8 @@
         function eliminarDocVenta(id){
             const doc = db_docventa.find(d=>d.id===id);
             if(!doc) return;
-            if(doc.estado==='pagada'){ alert('Este documento ya está pagado -- no se puede eliminar, por seguridad de la información contable.'); return; }
+            // Conde 2026-09-25: candado suavizado a confirm(), ver editarDocVenta arriba.
+            if(doc.estado==='pagada' && !confirm(`Este documento "${doc.numero}" ya está pagado. ¿Seguro que quieres eliminarlo?\n\nYa se registraron cobros contra este documento.`)) return;
             if(!confirm(`¿Eliminar el documento "${doc.numero}"?\n\nEsta acción no se puede deshacer.`)) return;
             tacticalEliminarDocVentaRemoto(id);
             db_docventa = db_docventa.filter(d=>d.id!==id);
@@ -9311,7 +9315,8 @@
                         </div>
                         <div class="action-row">
                             ${doc.tipoDoc==='cuenta_cobro'?`<button class="btn-stage btn-avanzar" style="flex:none; padding:8px 14px;" onclick="contImprimirCuentaCobro('${doc.id}')">🖨️ Imprimir</button>`:''}
-                            ${doc.estado!=='pagada'?`<button class="btn-action" onclick="editarDocVenta('${doc.id}')">✏️ Editar</button><button class="btn-action" style="color:var(--peligro); border-color:var(--peligro);" onclick="eliminarDocVenta('${doc.id}')">🗑️ Eliminar</button>`:'<span style="font-size:0.82rem; color:#718096;">🔒 Pagado — bloqueado para editar/eliminar</span>'}
+                            <button class="btn-action" onclick="editarDocVenta('${doc.id}')">✏️ Editar</button><button class="btn-action" style="color:var(--peligro); border-color:var(--peligro);" onclick="eliminarDocVenta('${doc.id}')">🗑️ Eliminar</button>
+                            ${doc.estado==='pagada'?'<span style="font-size:0.78rem; color:#718096; margin-left:6px;">🔓 Pagado — editar con cuidado</span>':''}
                         </div>
                     </div>`;
             });
@@ -9586,7 +9591,8 @@
             if(!c) return;
             // Conde 2026-08-21: "facturas de proveedor pagadas no las deje editar" -- mismo candado
             // que ya tenía Eliminar, ahora también en Editar.
-            if(c.estado==='pagado'){ alert('Esta factura ya está pagada -- no se puede editar, por seguridad de la información contable.'); return; }
+            // Conde 2026-09-25: candado suavizado a confirm(), ver editarDocVenta.
+            if(c.estado==='pagado' && !confirm('Esta factura ya está pagada. ¿Seguro que quieres editarla?\n\nRecuerda que ya se registraron pagos contra esta factura.')) return;
             cxpEditandoId = id;
             document.getElementById('cxp-proveedor').value = c.proveedor;
             document.getElementById('cxp-numFactura').value = c.numeroFacturaProveedor || '';
@@ -9625,7 +9631,8 @@
             // Conde 2026-08-21: "para la factura proveedor que ya esta pagada quita la opcion de
             // eliminar por seguridad de la informacion" -- el botón ya no aparece en la tarjeta (ver
             // renderCxp), esto es el candado de respaldo por si se llama directo.
-            if(c.estado==='pagado'){ alert('Esta factura ya está pagada -- no se puede eliminar, por seguridad de la información contable.'); return; }
+            // Conde 2026-09-25: candado suavizado a confirm(), ver editarDocVenta.
+            if(c.estado==='pagado' && !confirm(`Esta factura "${c.numeroFacturaProveedor||c.numero}" ya está pagada. ¿Seguro que quieres eliminarla?\n\nYa se registraron pagos contra esta factura.`)) return;
             if(!confirm(`¿Eliminar la Cuenta por Pagar "${c.numeroFacturaProveedor||c.numero} — ${c.proveedor}"?\n\nEsta acción no se puede deshacer.`)) return;
             tacticalEliminarCxpRemoto(id);
             db_cxp = db_cxp.filter(x=>x.id!==id);
@@ -9645,7 +9652,8 @@
                         <div class="card-subtitle">${c.categoria==='fijo'?'Gasto Fijo':'Gasto Variable'} — ${c.subcategoria||''}</div>
                         <div style="font-size:0.9rem;">Monto factura: <strong>${cotFormatoCop(c.monto)}</strong>${c.iva?` (incl. IVA ${cotFormatoCop(c.iva)})`:''}<br>Saldo pendiente: <strong style="color:var(--primary);">${cotFormatoCop(c.saldoPendiente)}</strong> — Vence: <strong>${c.fechaVencimiento||'-'}</strong></div>
                         <div class="action-row">
-                            ${c.estado!=='pagado'?`<button class="btn-action" onclick="editarCxp('${c.id}')">✏️ Editar</button><button class="btn-action" style="color:var(--peligro); border-color:var(--peligro);" onclick="eliminarCxp('${c.id}')">🗑️ Eliminar</button>`:'<span style="font-size:0.82rem; color:#718096;">🔒 Pagada — bloqueada para editar/eliminar</span>'}
+                            <button class="btn-action" onclick="editarCxp('${c.id}')">✏️ Editar</button><button class="btn-action" style="color:var(--peligro); border-color:var(--peligro);" onclick="eliminarCxp('${c.id}')">🗑️ Eliminar</button>
+                            ${c.estado==='pagado'?'<span style="font-size:0.78rem; color:#718096; margin-left:6px;">🔓 Pagada — editar con cuidado</span>':''}
                         </div>
                     </div>`;
             });
