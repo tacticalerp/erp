@@ -788,12 +788,14 @@ function tacticalIngresoADb(i){
   return {
     id: i.id, numero: i.numero, fecha: i.fecha, id_cliente: i.idCli||null, id_documento_venta: i.idDocVenta||null,
     valor: i.valor||0, concepto: i.concepto||'', medio_pago: i.medioPago||null, referencia_soporte: i.referenciaSoporte||null,
+    reteiva_recibida: !!i.reteivaRecibida,
   };
 }
 function tacticalIngresoDeDb(r){
   return {
     id: r.id, numero: r.numero, fecha: r.fecha, idCli: r.id_cliente, idDocVenta: r.id_documento_venta,
     valor: Number(r.valor)||0, concepto: r.concepto, medioPago: r.medio_pago, referenciaSoporte: r.referencia_soporte,
+    reteivaRecibida: !!r.reteiva_recibida,
   };
 }
 async function tacticalIngresosCargar(){
