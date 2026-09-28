@@ -498,7 +498,7 @@
         .doc-tipo { display: inline-block; background: var(--dark); color: white; padding: 4px 14px; border-radius: 4px; font-weight: bold; font-size: 0.85rem; margin-top: 6px; }
         .doc-section-title { font-weight: bold; color: var(--dark); background: var(--light-gray); padding: 4px 8px; border-left: 4px solid var(--primary); margin: 10px 0 5px; font-size: 0.85rem; }
         .doc-table { width: 100%; border-collapse: collapse; margin-bottom: 6px; font-size: 0.8rem; }
-        .doc-table td, .doc-table th { border: 1px solid #cbd5e0; padding: 4px 8px; text-align: left; }
+        .doc-table td, .doc-table th { border: 1px solid #cbd5e0; padding: 3px 6px; text-align: left; }
         .doc-table th { background: var(--light-gray); }
         .doc-total-box { text-align: right; font-size: 1.2rem; font-weight: 800; color: var(--primary); margin: 8px 0; padding: 6px 12px; background: var(--light-gray); border: 1.5px solid var(--primary); border-radius: 6px; }
         .doc-cliente-destacado { background: var(--light-gray); border-left: 4px solid var(--primary); padding: 8px 12px; margin-bottom: 8px; border-radius: 0 6px 6px 0; }
@@ -5806,7 +5806,12 @@
             // CADA producto en su propia fila, no solo en el desglose general de abajo.
             const subtotalLinea = unitario*cant;
             const ivaLinea = l.monto - subtotalLinea;
-            return `<tr><td><div style="display:flex; align-items:center; gap:6px;">${l.fotoUrl?`<img src="${l.fotoUrl}" style="width:90px; height:90px; object-fit:contain; background:#f8fafc; border:1px solid #cbd5e0; border-radius:4px; flex-shrink:0;">`:''}<div>${cotTextoConNegrilla(l.desc)}${l.videoUrl?`<br><a href="${l.videoUrl}" style="color:#cc0000; text-decoration:none; font-size:0.65rem; font-weight:bold;">▶ Ver video del producto</a>`:''}</div></div></td><td style="text-align:right;">${l.cantidad||'-'}</td><td style="text-align:right;">${cotFormatoCop(unitario)}</td><td style="text-align:right;">${cotFormatoCop(subtotalLinea)}</td><td style="text-align:right;">${cotFormatoCop(ivaLinea)}</td><td style="text-align:right;">${cotFormatoCop(l.monto)}</td></tr>`;
+            // Conde 2026-09-28: "quiero que el cliente pueda observar en una sola página todo el
+            // contenido" -- con varias líneas (cada una con foto + descripción larga) el PDF se iba
+            // a 3-4 páginas. Foto más chica (90->56px), texto un poco más compacto (line-height) y
+            // columnas numéricas angostas via colgroup (le dan todo el ancho que sobra a la
+            // Descripción, que es la que de verdad necesita espacio) -- mismo contenido, menos alto.
+            return `<tr><td><div style="display:flex; align-items:center; gap:6px;">${l.fotoUrl?`<img src="${l.fotoUrl}" style="width:56px; height:56px; object-fit:contain; background:#f8fafc; border:1px solid #cbd5e0; border-radius:4px; flex-shrink:0;">`:''}<div style="line-height:1.25;">${cotTextoConNegrilla(l.desc)}${l.videoUrl?`<br><a href="${l.videoUrl}" style="color:#cc0000; text-decoration:none; font-size:0.65rem; font-weight:bold;">▶ Ver video del producto</a>`:''}</div></div></td><td style="text-align:right;">${l.cantidad||'-'}</td><td style="text-align:right;">${cotFormatoCop(unitario)}</td><td style="text-align:right;">${cotFormatoCop(subtotalLinea)}</td><td style="text-align:right;">${cotFormatoCop(ivaLinea)}</td><td style="text-align:right;">${cotFormatoCop(l.monto)}</td></tr>`;
           }).join('');
           // Conde 2026-09-02: si el cliente es Personalizado (Cuenta de Cobro) no se cobra IVA -- no
           // inventar un desglose de IVA a partir del total cuando aplicaIva===false.
@@ -5836,6 +5841,7 @@
             </div>
             <div class="doc-section-title">Productos Cotizados</div>
             <table class="doc-table">
+              <colgroup><col style="width:38%;"><col style="width:8%;"><col style="width:14%;"><col style="width:14%;"><col style="width:12%;"><col style="width:14%;"></colgroup>
               <tr><th>Descripción</th><th>Cantidad</th><th>Valor Unitario (sin IVA)</th><th>Subtotal (sin IVA)</th><th>IVA</th><th>Valor Total</th></tr>
               ${filasLineas}
             </table>
