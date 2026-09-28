@@ -3184,6 +3184,19 @@
         // Se llama automático (ver tactical-supabase.js) apenas el login confirma
         // sesión válida -- trae los datos reales compartidos entre los 6 usuarios.
         window.tacticalOnLogin = async function(){
+          // Conde 2026-09-28: "le doy clic una vez no actúa, la segunda me manda al hub" -- en
+          // "Nueva cotización" el 2do clic SÍ dispara un reload real (el 1ro solo cambia el hash sin
+          // recargar), y ese reload repite esta función entera de cero -- unos 25 `await` seguidos
+          // (clientes, opps, kanban, cotizaciones, histórico, tareas, proveedores, doc. venta, B2C,
+          // prefacturas, ingresos, CxP, egresos...) antes de llegar a irAVistaDesdeHash() al final.
+          // Si CUALQUIERA de esos falla (ping lento, RLS, lo que sea) la promesa se corta ahí mismo
+          // y esa línea final nunca corre -- el usuario se queda viendo el Hub (el view-hub por
+          // defecto en el HTML crudo) sin ningún aviso de error. window.tacticalUsuarioPerfil ya
+          // está listo ANTES de que tacticalMostrarGateLogin() llame a esta función (ver
+          // tactical-supabase.js), así que no hace falta esperar toda la carga de datos para saber a
+          // qué vista ir -- se mueve al inicio para que la navegación sea inmediata y no dependa de
+          // que las ~25 llamadas de red de abajo salgan todas bien.
+          irAVistaDesdeHash();
           db_clientes = await tacticalClientesCargar();
           db_opps = await tacticalOppsCargar();
           db_historial_cierres = await tacticalHistorialCargar();
