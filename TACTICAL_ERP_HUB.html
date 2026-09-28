@@ -1414,12 +1414,12 @@
                     <div id="cot-comercial" class="accordion-content">
                         <div class="form-grid">
                             <div class="form-group"><label>% Utilidad:</label><input type="number" id="cot-utilidadPct" value="40" step="1"></div>
-                            <div class="form-group"><label>% Ventas:</label><input type="number" id="cot-ventasPct" value="2" step="1"></div>
+                            <div class="form-group"><label>% Ventas:</label><input type="number" id="cot-ventasPct" value="4" step="1"></div>
                             <div class="form-group" style="flex-basis:100%;"><label>Extra / Ajuste adicional (opcional -- algo puntual que pida el cliente y no esté en el catálogo):</label></div>
                             <div class="form-group" style="flex:2;"><input type="text" id="cot-extraDesc" placeholder="Descripción del extra"></div>
                             <div class="form-group"><input type="number" id="cot-extraCantidad" placeholder="Cant." min="0"></div>
                             <div class="form-group"><input type="number" id="cot-extraValorUnitario" placeholder="Valor unitario"></div>
-                            <div class="form-group" style="flex-basis:100%;"><label>Plazo de entrega:</label><input type="text" id="cot-plazoEntrega" value="15 días hábiles luego de aprobado montaje digital y anticipo"></div>
+                            <div class="form-group" style="flex-basis:100%;"><label>Plazo de entrega:</label><input type="text" id="cot-plazoEntrega" value="A convenir"></div>
                             <div class="form-group" style="flex-basis:100%;"><label>Validez de la oferta:</label><input type="text" id="cot-validezOferta" placeholder="Ej: 30 días calendario desde la fecha de emisión"></div>
                             <div class="form-group" style="flex-basis:100%;"><label>Condiciones comerciales (editable — una por línea; ajusta forma de pago u otras según el cliente):</label><textarea id="cot-condicionesComerciales" class="tactical-campo-dictado" rows="5" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e0; border-radius:4px; font-family:inherit; font-size:0.9rem;"></textarea></div>
                             <div class="form-group" style="flex-basis:100%;"><label>Observaciones (opcional — aparecen en el PDF, y queda espacio para agregar más a mano):</label><textarea id="cot-observaciones" class="tactical-campo-dictado" rows="2" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e0; border-radius:4px; font-family:inherit; font-size:0.95rem;"></textarea></div>
@@ -7068,7 +7068,7 @@
           document.getElementById('cot-cli-telefono').value = cot.cliente.telefono || '';
           document.getElementById('cot-cli-correo').value = cot.cliente.correo || '';
           if(cot.vendedor) document.getElementById('cot-vendedor').value = cot.vendedor;
-          document.getElementById('cot-plazoEntrega').value = cot.plazoEntrega || '';
+          document.getElementById('cot-plazoEntrega').value = cot.plazoEntrega || 'A convenir';
           document.getElementById('cot-validezOferta').value = cot.validezOferta || '';
           document.getElementById('cot-observaciones').value = cot.observaciones || '';
           document.getElementById('cot-condicionesComerciales').value = (cot.condicionesComerciales||[]).join('\n');

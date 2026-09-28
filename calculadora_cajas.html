@@ -296,6 +296,10 @@
           <div class="campo chico"><input type="number" id="in-extraValorUnitario" placeholder="Valor unitario"></div>
         </div>
       </div>
+      <div class="campo" style="margin-top:10px;">
+        <label>Plazo de entrega:</label>
+        <input type="text" id="in-plazoEntrega" value="A convenir">
+      </div>
       <div style="margin-top:10px; border-top:1px solid var(--borde); padding-top:8px;">
         <div onclick="toggleCondicionesComerciales()" style="cursor:pointer; font-size:0.8rem; color:var(--azul); font-weight:600; user-select:none;">
           <span id="condicionesComerciales-flecha">▸</span> Ajustar condiciones comerciales de esta cotización
@@ -944,6 +948,12 @@ function leerCondicionesComerciales(){
   const lista = ta.value.split(String.fromCharCode(10)).map(l=>l.trim()).filter(Boolean);
   return lista.length ? lista : CONDICIONES_COMERCIALES_DEFAULT;
 }
+// Conde 2026-09-28: "plazo de entrega a convenir, que sea predeterminado" -- mismo patrón que ya
+// existía en Cuadernos (Hub), replicado a las 8 calculadoras standalone.
+function leerPlazoEntrega(){
+  const el = document.getElementById('in-plazoEntrega');
+  return (el && el.value.trim()) || 'A convenir';
+}
 
 /* ============ PDF CLIENTE (comparte estilo con TACTICAL_ERP_HUB.html) ============ */
 const TACTICAL_INFO = {
@@ -1044,6 +1054,7 @@ function imprimirPDFCliente(datos){
     ${mostrarTotal ? `<div class="doc-total-box">TOTAL: ${cop(datos.total)} COP</div>` : ''}
     <div class="doc-cta">✅ <strong>Para aprobar esta cotización</strong>, responde confirmando el número <strong>${datos.ot||''}</strong> por WhatsApp al ${TACTICAL_INFO.telefono} o al correo ${TACTICAL_INFO.correo}. Iniciamos producción con orden de compra, anticipo y archivos aprobados.</div>
     <div class="doc-section-title">Condiciones Comerciales</div>
+    <p style="font-size:0.85rem; margin:4px 0;"><strong>Plazo de entrega:</strong> ${leerPlazoEntrega()}</p>
     <div class="doc-condiciones"><ul>${leerCondicionesComerciales().map(c=>`<li>${c}</li>`).join('')}</ul></div>
     <div class="doc-section-title" style="margin-top:10px;">Observaciones</div>
     <div style="border:1px dashed #a0aec0; border-radius:4px; min-height:60px; margin-top:4px;"></div>
@@ -1162,7 +1173,7 @@ async function guardarCotizacionClick(){
     id: opp.id, linea: 'cajas', ot, idOpp: opp.id, idCli: cli.id,
     cliente: {empresa: cli.empresa, encargado: cli.nombre, telefono: cli.wp, correo: cli.correo},
     vendedor, desc, params: ultimoParams, resultado: ultimoResultado,
-    condicionesComerciales: leerCondicionesComerciales(),
+    condicionesComerciales: leerCondicionesComerciales(), plazoEntrega: leerPlazoEntrega(),
   };
   const desgloseGuardadoOk = await tacticalSyncCotizacionCalc(cotizacionGuardada);
   cotCancelarEdicion();
@@ -1196,6 +1207,7 @@ function cargarCotizacionGuardada(cot){
   if(cot.condicionesComerciales && cot.condicionesComerciales.length){
     document.getElementById('in-condicionesComerciales').value = cot.condicionesComerciales.join('\n');
   }
+  document.getElementById('in-plazoEntrega').value = cot.plazoEntrega || 'A convenir';
 
   document.getElementById('in-troquel').value = p.troquelId;
   onCambioTroquel();
@@ -1599,6 +1611,7 @@ function generarPDFComparativo(){
     <div class="doc-cta">✅ <strong>Estas son tus opciones para elegir.</strong> Para aprobar, responde confirmando el número <strong>${comp.ot}</strong> y cuál opción prefieres, por WhatsApp al ${TACTICAL_INFO.telefono} o al correo ${TACTICAL_INFO.correo}.</div>
     ${bloquesOpciones}
     <div class="doc-section-title">Condiciones Comerciales</div>
+    <p style="font-size:0.85rem; margin:4px 0;"><strong>Plazo de entrega:</strong> ${leerPlazoEntrega()}</p>
     <div class="doc-condiciones"><ul>${leerCondicionesComerciales().map(c=>`<li>${c}</li>`).join('')}</ul></div>
     <div class="doc-section-title" style="margin-top:10px;">Observaciones</div>
     <div style="border:1px dashed #a0aec0; border-radius:4px; min-height:60px; margin-top:4px;"></div>
