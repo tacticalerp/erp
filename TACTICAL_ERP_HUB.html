@@ -7153,9 +7153,15 @@
             nombreVal = empresaVal.slice(sepIdx+4).trim();
             empresaVal = empresaVal.slice(0, sepIdx).trim();
           }
+          // Conde 2026-09-28: "no me deja cambiar las otras opciones del cliente" -- este cotizador
+          // (Cuadernos, Hub) nunca recibió el fix de 2026-08-28 que ya tenían las 8 calculadoras:
+          // el correo del CONTACTO ANTERIOR seguía en el campo al elegir uno nuevo del desplegable,
+          // y esa coincidencia por correo se revisaba primero -- ganaba el contacto viejo aunque sí
+          // se hubiera elegido el nuevo. Si se eligió un contacto explícito, ese manda siempre; el
+          // correo solo sirve de respaldo cuando NO se eligió un contacto puntual.
           const cli = db_clientes.find(c =>
-            (correoVal && c.correo && c.correo.toLowerCase() === correoVal.toLowerCase()) ||
             (nombreVal && c.empresa.toLowerCase() === empresaVal.toLowerCase() && (c.nombre||'').toLowerCase() === nombreVal.toLowerCase()) ||
+            (!nombreVal && correoVal && c.correo && c.correo.toLowerCase() === correoVal.toLowerCase()) ||
             (!nombreVal && empresaVal && c.empresa.toLowerCase() === empresaVal.toLowerCase())
           );
           if(cli){
