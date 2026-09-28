@@ -3706,7 +3706,20 @@
           crearTareaAutomatica('diseno', `Diseño aprobado: ${f.nombreCli} — ${resumen}`);
           f.disenoAprobado = true;
           tacticalSyncFichaKanban(f);
+          // Conde 2026-09-28: "en el modulo comercial no se ve reflejado cuando se aprueba el diseño
+          // en kanban" -- la columna "Pendiente" de Personalizados (B2C) era texto libre que Conde
+          // escribía a mano ("aprobado") sin ninguna conexión real con el Kanban. Ahora se
+          // autocompleta sola al momento de aprobar el diseño acá -- Conde la puede seguir editando
+          // después si necesita escribir otra cosa (ej. "Pendiente md").
+          if(f.origen==='b2c'){
+            const pedido = db_b2cPedidos.find(p => p.idKanban===f.id);
+            if(pedido){
+              pedido.notaComercial = 'Aprobado';
+              tacticalGuardarComercialB2C(pedido.id, 'pendiente', 'Aprobado');
+            }
+          }
           renderKanban();
+          if(document.getElementById('view-comercial') && document.getElementById('view-comercial').classList.contains('active-view')) renderComercial();
         }
         function crearFichaKanbanDesdeOpp(opp, cli, fechaEntrega){
           const ficha = {
