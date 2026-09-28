@@ -3998,9 +3998,20 @@
         function eliminarFichaKanban(id){
             if(!tacticalRequiereComercialOAdmin()) return;
             const f = db_kanban.find(x=>x.id===id); if(!f) return;
-            if(!confirm(`¿ELIMINAR la ficha "${f.titulo}"?\n\nEsta acción no se puede deshacer y no borra la cotización/negocio original en el CRM, solo esta tarjeta de producción.`)) return;
+            // Conde 2026-09-28: "por que sigue Camila en Comercial si ya esta en Postventa" -- la
+            // causa real era que esta función borraba la ficha sin avisar que un pedido B2C seguía
+            // apuntándole (b2c_pedidos.kanban_ficha_id), dejando ese enlace roto para siempre --
+            // Comercial nunca podía saber que el pedido ya estaba entregado. Ahora avisa si hay un
+            // pedido B2C enlazado y, si se borra igual, limpia el enlace en vez de dejarlo huérfano.
+            const pedidoLigado = f.origen==='b2c' ? db_b2cPedidos.find(p => p.idKanban===f.id) : null;
+            const avisoB2C = pedidoLigado ? `\n\n⚠️ Esta ficha pertenece al pedido B2C de "${pedidoLigado.nombre}" -- al borrarla, ese pedido queda sin ficha de producción enlazada (dejará de verse en Comercial como pendiente/aprobado).` : '';
+            if(!confirm(`¿ELIMINAR la ficha "${f.titulo}"?\n\nEsta acción no se puede deshacer y no borra la cotización/negocio original en el CRM, solo esta tarjeta de producción.${avisoB2C}`)) return;
             tacticalEliminarFichaKanbanRemoto(id);
             db_kanban = db_kanban.filter(x=>x.id!==id);
+            if(pedidoLigado){
+                pedidoLigado.idKanban = null;
+                tacticalSyncB2CPedido(pedidoLigado);
+            }
             renderKanban();
         }
         // Imágenes de referencia por ficha (portada, insertos, cuadrícula, etc. -- Conde 2026-08-12).
