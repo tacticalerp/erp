@@ -340,7 +340,7 @@ function tacticalSeleccionarSustratos(claves, calculadoraId){
 
 /* ---- IMPRESIÓN OFFSET ---- */
 const PRECIOS_OFFSET_CTP_COP = tacticalMergeNivel1({medio_pliego:22000, cuarto:11000, octavo:9000}, TACTICAL_PRECIOS_OVERRIDE.offsetCtp);
-const PRECIOS_OFFSET_MILLAR_COP = tacticalMergeNivel1({medio_pliego_color:25000, medio_pliego_policromia_4x0:100000, cuarto:16000, octavo:12000}, TACTICAL_PRECIOS_OVERRIDE.offsetMillar);
+const PRECIOS_OFFSET_MILLAR_COP = tacticalMergeNivel1({medio_pliego_color:25000, medio_pliego_policromia_4x0:100000, cuarto:17000, octavo:12000}, TACTICAL_PRECIOS_OVERRIDE.offsetMillar);
 const PRECIOS_OFFSET_RECARGO_FONDO_PLENO_COP = tacticalMergeNivel1({medio_pliego:90000, cuarto:50000, octavo:50000}, TACTICAL_PRECIOS_OVERRIDE.offsetRecargoFondoPleno);
 const PRECIOS_OFFSET_TOLERANCIA_MERMA_MILLAR = (TACTICAL_PRECIOS_OVERRIDE.offsetToleranciaMerma != null) ? TACTICAL_PRECIOS_OVERRIDE.offsetToleranciaMerma : 180;
 
@@ -412,7 +412,7 @@ const PRECIOS_FONDO_SEGURIDAD_TRAMOS = TACTICAL_PRECIOS_OVERRIDE.fondoSeguridad 
 const PRECIOS_CAMPOS_PANEL = [
   {grupo:"Papel / Sustratos", tipo:"sustratos", clave:"sustratos", base:PRECIOS_BASE_SUSTRATOS},
   {grupo:"Impresión Offset — Plancha (CTP)", tipo:"nivel1", clave:"offsetCtp", base:{medio_pliego:22000, cuarto:11000, octavo:9000}, etiquetas:{medio_pliego:"Medio pliego", cuarto:"Cuarto de pliego", octavo:"Octavo de pliego"}},
-  {grupo:"Impresión Offset — Millar (tiro)", tipo:"nivel1", clave:"offsetMillar", base:{medio_pliego_color:25000, medio_pliego_policromia_4x0:100000, cuarto:16000, octavo:12000}, etiquetas:{medio_pliego_color:"Medio pliego (1-2 tintas)", medio_pliego_policromia_4x0:"Medio pliego policromía 4x0", cuarto:"Cuarto de pliego", octavo:"Octavo de pliego"}},
+  {grupo:"Impresión Offset — Millar (tiro)", tipo:"nivel1", clave:"offsetMillar", base:{medio_pliego_color:25000, medio_pliego_policromia_4x0:100000, cuarto:17000, octavo:12000}, etiquetas:{medio_pliego_color:"Medio pliego (1-2 tintas)", medio_pliego_policromia_4x0:"Medio pliego policromía 4x0", cuarto:"Cuarto de pliego", octavo:"Octavo de pliego"}},
   {grupo:"Impresión Offset — Recargo fondo pleno", tipo:"nivel1", clave:"offsetRecargoFondoPleno", base:{medio_pliego:90000, cuarto:50000, octavo:50000}, etiquetas:{medio_pliego:"Medio pliego", cuarto:"Cuarto de pliego", octavo:"Octavo de pliego"}},
   {grupo:"Impresión Digital — Cuadernos ($/clic)", tipo:"nivel2", clave:"digitalClicCuadernos", base:{ carta:{color:750, negro:350}, octavo:{color:900, negro:450}, pliego_max:{color:1000, negro:550} }},
   {grupo:"Impresión Digital — Otras líneas ($/clic)", tipo:"nivel2", clave:"digitalClicOtrasLineas", base:{ carta:{color:1000, negro:250}, octavo:{color:1400, negro:350}, pliego_max:{color:2200, negro:550} }},
