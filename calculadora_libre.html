@@ -405,8 +405,7 @@ function fechaMasDias(fecha, dias){
 const CONDICIONES_COMERCIALES_DEFAULT = [
   "El cliente suministra diseño listo para impresión en Illustrator o PDF editable. Correcciones adicionales generan un sobrecosto de mínimo $50.000, al igual que archivos recibidos en Canva.",
   "Costo sujeto a verificación de archivos y/o muestra suministrada por el cliente.",
-  "Forma de pago: 50% inicial - 50% al registro fotográfico de alistamiento de material para despacho. Plazo de compra luego del anticipo: 30 días — si el producto no es fabricado en ese plazo, se realizará un descuento del 15% sobre el anticipo recibido.",
-  "Se inicia producción con orden de compra, anticipo y archivos aprobados.",
+  "Forma de pago: 50% inicial - 50% al registro fotográfico de alistamiento de material para despacho.",
   "Despacho en zona urbana de Bogotá. Despachos solo días hábiles impares.",
   "Condiciones de anticipo: Una vez realizado el pago inicial, el cliente cuenta con un plazo máximo de 30 días para aprobar el diseño o producto. Si transcurrido este tiempo no se ha dado la aprobación, o si el cliente decide cancelar la fabricación, se realizará una retención del 15% sobre el monto del anticipo recibido para cubrir gastos de gestión.",
 ];
@@ -490,7 +489,7 @@ function imprimirPDFCliente(datos){
     </table>
     ${desgloseHtml}
     ${mostrarTotal ? `<div class="doc-total-box">TOTAL: ${cop(datos.total)} COP</div>` : ''}
-    <div class="doc-cta">✅ <strong>Para aprobar esta cotización</strong>, responde confirmando el número <strong>${datos.ot||''}</strong> por WhatsApp al ${TACTICAL_INFO.telefono} o al correo ${TACTICAL_INFO.correo}. Iniciamos producción con orden de compra, anticipo y archivos aprobados.</div>
+    <div class="doc-cta">✅ <strong>Para aprobar esta cotización</strong>, responde confirmando el número <strong>${datos.ot||''}</strong> por WhatsApp al ${TACTICAL_INFO.telefono} o al correo ${TACTICAL_INFO.correo}. Iniciamos producción con anticipo y sherpas aprobadas.</div>
     <div class="doc-section-title">Condiciones Comerciales</div>
     <p style="font-size:0.85rem; margin:4px 0;"><strong>Plazo de entrega:</strong> ${leerPlazoEntrega()}</p>
     <div class="doc-condiciones"><ul>${leerCondicionesComerciales().map(c=>`<li>${c}</li>`).join('')}</ul></div>
