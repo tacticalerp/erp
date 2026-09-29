@@ -1144,14 +1144,9 @@ async function aprobarPedido(id){
   // Supabase). Entra directo a Diseño (no a Cotización Aprobada, ya está aprobada) y con fecha de
   // entrega automática: 4 días hábiles en Colombia para 500 fichas o menos, 5 para más de 500.
   const items = pedidoItems(pedido);
-  const hayLaser = items.some(it=>it.linea==='laser');
-  const hayTroquel = items.some(it=>it.linea!=='laser');
-  const checklistBase = [
-    {texto:'Impresión', hecho:false, riel:null},
-    ...(hayLaser ? [{texto:'Corte láser', hecho:false, riel:null}] : []),
-    ...(hayTroquel ? [{texto:'Troquelado', hecho:false, riel:null}] : []),
-    {texto:'Armado / empaque', hecho:false, riel:null},
-  ];
+  // Conde 2026-09-29: "quita los puntos de impresion, corte laser, armado que nunca la usamos" --
+  // el checklist genérico del Kanban nunca se marcaba para rompecabezas personalizados (B2C), se
+  // quita del todo en vez de dejarlo como ruido sin usar.
   const maxFichas = Math.max(...items.map(it=>it.fichas||0));
   const diasHabiles = maxFichas > 500 ? 5 : 4;
   const fechaEntrega = tacticalSumarDiasHabilesColombia(new Date(), diasHabiles);
@@ -1163,9 +1158,14 @@ async function aprobarPedido(id){
   // (Rectangular no hace falta aclararlo, es la forma por defecto y la más obvia).
   const formaTitulo = items[0].forma && LASER_FORMAS[items[0].forma] && items[0].forma !== 'rectangular'
     ? ` (${LASER_FORMAS[items[0].forma].label})` : '';
+  // Conde 2026-09-29: "en caso que sea mas de 1 rompecabezas, solo si es mas de 1 unidad, que
+  // inicie con esa informacion" -- ej. "4 romp 30 fichas — 32x24cm" en vez de no decir cuántas
+  // unidades son cuando el pedido es de un solo tamaño repetido varias veces.
+  const cantidadUnica = items.length===1 ? (items[0].cantidad||1) : null;
+  const prefijoCantidad = cantidadUnica && cantidadUnica>1 ? `${cantidadUnica} romp ` : '';
   const titulo = items.length > 1
     ? `${items.length} rompecabezas (${pedido.cantidad} unidades)`
-    : `${items[0].fichas} fichas — ${items[0].medida}cm${formaTitulo}`;
+    : `${prefijoCantidad}${items[0].fichas} fichas — ${items[0].medida}cm${formaTitulo}`;
   const lineasFicha = items.map(it => ({
     linea:'rompecabezas',
     desc: `${it.cantidad}x ${it.linea==='laser'?'Láser':'Troquel'}${it.forma&&LASER_FORMAS[it.forma]?' - '+LASER_FORMAS[it.forma].label:''} ${it.medida}cm (${it.fichas}f)`,
@@ -1175,7 +1175,7 @@ async function aprobarPedido(id){
     id: crypto.randomUUID(), ot: null,
     idCli: cli.id, nombreCli: tacticalNombreCliente(cli), titulo,
     columna: 'diseno', lineas: lineasFicha,
-    checklist: checklistBase, urgente:false, fechaEntrega, entrega: pedido.entrega||'',
+    checklist: [], urgente:false, fechaEntrega, entrega: pedido.entrega||'',
     fechaCreacion: new Date().toISOString(), responsable:'', origen:'b2c',
   };
   // Conde 2026-08-22: antes se avisaba "Pedido aprobado" sin esperar a que la ficha realmente
