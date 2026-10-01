@@ -668,6 +668,18 @@
                     <div class="card-footer">Ingresar al Módulo ➔</div>
                 </div>
 
+                <!-- MÓDULO 5B: SEGMENTOS DE CLIENTES -- Conde 2026-10-01: filtrar compradores por
+                     línea/tamaño/fecha/estado para armar listas de campañas (ej. navideñas). -->
+                <div class="hub-card active-card" onclick="showView('segmentos')">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>Segmentos de Clientes</h3>
+                            <span class="badge badge-active">Beta</span>
+                        </div>
+                    </div>
+                    <div class="card-footer">Ingresar al Módulo ➔</div>
+                </div>
+
                 <!-- MÓDULO 6: RADAR Y REPORTES (Conde 2026-08-28: unificados en una sola herramienta
                      -- antes eran 2 tarjetas separadas, showView('reportes') ahora también pinta las
                      recomendaciones que antes vivían en showView('radar'). -->
@@ -2040,6 +2052,56 @@
                 <div id="galeriabot-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px;"></div>
             </div>
         </div>
+
+        <!-- VISTA: SEGMENTOS DE CLIENTES -- Conde 2026-10-01: filtrar compradores para armar listas
+             de campañas (ej. navideñas). "Compró" lee el Kanban que ya está cargado en memoria (sin
+             consulta nueva a Supabase); "Mandó foto pero no pagó" reusa la misma API del bot que ya
+             usa "Bot WhatsApp" (pedidos ahí quedan con estado pendiente_verificacion hasta que se
+             aprueban, así que ya sirven como señal de abandono). El envío real de mensajes queda
+             fuera de esto -- WhatsApp exige plantilla aprobada por Meta para mandarle a alguien que
+             no te ha escrito en las últimas 24h; esto solo arma la LISTA de a quién contactar. -->
+        <div id="view-segmentos" class="app-view">
+            <div style="padding:10px;">
+                <div class="data-card" style="margin-bottom:16px;">
+                    <div class="card-title">Segmentos de Clientes</div>
+                    <p style="color:#64748b; margin:8px 0 0;">Filtra compradores para armar la lista de a quién contactar en una campaña (ej. "rompecabezas grandes" para una promo navideña). Esto arma la LISTA -- el envío masivo en sí necesita una plantilla de WhatsApp aprobada por Meta aparte.</p>
+                    <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+                        <div class="form-group" style="margin:0;">
+                            <label style="font-size:0.75rem;">Línea</label>
+                            <select id="seg-linea" style="padding:8px; border:1px solid #cbd5e0; border-radius:6px;" onchange="segmentosToggleFichas()">
+                                <option value="rompecabezas">Rompecabezas</option>
+                                <option value="cualquiera">Cualquier línea</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="seg-fichas-wrap" style="margin:0;">
+                            <label style="font-size:0.75rem;">Fichas (mín-máx)</label>
+                            <div style="display:flex; gap:6px;">
+                                <input type="number" id="seg-fichas-min" placeholder="mín" style="width:80px; padding:8px; border:1px solid #cbd5e0; border-radius:6px;">
+                                <input type="number" id="seg-fichas-max" placeholder="máx" style="width:80px; padding:8px; border:1px solid #cbd5e0; border-radius:6px;">
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                            <label style="font-size:0.75rem;">Desde</label>
+                            <input type="date" id="seg-fecha-desde" style="padding:8px; border:1px solid #cbd5e0; border-radius:6px;">
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                            <label style="font-size:0.75rem;">Hasta</label>
+                            <input type="date" id="seg-fecha-hasta" style="padding:8px; border:1px solid #cbd5e0; border-radius:6px;">
+                        </div>
+                    </div>
+                    <div style="margin-top:10px; display:flex; gap:16px; flex-wrap:wrap; font-size:0.85rem;">
+                        <label><input type="checkbox" id="seg-estado-compro" checked> Compró (en Kanban)</label>
+                        <label><input type="checkbox" id="seg-estado-pendiente" checked> Mandó foto / confirmó pero no pagó (bot, pendiente)</label>
+                    </div>
+                    <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+                        <button class="btn-submit" style="width:auto;" onclick="segmentosBuscar()">${ticon('search')}Buscar</button>
+                        <button class="btn-action" onclick="segmentosCopiarNumeros()">Copiar números</button>
+                    </div>
+                    <p id="seg-estado" style="font-size:0.85em; color:#94a3b8; margin-top:8px;"></p>
+                </div>
+                <div id="seg-resultados"></div>
+            </div>
+        </div>
     </div>
 
     <!-- CONTENEDOR OCULTO PARA IMPRESIÓN (PDF / ORDEN DE PRODUCCIÓN) -->
@@ -2068,6 +2130,7 @@
         // por este cambio.
         const TACTICAL_ROLES_POR_VISTA = {
             crm: ['administrador', 'comercial', 'contabilidad'],
+            segmentos: ['administrador', 'comercial'],
             calculadoras: ['administrador', 'comercial'],
             cotizador: ['administrador', 'comercial'],
             reportes: ['administrador', 'comercial', 'contabilidad'],
@@ -2278,6 +2341,11 @@
                 mainTitle.innerText = "GALERÍA FOTOS BOT ROMPECABEZAS";
                 subTitle.innerText = "Fotos y comprobantes que manda el cliente por WhatsApp (2026)";
                 if (typeof galeriaBotInit === 'function') galeriaBotInit();
+            } else if (viewId === 'segmentos') {
+                navContainer.style.display = 'block';
+                mainTitle.innerText = "SEGMENTOS DE CLIENTES";
+                subTitle.innerText = "Filtra compradores por línea/tamaño/fecha/estado para armar listas de campañas (2026)";
+                if (typeof segmentosInit === 'function') segmentosInit();
             }
         }
 
@@ -4468,6 +4536,112 @@
               : `<a href="${blobUrl}" target="_blank" rel="noopener"><img src="${blobUrl}" style="max-width:100%; max-height:200px; border-radius:6px; border:1px solid #e2e8f0;"></a>`;
           }catch(e){
             if(holder) holder.innerText = 'No se pudo cargar.';
+          }
+        }
+
+        // ==========================================
+        // SEGMENTOS DE CLIENTES -- arma listas de compradores filtradas (línea/fichas/fecha/estado)
+        // para campañas de marketing (ej. navideñas). "Compró" lee db_kanban (ya cargado en memoria,
+        // sin consulta nueva); "Pendiente" reusa la API del bot (pedidos con estado
+        // pendiente_verificacion = llegaron a confirmar pero nunca se les aprobó el pago -- señal de
+        // abandono). Solo arma la LISTA; el envío masivo real necesita plantilla de Meta aparte.
+        // ==========================================
+        let segResultados = [];
+        function segmentosInit(){
+          segmentosToggleFichas();
+        }
+        function segmentosToggleFichas(){
+          const esRompecabezas = document.getElementById('seg-linea').value === 'rompecabezas';
+          document.getElementById('seg-fichas-wrap').style.display = esRompecabezas ? '' : 'none';
+        }
+        // Extrae el número de fichas de un texto tipo "200f" / "(200f)" / "200 fichas" -- mismo
+        // patrón que ya usan modulo_montajes_rompecabezas.html y el bot al armar la descripción.
+        function segmentosExtraerFichas(texto){
+          const m = (texto||'').match(/(\d+)\s*f\b/i);
+          return m ? parseInt(m[1], 10) : null;
+        }
+        function segmentosEnRangoFecha(fechaIso, desde, hasta){
+          if(!fechaIso) return true;
+          const f = fechaIso.slice(0,10);
+          if(desde && f < desde) return false;
+          if(hasta && f > hasta) return false;
+          return true;
+        }
+        async function segmentosBuscar(){
+          const linea = document.getElementById('seg-linea').value;
+          const fichasMin = parseInt(document.getElementById('seg-fichas-min').value, 10);
+          const fichasMax = parseInt(document.getElementById('seg-fichas-max').value, 10);
+          const desde = document.getElementById('seg-fecha-desde').value;
+          const hasta = document.getElementById('seg-fecha-hasta').value;
+          const incluirCompro = document.getElementById('seg-estado-compro').checked;
+          const incluirPendiente = document.getElementById('seg-estado-pendiente').checked;
+          const estado = document.getElementById('seg-estado');
+          const resultados = [];
+
+          if(incluirCompro){
+            db_kanban.forEach(ficha => {
+              if(!segmentosEnRangoFecha(ficha.fechaCreacion, desde, hasta)) return;
+              const lineasMatch = (ficha.lineas||[]).filter(l => linea==='cualquiera' || l.linea===linea);
+              if(lineasMatch.length===0) return;
+              let detalle = lineasMatch.map(l=>l.desc).join(' + ');
+              if(linea==='rompecabezas' && (!isNaN(fichasMin) || !isNaN(fichasMax))){
+                const fichasEncontradas = lineasMatch.map(l=>segmentosExtraerFichas(l.desc)).filter(n=>n!=null);
+                const algunaEnRango = fichasEncontradas.some(n => (isNaN(fichasMin)||n>=fichasMin) && (isNaN(fichasMax)||n<=fichasMax));
+                if(!algunaEnRango) return;
+              }
+              const cli = db_clientes.find(c=>c.id===ficha.idCli);
+              resultados.push({ nombre: ficha.nombreCli || (cli&&cli.nombre) || 'Sin nombre', telefono: cli&&cli.wp || '', fuente:'Compró', detalle, fecha: ficha.fechaCreacion });
+            });
+          }
+
+          if(incluirPendiente){
+            const url = botwaUrlBase(), key = botwaKey();
+            if(!url || !key){
+              estado.innerText = 'Para incluir "pendientes" configura la URL/clave del bot en el módulo Bot WhatsApp.';
+            } else {
+              try{
+                const res = await fetch(url + '/api/pedidos-pendientes', { headers: { 'x-api-key': key } });
+                if(!res.ok) throw new Error('HTTP '+res.status);
+                const pedidos = await res.json();
+                pedidos.forEach(p => {
+                  if(p.estado !== 'pendiente_verificacion' || !p.fichas) return;
+                  if(!segmentosEnRangoFecha(p.fecha, desde, hasta)) return;
+                  if(linea==='rompecabezas' && (!isNaN(fichasMin) && p.fichas<fichasMin)) return;
+                  if(linea==='rompecabezas' && (!isNaN(fichasMax) && p.fichas>fichasMax)) return;
+                  resultados.push({ nombre: p.nombre || 'Sin nombre', telefono: p.cel || '', fuente:'Pendiente (no pagó)', detalle: `${p.fichas} fichas — ${p.medida||''}cm`, fecha: p.fecha });
+                });
+              }catch(e){
+                estado.innerText = 'No se pudo conectar con el bot para traer los pendientes: ' + e.message;
+              }
+            }
+          }
+
+          segResultados = resultados;
+          estado.innerText = `${resultados.length} resultado(s).`;
+          renderSegmentosResultados();
+        }
+        function renderSegmentosResultados(){
+          const cont = document.getElementById('seg-resultados');
+          if(segResultados.length===0){ cont.innerHTML = '<p style="color:#94a3b8;">Sin resultados -- ajusta los filtros y busca de nuevo.</p>'; return; }
+          cont.innerHTML = `<table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+            <thead><tr style="text-align:left; border-bottom:2px solid #e2e8f0;"><th style="padding:6px;">Nombre</th><th style="padding:6px;">Teléfono</th><th style="padding:6px;">Qué compró</th><th style="padding:6px;">Estado</th><th style="padding:6px;">Fecha</th></tr></thead>
+            <tbody>${segResultados.map(r => `<tr style="border-bottom:1px solid #f1f5f9;">
+              <td style="padding:6px;">${r.nombre}</td>
+              <td style="padding:6px;">${r.telefono||'—'}</td>
+              <td style="padding:6px;">${r.detalle}</td>
+              <td style="padding:6px;">${r.fuente}</td>
+              <td style="padding:6px;">${r.fecha ? new Date(r.fecha).toLocaleDateString('es-CO') : ''}</td>
+            </tr>`).join('')}</tbody>
+          </table>`;
+        }
+        async function segmentosCopiarNumeros(){
+          const numeros = [...new Set(segResultados.map(r=>r.telefono).filter(Boolean))];
+          if(numeros.length===0){ alert('No hay números para copiar -- busca primero.'); return; }
+          try{
+            await navigator.clipboard.writeText(numeros.join('\n'));
+            document.getElementById('seg-estado').innerText = `${numeros.length} número(s) único(s) copiados al portapapeles.`;
+          }catch(e){
+            alert('No se pudo copiar automático, aquí están los números:\n\n' + numeros.join('\n'));
           }
         }
 
