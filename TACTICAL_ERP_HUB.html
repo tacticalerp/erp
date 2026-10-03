@@ -1562,6 +1562,42 @@
                     </div>
                 </div>
 
+                <!-- Conde 2026-10-03: "crea una seccion que se llame rompecabezas personalizados y anexa
+                     la informacion que tengas, si falta algunos meses que me avises que no sera completo
+                     el informe" -- ventas mensuales del canal Personalizado (histórico cargado + pedidos
+                     B2C aprobados en vivo para los meses que el histórico todavía no cubre). -->
+                <div class="accordion-item">
+                    <div class="accordion-header active" id="head-rep-rompe-pers" onclick="toggleSection('rep-rompe-pers')">
+                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M19.4 7.5V5a2 2 0 0 0-2-2h-3a2.5 2.5 0 1 0-5 0h-3a2 2 0 0 0-2 2v3a2.5 2.5 0 1 1 0 5v3a2 2 0 0 0 2 2h3a2.5 2.5 0 1 1 5 0h3a2 2 0 0 0 2-2v-2.5a2.5 2.5 0 1 0 0-5z"></path></svg>Rompecabezas personalizados</span><span class="arrow" id="arrow-rep-rompe-pers">▼</span>
+                    </div>
+                    <div id="rep-rompe-pers" class="accordion-content active">
+                        <p style="font-size:0.85rem; color:#718096; margin-top:0;">Ventas mes a mes del canal Personalizado (Norely): rompecabezas B2C y otros ingresos sin factura, año contra año.</p>
+                        <div id="rp-aviso" style="display:none; padding:12px; background:#fff3cd; border-left:4px solid #f0d98c; border-radius:4px; font-size:0.86rem; margin-bottom:12px; line-height:1.5;"></div>
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:10px; background:var(--light-gray); border-radius:6px; border:1px solid #cbd5e0; margin-bottom:14px;">
+                            <span style="font-size:0.85rem; font-weight:bold; color:#4a5568;">Ver desde</span>
+                            <select id="rp-anio-desde" onchange="renderRompecabezasPersonalizados()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;"></select>
+                            <span style="font-size:0.85rem; font-weight:bold; color:#4a5568;">hasta</span>
+                            <select id="rp-anio-hasta" onchange="renderRompecabezasPersonalizados()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;"></select>
+                        </div>
+                        <div class="dash-grid" id="rp-kpis"></div>
+                        <div class="card-grid" style="margin-top:15px;">
+                            <div class="data-card" style="grid-column:1/-1;">
+                                <div class="card-title">Ventas por mes -- una línea por año</div>
+                                <div style="position:relative; height:280px; margin-top:10px;"><canvas id="rp-chart-meses"></canvas></div>
+                            </div>
+                            <div class="data-card" style="grid-column:1/-1;">
+                                <div class="card-title">Total por año (solo meses con dato)</div>
+                                <div style="position:relative; height:240px; margin-top:10px;"><canvas id="rp-chart-anual"></canvas></div>
+                            </div>
+                            <div class="data-card" style="grid-column:1/-1;">
+                                <div class="card-title">Detalle mes a mes</div>
+                                <p style="font-size:0.78rem; color:#94a3b8; margin:2px 0 6px;">"—" = sin dato cargado (puede ser un mes sin ventas o un mes que todavía no tenemos). Los meses con * salen de los pedidos B2C aprobados en el ERP, no del cuadro histórico.</p>
+                                <div id="rp-tabla" style="overflow-x:auto;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="accordion-item">
                     <div class="accordion-header active" id="head-rep-comercial" onclick="toggleSection('rep-comercial')">
                         <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>Ventas y Comercial</span><span class="arrow" id="arrow-rep-comercial">▼</span>
@@ -2487,6 +2523,9 @@
                 // con tamaño 0 -- .resize() los recalcula contra el tamaño real que ya tienen ahora.
                 if (sectionId === 'rep-historico') {
                     [thChartMes, thChartAnual, thChartBalance, thChartMargen].forEach(c => { if (c) c.resize(); });
+                }
+                if (sectionId === 'rep-rompe-pers') {
+                    [rpChartMeses, rpChartAnual].forEach(c => { if (c) c.resize(); });
                 }
             }
         }
@@ -8944,6 +8983,7 @@
           }
 
           renderThClientesHistoricos();
+          renderRompecabezasPersonalizados();
 
           if (typeof Chart === 'undefined') return; // CDN bloqueado o sin internet -- KPIs y clientes igual se ven
 
@@ -9094,6 +9134,117 @@
             const badge = cli ? `<span style="font-size:0.75rem; background:var(--ganado); color:#fff; padding:1px 7px; border-radius:10px; margin-left:6px;" title="Ya es cliente en el CRM -- compras acumuladas (LTV) actuales">${ticon('check',{noMargin:true,color:'#fff'})}Cliente activo (LTV ${cotFormatoCop(cli.ltv||0)})</span>` : '';
             return `<div style="padding:3px 0; border-bottom:1px solid #edf2f7;">${idx+1}. ${r.nombreCliente}${r.nit ? ` <span style="color:#a0aec0; font-size:0.78rem;">(${r.nit})</span>` : ''}: <strong>${cotFormatoCop(r.valor)}</strong>${r.numFacturas ? ` — ${r.numFacturas} factura(s)` : ''}${badge}</div>`;
           }).join('');
+        }
+        /* ============ ROMPECABEZAS PERSONALIZADOS (canal Personalizado, mes a mes) ============
+           Conde 2026-10-03. Fuente: db_historicoMensual (canal 'personalizado', cuadro de Fany) y,
+           para los meses que el histórico todavía no cubre (desde jul-2026), los pedidos B2C
+           aprobados en vivo (db_b2cPedidos). Un mes sin ninguna de las 2 fuentes queda como "sin dato"
+           -- el aviso de arriba lo lista para que se pueda buscar esa información después. */
+        let rpChartMeses = null, rpChartAnual = null;
+        const RP_COLORES = ['#94a3d8','#f0a35c','#16a34a','#d97706','#3b82f6','#a855f7','#14b8a6','#ef4444','#64748b','#eab308','#0ea5e9','#84cc16','#ec4899','#1e3a5f','#78716c'];
+        function rpMesValor(anio, mes){
+          const h = db_historicoMensual.find(r => r.anio === anio && r.mes === mes && r.canal === 'personalizado');
+          if(h) return { valor: h.ingresos, vivo: false };
+          const peds = db_b2cPedidos.filter(p => {
+            if(p.estado !== 'aprobado') return false;
+            const d = new Date(p.fechaAprobado || p.fecha);
+            return !isNaN(d) && d.getFullYear() === anio && d.getMonth() + 1 === mes;
+          });
+          if(peds.length) return { valor: peds.reduce((s, p) => s + (p.total || 0), 0), vivo: true, pedidos: peds.length };
+          return null;
+        }
+        function rpRangosMeses(meses){ // [1,2,3,5] -> "Ene–Mar, May"
+          const out = []; let i = 0;
+          while(i < meses.length){
+            let j = i;
+            while(j + 1 < meses.length && meses[j + 1] === meses[j] + 1) j++;
+            const ab = m => TH_MESES[m - 1].slice(0, 3);
+            out.push(j > i ? `${ab(meses[i])}–${ab(meses[j])}` : ab(meses[i]));
+            i = j + 1;
+          }
+          return out.join(', ');
+        }
+        function renderRompecabezasPersonalizados(){
+          if(!document.getElementById('rep-rompe-pers')) return;
+          const hoy = new Date(), anioActual = hoy.getFullYear(), mesActual = hoy.getMonth() + 1;
+          const aniosConDato = [...new Set(db_historicoMensual.filter(r => r.canal === 'personalizado').map(r => r.anio))];
+          if(!aniosConDato.length) { document.getElementById('rp-aviso').style.display = 'none'; return; }
+          const primerAnio = Math.min(...aniosConDato);
+          const selD = document.getElementById('rp-anio-desde'), selH = document.getElementById('rp-anio-hasta');
+          if(selD && !selD.dataset.poblado){
+            for(let a = primerAnio; a <= anioActual; a++){ selD.appendChild(new Option(a, a)); selH.appendChild(new Option(a, a)); }
+            selD.value = Math.max(primerAnio, anioActual - 4); selH.value = anioActual; // 5 años por defecto: con los 16 la gráfica de líneas queda ilegible
+            selD.dataset.poblado = '1'; selH.dataset.poblado = '1';
+          }
+          let desde = parseInt(selD.value), hasta = parseInt(selH.value);
+          if(desde > hasta) [desde, hasta] = [hasta, desde];
+          const anios = []; for(let a = desde; a <= hasta; a++) anios.push(a);
+
+          // Cobertura (siempre de TODOS los años, no solo el rango elegido, para que el aviso sea
+          // completo): el mes en curso no cuenta como faltante (todavía no termina). Meses futuros tampoco.
+          const matriz = {}; const faltantes = [];
+          const todosAnios = []; for(let a = primerAnio; a <= anioActual; a++) todosAnios.push(a);
+          todosAnios.forEach(a => {
+            matriz[a] = []; const falta = [];
+            for(let m = 1; m <= 12; m++){
+              const v = rpMesValor(a, m); matriz[a].push(v);
+              const yaTermino = a < anioActual || (a === anioActual && m < mesActual);
+              if(!v && yaTermino) falta.push(m);
+            }
+            if(falta.length) faltantes.push({ anio: a, meses: falta });
+          });
+          const aviso = document.getElementById('rp-aviso');
+          if(faltantes.length){
+            aviso.style.display = 'block';
+            aviso.innerHTML = '<strong>Este informe no está completo.</strong> Faltan datos de estos meses (puede que no hubo ventas, o que todavía no los tenemos):<ul style="margin:6px 0 0 18px; padding:0;">' +
+              faltantes.map(f => `<li><strong>${f.anio}:</strong> ${f.meses.length === 12 ? 'todo el año' : rpRangosMeses(f.meses)}</li>`).join('') + '</ul>';
+          } else aviso.style.display = 'none';
+
+          const celdas = anios.flatMap(a => matriz[a].filter(Boolean).map(v => v.valor));
+          const mejor = anios.flatMap(a => matriz[a].map((v, i) => v ? { anio: a, mes: i + 1, valor: v.valor } : null)).filter(Boolean).reduce((m, x) => (!m || x.valor > m.valor) ? x : m, null);
+          const total = celdas.reduce((s, v) => s + v, 0);
+          document.getElementById('rp-kpis').innerHTML = `
+            <div class="kpi-box" style="border-color:var(--primary);"><div class="kpi-label">Total vendido en el rango (meses con dato)</div><div class="kpi-value" style="font-size:1.4rem;">${cotFormatoCop(total)}</div><div style="font-size:0.8rem; color:#64748b;">${desde}–${hasta}</div></div>
+            <div class="kpi-box" style="border-color:var(--ganado);"><div class="kpi-label">Promedio por mes con dato</div><div class="kpi-value" style="font-size:1.4rem;">${celdas.length ? cotFormatoCop(total / celdas.length) : '-'}</div><div style="font-size:0.8rem; color:#64748b;">${celdas.length} meses con dato</div></div>
+            <div class="kpi-box"><div class="kpi-label">Mejor mes</div><div class="kpi-value" style="font-size:1.4rem;">${mejor ? TH_MESES[mejor.mes - 1] + ' ' + mejor.anio : '-'}</div><div style="font-size:0.8rem; color:#64748b;">${mejor ? cotFormatoCop(mejor.valor) : ''}</div></div>`;
+
+          // Tabla año x mes
+          let html = '<table style="width:100%; border-collapse:collapse; font-size:0.8rem; white-space:nowrap;"><thead><tr style="background:#f7fafc; color:#4a5568;"><th style="padding:6px 8px; text-align:left;">Año</th>' +
+            TH_MESES.map(m => `<th style="padding:6px 8px; text-align:right;">${m.slice(0, 3)}</th>`).join('') + '<th style="padding:6px 8px; text-align:right;">Total</th></tr></thead><tbody>';
+          anios.slice().reverse().forEach(a => {
+            const tot = matriz[a].filter(Boolean).reduce((s, v) => s + v.valor, 0);
+            html += `<tr style="border-bottom:1px solid #edf2f7;"><td style="padding:6px 8px; font-weight:700;">${a}</td>` +
+              matriz[a].map(v => v
+                ? `<td style="padding:6px 8px; text-align:right;" ${v.vivo ? `title="${v.pedidos} pedido(s) B2C aprobados en el ERP"` : ''}>${cotFormatoCop(v.valor)}${v.vivo ? '*' : ''}</td>`
+                : '<td style="padding:6px 8px; text-align:right; color:#cbd5e0;">—</td>').join('') +
+              `<td style="padding:6px 8px; text-align:right; font-weight:700;">${matriz[a].some(Boolean) ? cotFormatoCop(tot) : '—'}</td></tr>`;
+          });
+          document.getElementById('rp-tabla').innerHTML = html + '</tbody></table>';
+
+          if(typeof Chart === 'undefined') return;
+          const ctxM = document.getElementById('rp-chart-meses');
+          if(ctxM){
+            if(rpChartMeses) rpChartMeses.destroy();
+            rpChartMeses = new Chart(ctxM, {
+              type: 'line',
+              data: { labels: TH_MESES.map(m => m.slice(0, 3)), datasets: anios.filter(a => matriz[a].some(Boolean)).map((a, i) => ({
+                label: String(a), data: matriz[a].map(v => v ? v.valor : null), borderColor: RP_COLORES[i % RP_COLORES.length], backgroundColor: RP_COLORES[i % RP_COLORES.length],
+                borderWidth: a === anioActual ? 3 : 1.5, pointRadius: 3, tension: 0.2, spanGaps: false,
+              })) },
+              options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { callbacks: { label: (c) => c.dataset.label + ': ' + cotFormatoCop(c.parsed.y) } } }, scales: { y: { ticks: { callback: (v) => cotFormatoCop(v) } } } }
+            });
+          }
+          const ctxA = document.getElementById('rp-chart-anual');
+          if(ctxA){
+            if(rpChartAnual) rpChartAnual.destroy();
+            const filas = anios.map(a => ({ anio: a, total: matriz[a].filter(Boolean).reduce((s, v) => s + v.valor, 0), n: matriz[a].filter(Boolean).length })).filter(f => f.n > 0);
+            rpChartAnual = new Chart(ctxA, {
+              type: 'bar',
+              data: { labels: filas.map(f => f.anio + (f.n < 12 ? ` (${f.n} meses)` : '')), datasets: [{ label: 'Ventas canal Personalizado', data: filas.map(f => f.total), backgroundColor: filas.map(f => f.n < 12 ? '#f6d2ab' : '#f0a35c') }] },
+              options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => cotFormatoCop(c.parsed.y), afterLabel: (c) => filas[c.dataIndex].n < 12 ? 'Año incompleto: solo ' + filas[c.dataIndex].n + ' de 12 meses' : '' } } }, scales: { y: { ticks: { callback: (v) => cotFormatoCop(v) } } } }
+            });
+          }
+          requestAnimationFrame(() => [rpChartMeses, rpChartAnual].forEach(c => { if(c) c.resize(); }));
         }
         let repPeriodoTipo = 'mensual', repPeriodoOffset = 0;
         function repCambiarTipo(v){ repPeriodoTipo = v; repPeriodoOffset = 0; renderReportes(); }
