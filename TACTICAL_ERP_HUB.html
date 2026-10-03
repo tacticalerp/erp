@@ -842,6 +842,9 @@
                    una ventana flotante" -- reemplaza el formulario siempre visible que tenía CRM antes
                    (ver comercialAbrirCrearNegocio más abajo). -->
               <button class="btn-action" onclick="comercialAbrirCrearNegocio()" style="white-space:nowrap;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Nuevo Negocio</button>
+              <!-- Conde 2026-10-03: "anexalo en un boton adicional de comercial" -- lista de precios
+                   de referencia con las cotizaciones del mes (ver comercialAbrirResumenCotizaciones). -->
+              <button class="btn-action" onclick="comercialAbrirResumenCotizaciones()" style="white-space:nowrap;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>Resumen de cotizaciones</button>
             </div>
 
             <div id="comercial-recordatorios" style="margin-bottom:4px;"></div>
@@ -8348,6 +8351,187 @@
           o.seguimiento = valor;
           tacticalGuardarSeguimientoOpp(id, valor);
         }
+        // ============ RESUMEN DE COTIZACIONES DEL MES ============
+        // Conde 2026-10-03: "es solo un resumen de las cotizaciones del mes" -- lista de precios de
+        // referencia para responder rápido a clientes que solo piden precio (casi siempre Cuadernos).
+        // Solo refleja lo que ya quedó guardado (sin verificación): Cliente, Producto completo,
+        // Cantidad, Unitario SIN IVA y Estado (solo por color). Sin precio total a propósito.
+        // Mes = fecha en que se hizo la cotización (no la de cierre). Abiertas (db_opps) = naranja;
+        // cerradas (db_historial_cierres) = verde/rojo. Cuadernos toma el detalle de db_cotizaciones;
+        // las demás líneas, de cotizaciones_calculadoras (se consulta solo el mes elegido).
+        const RESUMEN_COT_COLORES = { todas:'#B4B2A9', ganada:'#639922', seguimiento:'#EF9F27', perdida:'#E24B4A' };
+        const RESUMEN_COT_TITULOS = { todas:'Todas', ganada:'Ganada', seguimiento:'En seguimiento', perdida:'Perdida' };
+        const RESUMEN_COT_LINEAS = { cuadernos:'Cuadernos', carpetas:'Carpetas', volantes:'Volantes', rompecabezas:'Rompecabezas', cubo_rubik:'Cubo Rubik', bolsas:'Bolsas', cajas:'Cajas', promocionales:'Promocionales', manual:'Libre' };
+        let resumenCotFilas = [], resumenCotEstado = 'todas', resumenCotCacheCalc = {};
+        function resumenCotEsc(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+        function resumenCotDescCuaderno(p){
+          if(!p || !p.lineaProducto) return '';
+          const partes = [cotDescripcionProducto(p).replace(/^\S+\s/, '')];
+          const enc = ((COT_ENCUADERNACIONES_POR_LINEA[p.lineaProducto]||[]).find(e=>e[0]===p.encuadernacionTipo)||[])[1];
+          if(enc) partes.push(enc);
+          const lineas = p.lineasImpresion || [];
+          if(p.tacoHojas) partes.push(`taco ${p.tacoHojas} hojas`);
+          lineas.filter(l=>l.rol==='inserto').forEach(l=>{
+            partes.push(`inserto${l.nombre?' '+l.nombre:''} ${l.hojasPorCuaderno} hojas ${l.tintasTiro||0}/${l.tintasRetiro||0} tintas${l.intercalado?' intercalado':''}`);
+          });
+          if(p.guardasCantidad>0) partes.push(`guardas ${p.guardasCantidad} (${p.guardasTintasTiro||0} tintas${p.guardasPlastificado?', plastificadas':''})`);
+          if(p.extraDescripcion) partes.push(p.extraDescripcion);
+          return partes.join(' · ');
+        }
+        function resumenCotFilasDeOpp(o, estado, detCuad, detCalc){
+          const base = { fecha: o.fecha ? new Date(o.fecha) : fechaDeRegistro(o), ot: o.ot||'', cliente: o.nombreCli||'', estado };
+          const filaDesde = (linea, desc, cant, unit, aprox, lineaClave) => ({ ...base, linea: lineaClave, producto: desc, cantidad: cant, unitario: unit, aprox });
+          const salida = [];
+          if(o.linea==='multi' && Array.isArray(o.lineas)){
+            o.lineas.forEach(l=>{
+              const desc = (l.linea==='cuadernos' && l.params && resumenCotDescCuaderno(l.params)) || l.desc || '';
+              const unit = l.precioUnitario!=null ? l.precioUnitario : (l.resultado && l.resultado.precioVentaUnitario);
+              salida.push(filaDesde(null, desc, l.cantidad, unit, false, l.linea));
+            });
+            return salida;
+          }
+          if(Array.isArray(o.opcionesComparativa) && o.opcionesComparativa.length){
+            o.opcionesComparativa.forEach(op=>{
+              const desc = (op.params && resumenCotDescCuaderno(op.params)) || op.titulo || o.desc;
+              salida.push(filaDesde(null, desc, op.params && op.params.cantidad, op.resultado && op.resultado.precioVentaUnitario, false, 'cuadernos'));
+            });
+            return salida;
+          }
+          const det = o.linea==='cuadernos' ? detCuad : detCalc;
+          const params = (det && det.params) || o.cotParams;
+          const res = (det && det.resultado) || o.cotResultado;
+          const desc = (o.linea==='cuadernos' && params && resumenCotDescCuaderno(params)) || o.desc || '';
+          let unit = res && res.precioVentaUnitario, aprox = false;
+          if(unit==null && o.cantidad>0 && o.monto>0){ unit = o.monto/o.cantidad/1.19; aprox = true; }
+          salida.push(filaDesde(null, desc, o.cantidad, unit, aprox, o.linea));
+          return salida;
+        }
+        async function resumenCotCargarMes(clave){
+          const [anio, mes] = clave.split('-').map(Number);
+          const inicio = new Date(anio, mes-1, 1), fin = new Date(anio, mes, 1);
+          if(!resumenCotCacheCalc[clave]){
+            const { data, error } = await tacticalSupabase.from('cotizaciones_calculadoras')
+              .select('opp_id,ot,linea,params,resultado').gte('created_at', inicio.toISOString()).lt('created_at', fin.toISOString());
+            if(error) console.error('Error cargando cotizaciones de calculadoras para el resumen:', error);
+            if(!error) resumenCotCacheCalc[clave] = data || [];
+          }
+          const calc = resumenCotCacheCalc[clave] || [];
+          const filas = [];
+          const procesar = (o, estado) => {
+            const f = o.fecha ? new Date(o.fecha) : fechaDeRegistro(o);
+            if(!fechaEnRango(f, inicio, fin)) return;
+            const detCuad = db_cotizaciones.find(c => c.idOpp===o.id || (o.ot && c.ot===o.ot));
+            const detCalc = calc.find(c => c.opp_id===o.id || (o.ot && c.ot===o.ot));
+            filas.push(...resumenCotFilasDeOpp(o, estado, detCuad, detCalc));
+          };
+          db_opps.forEach(o => procesar(o, 'seguimiento'));
+          db_historial_cierres.forEach(h => procesar(h, h.estado==='ganado' ? 'ganada' : 'perdida'));
+          filas.sort((a,b) => (b.fecha||0) - (a.fecha||0));
+          resumenCotFilas = filas;
+        }
+        function resumenCotFiltradas(){
+          const txt = ((document.getElementById('resumen-cot-buscar')||{}).value||'').toLowerCase().trim();
+          const linea = (document.getElementById('resumen-cot-linea')||{}).value || '';
+          return resumenCotFilas.filter(f =>
+            (resumenCotEstado==='todas' || f.estado===resumenCotEstado) &&
+            (!linea || f.linea===linea) &&
+            (!txt || (f.cliente+' '+f.producto+' '+f.ot).toLowerCase().includes(txt))
+          );
+        }
+        function resumenCotPintar(){
+          const filas = resumenCotFiltradas();
+          const cuerpo = document.getElementById('resumen-cot-cuerpo');
+          if(!cuerpo) return;
+          cuerpo.innerHTML = filas.length ? filas.map(f => {
+            const fTxt = f.fecha instanceof Date && !isNaN(f.fecha) ? f.fecha.toLocaleDateString('es-CO', {day:'numeric', month:'short'}) : '-';
+            return `<tr style="border-bottom:1px solid #edf2f7;">
+              <td style="padding:8px 10px; vertical-align:top; min-width:130px;"><div style="font-weight:600; color:#1a202c;">${resumenCotEsc(f.cliente)}</div><div style="font-size:0.72rem; color:#718096;">${fTxt}${f.ot?' · '+resumenCotEsc(f.ot):''}</div></td>
+              <td style="padding:8px 10px; vertical-align:top; color:#2d3748; font-size:0.82rem;">${resumenCotEsc(f.producto)}</td>
+              <td style="padding:8px 10px; vertical-align:top; text-align:right; white-space:nowrap;">${f.cantidad!=null?Number(f.cantidad).toLocaleString('es-CO'):'-'}</td>
+              <td style="padding:8px 10px; vertical-align:top; text-align:right; white-space:nowrap; font-weight:700;" title="${f.aprox?'Aproximado: calculado desde el monto total':''}">${f.unitario!=null?(f.aprox?'≈ ':'')+cotFormatoCop(f.unitario):'-'}</td>
+              <td style="padding:8px 10px; vertical-align:top; text-align:center;"><span title="${RESUMEN_COT_TITULOS[f.estado]}" style="display:inline-block; width:12px; height:12px; border-radius:50%; background:${RESUMEN_COT_COLORES[f.estado]};"></span></td>
+            </tr>`;
+          }).join('') : '<tr><td colspan="5" style="padding:24px; text-align:center; color:#718096;">No hay cotizaciones con estos filtros.</td></tr>';
+          const cnt = document.getElementById('resumen-cot-conteo');
+          if(cnt) cnt.textContent = filas.length + (filas.length===1 ? ' cotización' : ' cotizaciones');
+        }
+        function resumenCotElegirEstado(e){
+          resumenCotEstado = e;
+          document.querySelectorAll('.resumen-cot-dot').forEach(b => { b.style.boxShadow = b.dataset.estado===e ? '0 0 0 2px #fff, 0 0 0 4px #1a202c' : 'none'; });
+          resumenCotPintar();
+        }
+        async function resumenCotCambiarMes(){
+          const cuerpo = document.getElementById('resumen-cot-cuerpo');
+          if(cuerpo) cuerpo.innerHTML = '<tr><td colspan="5" style="padding:24px; text-align:center; color:#718096;">Cargando...</td></tr>';
+          await resumenCotCargarMes(document.getElementById('resumen-cot-mes').value);
+          resumenCotPintar();
+        }
+        function resumenCotDescargarExcel(){
+          const filas = resumenCotFiltradas();
+          const celda = v => '"' + String(v==null?'':v).replace(/"/g,'""') + '"';
+          const lineas = [['Fecha','OT','Cliente','Línea','Producto','Cantidad','Unitario sin IVA','Estado'].map(celda).join(';')];
+          filas.forEach(f => lineas.push([
+            f.fecha instanceof Date && !isNaN(f.fecha) ? f.fecha.toLocaleDateString('es-CO') : '',
+            f.ot, f.cliente, RESUMEN_COT_LINEAS[f.linea]||f.linea||'', f.producto,
+            f.cantidad!=null ? f.cantidad : '', f.unitario!=null ? Math.round(f.unitario) : '', RESUMEN_COT_TITULOS[f.estado]
+          ].map(celda).join(';')));
+          const blob = new Blob(['﻿' + lineas.join('\r\n')], {type:'text/csv;charset=utf-8'});
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = `resumen_cotizaciones_${document.getElementById('resumen-cot-mes').value}.csv`;
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        }
+        async function comercialAbrirResumenCotizaciones(){
+          const hoy = new Date();
+          const meses = [];
+          for(let i=0; i<12; i++){
+            const d = new Date(hoy.getFullYear(), hoy.getMonth()-i, 1);
+            let et = d.toLocaleDateString('es-CO', {month:'long', year:'numeric'});
+            meses.push({ clave: d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'), etiqueta: et.charAt(0).toUpperCase()+et.slice(1) });
+          }
+          resumenCotEstado = 'todas';
+          const estiloCtl = 'padding:7px 8px; border:1px solid #cbd5e0; border-radius:6px; font-size:0.85rem; background:#fff;';
+          const overlay = document.createElement('div');
+          overlay.id = 'comercial-modal-resumen-cot';
+          overlay.style.cssText = 'position:fixed; inset:0; background:rgba(26,32,44,0.6); z-index:99999; display:flex; align-items:center; justify-content:center; padding:20px;';
+          overlay.innerHTML = `
+            <div style="background:#fff; border-radius:10px; padding:20px; max-width:1000px; width:100%; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 12px 40px rgba(0,0,0,0.35); font-family:'Segoe UI', Tahoma, sans-serif;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:10px;">
+                <div style="font-weight:800; font-size:1.05rem; color:#1a202c;">Resumen de cotizaciones</div>
+                <button type="button" onclick="document.getElementById('comercial-modal-resumen-cot').remove()" style="border:none; background:none; font-size:1.4rem; line-height:1; cursor:pointer; color:#4a5568;" title="Cerrar">&times;</button>
+              </div>
+              <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px;">
+                <select id="resumen-cot-mes" onchange="resumenCotCambiarMes()" style="${estiloCtl}">${meses.map(m=>`<option value="${m.clave}">${m.etiqueta}</option>`).join('')}</select>
+                <select id="resumen-cot-linea" onchange="resumenCotPintar()" style="${estiloCtl}">
+                  <option value="">Todas las líneas</option>
+                  ${Object.keys(RESUMEN_COT_LINEAS).map(k=>`<option value="${k}">${RESUMEN_COT_LINEAS[k]}</option>`).join('')}
+                </select>
+                <input type="text" id="resumen-cot-buscar" oninput="resumenCotPintar()" placeholder="Buscar cliente o producto..." style="${estiloCtl} flex:1; min-width:160px;">
+                <div style="display:flex; gap:8px; align-items:center; padding:0 6px;">
+                  ${['todas','ganada','seguimiento','perdida'].map(e=>`<button type="button" class="resumen-cot-dot" data-estado="${e}" onclick="resumenCotElegirEstado('${e}')" title="${RESUMEN_COT_TITULOS[e]}" style="width:16px; height:16px; border-radius:50%; border:none; padding:0; cursor:pointer; background:${RESUMEN_COT_COLORES[e]}; ${e==='todas'?'box-shadow:0 0 0 2px #fff, 0 0 0 4px #1a202c;':''}"></button>`).join('')}
+                </div>
+                <button type="button" onclick="resumenCotDescargarExcel()" style="padding:7px 12px; border:1px solid #cbd5e0; background:#fff; color:#2d3748; border-radius:6px; font-weight:700; font-size:0.85rem; cursor:pointer;">Descargar Excel</button>
+              </div>
+              <div style="overflow:auto; border:1px solid #e2e8f0; border-radius:6px; flex:1;">
+                <table style="width:100%; border-collapse:collapse; font-size:0.88rem;">
+                  <thead style="position:sticky; top:0; background:#f7fafc;">
+                    <tr style="text-align:left; color:#4a5568; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.03em;">
+                      <th style="padding:8px 10px;">Cliente</th><th style="padding:8px 10px;">Producto</th>
+                      <th style="padding:8px 10px; text-align:right;">Cant.</th><th style="padding:8px 10px; text-align:right;">Unitario sin IVA</th>
+                      <th style="padding:8px 10px; text-align:center;">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody id="resumen-cot-cuerpo"></tbody>
+                </table>
+              </div>
+              <div id="resumen-cot-conteo" style="margin-top:8px; font-size:0.78rem; color:#718096;"></div>
+            </div>`;
+          document.body.appendChild(overlay);
+          overlay.addEventListener('mousedown', e => { if(e.target===overlay) overlay.remove(); });
+          await resumenCotCambiarMes();
+        }
+
         // Conde 2026-08-28: "deja crear negocio manual en comercial, que sea un botón que al
         // activarse abra una ventana flotante... ese módulo está pensado en simplicidad visual" --
         // reemplaza el formulario que antes vivía siempre visible en CRM (ver el historial de
