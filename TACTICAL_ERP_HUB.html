@@ -1481,11 +1481,21 @@
                 <!-- Conde 2026-08-28: "unifica radar de negocio y reportes en una sola herramienta"
                      -- el Radar (recomendaciones de hoy) queda arriba, fuera del acordeón, para que
                      siga viéndose de una sola vez como antes; los reportes de siempre van debajo. -->
-                <p style="color:#718096; font-size:0.9rem; margin:0 0 14px;">Cruces de CRM, Contabilidad y Reprocesos, traducidos a frases simples con una acción sugerida — no hace falta saber de contabilidad para leerlo.</p>
-                <div style="font-size:0.8rem; color:#a0aec0; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px;">Esta semana</div>
-                <div id="radar-urgente" style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;"></div>
-                <div style="font-size:0.8rem; color:#a0aec0; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px;">Para tener en cuenta</div>
-                <div id="radar-informativo" style="display:flex; flex-direction:column; gap:10px; margin-bottom:24px;"></div>
+                <!-- Conde 2026-10-04: "quiero que esto sea desplegable y que no esté expandido siempre"
+                     -- el Radar arranca plegado; el contador rojo del título avisa cuántas cosas
+                     urgentes hay sin tener que abrirlo (renderRadar lo actualiza). -->
+                <div class="accordion-item" style="margin-bottom:16px;">
+                    <div class="accordion-header" id="head-rep-radar" onclick="toggleSection('rep-radar')">
+                        <span>Radar de hoy <span id="radar-conteo" style="display:none; margin-left:6px; background:var(--peligro); color:#fff; font-size:0.72rem; padding:1px 8px; border-radius:10px;"></span></span><span class="arrow" id="arrow-rep-radar">►</span>
+                    </div>
+                    <div id="rep-radar" class="accordion-content">
+                        <p style="color:#718096; font-size:0.9rem; margin:0 0 14px;">Cruces de CRM, Contabilidad y Reprocesos, traducidos a frases simples con una acción sugerida — no hace falta saber de contabilidad para leerlo.</p>
+                        <div style="font-size:0.8rem; color:#a0aec0; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px;">Esta semana</div>
+                        <div id="radar-urgente" style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;"></div>
+                        <div style="font-size:0.8rem; color:#a0aec0; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px;">Para tener en cuenta</div>
+                        <div id="radar-informativo" style="display:flex; flex-direction:column; gap:10px;"></div>
+                    </div>
+                </div>
 
                 <!-- Conde 2026-09-16: "informacion financiera de otros periodos... quiero ver como
                      va la empresa, ventas por linea, por fecha, por años, comparativos por mes en
@@ -8862,6 +8872,9 @@
 
           urgenteEl.innerHTML = urgente || '<p style="color:#a0aec0; font-style:italic;">Todo tranquilo por ahora -- no hay nada urgente que atender.</p>';
           infoEl.innerHTML = info || '<p style="color:#a0aec0; font-style:italic;">Todavía no hay suficientes datos para mostrar algo aquí.</p>';
+          const nUrgentes = urgenteEl.querySelectorAll(':scope > .data-card').length;
+          const conteoEl = document.getElementById('radar-conteo');
+          if(conteoEl){ conteoEl.textContent = nUrgentes + (nUrgentes === 1 ? ' urgente' : ' urgentes'); conteoEl.style.display = nUrgentes ? 'inline-block' : 'none'; }
         }
         /* ============ TENDENCIA HISTÓRICA (2011-2026) ============
            Conde 2026-09-16: "quiero que analices todos los informes... ventas por linea, por
