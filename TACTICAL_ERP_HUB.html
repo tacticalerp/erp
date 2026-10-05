@@ -4421,6 +4421,7 @@
               <div class="card-title">${p.nombre}${etiquetaExpress}${etiquetaIman}</div>
               <p style="margin:4px 0; font-size:0.9em; color:#64748b;">${p.cel}</p>
               <p style="margin:4px 0; font-size:0.9em;">${medioTxt}</p>
+              ${p.frase ? `<p style="margin:4px 0; font-size:0.9em;">Frase: <b>«${p.frase}»</b> — tipografía ${p.tipografia}</p>` : ''}
               <p style="margin:4px 0; font-weight:bold;">${totalTxt}</p>
               <div id="botwa-img-${p.id}" style="margin-top:8px; font-size:0.8em; color:#94a3b8;">Cargando comprobante...</div>
               <div style="display:flex; gap:8px; margin-top:10px;">
@@ -4467,7 +4468,7 @@
           ];
           // Express = urgente para producción (el título lo deja a la vista); imán se marca en el título.
           const prefijoEspecial = (p.express ? `EXPRESS x${p.cantidadExpress||1} — ` : '') + (p.iman ? `CON IMÁN x${p.cantidadIman||1} — ` : '');
-          const titulo = `${prefijoEspecial}Rompecabezas B2C ${p.linea==='laser'?'Láser':'Troquel'}${p.forma?' - '+p.forma:''} — ${p.fichas}f x${p.cantidad} — ${p.nombre}`;
+          const titulo = `${prefijoEspecial}Rompecabezas B2C ${p.linea==='laser'?'Láser':'Troquel'}${p.forma?' - '+p.forma:''} — ${p.fichas}f x${p.cantidad} — ${p.nombre}${p.frase ? ` — FRASE «${p.frase}» (tipografía ${p.tipografia})` : ''}`;
           const ficha = {
             id: crypto.randomUUID(), ot: null,
             idCli: cli.id, nombreCli: tacticalNombreCliente(cli), titulo,
