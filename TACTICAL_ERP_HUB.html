@@ -1819,6 +1819,27 @@
                     </div>
                 </div>
 
+                <!-- Conde 2026-10-05: Notas Crédito -- anulan una factura / cuenta de cobro completa. -->
+                <div class="accordion-item">
+                    <div class="accordion-header" id="head-cont-notacredito" onclick="toggleSection('cont-notacredito')">
+                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="9" y1="15" x2="15" y2="15"></line></svg>Notas Crédito (anular facturas)</span><span class="arrow" id="arrow-cont-notacredito">►</span>
+                    </div>
+                    <div id="cont-notacredito" class="accordion-content">
+                        <p style="font-size:0.85rem; color:#718096; margin-top:0;">Una Nota Crédito anula COMPLETA una factura o cuenta de cobro: el documento queda "anulada", sale de la cartera por cobrar y la venta se resta en el mes en que haces la Nota. Si te equivocas, eliminar la Nota reactiva la factura.</p>
+                        <div class="form-grid">
+                            <div class="form-group" style="flex-basis:100%;"><label>Factura / Cuenta de cobro a anular:</label>
+                                <input type="text" id="nc-doc-filtro" placeholder="Escribe el número o el cliente para buscar..." oninput="contNcLlenarSelect()" style="margin-bottom:4px;">
+                                <select id="nc-docventa" onchange="contNcMostrarResumen()"></select></div>
+                            <div id="nc-resumen" style="display:none; flex-basis:100%; background:#f1f5f9; border-left:4px solid var(--peligro); border-radius:4px; padding:8px 12px; font-size:0.86rem; line-height:1.5; margin-bottom:8px;"></div>
+                            <div class="form-group"><label>N° de Nota Crédito:</label><input type="text" id="nc-numero" placeholder="Ej: NC-0001" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase(); this.dataset.auto=''"></div>
+                            <div class="form-group"><label>Fecha de la Nota:</label><input type="date" id="nc-fecha"></div>
+                            <div class="form-group" style="flex-basis:100%;"><label>Motivo de la anulación:</label><input type="text" id="nc-motivo" placeholder="Ej: Error en la facturación / el cliente canceló el pedido"></div>
+                        </div>
+                        <button class="btn-submit" style="margin-top:12px;" onclick="contGuardarNotaCredito()">Generar Nota Crédito y anular la factura</button>
+                        <div class="card-grid" id="lista-notascredito"></div>
+                    </div>
+                </div>
+
                 <div class="accordion-item">
                     <div class="accordion-header" id="head-cont-ingreso" onclick="toggleSection('cont-ingreso')">
                         <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>Comprobante de Ingreso</span><span class="arrow" id="arrow-cont-ingreso">►</span>
@@ -2165,7 +2186,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Conde 2026-09-16: "convertir esos informes en graficos" (Tendencia Histórica en Reportes) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-    <script src="tactical-supabase.js?v=20260925a"></script>
+    <script src="tactical-supabase.js?v=20261005a"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
     <script src="precios_tactical.js?v=20260929a"></script>
     <script src="precios_promocionales.js?v=20260919a"></script>
@@ -3344,6 +3365,7 @@
           tareas.activas.forEach(t => addTask(t.area, t.desc, t.espec, t.emp, t.status, t.id, t.fechaOrigen, t.orden, t.aclaracion, t.fechaLimite));
           db_proveedores = await tacticalProveedoresCargar();
           db_docventa = await tacticalDocVentaCargar();
+          db_notasCredito = await tacticalNotasCreditoCargar();
           db_b2cPedidos = await tacticalB2CPedidosCargar();
           db_prefacturas = await tacticalPrefacturasCargar();
           db_ingresos = await tacticalIngresosCargar();
@@ -9112,7 +9134,8 @@
             const d = s.length <= 10 ? new Date(s + 'T00:00:00') : new Date(s);
             return !isNaN(d) && d.getFullYear() === anio && (d.getMonth() + 1) === mes;
           };
-          const vivo = db_docventa.filter(d => enPeriodo(d.fecha)).reduce((s, d) => s + (d.totalDocumento || 0), 0);
+          const vivo = db_docventa.filter(d => enPeriodo(d.fecha)).reduce((s, d) => s + (d.totalDocumento || 0), 0)
+            - db_notasCredito.filter(n => enPeriodo(n.fecha)).reduce((s, n) => s + (n.totalDocumento || 0), 0);
           if (vivo > 0) return vivo;
           const h = db_historicoMensual.find(r => r.anio === anio && r.mes === mes && r.canal === 'tactical');
           return h ? h.ingresos : null;
@@ -10132,6 +10155,7 @@
         function editarDocVenta(id){
             const doc = db_docventa.find(d=>d.id===id);
             if(!doc) return;
+            if(doc.estado==='anulada'){ alert('Este documento está anulado por una Nota Crédito, no se puede editar. Si fue un error, elimina primero la Nota Crédito (sección Notas Crédito) para reactivarlo.'); return; }
             // Conde 2026-08-21: "de cliente ya pagadas no las deje eliminar ni editar" -- mismo
             // candado que CxP.
             // Conde 2026-09-25: candado suavizado a confirm() "mientras nos adaptamos al manejo
@@ -10183,6 +10207,7 @@
         function eliminarDocVenta(id){
             const doc = db_docventa.find(d=>d.id===id);
             if(!doc) return;
+            if(doc.estado==='anulada'){ alert('Este documento está anulado por una Nota Crédito, no se puede eliminar. Si quieres borrarlo, elimina primero la Nota Crédito (sección Notas Crédito).'); return; }
             // Conde 2026-09-25: candado suavizado a confirm(), ver editarDocVenta arriba.
             if(doc.estado==='pagada' && !confirm(`Este documento "${doc.numero}" ya está pagado. ¿Seguro que quieres eliminarlo?\n\nYa se registraron cobros contra este documento.`)) return;
             if(!confirm(`¿Eliminar el documento "${doc.numero}"?\n\nEsta acción no se puede deshacer.`)) return;
@@ -10205,7 +10230,7 @@
                 // texto completo queda oculto detrás de un "Ver detalle" opcional.
                 container.innerHTML += `
                     <div class="data-card">
-                        <span class="tag" style="float:right; background:${doc.estado==='pagada'?'var(--ganado)':(doc.estado==='abonado_parcial'?'var(--proceso)':'var(--pendiente)')}; color:${doc.estado==='pendiente'?'#744210':'white'};">${doc.estado.toUpperCase()}</span>
+                        <span class="tag" style="float:right; background:${doc.estado==='anulada'?'#718096':(doc.estado==='pagada'?'var(--ganado)':(doc.estado==='abonado_parcial'?'var(--proceso)':'var(--pendiente)'))}; color:${doc.estado==='pendiente'?'#744210':'white'};">${doc.estado.toUpperCase()}</span>
                         <div class="card-title">${doc.numero} — ${cli?cli.empresa:'Cliente eliminado'}</div>
                         <div class="card-subtitle">${badgeTipo} — ${(doc.items||[]).length} ítem(s)
                             <span style="color:var(--info); cursor:pointer; text-decoration:underline; font-size:0.82rem;" onclick="const d=this.nextElementSibling; const abrir=d.style.display==='none'; d.style.display=abrir?'block':'none'; this.textContent=abrir?'Ocultar detalle ▴':'Ver detalle ▾';">Ver detalle ▾</span>
@@ -10274,11 +10299,11 @@
             if(idsDoc.length > 1){
                 idsDoc.forEach(id => {
                     const doc = db_docventa.find(d=>d.id===id);
-                    if(doc){ doc.saldoPendiente = doc.totalCobrar; doc.estado = 'pendiente'; tacticalSyncDocVenta(doc); }
+                    if(doc && doc.estado !== 'anulada'){ doc.saldoPendiente = doc.totalCobrar; doc.estado = 'pendiente'; tacticalSyncDocVenta(doc); }
                 });
             } else if(idsDoc.length === 1){
                 const doc = db_docventa.find(d=>d.id===idsDoc[0]);
-                if(doc){
+                if(doc && doc.estado !== 'anulada'){
                     doc.saldoPendiente = Math.min(doc.totalCobrar, doc.saldoPendiente + ingreso.valor);
                     doc.estado = doc.saldoPendiente<=0 ? 'pagada' : (doc.saldoPendiente<doc.totalCobrar ? 'abonado_parcial' : 'pendiente');
                     tacticalSyncDocVenta(doc);
@@ -10892,8 +10917,13 @@
             // Conde 2026-09-14: "como se de donde llego esas ventas?" -- se guardan los registros
             // filtrados (no solo la suma) para poder mostrar el detalle debajo del KPI.
             const docsVentaMes = db_docventa.filter(d => enPeriodo(d.fecha)).sort((a,b) => String(b.fecha||'').localeCompare(String(a.fecha||'')));
-            const ventasFacturadasMes = docsVentaMes.reduce((s,d)=>s+d.totalDocumento,0);
-            const ventasFacturadasMesSinIva = docsVentaMes.reduce((s,d)=>s+(d.valorBruto||0),0);
+            // Conde 2026-10-05: las Notas Crédito restan en el mes en que se hacen (la factura anulada
+            // sigue contando en su mes original).
+            const notasMes = db_notasCredito.filter(n => enPeriodo(n.fecha));
+            const notasMesTotal = notasMes.reduce((s,n)=>s+n.totalDocumento,0);
+            const notasMesBruto = notasMes.reduce((s,n)=>s+n.valorBruto,0);
+            const ventasFacturadasMes = docsVentaMes.reduce((s,d)=>s+d.totalDocumento,0) - notasMesTotal;
+            const ventasFacturadasMesSinIva = docsVentaMes.reduce((s,d)=>s+(d.valorBruto||0),0) - notasMesBruto;
             const ingresosMesArr = db_ingresos.filter(i => enPeriodo(i.fecha)).sort((a,b) => String(b.fecha||'').localeCompare(String(a.fecha||'')));
             const ingresosCobradosMes = ingresosMesArr.reduce((s,i)=>s+i.valor,0);
             const gastosFijosMes = db_egresos.filter(e => enPeriodo(e.fecha) && e.categoria==='fijo').reduce((s,e)=>s+e.monto,0);
@@ -10950,7 +10980,7 @@
             const utilidadNetaMes = ingresosCobradosMes - (gastosFijosMes + gastosVariablesMes);
 
             document.getElementById('cont-tablero-kpis').innerHTML = `
-                <div class="kpi-box" style="border-color:var(--info);"><div class="kpi-label">Ventas Facturadas (mes)</div><div class="kpi-value">${cotFormatoCop(ventasFacturadasMes)}</div>${docsVentaMes.length?`<div style="font-size:0.8rem; color:#64748b; margin-top:3px;">${cotFormatoCop(ventasFacturadasMesSinIva)} antes de IVA</div>`:''}<span style="font-size:0.78rem; color:var(--info); cursor:pointer; text-decoration:underline;" onclick="const d=this.nextElementSibling; const abrir=d.style.display==='none'; d.style.display=abrir?'block':'none'; this.textContent=abrir?'Ocultar detalle ▴':'¿De dónde salió esto? ▾';">¿De dónde salió esto? ▾</span><div style="display:none; margin-top:6px; text-align:left; max-height:180px; overflow-y:auto; font-size:0.78rem; color:#4a5568;">${contDetalleDocVentaHtml(docsVentaMes)}</div></div>
+                <div class="kpi-box" style="border-color:var(--info);"><div class="kpi-label">Ventas Facturadas (mes)</div><div class="kpi-value">${cotFormatoCop(ventasFacturadasMes)}</div>${docsVentaMes.length?`<div style="font-size:0.8rem; color:#64748b; margin-top:3px;">${cotFormatoCop(ventasFacturadasMesSinIva)} antes de IVA</div>`:''}${notasMes.length?`<div style="font-size:0.78rem; color:#b45309; margin-top:2px;">incluye −${cotFormatoCop(notasMesTotal)} de ${notasMes.length} Nota(s) Crédito</div>`:''}<span style="font-size:0.78rem; color:var(--info); cursor:pointer; text-decoration:underline;" onclick="const d=this.nextElementSibling; const abrir=d.style.display==='none'; d.style.display=abrir?'block':'none'; this.textContent=abrir?'Ocultar detalle ▴':'¿De dónde salió esto? ▾';">¿De dónde salió esto? ▾</span><div style="display:none; margin-top:6px; text-align:left; max-height:180px; overflow-y:auto; font-size:0.78rem; color:#4a5568;">${contDetalleDocVentaHtml(docsVentaMes)}</div></div>
                 <div class="kpi-box" style="border-color:var(--ganado);"><div class="kpi-label">Ingresos Cobrados (mes, caja)</div><div class="kpi-value" style="color:var(--ganado);">${cotFormatoCop(ingresosCobradosMes)}</div><span style="font-size:0.78rem; color:var(--ganado); cursor:pointer; text-decoration:underline;" onclick="const d=this.nextElementSibling; const abrir=d.style.display==='none'; d.style.display=abrir?'block':'none'; this.textContent=abrir?'Ocultar detalle ▴':'¿De dónde salió esto? ▾';">¿De dónde salió esto? ▾</span><div style="display:none; margin-top:6px; text-align:left; max-height:180px; overflow-y:auto; font-size:0.78rem; color:#4a5568;">${contDetalleIngresosHtml(ingresosMesArr)}</div></div>
                 <div class="kpi-box" style="border-color:${colorSemaforo};"><div class="kpi-label">Punto de Equilibrio (meta mes)</div><div class="kpi-value" style="color:${colorSemaforo};">${cotFormatoCop(puntoEquilibrio)}</div></div>
                 <div class="kpi-box" style="border-color:${colorSemaforo};"><div class="kpi-label">% Cumplimiento Punto Equilibrio</div><div class="kpi-value" style="color:${colorSemaforo};">${cumplimientoPct}%</div></div>
@@ -10975,15 +11005,160 @@
             document.getElementById('cont-ventas-por-linea').innerHTML = rankingVentas.length ? rankingVentas.map(l=>`• ${NOMBRES_LINEA_PRODUCTO[l]||l}: <strong>${cotFormatoCop(ventasPorLinea[l])}</strong>`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin negocios ganados todavía.</span>';
         }
 
+        /* ---- NOTAS CRÉDITO (anulan una factura / cuenta de cobro completa) ----
+           Conde 2026-10-05: "necesito crear un documento que se llame nota crédito, que permita
+           anular una factura de venta específica". Decisiones de Conde: solo anulación TOTAL; si la
+           factura ya tenía cobros se permite anular igual pero se avisa (los Ingresos no se tocan);
+           la venta anulada se resta en el MES DE LA NOTA (la factura sigue en su mes original).
+           La factura queda estado 'anulada' con saldo $0 (sale de la cartera, de Ingresos por cobrar,
+           del Radar). Eliminar la Nota la reactiva. Requiere supabase/migracion_notas_credito.sql. */
+        let db_notasCredito = [];
+        function contNcLlenarSelect(){
+            const sel = document.getElementById('nc-docventa');
+            if(!sel) return;
+            const txt = ((document.getElementById('nc-doc-filtro') || {}).value || '').toLowerCase().trim();
+            const previo = sel.value;
+            const docs = db_docventa.filter(d => d.estado !== 'anulada').filter(d => {
+                const c = db_clientes.find(x => x.id === d.idCli);
+                return !txt || (d.numero + ' ' + (c ? c.empresa : '')).toLowerCase().includes(txt);
+            }).sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')));
+            sel.innerHTML = '<option value="">-- Elige la factura a anular --</option>' + docs.map(d => {
+                const c = db_clientes.find(x => x.id === d.idCli);
+                return `<option value="${d.id}">${d.numero} — ${c ? c.empresa : 'Cliente eliminado'} — ${cotFormatoCop(d.totalCobrar)} — ${d.estado}</option>`;
+            }).join('');
+            if(previo && docs.some(d => d.id === previo)) sel.value = previo;
+            contNcMostrarResumen();
+        }
+        function contNcMostrarResumen(){
+            const el = document.getElementById('nc-resumen');
+            if(!el) return;
+            const doc = db_docventa.find(d => d.id === document.getElementById('nc-docventa').value);
+            if(!doc){ el.style.display = 'none'; return; }
+            const cli = db_clientes.find(c => c.id === doc.idCli);
+            const cobrado = Math.max(0, doc.totalCobrar - doc.saldoPendiente);
+            el.style.display = 'block';
+            el.innerHTML = `<strong>${doc.numero}</strong> — ${cli ? cli.empresa : 'Cliente eliminado'} — ${doc.fecha ? String(doc.fecha).slice(0, 10) : '-'}<br>
+                Total a anular: <strong>${cotFormatoCop(doc.totalCobrar)}</strong> (IVA ${cotFormatoCop(doc.iva)}) — saldo pendiente hoy: ${cotFormatoCop(doc.saldoPendiente)}
+                ${cobrado > 0 ? `<br><span style="color:#b45309; font-weight:bold;">⚠ Ya tiene ${cotFormatoCop(cobrado)} cobrados: la Nota no borra esos Ingresos, tendrás que devolver o reasignar ese dinero por aparte.</span>` : ''}`;
+        }
+        async function contGuardarNotaCredito(){
+            const doc = db_docventa.find(d => d.id === document.getElementById('nc-docventa').value);
+            if(!doc){ alert('Elige la factura o cuenta de cobro que quieres anular.'); return; }
+            if(doc.estado === 'anulada'){ alert('Ese documento ya está anulado.'); return; }
+            const motivo = document.getElementById('nc-motivo').value.trim();
+            if(!motivo){ alert('Escribe el motivo de la anulación (ej. error en la facturación, el cliente canceló el pedido).'); return; }
+            const fecha = contFechaComprobante('nc-fecha');
+            if(fecha === null) return;
+            const cli = db_clientes.find(c => c.id === doc.idCli);
+            const cobradoPrevio = Math.max(0, doc.totalCobrar - doc.saldoPendiente);
+            let aviso = `¿Anular ${doc.numero} (${cli ? cli.empresa : 'cliente eliminado'}) por ${cotFormatoCop(doc.totalCobrar)}?\n\nLa factura queda ANULADA, sale de la cartera por cobrar y la venta se resta en el mes de esta Nota.`;
+            if(cobradoPrevio > 0) aviso += `\n\n⚠ Esta factura ya tiene ${cotFormatoCop(cobradoPrevio)} cobrados. Los Comprobantes de Ingreso NO se borran: ese dinero debes devolverlo o reasignarlo por aparte.`;
+            if(!confirm(aviso)) return;
+
+            const campo = document.getElementById('nc-numero');
+            const esManual = campo.value.trim() && campo.dataset.auto !== 'true';
+            let numero;
+            if(esManual){
+                numero = campo.value.trim().toUpperCase();
+                if(db_notasCredito.some(n => n.numero === numero)){ alert('El número ' + numero + ' ya lo tiene otra Nota Crédito.'); return; }
+                contActualizarContadorDesdeNumero('nc', numero);
+            } else {
+                const n = await tacticalSiguienteNumero('nc');
+                if(n == null){ alert('No se pudo generar el número de la Nota Crédito. ¿Ya corriste supabase/migracion_notas_credito.sql en Supabase?'); return; }
+                numero = 'NC-' + String(n).padStart(4, '0');
+            }
+            const nota = {
+                id: crypto.randomUUID(), numero, fecha, idDocVenta: doc.id, numeroDoc: doc.numero, idCli: doc.idCli, motivo,
+                valorBruto: doc.valorBruto, iva: doc.iva, totalDocumento: doc.totalDocumento, totalCobrar: doc.totalCobrar, cobradoPrevio,
+            };
+            // Primero la Nota; la factura solo se anula si la Nota quedó guardada (nunca a medias).
+            const ok = await tacticalSyncNotaCredito(nota);
+            if(!ok){ alert('No se pudo guardar la Nota Crédito en Supabase, así que la factura NO se anuló. ¿Ya corriste supabase/migracion_notas_credito.sql?'); return; }
+            db_notasCredito.push(nota);
+            doc.estado = 'anulada'; doc.saldoPendiente = 0;
+            tacticalSyncDocVenta(doc);
+
+            document.getElementById('nc-docventa').value = ''; document.getElementById('nc-doc-filtro').value = '';
+            document.getElementById('nc-motivo').value = '';
+            campo.value = ''; campo.dataset.auto = '';
+            document.getElementById('nc-fecha').value = contHoy();
+            renderContabilidad();
+            contImprimirNotaCredito(nota.id);
+        }
+        async function eliminarNotaCredito(id){
+            const nota = db_notasCredito.find(n => n.id === id);
+            if(!nota) return;
+            if(!confirm(`¿Eliminar la Nota Crédito "${nota.numero}"?\n\nLa factura ${nota.numeroDoc || ''} se reactiva (vuelve a su saldo anterior) y la venta deja de restarse.\n\nEsta acción no se puede deshacer.`)) return;
+            const ok = await tacticalEliminarNotaCreditoRemoto(id);
+            if(!ok) return;
+            db_notasCredito = db_notasCredito.filter(n => n.id !== id);
+            const doc = db_docventa.find(d => d.id === nota.idDocVenta);
+            if(doc && doc.estado === 'anulada'){
+                doc.saldoPendiente = Math.max(0, doc.totalCobrar - (nota.cobradoPrevio || 0));
+                doc.estado = doc.saldoPendiente <= 0 ? 'pagada' : (doc.saldoPendiente < doc.totalCobrar ? 'abonado_parcial' : 'pendiente');
+                tacticalSyncDocVenta(doc);
+            }
+            renderContabilidad();
+        }
+        function renderNotasCredito(){
+            const cont = document.getElementById('lista-notascredito');
+            if(!cont) return;
+            cont.innerHTML = [...db_notasCredito].reverse().map(n => {
+                const cli = db_clientes.find(c => c.id === n.idCli);
+                return `<div class="data-card">
+                    <span class="tag" style="float:right; background:#718096; color:#fff;">ANULA ${n.numeroDoc || ''}</span>
+                    <div class="card-title">${n.numero} — ${cotFormatoCop(n.totalDocumento)}</div>
+                    <div class="card-subtitle">${cli ? cli.empresa : 'Cliente eliminado'} — ${n.fecha ? String(n.fecha).slice(0, 10) : '-'}</div>
+                    <div style="font-size:0.85rem; color:#4a5568;">${n.motivo || ''}${n.cobradoPrevio > 0 ? `<br><span style="color:#b45309;">⚠ Tenía ${cotFormatoCop(n.cobradoPrevio)} cobrados</span>` : ''}</div>
+                    <div class="action-row">
+                        <button class="btn-action" onclick="contImprimirNotaCredito('${n.id}')">${ticon('printer')}Imprimir</button>
+                        <button class="btn-action" style="color:var(--peligro); border-color:var(--peligro);" onclick="eliminarNotaCredito('${n.id}')">${ticon('trash')}Eliminar</button>
+                    </div>
+                </div>`;
+            }).join('') || '<p style="color:#718096; grid-column: 1/-1;">No hay Notas Crédito todavía.</p>';
+        }
+        function contImprimirNotaCredito(id){
+            const n = db_notasCredito.find(x => x.id === id);
+            if(!n) return;
+            const cli = db_clientes.find(c => c.id === n.idCli);
+            const doc = db_docventa.find(d => d.id === n.idDocVenta);
+            const vend = VENDEDORES[(doc && doc.vendedor)] || {correo: '', telefono: ''};
+            const fecha = new Date(String(n.fecha).slice(0, 10) + 'T00:00:00').toLocaleDateString('es-CO', {year: 'numeric', month: 'long', day: 'numeric'});
+            const html = `
+              <div class="doc-header">
+                <div><img src="${TACTICAL_LOGO_B64}" style="height:68px; margin-bottom:8px; display:block;" alt="Tactical Marketing"><div class="doc-tipo">NOTA CRÉDITO ${n.numero}</div></div>
+                <div class="doc-empresa-datos">${TACTICAL_INFO.nit}<br>${TACTICAL_INFO.direccion}<br>${TACTICAL_INFO.web}<br>${TACTICAL_INFO.telefono}</div>
+              </div>
+              <table class="doc-table">
+                <tr><td style="width:22%;"><strong>Fecha</strong></td><td>${fecha}</td><td style="width:22%;"><strong>Cliente</strong></td><td>${cli ? cli.empresa : '-'}</td></tr>
+                <tr><td><strong>Identificación</strong></td><td>${cli ? (cli.identificacion || '-') : '-'}</td><td><strong>Documento que anula</strong></td><td><strong>${n.numeroDoc || '-'}</strong></td></tr>
+              </table>
+              <div class="doc-section-title">Motivo</div>
+              <div class="doc-condiciones"><p>${n.motivo || '-'}</p></div>
+              <div class="doc-section-title">Valor acreditado</div>
+              <table class="doc-table">
+                <tr><td>Valor Bruto</td><td style="text-align:right;">${cotFormatoCop(n.valorBruto)}</td></tr>
+                ${n.iva > 0 ? `<tr><td>IVA</td><td style="text-align:right;">${cotFormatoCop(n.iva)}</td></tr>` : ''}
+              </table>
+              <div class="doc-total-box">TOTAL ACREDITADO: ${cotFormatoCop(n.totalDocumento)} COP</div>
+              <div class="doc-condiciones"><p>Esta Nota Crédito anula en su totalidad el documento <strong>${n.numeroDoc || ''}</strong>. El valor acreditado deja sin efecto el cobro de ese documento.</p></div>
+            `;
+            document.getElementById('print-area').innerHTML = html;
+            document.getElementById('print-area').style.display = 'block';
+            tacticalImprimirConTitulo(`${cli ? cli.empresa : 'Cliente'} - ${n.numero}`);
+        }
+
         /* ---- ORQUESTADOR DEL MÓDULO ---- */
         function renderContabilidad(){
-            ['egr-fecha','ing-fecha','doc-fecha'].forEach(id => { const el = document.getElementById(id); if(el && !el.value) el.value = contHoy(); });
+            ['egr-fecha','ing-fecha','doc-fecha','nc-fecha'].forEach(id => { const el = document.getElementById(id); if(el && !el.value) el.value = contHoy(); });
             contLlenarSelectClienteDoc();
             contLlenarSelectVendedorDoc();
             contLlenarDatalistProveedores();
             if(document.getElementById('cxp-subcategoria') && !document.getElementById('cxp-subcategoria').options.length) contLlenarSubcategorias();
             renderPrefacturas();
             renderDocVenta();
+            contNcLlenarSelect();
+            renderNotasCredito();
             renderIngresos();
             renderCxp();
             renderEgresos();
@@ -10993,6 +11168,7 @@
             contSugerirNumeroDoc();
             contSugerirNumeroSiVacio('ing-numero', 'ingreso', 'IN-');
             contSugerirNumeroSiVacio('egr-numero', 'egreso', 'EG-');
+            contSugerirNumeroSiVacio('nc-numero', 'nc', 'NC-');
         }
 
         // Conde 2026-08-28: irAVistaDesdeHash() (antes en window.onload acá) se movió al final de

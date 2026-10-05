@@ -784,6 +784,39 @@ async function tacticalEliminarPrefacturaRemoto(id){
   if(error){ console.error('Error eliminando prefactura en Supabase:', error); tacticalAvisoErrorGuardado('Error eliminando prefactura en Supabase'); }
 }
 
+// Conde 2026-10-05: Notas Crédito (anulan una factura / cuenta de cobro completa) -- ver
+// supabase/migracion_notas_credito.sql. tacticalSyncNotaCredito devuelve true/false: el que llama
+// solo anula la factura DESPUÉS de que la Nota quedó guardada (nunca a medias).
+function tacticalNotaCreditoADb(n){
+  return {
+    id: n.id, numero: n.numero, fecha: n.fecha, id_doc_venta: n.idDocVenta||null, numero_doc: n.numeroDoc||null,
+    id_cliente: n.idCli||null, motivo: n.motivo||null, valor_bruto: n.valorBruto||0, iva: n.iva||0,
+    total_documento: n.totalDocumento||0, total_cobrar: n.totalCobrar||0, cobrado_previo: n.cobradoPrevio||0,
+  };
+}
+function tacticalNotaCreditoDeDb(r){
+  return {
+    id: r.id, numero: r.numero, fecha: r.fecha, idDocVenta: r.id_doc_venta, numeroDoc: r.numero_doc, idCli: r.id_cliente,
+    motivo: r.motivo||'', valorBruto: Number(r.valor_bruto)||0, iva: Number(r.iva)||0, totalDocumento: Number(r.total_documento)||0,
+    totalCobrar: Number(r.total_cobrar)||0, cobradoPrevio: Number(r.cobrado_previo)||0,
+  };
+}
+async function tacticalNotasCreditoCargar(){
+  const { data, error } = await tacticalSupabase.from('notas_credito').select('*').order('created_at');
+  if(error){ console.error('Error cargando notas crédito de Supabase (¿falta correr migracion_notas_credito.sql?):', error); return []; }
+  return data.map(tacticalNotaCreditoDeDb);
+}
+async function tacticalSyncNotaCredito(n){
+  const { error } = await tacticalSupabase.from('notas_credito').upsert(tacticalNotaCreditoADb(n));
+  if(error){ console.error('Error guardando nota crédito en Supabase:', error); return false; }
+  return true;
+}
+async function tacticalEliminarNotaCreditoRemoto(id){
+  const { error } = await tacticalSupabase.from('notas_credito').delete().eq('id', id);
+  if(error){ console.error('Error eliminando nota crédito en Supabase:', error); tacticalAvisoErrorGuardado('Error eliminando nota crédito en Supabase'); return false; }
+  return true;
+}
+
 function tacticalIngresoADb(i){
   return {
     id: i.id, numero: i.numero, fecha: i.fecha, id_cliente: i.idCli||null, id_documento_venta: i.idDocVenta||null,
