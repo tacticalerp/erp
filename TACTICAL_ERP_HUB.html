@@ -1334,6 +1334,12 @@
                                 </select>
                             </div>
                             <div class="form-group"><label>Identificación (NIT / CC):</label><input type="text" id="cot-cli-identificacion" placeholder="Ej: 900.123.456-7"></div>
+                            <div class="form-group" style="grid-column:1/-1;">
+                                <label>Logo del cliente (para el mockup del cuaderno en el PDF):</label>
+                                <input type="file" id="cot-logo-file" accept="image/*" onchange="cotLogoSubir(this)">
+                                <div id="cot-logo-estado" style="font-size:0.8rem; color:var(--peligro,#c53030); margin-top:2px;"></div>
+                                <div id="cot-logo-preview" style="margin-top:6px;"></div>
+                            </div>
                             <div class="form-group">
                                 <label>Vendedor a cargo:</label>
                                 <select id="cot-vendedor"></select>
@@ -5978,6 +5984,7 @@
             ot: opp.ot||'', fecha: fechaDeRegistro(opp) || new Date(), vendedor: opp.vendedor,
             cliente: {empresa: cli.empresa, encargado: cli.nombre, telefono: cli.wp, correo: cli.correo},
             lineas, total: opp.monto, aplicaIva: cli.tipo !== 'personalizado',
+            mockupHtml: cotMockupPdfHtml((opp.lineas && opp.lineas.length) ? opp.lineas.map(l => l.params) : [(db_cotizaciones.find(c => c.idOpp === opp.id) || {}).params || opp.cotParams]),
           });
         }
         function verPDFComparativoGuardado(opp){
@@ -6037,11 +6044,23 @@
           const tituloOriginal = document.title;
           const limpio = (nombreArchivo||'').replace(/[\\/:*?"<>|]/g,'').trim();
           document.title = limpio || tituloOriginal;
-          setTimeout(() => {
+          setTimeout(async () => {
+            await tacticalEsperarImagenes(document.getElementById('print-area'), 3000);
             window.print();
             document.getElementById('print-area').style.display = 'none';
             document.title = tituloOriginal;
           }, 100);
+        }
+        // Conde 2026-10-05: el logo del cliente (mockup) y las fotos vienen de Storage -- si el diálogo
+        // de impresión se abre antes de que carguen, el PDF sale con el hueco en blanco. Espera máx.
+        // maxMs; si una imagen falla (error), no bloquea.
+        function tacticalEsperarImagenes(contenedor, maxMs){
+          const pendientes = [...contenedor.querySelectorAll('img')].filter(im => !im.complete);
+          if(!pendientes.length) return Promise.resolve();
+          return Promise.race([
+            Promise.all(pendientes.map(im => new Promise(res => { im.addEventListener('load', res, {once:true}); im.addEventListener('error', res, {once:true}); }))),
+            new Promise(res => setTimeout(res, maxMs)),
+          ]);
         }
         function verPDFGenerico(datos){
           const fecha = datos.fecha.toLocaleDateString('es-CO', {year:'numeric', month:'long', day:'numeric'});
@@ -6091,10 +6110,13 @@
               <div><img src="${TACTICAL_LOGO_B64}" style="height:68px; margin-bottom:8px; display:block;" alt="Tactical Marketing"><div class="doc-tipo">COTIZACIÓN ${datos.ot||''}</div></div>
               <div class="doc-empresa-datos">${TACTICAL_INFO.nit}<br>${TACTICAL_INFO.direccion}<br>${TACTICAL_INFO.web}<br>${TACTICAL_INFO.telefono}</div>
             </div>
-            <div class="doc-cliente-destacado">
-              <div class="doc-cliente-nombre">${datos.cliente.empresa||'Cliente'}</div>
-              <div class="doc-cliente-meta">Atención: ${datos.cliente.encargado||'-'} &nbsp;·&nbsp; ${datos.cliente.telefono||'-'} &nbsp;·&nbsp; ${datos.cliente.correo||'-'}</div>
-              <div class="doc-cliente-fechas">Fecha de emisión: ${fecha} &nbsp;|&nbsp; Válida hasta: ${validoHasta} (30 días calendario)</div>
+            <div class="doc-cliente-destacado" style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+              <div>
+                <div class="doc-cliente-nombre">${datos.cliente.empresa||'Cliente'}</div>
+                <div class="doc-cliente-meta">Atención: ${datos.cliente.encargado||'-'} &nbsp;·&nbsp; ${datos.cliente.telefono||'-'} &nbsp;·&nbsp; ${datos.cliente.correo||'-'}</div>
+                <div class="doc-cliente-fechas">Fecha de emisión: ${fecha} &nbsp;|&nbsp; Válida hasta: ${validoHasta} (30 días calendario)</div>
+              </div>
+              ${datos.mockupHtml||''}
             </div>
             <div class="doc-section-title">Productos Cotizados</div>
             <table class="doc-table">
@@ -7092,6 +7114,7 @@
               extraDescripcion: document.getElementById("cot-extraDesc").value.trim(),
               extraCantidad: parseFloat(document.getElementById("cot-extraCantidad").value)||0,
               extraValorUnitario: parseFloat(document.getElementById("cot-extraValorUnitario").value)||0,
+              logoUrl: cotLogoCliente.url, mockupColor: cotLogoCliente.color,
             };
             const r = cotizarCuaderno(p);
             cotUltimoResultado = r; cotUltimoParams = p;
@@ -7101,6 +7124,7 @@
             if(notaOt) notaOt.style.display = 'none';
             cotRenderResultado(r, p);
             renderRecomendacionesCot(r, p);
+            cotLogoRenderPreview();
           } catch(err){
             document.getElementById("cot-resultado-contenido").innerHTML = `<div style="background:#fde8e8; color:var(--peligro); border:1px solid #f3b4b4; border-radius:6px; padding:10px 12px; font-size:13px;">Error en el cálculo: ${err.message}</div>`;
             document.getElementById("card-recomendaciones-cot").style.display = 'none';
@@ -7365,6 +7389,7 @@
           document.getElementById('cot-insertosContainer').innerHTML = '';
           insertos.forEach(datosInserto => cotAgregarInserto(datosInserto));
 
+          cotLogoAplicar({ url: p.logoUrl || '', color: p.mockupColor || '#ffffff', dueno: cot.idCli || null });
           cotCalcular();
           // cotCalcular() siempre resetea "Descripción para el cliente" a la versión corta
           // automática (comportamiento existente para cuando se cotiza desde cero) -- por eso el
@@ -7437,6 +7462,154 @@
           } else {
             nota.style.display = 'none';
           }
+          // Logo del cliente: si ya cotizó antes con logo, se carga solo; si cambió a OTRO cliente, el
+          // logo del anterior NO se arrastra (saldría el logo equivocado en el PDF).
+          cotClienteActualId = cli ? cli.id : null;
+          if(cli){
+            if(cotLogoCliente.dueno !== cli.id){
+              const lg = cotLogoDeCliente(cli.id);
+              cotLogoAplicar({ url: lg ? lg.url : '', color: lg ? lg.color : '#ffffff', dueno: cli.id });
+            }
+          } else if(cotLogoCliente.dueno){
+            cotLogoAplicar({ url: '', color: '#ffffff', dueno: null });
+          }
+        }
+
+        /* ============ LOGO DEL CLIENTE + MOCKUP DEL CUADERNO ============
+           Conde 2026-10-05: "para las cotizaciones anexamos el logo de la empresa y se haga un mockup
+           del cuaderno ... que la cotización cree una conexión con el cliente". El logo del CLIENTE
+           (no el de Tactical) se sube una vez, queda en Storage (bucket tactical-fotos, ruta logos/) y
+           su URL viaja dentro de params.logoUrl de la cotización (params es JSON -- sin migración).
+           La próxima cotización del mismo cliente lo recuerda sola (cotLogoDeCliente). El mockup es un
+           dibujo ilustrativo de la tapa (proporción real ancho x alto, encuadernación, tapa) con el
+           logo encima -- NO es prueba de arte, por eso el PDF lo rotula como "Imagen ilustrativa". */
+        const COT_MOCKUP_COLORES = [['#ffffff','Blanco'],['#1f2937','Negro'],['#c62828','Rojo'],['#1e3a8a','Azul'],['#2e7d32','Verde'],['#f59e0b','Amarillo'],['#9ca3af','Gris']];
+        let cotLogoCliente = { url:'', color:'#ffffff', dueno:null }; // dueno = id del cliente al que pertenece el logo cargado
+        let cotClienteActualId = null;
+        function cotLogoDeCliente(idCli){
+          for(let i = db_cotizaciones.length - 1; i >= 0; i--){
+            const c = db_cotizaciones[i];
+            if(c.idCli === idCli && c.params && c.params.logoUrl) return { url: c.params.logoUrl, color: c.params.mockupColor || '#ffffff' };
+          }
+          return null;
+        }
+        function cotLogoAplicar(estado){
+          const n = { ...cotLogoCliente, ...estado };
+          cotLogoCliente = { url: n.url || '', color: n.color || '#ffffff', dueno: n.dueno };
+          if(cotUltimoParams){ cotUltimoParams.logoUrl = cotLogoCliente.url; cotUltimoParams.mockupColor = cotLogoCliente.color; }
+          cotLogoRenderPreview();
+        }
+        function cotLogoRenderPreview(){
+          const el = document.getElementById('cot-logo-preview');
+          if(!el) return;
+          const colores = COT_MOCKUP_COLORES.map(c => `<option value="${c[0]}" ${c[0]===cotLogoCliente.color?'selected':''}>${c[1]}</option>`).join('');
+          if(!cotLogoCliente.url){
+            el.innerHTML = '<span style="font-size:0.8rem; color:#a0aec0;">Sin logo -- la cotización sale sin mockup.</span>';
+            return;
+          }
+          const lp = document.getElementById('cot-lineaProducto'), enc = document.getElementById('cot-encuadernacionTipo'), tp = document.getElementById('cot-tapaTipo');
+          const pMock = {
+            logoUrl: cotLogoCliente.url, mockupColor: cotLogoCliente.color,
+            anchoCm: parseFloat((document.getElementById('cot-anchoCm')||{}).value) || 15, altoCm: parseFloat((document.getElementById('cot-altoCm')||{}).value) || 21,
+            lineaProducto: lp ? lp.value : 'escolar', encuadernacionTipo: enc ? enc.value : 'grapa', tapaTipo: tp ? tp.value : 'blanda',
+          };
+          el.innerHTML = `<div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            ${cotMockupCuadernoHtml(pMock, 110)}
+            <div style="font-size:0.8rem;">
+              <label style="display:block; font-weight:bold; margin-bottom:2px;">Color de la tapa (solo para el dibujo):</label>
+              <select onchange="cotLogoAplicar({color:this.value})" style="padding:4px;">${colores}</select><br>
+              <button type="button" class="btn-action" style="margin-top:6px;" onclick="cotLogoAplicar({url:'', dueno:null})">Quitar logo</button>
+            </div></div>`;
+        }
+        // Reduce el logo a máx. 600px (un logo de 4000px pesaría megas sin ganar nada en un dibujo de
+        // 110px) y lo pasa por canvas a PNG para conservar la transparencia.
+        function cotLogoReducir(archivo){
+          return new Promise((resolve, reject) => {
+            const fr = new FileReader();
+            fr.onerror = () => reject(new Error('No se pudo leer el archivo'));
+            fr.onload = () => {
+              const img = new Image();
+              img.onerror = () => reject(new Error('El archivo no es una imagen válida'));
+              img.onload = () => {
+                const w0 = img.naturalWidth || 300, h0 = img.naturalHeight || 300;
+                const k = Math.min(1, 600 / Math.max(w0, h0));
+                const cv = document.createElement('canvas');
+                cv.width = Math.max(1, Math.round(w0 * k)); cv.height = Math.max(1, Math.round(h0 * k));
+                cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+                resolve(cv.toDataURL('image/png'));
+              };
+              img.src = fr.result;
+            };
+            fr.readAsDataURL(archivo);
+          });
+        }
+        async function cotLogoSubir(input){
+          const archivo = input.files && input.files[0];
+          if(!archivo) return;
+          const estado = document.getElementById('cot-logo-estado');
+          estado.textContent = 'Subiendo logo...';
+          try{
+            const dataUrl = await cotLogoReducir(archivo);
+            const url = await tacticalSubirFoto(dataUrl, `logos/${crypto.randomUUID()}.png`);
+            if(!url){ estado.textContent = 'No se pudo subir el logo. Revisa la conexión e intenta de nuevo.'; return; }
+            cotLogoAplicar({ url, dueno: cotClienteActualId });
+            estado.textContent = '';
+          } catch(e){
+            estado.textContent = e.message || 'No se pudo cargar el logo.';
+          }
+          input.value = '';
+        }
+        // Mockup ilustrativo de la tapa: cuerpo en SVG (sombra, hojas, lomo/anillos/elástico según
+        // encuadernación) y el logo como <img> encima -- así el PDF puede esperar a que cargue
+        // (tacticalEsperarImagenes), cosa que no se puede con un <image> dentro de un SVG.
+        function cotMockupCuadernoHtml(p, h){
+          if(!p || !p.logoUrl) return '';
+          h = h || 100;
+          const ratio = Math.min(Math.max((p.anchoCm || 15) / (p.altoCm || 21), 0.5), 1.4);
+          const w = Math.round(h * ratio);
+          const color = p.mockupColor || '#ffffff';
+          const enc = p.encuadernacionTipo, lp = p.lineaProducto;
+          const esAnillo = enc === 'anillo_doble_o';
+          const padL = esAnillo ? 7 : 1;
+          const dura = p.tapaTipo === 'dura';
+          const spineW = esAnillo ? 0 : Math.max(4, Math.round(w * 0.07));
+          const W2 = w + padL + 6, H2 = h + 6;
+          let deco = '';
+          if(esAnillo){
+            const n = Math.max(5, Math.round(h / 9));
+            for(let i = 0; i < n; i++){
+              const cy = 7 + i * (h - 14) / (n - 1);
+              deco += `<ellipse cx="${padL + 1}" cy="${cy.toFixed(1)}" rx="4.6" ry="2.2" fill="none" stroke="#4b5563" stroke-width="1.5"/>`;
+            }
+          } else {
+            deco += `<rect x="${padL}" y="1" width="${spineW}" height="${h}" fill="rgba(0,0,0,0.16)"/><line x1="${padL + spineW}" y1="1" x2="${padL + spineW}" y2="${h + 1}" stroke="rgba(255,255,255,0.45)" stroke-width="0.8"/>`;
+            if(enc === 'grapa'){
+              [0.25, 0.75].forEach(f => { deco += `<rect x="${padL + spineW / 2 - 2.5}" y="${(h * f).toFixed(1)}" width="5" height="1.8" rx="0.6" fill="#6b7280"/>`; });
+            }
+            if(enc === 'hilo_cinta'){
+              deco += `<rect x="${padL + spineW + 1}" y="1" width="3" height="${h}" fill="#c62828"/>`;
+            }
+            if(lp === 'agenda_ejecutiva'){
+              deco += `<rect x="${padL + w - 10}" y="1" width="3.2" height="${h}" fill="rgba(31,41,55,0.88)"/>`;
+            }
+          }
+          const radio = dura ? 2.5 : 1.5;
+          const pagBorde = dura ? 4 : 2.5;
+          const svg = `<svg width="${W2}" height="${H2}" viewBox="0 0 ${W2} ${H2}" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+            <rect x="${padL + pagBorde}" y="${1 + pagBorde}" width="${w}" height="${h}" rx="${radio}" fill="#f4f4ee" stroke="#d6d6cc" stroke-width="0.7"/>
+            <rect x="${padL}" y="1" width="${w}" height="${h}" rx="${radio}" fill="${color}" stroke="#aab2bf" stroke-width="0.8"/>
+            ${deco}
+          </svg>`;
+          const areaX = padL + spineW, areaW = w - spineW - (lp === 'agenda_ejecutiva' ? 12 : 0);
+          const bx = Math.round(areaX + areaW * 0.15), bw = Math.round(areaW * 0.7);
+          const by = Math.round(h * 0.2), bh = Math.round(h * 0.38);
+          return `<div class="cot-mockup" style="position:relative; width:${W2}px; height:${H2}px; flex-shrink:0; -webkit-print-color-adjust:exact; print-color-adjust:exact;">${svg}<img src="${p.logoUrl}" alt="" style="position:absolute; left:${bx}px; top:${by}px; width:${bw}px; height:${bh}px; object-fit:contain;"></div>`;
+        }
+        // Bloque listo para el PDF (mockup + leyenda). Toma el primer params de la lista que tenga logo.
+        function cotMockupPdfHtml(listaParams){
+          const p = (listaParams || []).find(x => x && x.logoUrl);
+          if(!p) return '';
+          return `<div style="text-align:center; flex-shrink:0;">${cotMockupCuadernoHtml(p, 96)}<div style="font-size:0.56rem; color:#718096; max-width:125px; margin:2px auto 0; line-height:1.15;">Imagen ilustrativa. El diseño final se define con el cliente.</div></div>`;
         }
 
         function cotDescripcionProducto(p){
@@ -7773,6 +7946,7 @@
                 ot: pd.ot, fecha: new Date(), vendedor: pd.vendedor, cliente: {empresa: cliPd.empresa, encargado: cliPd.nombre, telefono: cliPd.wp, correo: cliPd.correo},
                 lineas: lineasPdf1,
                 total: montoTotal, aplicaIva: pd.aplicaIva,
+                mockupHtml: cotMockupPdfHtml([l.params]),
               });
             }
             return;
@@ -7805,6 +7979,7 @@
               return [base];
             }),
             total: montoTotal, aplicaIva: pd.aplicaIva, mostrarTotal: mostrarTotalCierre,
+            mockupHtml: cotMockupPdfHtml(pd.lineas.map(l => l.params)),
           });
         }
         function cotCancelarPedido(){
@@ -7961,10 +8136,13 @@
                 Vendedor: <strong>${cot.vendedor}</strong> — ${vend.telefono} — ${vend.correo}
               </div>
             </div>
-            <div class="doc-cliente-destacado">
-              <div class="doc-cliente-nombre">${cot.cliente.empresa||'Cliente'}</div>
-              <div class="doc-cliente-meta">Atención: ${cot.cliente.encargado||'-'} &nbsp;·&nbsp; ${cot.cliente.telefono||'-'} &nbsp;·&nbsp; ${cot.cliente.correo||'-'}</div>
-              <div class="doc-cliente-fechas">Fecha de emisión: ${fecha} &nbsp;|&nbsp; Válida hasta: ${validez}</div>
+            <div class="doc-cliente-destacado" style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+              <div>
+                <div class="doc-cliente-nombre">${cot.cliente.empresa||'Cliente'}</div>
+                <div class="doc-cliente-meta">Atención: ${cot.cliente.encargado||'-'} &nbsp;·&nbsp; ${cot.cliente.telefono||'-'} &nbsp;·&nbsp; ${cot.cliente.correo||'-'}</div>
+                <div class="doc-cliente-fechas">Fecha de emisión: ${fecha} &nbsp;|&nbsp; Válida hasta: ${validez}</div>
+              </div>
+              ${cotMockupPdfHtml([p])}
             </div>
 
             <div class="doc-section-title">Cotización</div>
