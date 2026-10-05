@@ -9686,6 +9686,22 @@
             const actual = await tacticalNumeroActual(tipo);
             return prefijo + String(actual+1).padStart(4,'0');
         }
+        // Conde 2026-10-05: "le doy editar para cambiar la numeración al EG-6725 y doy F5 y sigue
+        // dejando 6726" -- al EDITAR un comprobante (Egreso / Ingreso / Documento de Venta) el
+        // N° que se escribía en el campo se ignoraba: solo se guardaba en un comprobante NUEVO.
+        // Devuelve el número a guardar (el escrito en el campo, o el anterior si lo dejaron vacío),
+        // o null si ya lo usa OTRO comprobante (la columna "numero" es única en Supabase, guardar
+        // repetido fallaría) -- en ese caso avisa y el que llama debe abortar.
+        function contNumeroEditado(campoId, numeroAnterior, lista, idActual){
+            const nuevo = (document.getElementById(campoId).value || '').trim().toUpperCase();
+            if(!nuevo) return numeroAnterior;
+            const choca = lista.find(x => x.id !== idActual && String(x.numero).toUpperCase() === nuevo);
+            if(choca){
+                alert('El número ' + nuevo + ' ya lo tiene otro comprobante. Cámbialo primero (o usa otro número) -- no puede haber dos con el mismo número.');
+                return null;
+            }
+            return nuevo;
+        }
         function contActualizarContadorDesdeNumero(tipo, numero){
             const match = String(numero).match(/(\d+)\s*$/);
             if(!match) return;
@@ -10027,11 +10043,13 @@
                 const idx = db_docventa.findIndex(d => d.id === docVentaEditandoId);
                 if(idx===-1){ alert("Este documento ya no existe (puede que se haya eliminado)."); cancelarEdicionDocVenta(); return; }
                 const anterior = db_docventa[idx];
+                const numeroDoc = contNumeroEditado('doc-numero', anterior.numero, db_docventa, anterior.id);
+                if(numeroDoc === null) return;
                 // Igual que en CxP: conserva lo ya cobrado en vez de reiniciar el saldo pendiente.
                 const yaCobrado = anterior.totalCobrar - anterior.saldoPendiente;
                 const nuevoSaldoPendiente = Math.max(0, totalCobrar - yaCobrado);
                 const docActualizado = {
-                    ...anterior, fecha: fechaDoc, tipoDoc, idCli, descripcion, items, valorBruto, iva, reteiva, valorEnvio,
+                    ...anterior, numero: numeroDoc, fecha: fechaDoc, tipoDoc, idCli, descripcion, items, valorBruto, iva, reteiva, valorEnvio,
                     totalDocumento, totalCobrar, condicionPago, fechaVencimiento, vendedor,
                     saldoPendiente: nuevoSaldoPendiente,
                     estado: nuevoSaldoPendiente<=0 ? 'pagada' : (nuevoSaldoPendiente<totalCobrar ? 'abonado_parcial' : 'pendiente'),
@@ -10125,6 +10143,8 @@
             contLlenarSelectClienteDoc();
             document.getElementById('doc-cliente').value = doc.idCli;
             document.getElementById('doc-tipoDoc').value = doc.tipoDoc;
+            // El N° del documento se carga en el campo (antes quedaba la sugerencia del siguiente) -- así se puede corregir y contNumeroEditado lo respeta.
+            document.getElementById('doc-numero').value = doc.numero; document.getElementById('doc-numero').dataset.auto = '';
             document.getElementById('doc-fecha').value = doc.fecha ? String(doc.fecha).slice(0,10) : contHoy();
             document.getElementById('doc-valorEnvio').value = (doc.valorEnvio||0).toLocaleString('es-CO');
             document.getElementById('doc-condicionPago').value = doc.condicionPago;
@@ -10154,6 +10174,7 @@
         function cancelarEdicionDocVenta(){
             docVentaEditandoId = null;
             contLimpiarItemsDoc();
+            document.getElementById('doc-numero').value = ''; document.getElementById('doc-numero').dataset.auto = ''; // si no, el N° del documento que se editaba se usaría en el siguiente nuevo
             document.getElementById('doc-fecha').value = contHoy();
             document.getElementById('doc-valorEnvio').value = '0';
             document.getElementById('doc-btn-guardar').textContent = '+ Registrar Documento de Venta';
@@ -10304,14 +10325,17 @@
                 const idx = db_ingresos.findIndex(x => x.id === ingresoEditandoId);
                 if(idx===-1){ alert("Este comprobante ya no existe (puede que se haya eliminado)."); cancelarEdicionIngreso(); return; }
                 const anterior = db_ingresos[idx];
+                const numeroIngreso = contNumeroEditado('ing-numero', anterior.numero, db_ingresos, anterior.id);
+                if(numeroIngreso === null) return;
                 contRevertirEfectoIngreso(anterior);
                 const ingresoActualizado = {
-                    ...anterior, fecha: fechaComprobante, idCli, idDocVenta: docs.length ? docs[0].id : null, idsDocVenta, valor,
+                    ...anterior, numero: numeroIngreso, fecha: fechaComprobante, idCli, idDocVenta: docs.length ? docs[0].id : null, idsDocVenta, valor,
                     concepto: concepto || (docs.length>1 ? `Pago facturas ${numerosTxt}` : `Pago factura ${numerosTxt}`),
                     medioPago, referenciaSoporte, reteivaRecibida,
                 };
                 contAplicarEfectoIngreso(docs, valor);
                 db_ingresos[idx] = ingresoActualizado;
+                if(numeroIngreso !== anterior.numero) contActualizarContadorDesdeNumero('ingreso', numeroIngreso);
                 tacticalSyncIngreso(ingresoActualizado);
                 cancelarEdicionIngreso();
             } else {
@@ -10636,10 +10660,13 @@
                 const idx = db_egresos.findIndex(x => x.id === egresoEditandoId);
                 if(idx===-1){ alert("Este comprobante ya no existe (puede que se haya eliminado)."); cancelarEdicionEgreso(); return; }
                 const anterior = db_egresos[idx];
+                const numeroEgreso = contNumeroEditado('egr-numero', anterior.numero, db_egresos, anterior.id);
+                if(numeroEgreso === null) return;
                 contRevertirEfectoEgreso(anterior);
-                const egresoActualizado = { ...anterior, fecha: fechaComprobante, beneficiario, concepto, monto, categoria, medioPago, referenciaSoporte, idsCxp };
+                const egresoActualizado = { ...anterior, numero: numeroEgreso, fecha: fechaComprobante, beneficiario, concepto, monto, categoria, medioPago, referenciaSoporte, idsCxp };
                 contAplicarEfectoEgreso(egresoActualizado, idsCxp, monto);
                 db_egresos[idx] = egresoActualizado;
+                if(numeroEgreso !== anterior.numero) contActualizarContadorDesdeNumero('egreso', numeroEgreso);
                 tacticalSyncEgreso(egresoActualizado);
                 cancelarEdicionEgreso();
             } else {
