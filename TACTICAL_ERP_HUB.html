@@ -4408,8 +4408,11 @@
             }
             const medioTxt = `${p.linea==='laser'?'Láser':'Troquel'}${p.forma?' - '+p.forma:''} — ${p.fichas} fichas (${p.medida}cm) x${p.cantidad}`;
             const totalTxt = p.total!=null ? '$'+Math.round(p.total).toLocaleString('es-CO') : 'A cotizar';
-            return `<div class="data-card">
-              <div class="card-title">${p.nombre}</div>
+            // Express (+30%, entrega en 2-3 días, URGENTE para producción) e imán (+30%, entrega normal)
+            const etiquetaExpress = p.express ? `<span style="font-size:0.7rem; font-weight:bold; color:#fff; background:#c53030; padding:2px 6px; border-radius:10px; margin-left:6px;">EXPRESS x${p.cantidadExpress||1}</span>` : '';
+            const etiquetaIman = p.iman ? `<span style="font-size:0.7rem; font-weight:bold; color:#fff; background:#2b6cb0; padding:2px 6px; border-radius:10px; margin-left:6px;">CON IMÁN x${p.cantidadIman||1}</span>` : '';
+            return `<div class="data-card"${p.express ? ' style="border-left:4px solid #c53030;"' : ''}>
+              <div class="card-title">${p.nombre}${etiquetaExpress}${etiquetaIman}</div>
               <p style="margin:4px 0; font-size:0.9em; color:#64748b;">${p.cel}</p>
               <p style="margin:4px 0; font-size:0.9em;">${medioTxt}</p>
               <p style="margin:4px 0; font-weight:bold;">${totalTxt}</p>
@@ -4456,12 +4459,14 @@
             {texto: p.linea==='laser' ? 'Corte láser' : 'Troquelado', hecho:false, riel:null},
             {texto:'Armado / empaque', hecho:false, riel:null},
           ];
-          const titulo = `Rompecabezas B2C ${p.linea==='laser'?'Láser':'Troquel'}${p.forma?' - '+p.forma:''} — ${p.fichas}f x${p.cantidad} — ${p.nombre}`;
+          // Express = urgente para producción (el título lo deja a la vista); imán se marca en el título.
+          const prefijoEspecial = (p.express ? `EXPRESS x${p.cantidadExpress||1} — ` : '') + (p.iman ? `CON IMÁN x${p.cantidadIman||1} — ` : '');
+          const titulo = `${prefijoEspecial}Rompecabezas B2C ${p.linea==='laser'?'Láser':'Troquel'}${p.forma?' - '+p.forma:''} — ${p.fichas}f x${p.cantidad} — ${p.nombre}`;
           const ficha = {
             id: crypto.randomUUID(), ot: null,
             idCli: cli.id, nombreCli: tacticalNombreCliente(cli), titulo,
             columna: 'aprobada', lineas: [{linea:'rompecabezas', desc: titulo, cantidad: p.cantidad}],
-            checklist: checklistBase, urgente:false, fechaEntrega:'',
+            checklist: checklistBase, urgente: !!p.express, fechaEntrega:'',
             fechaCreacion: new Date().toISOString(), responsable:'', origen:'bot_whatsapp',
           };
           db_kanban.push(ficha);
