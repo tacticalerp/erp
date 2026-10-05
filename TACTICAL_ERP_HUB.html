@@ -4893,6 +4893,19 @@
           }
           kanbanTouch = null;
         }
+        // Conde 2026-10-05: "cada ficha donde está el nombre del cliente, las 2 primeras palabras en
+        // negrilla y al lado el comercial encargado, para que en producción sepan a quién preguntar
+        // si hay dudas". Las fichas de Rompecabezas B2C / bot de WhatsApp no guardan vendedor -- el
+        // comercial de ese canal es Norely (misma regla que usa la vista Comercial, esNorely).
+        function kanbanClienteYComercialHtml(f){
+          const palabras = String(f.nombreCli || '').trim().split(/\s+/);
+          const negrilla = resumenCotEsc(palabras.slice(0, 2).join(' '));
+          const resto = resumenCotEsc(palabras.slice(2).join(' '));
+          const nombreHtml = '<strong>' + negrilla + '</strong>' + (resto ? ' ' + resto : '');
+          const comercial = f.vendedor || ((f.origen === 'b2c' || f.origen === 'bot_whatsapp') ? 'Norely Sarmiento' : '');
+          const comercialHtml = comercial ? ' <span title="Comercial encargado -- a quien preguntar si hay dudas" style="display:inline-block; font-size:0.7rem; background:#edf2f7; color:#2d3748; border-radius:10px; padding:1px 8px; margin-left:4px; white-space:nowrap;">' + resumenCotEsc(comercial) + '</span>' : '';
+          return nombreHtml + comercialHtml;
+        }
         function renderFichaKanbanHtml(f){
           const idx = KANBAN_COLUMNAS.indexOf(f.columna);
           const puedeAtras = idx>0, puedeAdelante = idx<KANBAN_COLUMNAS.length-1;
@@ -4928,7 +4941,7 @@
             ${f.urgente?'<div style="font-size:0.85rem; font-weight:900; color:#fff; background:var(--peligro); padding:4px 8px; border-radius:4px; margin-bottom:5px; display:inline-block;">🚨 URGENTE</div>':''}
             <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.03em; color:#a0aec0; font-weight:bold;">${dotsHtml}${ticon('fileText')}Descripción</div>
             <div class="kanban-card-title" ${tituloEsLargo?'onclick="event.stopPropagation(); this.classList.toggle(\'expandido\')"':''}>${tituloHtml}</div>
-            <div class="kanban-card-meta">${ticon('user')}${f.nombreCli}${f.ot?` — ${f.ot}`:''}${f.origen==='manual'?' — Servicio Express':''}</div>
+            <div class="kanban-card-meta">${ticon('user')}${kanbanClienteYComercialHtml(f)}${f.ot?` — ${f.ot}`:''}${f.origen==='manual'?' — Servicio Express':''}</div>
             ${f.entrega?`<div class="kanban-card-meta">${ticon('truck')}Entrega: ${f.entrega}</div>`:''}
             ${f.responsable?`<div class="kanban-card-meta">${ticon('fileText')}Notas: ${f.responsable}</div>`:''}
             ${aprobacionHtml}
@@ -4967,7 +4980,7 @@
             ${f.urgente?'<div style="font-size:0.68rem; font-weight:900; color:#fff; background:var(--peligro); padding:2px 6px; border-radius:4px; margin-bottom:3px; display:inline-block;">🚨 URGENTE</div>':''}
             <div class="kanban-card-title" style="font-size:0.85rem; margin-bottom:2px;">${dotsHtml}${tituloCortoCompacto}</div>
             ${productosCompactoHtml}
-            <div class="kanban-card-meta" style="margin-bottom:3px;">${ticon('user')}${f.nombreCli}</div>
+            <div class="kanban-card-meta" style="margin-bottom:3px;">${ticon('user')}${kanbanClienteYComercialHtml(f)}</div>
             ${dueCompactoHtml}
             <div style="clear:both;"></div>`;
           if(!expandida){
