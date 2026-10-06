@@ -1567,11 +1567,15 @@
                             </div>
                             <div class="data-card" style="grid-column:1/-1;">
                                 <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-                                    <div class="card-title" style="margin:0;">Mejores Clientes Históricos (según reportes de SIIGO)</div>
-                                    <select id="th-cliente-periodo" onchange="renderTendenciaHistorica()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;"></select>
+                                    <div class="card-title" style="margin:0;">Ventas por Cliente (según reportes de SIIGO)</div>
+                                    <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                                        <input type="text" id="th-cliente-buscar" placeholder="Buscar cliente o NIT..." oninput="renderThClientesHistoricos()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0; min-width:170px;">
+                                        <select id="th-cliente-periodo" onchange="renderThClientesHistoricos()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;"></select>
+                                    </div>
                                 </div>
-                                <p style="font-size:0.78rem; color:#94a3b8; margin:2px 0 6px;">Los que ya están registrados como cliente en el CRM salen marcados -- útil para ver cuáles clientes grandes de antes siguen comprando hoy. El total de este listado puede no cuadrar centavo a centavo contra "Ventas Facturadas" del Tablero -- son dos reportes de SIIGO distintos, no siempre con el mismo criterio.</p>
-                                <div id="th-clientes-lista" style="font-size:0.88rem; line-height:1.7; max-height:340px; overflow-y:auto;"></div>
+                                <p style="font-size:0.78rem; color:#94a3b8; margin:2px 0 6px;">Venta de cada cliente en el período, sin IVA (subtotal del reporte "Ventas por cliente" de SIIGO), de mayor a menor. Debajo de cada cliente se ve lo que compró en los otros años. Los que ya están registrados en el CRM salen marcados -- útil para ver cuáles clientes grandes de antes siguen comprando hoy. El total puede no cuadrar centavo a centavo contra "Ventas Facturadas" del Tablero -- son reportes distintos de SIIGO.</p>
+                                <div id="th-clientes-resumen" style="font-size:0.85rem; font-weight:bold; color:#4a5568; margin-bottom:4px;"></div>
+                                <div id="th-clientes-lista" style="font-size:0.88rem; line-height:1.7; max-height:480px; overflow-y:auto;"></div>
                             </div>
                         </div>
                         <p style="font-size:0.78rem; color:#94a3b8; margin-top:10px;">El desglose por línea de producto (Cuadernos, Rompecabezas, Volantes...) solo existe desde agosto de 2026, cuando el ERP se migró a Supabase -- antes de eso los cuadros de Conde/Fany solo llevaban el total facturado, sin separar por producto. "Ventas por Producto" en Ventas y Comercial (abajo) sí tiene ese desglose, pero solo desde ago-2026.</p>
@@ -9350,10 +9354,17 @@
           const cont = document.getElementById('th-clientes-lista');
           if (!cont) return;
           const selPeriodo = document.getElementById('th-cliente-periodo');
-          if (selPeriodo && !selPeriodo.dataset.poblado) {
-            const periodos = [...new Set(db_historicoVentasCliente.map(r => r.periodoEtiqueta))];
+          // Conde 2026-10-06: con 2023-2026 cargados el orden de llegada ya no sirve -- se ordenan por
+          // año (el más reciente arriba y seleccionado por defecto).
+          const periodosOrdenados = () => {
+            const mapa = {};
+            db_historicoVentasCliente.forEach(r => { mapa[r.periodoEtiqueta] = r.anio; });
+            return Object.keys(mapa).sort((a, b) => (mapa[b] - mapa[a]) || b.localeCompare(a));
+          };
+          if (selPeriodo && !selPeriodo.dataset.poblado && db_historicoVentasCliente.length) {
+            const periodos = periodosOrdenados();
             periodos.forEach(p => selPeriodo.appendChild(new Option(p, p)));
-            if (periodos.length) selPeriodo.value = periodos[periodos.length - 1];
+            selPeriodo.value = periodos[0];
             selPeriodo.dataset.poblado = '1';
           }
           if (!db_historicoVentasCliente.length) {
@@ -9361,12 +9372,26 @@
             return;
           }
           const periodo = selPeriodo ? selPeriodo.value : db_historicoVentasCliente[0].periodoEtiqueta;
-          const filas = db_historicoVentasCliente.filter(r => r.periodoEtiqueta === periodo).sort((a, b) => b.valor - a.valor).slice(0, 20);
-          cont.innerHTML = filas.map((r, idx) => {
+          const delPeriodo = db_historicoVentasCliente.filter(r => r.periodoEtiqueta === periodo).sort((a, b) => b.valor - a.valor);
+          const totalPeriodo = delPeriodo.reduce((s, r) => s + r.valor, 0);
+          const txtBuscar = ((document.getElementById('th-cliente-buscar') || {}).value || '').toLowerCase().trim();
+          // Mismo cliente en otros períodos: por NIT si lo trae, si no por nombre normalizado.
+          const claveCliente = (r) => r.nit ? 'n' + String(r.nit).replace(/[^0-9]/g, '') : 'm' + thNormalizarNombre(r.nombreCliente);
+          const porClave = {};
+          db_historicoVentasCliente.forEach(r => { (porClave[claveCliente(r)] = porClave[claveCliente(r)] || []).push(r); });
+          const orden = periodosOrdenados().reverse(); // cronológico
+          const filas = delPeriodo.map((r, i) => ({ r, rank: i + 1 })).filter(({ r }) => !txtBuscar || (r.nombreCliente + ' ' + (r.nit || '')).toLowerCase().includes(txtBuscar));
+          const resumenEl = document.getElementById('th-clientes-resumen');
+          if (resumenEl) resumenEl.textContent = `${periodo}: ${cotFormatoCop(totalPeriodo)} sin IVA — ${delPeriodo.length} clientes${txtBuscar ? ` (mostrando ${filas.length})` : ''}`;
+          cont.innerHTML = filas.map(({ r, rank: idx0 }) => {
+            const idx = idx0 - 1;
+            const otros = (porClave[claveCliente(r)] || []).filter(o => o.periodoEtiqueta !== periodo).sort((a, b) => orden.indexOf(a.periodoEtiqueta) - orden.indexOf(b.periodoEtiqueta));
+            const otrosHtml = otros.length ? `<div style="font-size:0.76rem; color:#718096; line-height:1.4; padding-left:18px;">${otros.map(o => `${o.periodoEtiqueta}: ${cotFormatoCop(o.valor)}`).join(' · ')}</div>` : '';
+            const pct = totalPeriodo > 0 ? (r.valor / totalPeriodo * 100) : 0;
             const cli = thBuscarClienteCrm(r.nombreCliente);
             const badge = cli ? `<span style="font-size:0.75rem; background:var(--ganado); color:#fff; padding:1px 7px; border-radius:10px; margin-left:6px;" title="Ya es cliente en el CRM -- compras acumuladas (LTV) actuales">${ticon('check',{noMargin:true,color:'#fff'})}Cliente activo (LTV ${cotFormatoCop(cli.ltv||0)})</span>` : '';
-            return `<div style="padding:3px 0; border-bottom:1px solid #edf2f7;">${idx+1}. ${r.nombreCliente}${r.nit ? ` <span style="color:#a0aec0; font-size:0.78rem;">(${r.nit})</span>` : ''}: <strong>${cotFormatoCop(r.valor)}</strong>${r.numFacturas ? ` — ${r.numFacturas} factura(s)` : ''}${badge}</div>`;
-          }).join('');
+            return `<div style="padding:3px 0; border-bottom:1px solid #edf2f7;">${idx+1}. ${r.nombreCliente}${r.nit ? ` <span style="color:#a0aec0; font-size:0.78rem;">(${r.nit})</span>` : ''}: <strong>${cotFormatoCop(r.valor)}</strong>${r.numFacturas ? ` — ${r.numFacturas} factura(s)` : ''} <span style="color:#a0aec0; font-size:0.78rem;">(${pct.toFixed(1)}%)</span>${badge}${otrosHtml}</div>`;
+          }).join('') || '<span style="color:#a0aec0; font-style:italic;">Ningún cliente coincide con la búsqueda.</span>';
         }
         /* ============ ROMPECABEZAS PERSONALIZADOS (canal Personalizado, mes a mes) ============
            Conde 2026-10-03. Fuente: db_historicoMensual (canal 'personalizado', cuadro de Fany) y,
