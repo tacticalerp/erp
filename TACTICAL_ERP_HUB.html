@@ -1434,7 +1434,7 @@
                     </div>
                     <div id="cot-comercial" class="accordion-content">
                         <div class="form-grid">
-                            <div class="form-group"><label>% Utilidad:</label><input type="number" id="cot-utilidadPct" value="40" step="1"></div>
+                            <div class="form-group"><label>% Utilidad:</label><input type="number" id="cot-utilidadPct" value="43" step="1"></div>
                             <div class="form-group"><label>% Ventas:</label><input type="number" id="cot-ventasPct" value="4" step="1"></div>
                             <div class="form-group" style="flex-basis:100%;"><label>Extra / Ajuste adicional (opcional -- algo puntual que pida el cliente y no esté en el catálogo):</label></div>
                             <div class="form-group" style="flex:2;"><input type="text" id="cot-extraDesc" placeholder="Descripción del extra"></div>
@@ -10948,7 +10948,7 @@
             const margenContribPctCuadernos = sumaVentas>0 ? (sumaMargen/sumaVentas) : 0.2284;
             const PUNTO_EQUILIBRIO_MARGEN_DEFAULT_LINEA = {
                 carpetas: 1-1/(1.40*1.03), cajas: 1-1/(1.40*1.03), bolsas: 1-1/(1.40*1.03), volantes: 1-1/(1.40*1.03),
-                cubo_rubik: 1-1/(1.45*1.03), rompecabezas: 1-1/(1.45*1.03),
+                cubo_rubik: 1-1/(1.50*1.05), rompecabezas: 1-1/(1.50*1.05),
                 // promocionales usa un modelo de descuento por monto, no %Utilidad/%Ventas -- sin
                 // fórmula equivalente confiable todavía, así que cae al respaldo (margen real de Cuadernos).
             };
