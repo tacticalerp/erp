@@ -1551,6 +1551,7 @@
                             <div class="data-card" style="grid-column:1/-1;">
                                 <div class="card-title">Ingresos facturados y Utilidad Neta por año -- canal Tactical (formal/SIIGO)</div>
                                 <div style="position:relative; height:300px; margin-top:10px;"><canvas id="th-chart-anual"></canvas></div>
+                                <div id="th-anual-tabla" style="overflow-x:auto; margin-top:12px;"></div>
                             </div>
                             <div class="data-card" style="grid-column:1/-1;">
                                 <div class="card-title">Ingresos por año -- canal Personalizado (Rompecabezas B2C / Cuenta de Cobro)</div>
@@ -9222,6 +9223,20 @@
           renderThClientesHistoricos();
           renderRompecabezasPersonalizados();
 
+          // Conde 2026-10-06: "quiero ver la utilidad en cifras exactas porque no la veo" -- el gráfico
+          // solo la mostraba como una línea sin valor. Tabla con las cifras exactas por año.
+          const tablaAnualEl = document.getElementById('th-anual-tabla');
+          if (tablaAnualEl) {
+            const fmt = (v) => v == null ? '<span style="color:#cbd5e0;">—</span>' : (v < 0 ? '-' + cotFormatoCop(-v) : cotFormatoCop(v));
+            tablaAnualEl.innerHTML = anualesTactical.length ? `<table style="width:100%; border-collapse:collapse; font-size:0.85rem; white-space:nowrap;">
+              <thead><tr style="background:#f7fafc; color:#4a5568; text-align:right;"><th style="padding:6px 8px; text-align:left;">Año</th><th style="padding:6px 8px;">Ingresos facturados</th><th style="padding:6px 8px;">Costo de ventas</th><th style="padding:6px 8px;">Gastos admin.</th><th style="padding:6px 8px;">Utilidad Neta</th><th style="padding:6px 8px;">Margen</th></tr></thead>
+              <tbody>${[...anualesTactical].reverse().map(r => {
+                const margen = (r.utilidadNeta != null && r.ingresos > 0) ? (r.utilidadNeta / r.ingresos * 100) : null;
+                const colorUtil = r.utilidadNeta == null ? '' : (r.utilidadNeta < 0 ? 'color:#dc2626;' : 'color:#16a34a;');
+                return `<tr style="border-bottom:1px solid #edf2f7; text-align:right;"><td style="padding:6px 8px; text-align:left; font-weight:700;">${r.anio}</td><td style="padding:6px 8px;">${fmt(r.ingresos)}</td><td style="padding:6px 8px;">${fmt(r.costoVentas)}</td><td style="padding:6px 8px;">${fmt(r.gastosAdmin)}</td><td style="padding:6px 8px; font-weight:700; ${colorUtil}">${fmt(r.utilidadNeta)}</td><td style="padding:6px 8px;">${margen == null ? '<span style="color:#cbd5e0;">—</span>' : margen.toFixed(1) + '%'}</td></tr>`;
+              }).join('')}</tbody></table>` : '<span style="color:#a0aec0; font-style:italic;">Sin datos para este rango y fuente.</span>';
+          }
+
           if (typeof Chart === 'undefined') return; // CDN bloqueado o sin internet -- KPIs y clientes igual se ven
 
           const aniosDisponibles = [...new Set(db_historicoMensual.map(r => r.anio))].filter(a => a >= anioDesde && a <= anioHasta).sort((a, b) => a - b);
@@ -9285,11 +9300,11 @@
             thChartAnual = new Chart(ctxAnual, {
               data: {
                 labels: anualesTactical.map(r => String(r.anio)), datasets: [
-                  { type: 'bar', label: 'Ingresos facturados', data: anualesTactical.map(r => r.ingresos), backgroundColor: '#94a3d8', yAxisID: 'y' },
-                  { type: 'line', label: 'Utilidad Neta', data: anualesTactical.map(r => r.utilidadNeta), borderColor: '#16a34a', backgroundColor: '#16a34a', yAxisID: 'y', tension: 0.2 },
+                  { type: 'bar', label: 'Ingresos facturados', data: anualesTactical.map(r => r.ingresos), backgroundColor: '#94a3d8', yAxisID: 'y', order: 2 },
+                  { type: 'line', label: 'Utilidad Neta', data: anualesTactical.map(r => r.utilidadNeta), borderColor: '#16a34a', backgroundColor: '#16a34a', yAxisID: 'y', tension: 0.2, pointRadius: 5, order: 1 },
                 ]
               },
-              options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + cotFormatoCop(ctx.parsed.y) } } }, scales: { y: { ticks: { callback: (v) => cotFormatoCop(v) } } } }
+              options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + cotFormatoCop(ctx.parsed.y) } } }, scales: { y: { ticks: { callback: (v) => cotFormatoCop(v) } } } }
             });
           }
 
