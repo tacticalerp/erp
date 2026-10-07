@@ -117,6 +117,24 @@
         /* Al expandir sí hace falta volver a "wrap" -- Impresión/Responsable completo/flechas
            necesitan pasar a líneas nuevas debajo (flex-basis:100%), lo que "nowrap" no permite. */
         #view-tareas tr.tarea-expandida { flex-wrap: wrap; }
+        /* Conde 2026-10-07 (Proyectos): el marco de la fila toma el color de su proyecto; si la fila es
+           Urgente, la regla .tarea-urgente (más abajo, misma especificidad) le gana y queda roja. */
+        #view-tareas tr.con-proyecto { border: 2px solid var(--proy-color) !important; }
+        #view-tareas tr.proy-oculta { display: none !important; }
+        #view-tareas .task-proy-tag { flex-shrink: 0; font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #f1f5f9; color: #475569; white-space: nowrap; }
+        #view-tareas .task-proyecto { width: auto !important; max-width: 74px !important; height: 24px !important; padding: 2px 3px !important; font-size: 11px !important; margin: 0 0 0 4px !important; }
+        #proyectos-panel { margin-bottom: 8px; }
+        .pj-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+        .pj-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border: 1px solid #cbd5e0; border-radius: 999px; font-size: 0.82rem; cursor: pointer; background: #fff; color: #2d3748; }
+        .pj-chip.on { background: #ebf4ff; border-color: #3182ce; color: #2b6cb0; font-weight: 700; }
+        .pj-chip.nuevo { border-style: dashed; color: #2b6cb0; }
+        .pj-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+        .pj-ficha { background: #fff; border: 2px solid; border-radius: 10px; margin-bottom: 8px; overflow: hidden; }
+        .pj-ficha-cab { display: flex; align-items: center; gap: 10px; padding: 8px 12px; flex-wrap: wrap; }
+        .pj-ficha-cuerpo { padding: 0 14px 12px; font-size: 0.86rem; }
+        .pj-lb { font-size: 0.7rem; color: #a0aec0; margin: 8px 0 1px; }
+        .pj-cuenta { font-size: 0.78rem; font-weight: 700; padding: 2px 10px; border-radius: 999px; white-space: nowrap; }
+        .pj-mini { font-size: 0.78rem; padding: 3px 9px; border: 1px solid #cbd5e0; background: #fff; border-radius: 6px; cursor: pointer; }
         #view-tareas td { display: flex !important; align-items: center; padding: 0 !important; border: none !important; width: auto; }
         /* flex-basis en 0% (no en 160px) -- con flex-wrap:wrap, el navegador decide si un elemento
            "cabe" en la línea usando su tamaño hipotético (el flex-basis), no el tamaño ya encogido;
@@ -884,6 +902,7 @@
         <!-- VISTA 1: PLAN DE TAREAS TACTICAL -->
         <div id="view-tareas" class="app-view">
             <div style="padding: 10px;">
+                <div id="proyectos-panel"></div>
                 <div class="accordion-item">
                     <div class="accordion-header active" id="head-diseno" onclick="toggleSection('diseno')">
                         <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M12 21a9 9 0 1 1 0-18c4.97 0 9 3.58 9 7.5 0 2.1-1.57 3.5-3.5 3.5H16a1.5 1.5 0 0 0-1 2.6c.36.36.5.86.5 1.4 0 1.11-.9 2-2 2z"></path><circle cx="7.5" cy="10.5" r="1.2"></circle><circle cx="10.5" cy="7" r="1.2"></circle><circle cx="15" cy="7.5" r="1.2"></circle></svg>1. Área de Diseño</span><span class="arrow" id="arrow-diseno">▼</span>
@@ -2191,7 +2210,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Conde 2026-09-16: "convertir esos informes en graficos" (Tendencia Histórica en Reportes) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-    <script src="tactical-supabase.js?v=20261005a"></script>
+    <script src="tactical-supabase.js?v=20261007a"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
     <script src="precios_tactical.js?v=20260929a"></script>
     <script src="precios_promocionales.js?v=20260919a"></script>
@@ -2495,9 +2514,177 @@
             const input = tr.querySelector('.task-fecha-limite');
             const txt = tr.querySelector('.task-entrega-txt');
             if(!input || !txt) return;
-            txt.textContent = tareaEntregaTexto(input.value);
-            txt.style.color = tareaEntregaVencida(input.value) ? 'var(--peligro)' : '#3182ce';
-            txt.style.fontWeight = tareaEntregaVencida(input.value) ? '800' : '600';
+            // Conde 2026-10-07: en vez de "E 25AGO" muestra cuántos días faltan (verde, amarillo si
+            // faltan 5 o menos, rojo si es hoy o ya está atrasada); la fecha exacta queda al pasar el mouse.
+            if(!input.value){ txt.textContent = ''; txt.title = ''; return; }
+            const hoy = new Date(); hoy.setHours(0,0,0,0);
+            const n = Math.round((new Date(input.value + 'T00:00:00') - hoy) / 86400000);
+            txt.textContent = n < 0 ? `${-n} d atraso` : (n === 0 ? 'Hoy' : `Faltan ${n} d`);
+            txt.title = tareaEntregaTexto(input.value) + ' -- toca ▶ para cambiarla';
+            txt.style.color = n <= 0 ? 'var(--peligro)' : (n <= 5 ? '#b7791f' : '#2f855a');
+            txt.style.fontWeight = n <= 5 ? '800' : '600';
+        }
+
+        /* ============ PROYECTOS del Plan de Tareas (Conde 2026-10-07) ============
+           Cada proyecto: nombre, etiqueta corta, color, objetivo, qué sí/no se hace, inicio y fin.
+           Cada tarea puede pertenecer a uno (tr.dataset.proyecto = id) o a ninguno (como siempre).
+           El panel de arriba filtra las filas (clase proy-oculta) sin tocar las áreas. */
+        let db_proyectos = [];
+        let proyectoFiltro = 'todo'; // 'todo' | 'sin' | id de proyecto
+        let proyectoDetalleAbierto = false;
+        const PROYECTO_COLORES = ['#7F77DD','#1D9E75','#D85A30','#378ADD','#D4537E','#BA7517'];
+        function proyEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+        function proyFechaTxt(iso){
+            if(!iso) return '—';
+            const d = new Date(iso + 'T00:00:00');
+            return d.toLocaleDateString('es-CO', {day:'numeric', month:'short', year:'numeric'});
+        }
+        function proyCuenta(p){
+            if(p.estado === 'terminado') return {txt:'Terminado', bg:'#edf2f7', fg:'#4a5568'};
+            if(!p.fechaFin) return null;
+            const hoy = new Date(); hoy.setHours(0,0,0,0);
+            const n = Math.round((new Date(p.fechaFin + 'T00:00:00') - hoy) / 86400000);
+            if(n < 0) return {txt:`Vencido hace ${-n} d`, bg:'#fed7d7', fg:'#c53030'};
+            if(n <= 5) return {txt:`Faltan ${n} d`, bg:'#fed7d7', fg:'#c53030'};
+            if(n <= 10) return {txt:`Faltan ${n} d`, bg:'#fefcbf', fg:'#975a16'};
+            return {txt:`Faltan ${n} d`, bg:'#c6f6d5', fg:'#276749'};
+        }
+        function taskPintarProyecto(tr){
+            const p = db_proyectos.find(x => x.id === tr.dataset.proyecto);
+            if(!p) tr.dataset.proyecto = ''; // proyecto borrado o aún no cargado: la tarea queda sin proyecto
+            const tag = tr.querySelector('.task-proy-tag');
+            tr.classList.toggle('con-proyecto', !!p);
+            if(p) tr.style.setProperty('--proy-color', p.color); else tr.style.removeProperty('--proy-color');
+            if(tag){
+                tag.style.display = p ? '' : 'none';
+                tag.textContent = p ? p.corto : '';
+                tag.title = p ? p.nombre : '';
+                if(p){ tag.style.background = p.color + '22'; tag.style.color = p.color; }
+            }
+            const sel = tr.querySelector('.task-proyecto');
+            if(sel){
+                sel.innerHTML = '<option value="">—</option>' + db_proyectos.map(x => `<option value="${x.id}" ${x.id===tr.dataset.proyecto?'selected':''}>${proyEsc(x.corto)}</option>`).join('');
+                sel.style.display = db_proyectos.length ? '' : 'none';
+            }
+            const oculta = proyectoFiltro !== 'todo' && (proyectoFiltro === 'sin' ? !!tr.dataset.proyecto : tr.dataset.proyecto !== proyectoFiltro);
+            tr.classList.toggle('proy-oculta', oculta);
+        }
+        function taskCambiarProyecto(sel){
+            const tr = sel.closest('tr');
+            tr.dataset.proyecto = sel.value;
+            taskPintarProyecto(tr);
+            guardarFila(tr);
+            proyectosRender();
+        }
+        function proyectosFilas(){ return [...document.querySelectorAll('#view-tareas tbody tr[data-id]')].filter(tr => tr.closest('table') && /^table-(diseno|produccion|comercial|gerencia)$/.test(tr.closest('table').id)); }
+        function proyectosSetFiltro(f){
+            proyectoFiltro = f; proyectoDetalleAbierto = false;
+            proyectosFilas().forEach(taskPintarProyecto);
+            // Al mirar un proyecto/sin proyecto se abren las áreas que sí tienen tareas visibles.
+            if(f !== 'todo'){
+                ['diseno','produccion','comercial','gerencia'].forEach(a => {
+                    const hay = [...document.querySelectorAll(`#table-${a} tbody tr`)].some(tr => !tr.classList.contains('proy-oculta'));
+                    const abierta = document.getElementById(a).classList.contains('active');
+                    if(hay && !abierta) toggleSection(a);
+                });
+            }
+            proyectosRender();
+        }
+        function proyectosRender(){
+            const cont = document.getElementById('proyectos-panel');
+            if(!cont) return;
+            const filas = proyectosFilas();
+            const cuenta = id => filas.filter(tr => id === 'todo' ? true : (id === 'sin' ? !tr.dataset.proyecto : tr.dataset.proyecto === id)).length;
+            let h = `<div class="pj-chips"><button class="pj-chip ${proyectoFiltro==='todo'?'on':''}" onclick="proyectosSetFiltro('todo')">Todo (${cuenta('todo')})</button>`;
+            if(db_proyectos.length) h += `<button class="pj-chip ${proyectoFiltro==='sin'?'on':''}" onclick="proyectosSetFiltro('sin')">Sin proyecto (${cuenta('sin')})</button>`;
+            db_proyectos.forEach(p => {
+                h += `<button class="pj-chip ${proyectoFiltro===p.id?'on':''}" style="${p.estado==='terminado'?'opacity:.55;':''}" onclick="proyectosSetFiltro('${p.id}')"><span class="pj-dot" style="background:${p.color}"></span>${proyEsc(p.corto)} (${cuenta(p.id)})${p.estado==='terminado'?' ✓':''}</button>`;
+            });
+            h += `<button class="pj-chip nuevo" onclick="proyectoAbrirForm(null)">+ Nuevo proyecto</button></div>`;
+            const p = db_proyectos.find(x => x.id === proyectoFiltro);
+            if(p){
+                const cu = proyCuenta(p);
+                const hechas = db_historico.filter(t => t.proyectoId === p.id).length;
+                const total = hechas + cuenta(p.id);
+                const pc = total ? Math.round(hechas / total * 100) : 0;
+                h += `<div class="pj-ficha" style="border-color:${p.color}">
+                    <div class="pj-ficha-cab">
+                        <span style="font-weight:700; font-size:1rem; flex:1; min-width:140px;">${proyEsc(p.nombre)}</span>
+                        <span style="font-size:0.78rem; color:#718096;">${proyFechaTxt(p.fechaInicio)} → ${proyFechaTxt(p.fechaFin)}</span>
+                        ${cu ? `<span class="pj-cuenta" style="background:${cu.bg}; color:${cu.fg};">${cu.txt}</span>` : ''}
+                        <button class="pj-mini" onclick="proyectoDetalleAbierto=!proyectoDetalleAbierto; proyectosRender();">${proyectoDetalleAbierto ? 'Ocultar detalles ▲' : 'Ver detalles ▼'}</button>
+                        <button class="pj-mini" onclick="proyectoAbrirForm('${p.id}')" title="Editar proyecto">${ticon('edit',{size:13,noMargin:true})}</button>
+                    </div>
+                    ${proyectoDetalleAbierto ? `<div class="pj-ficha-cuerpo">
+                        <div class="pj-lb">Para qué es</div><div>${proyEsc(p.objetivo)||'—'}</div>
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px;">
+                            <div><div class="pj-lb">Sí se hace</div><div>${proyEsc(p.siHace)||'—'}</div></div>
+                            <div><div class="pj-lb">No se hace</div><div>${proyEsc(p.noHace)||'—'}</div></div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:#718096; margin:12px 0 4px;"><span>Avance</span><span>${hechas} de ${total} tareas · ${pc}%</span></div>
+                        <div style="height:6px; background:#edf2f7; border-radius:3px; overflow:hidden;"><div style="height:100%; width:${pc}%; background:${p.color};"></div></div>
+                    </div>` : ''}
+                </div>`;
+            }
+            cont.innerHTML = h;
+        }
+        function proyectoAbrirForm(id){
+            const p = id ? db_proyectos.find(x => x.id === id) : null;
+            const prev = document.getElementById('proyecto-form-overlay'); if(prev) prev.remove();
+            const ov = document.createElement('div');
+            ov.id = 'proyecto-form-overlay';
+            ov.style.cssText = 'position:fixed; inset:0; background:rgba(26,32,44,0.6); z-index:99999; display:flex; align-items:center; justify-content:center; padding:20px;';
+            const campo = 'width:100%; padding:7px; border:1px solid #cbd5e0; border-radius:6px; font-size:0.9rem !important; box-sizing:border-box; margin-bottom:8px;';
+            const lbl = 'font-size:0.75rem; font-weight:700; color:#4a5568; display:block; margin-bottom:2px;';
+            const color = p ? p.color : PROYECTO_COLORES[db_proyectos.length % PROYECTO_COLORES.length];
+            ov.innerHTML = `<div style="background:#fff; border-radius:10px; padding:20px; max-width:460px; width:100%; max-height:90vh; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.35); font-family:'Segoe UI', Tahoma, sans-serif;">
+                <div style="font-weight:800; font-size:1.02rem; margin-bottom:12px;">${p ? 'Editar proyecto' : 'Nuevo proyecto'}</div>
+                <label style="${lbl}">Nombre</label><input id="pf-nombre" type="text" style="${campo}" value="${tacticalEscAttr(p?p.nombre:'')}">
+                <label style="${lbl}">Etiqueta corta (la que se ve en cada tarea; si la dejas vacía, la primera palabra)</label><input id="pf-corto" type="text" style="${campo}" value="${tacticalEscAttr(p?p.corto:'')}">
+                <label style="${lbl}">Para qué es (objetivo)</label><textarea id="pf-objetivo" style="${campo} height:56px;">${proyEsc(p?p.objetivo:'')}</textarea>
+                <label style="${lbl}">Sí se hace</label><textarea id="pf-si" style="${campo} height:50px;">${proyEsc(p?p.siHace:'')}</textarea>
+                <label style="${lbl}">No se hace</label><textarea id="pf-no" style="${campo} height:50px;">${proyEsc(p?p.noHace:'')}</textarea>
+                <div style="display:flex; gap:10px;"><div style="flex:1;"><label style="${lbl}">Inicio</label><input id="pf-ini" type="date" style="${campo}" value="${p&&p.fechaInicio?p.fechaInicio:''}"></div>
+                <div style="flex:1;"><label style="${lbl}">Fin</label><input id="pf-fin" type="date" style="${campo}" value="${p&&p.fechaFin?p.fechaFin:''}"></div></div>
+                <label style="${lbl}">Color</label>
+                <div id="pf-colores" data-color="${color}" style="display:flex; gap:8px; margin-bottom:10px;">${PROYECTO_COLORES.map(c => `<span onclick="document.getElementById('pf-colores').dataset.color='${c}'; [...this.parentNode.children].forEach(x=>x.style.borderColor=x===this?'#1a202c':'transparent');" style="width:24px; height:24px; border-radius:50%; background:${c}; cursor:pointer; border:2px solid ${c===color?'#1a202c':'transparent'};"></span>`).join('')}</div>
+                ${p ? `<label style="${lbl}">Estado</label><select id="pf-estado" style="${campo}"><option value="activo" ${p.estado!=='terminado'?'selected':''}>Activo</option><option value="terminado" ${p.estado==='terminado'?'selected':''}>Terminado</option></select>` : ''}
+                <div style="display:flex; gap:8px; margin-top:6px;">
+                    <button type="button" onclick="proyectoGuardarForm('${p?p.id:''}')" style="flex:1; padding:9px; border:none; background:#16a34a; color:#fff; border-radius:6px; font-weight:700; cursor:pointer;">Guardar</button>
+                    ${p ? `<button type="button" onclick="proyectoEliminar('${p.id}')" style="padding:9px 12px; border:1px solid #e53e3e; background:#fff; color:#e53e3e; border-radius:6px; font-weight:700; cursor:pointer;">Eliminar</button>` : ''}
+                    <button type="button" onclick="document.getElementById('proyecto-form-overlay').remove()" style="flex:1; padding:9px; border:1px solid #cbd5e0; background:#fff; color:#4a5568; border-radius:6px; font-weight:700; cursor:pointer;">Cancelar</button>
+                </div></div>`;
+            document.body.appendChild(ov);
+        }
+        function proyectoGuardarForm(id){
+            const g = k => document.getElementById(k).value.trim();
+            const nombre = g('pf-nombre');
+            if(!nombre){ alert('Escribe el nombre del proyecto.'); return; }
+            let p = id ? db_proyectos.find(x => x.id === id) : null;
+            const nuevo = !p;
+            if(nuevo){ p = { id: crypto.randomUUID(), orden: db_proyectos.length, estado: 'activo' }; db_proyectos.push(p); }
+            Object.assign(p, {
+                nombre, corto: g('pf-corto') || nombre.split(/[\s:]/)[0], objetivo: g('pf-objetivo'), siHace: g('pf-si'), noHace: g('pf-no'),
+                fechaInicio: g('pf-ini') || null, fechaFin: g('pf-fin') || null, color: document.getElementById('pf-colores').dataset.color,
+            });
+            if(!nuevo){ const e = document.getElementById('pf-estado'); if(e) p.estado = e.value; }
+            tacticalSyncProyecto(p);
+            document.getElementById('proyecto-form-overlay').remove();
+            proyectoFiltro = p.id; proyectoDetalleAbierto = false;
+            proyectosFilas().forEach(taskPintarProyecto);
+            proyectosRender();
+        }
+        function proyectoEliminar(id){
+            if(!tacticalRequiereAdministrador()) return;
+            const p = db_proyectos.find(x => x.id === id);
+            if(!p || !confirm(`¿Eliminar el proyecto "${p.nombre}"?\n\nSus tareas NO se borran: quedan "sin proyecto".`)) return;
+            tacticalEliminarProyectoRemoto(id);
+            db_proyectos = db_proyectos.filter(x => x.id !== id);
+            db_historico.forEach(t => { if(t.proyectoId === id) t.proyectoId = null; });
+            document.getElementById('proyecto-form-overlay').remove();
+            proyectoFiltro = 'todo';
+            proyectosFilas().forEach(taskPintarProyecto);
+            proyectosRender();
         }
 
         // Personal editable desde "Plan de Tareas -> Gestionar Personal" (Conde 2026-08-19) --
@@ -2608,7 +2795,7 @@
             const aclaracion = '';
             const fechaLimite = tr.querySelector('.task-fecha-limite').value || null;
             tacticalSyncTarea({
-                id: tr.dataset.id, area, desc, espec, emp, status, aclaracion, fechaLimite,
+                id: tr.dataset.id, area, desc, espec, emp, status, aclaracion, fechaLimite, proyectoId: tr.dataset.proyecto || null,
                 fechaOrigen: tr.dataset.fechaOrigen, orden: parseFloat(tr.dataset.orden),
             });
             taskReordenarTabla(area);
@@ -2627,12 +2814,13 @@
             const fechaLimite = tr.querySelector('.task-fecha-limite').value || null;
             const fechaOrigen = tr.dataset.fechaOrigen;
             tacticalSyncTarea({
-                id: tr.dataset.id, area, desc, espec, emp, status, aclaracion, fechaLimite, fechaOrigen,
+                id: tr.dataset.id, area, desc, espec, emp, status, aclaracion, fechaLimite, fechaOrigen, proyectoId: tr.dataset.proyecto || null,
                 orden: parseFloat(tr.dataset.orden),
                 cerrada: true, fechaCierre: new Date().toISOString(), delayCerrado: tareaDiasRetraso(fechaOrigen),
             });
-            db_historico.push({ id: tr.dataset.id, area, desc, espec, emp, status, aclaracion, fechaLimite, fechaCierre: new Date().toISOString(), delay: tareaDiasRetraso(fechaOrigen) });
+            db_historico.push({ id: tr.dataset.id, area, desc, espec, emp, status, aclaracion, fechaLimite, proyectoId: tr.dataset.proyecto || null, fechaCierre: new Date().toISOString(), delay: tareaDiasRetraso(fechaOrigen) });
             tr.remove();
+            proyectosRender();
             if(document.getElementById('historico') && document.getElementById('historico').classList.contains('active')) renderHistory();
             if(document.getElementById('kpis') && document.getElementById('kpis').classList.contains('active')){ renderKPIs(); renderKPIsPorArea(); }
         }
@@ -2645,7 +2833,7 @@
           return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;');
         }
         const TACTICAL_ESTADO_LABELS = { pendiente:'Pendiente', urgente:'Urgente', listo:'Listo', finalizado:'Finalizado' };
-        function addTask(area, desc = '', espec = '', assigned = '', status = 'pendiente', id = null, fechaOrigen = null, orden = null, aclaracion = '', fechaLimite = null) {
+        function addTask(area, desc = '', espec = '', assigned = '', status = 'pendiente', id = null, fechaOrigen = null, orden = null, aclaracion = '', fechaLimite = null, proyectoId = null) {
             // Conde 2026-09-16: "elimina causa externa... tambien elimina en proceso" -- ninguna de
             // las 2 hacía nada más que cambiar de color; se quitaron del desplegable. Tareas viejas
             // que ya tenían guardado 'proceso' o 'externo' se normalizan a 'pendiente' acá mismo (se
@@ -2656,6 +2844,9 @@
             tr.dataset.id = id || crypto.randomUUID();
             tr.dataset.fechaOrigen = fechaOrigen || new Date().toISOString();
             tr.dataset.orden = orden != null ? orden : Date.now();
+            // Conde 2026-10-07 (Proyectos): una tarea nueva creada mientras se filtra un proyecto nace en él.
+            if(!id && !proyectoId && proyectoFiltro !== 'todo' && proyectoFiltro !== 'sin') proyectoId = proyectoFiltro;
+            tr.dataset.proyecto = proyectoId || '';
             tr.classList.toggle('tarea-urgente', status === 'urgente');
             const dateStr = tareaOrigenTexto(tr.dataset.fechaOrigen);
             const diasRetraso = tareaDiasRetraso(tr.dataset.fechaOrigen);
@@ -2686,6 +2877,7 @@
                 <td class="td-tarea">
                     ${delayBadge}
                     <button type="button" class="task-toggle" onclick="taskToggleExpandir(this)" title="Ver más detalles">▶</button>
+                    <span class="task-proy-tag" style="display:none;"></span>
                     <input type="text" style="width:95%; font-weight:bold;" placeholder="Escriba la tarea..." value="${tacticalEscAttr(desc)}" class="task-desc" onchange="guardarFila(this.closest('tr'))">
                 </td>
                 <td class="td-detalle td-detalle-desktop"><input type="text" class="task-espec" placeholder="${inputPlaceholder}" value="${tacticalEscAttr(espec)}" onchange="guardarFila(this.closest('tr'))"></td>
@@ -2709,6 +2901,7 @@
                         <option value="urgente" title="Urgente -- no avanza por falta de información o por otras prioridades (resalta la fila en rojo)" ${status === 'urgente' ? 'selected' : ''}>🚨</option>
                         <option value="listo" title="Listo -- termina la tarea y la archiva al Histórico" ${status === 'listo' ? 'selected' : ''}>✅</option>
                     </select>
+                    <select class="task-proyecto" title="Proyecto de esta tarea" onchange="taskCambiarProyecto(this)"></select>
                 </td>
                 <td class="td-detalle task-origin">
                     <span class="task-origin-txt" title="Fecha en que quedó pendiente">${dateStr}</span>
@@ -2724,6 +2917,7 @@
             tbody.appendChild(tr);
             taskRenderChips(tr.querySelector('.task-emp-list'), area);
             taskActualizarEntregaTexto(tr);
+            taskPintarProyecto(tr);
             taskReordenarTabla(area);
         }
         // "que al escribir la fecha automaticamente tome 2026" -- al enfocar un campo de fecha
@@ -2910,9 +3104,9 @@
             let t = db_historico.find(x => x.id === id);
             if(!t) return;
             const fechaOrigenNueva = new Date().toISOString();
-            addTask(t.area, t.desc, t.espec, t.emp, 'proceso', t.id, fechaOrigenNueva, Date.now(), t.aclaracion, t.fechaLimite);
+            addTask(t.area, t.desc, t.espec, t.emp, 'proceso', t.id, fechaOrigenNueva, Date.now(), t.aclaracion, t.fechaLimite, t.proyectoId);
             tacticalSyncTarea({
-                id: t.id, area: t.area, desc: t.desc, espec: t.espec, emp: t.emp, status: 'proceso', aclaracion: t.aclaracion, fechaLimite: t.fechaLimite,
+                id: t.id, area: t.area, desc: t.desc, espec: t.espec, emp: t.emp, status: 'proceso', aclaracion: t.aclaracion, fechaLimite: t.fechaLimite, proyectoId: t.proyectoId || null,
                 fechaOrigen: fechaOrigenNueva, orden: Date.now(), cerrada: false, fechaCierre: null, delayCerrado: null,
             });
             db_historico = db_historico.filter(x => x.id !== id);
@@ -3365,9 +3559,13 @@
           db_historicoMensual = await tacticalHistoricoMensualCargar();
           db_historicoBalance = await tacticalHistoricoBalanceCargar();
           db_historicoVentasCliente = await tacticalHistoricoVentasClienteCargar();
+          // Conde 2026-10-07 (Proyectos): se cargan ANTES que las tareas para que cada fila ya pueda
+          // pintar su etiqueta/color; si falla (tabla aún sin crear), el Plan de Tareas sigue igual.
+          try { db_proyectos = await tacticalProyectosCargar(); } catch(e){ console.error('Proyectos:', e); db_proyectos = []; }
           const tareas = await tacticalTareasCargar();
           db_historico = tareas.historico;
-          tareas.activas.forEach(t => addTask(t.area, t.desc, t.espec, t.emp, t.status, t.id, t.fechaOrigen, t.orden, t.aclaracion, t.fechaLimite));
+          tareas.activas.forEach(t => addTask(t.area, t.desc, t.espec, t.emp, t.status, t.id, t.fechaOrigen, t.orden, t.aclaracion, t.fechaLimite, t.proyectoId));
+          proyectosRender();
           db_proveedores = await tacticalProveedoresCargar();
           db_docventa = await tacticalDocVentaCargar();
           db_notasCredito = await tacticalNotasCreditoCargar();

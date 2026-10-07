@@ -642,20 +642,23 @@ function tacticalTareaADb(t){
     fecha_origen: t.fechaOrigen||new Date().toISOString(), orden: t.orden||Date.now(),
     cerrada: !!t.cerrada, fecha_cierre: t.fechaCierre||null, delay_cerrado: t.delayCerrado!=null ? t.delayCerrado : null,
     fecha_limite: t.fechaLimite||null,
+    // Solo se manda si la tabla "proyectos" ya existe (ver tacticalProyectosCargar) o si hay un proyecto
+    // puesto -- si el SQL migracion_proyectos.sql todavia no se corrio, no debe romper el guardado.
+    ...((t.proyectoId !== undefined && (t.proyectoId || window.tacticalProyectosOk)) ? { proyecto_id: t.proyectoId||null } : {}),
   };
 }
 function tacticalTareaActivaDeDb(r){
   return {
     id: r.id, area: r.area, desc: r.descripcion, espec: r.especificaciones||'',
     emp: r.responsables||[], status: r.status, aclaracion: r.aclaracion||'',
-    fechaOrigen: r.fecha_origen, orden: r.orden, fechaLimite: r.fecha_limite||null,
+    fechaOrigen: r.fecha_origen, orden: r.orden, fechaLimite: r.fecha_limite||null, proyectoId: r.proyecto_id||null,
   };
 }
 function tacticalTareaHistDeDb(r){
   return {
     id: r.id, area: r.area, desc: r.descripcion, espec: r.especificaciones||'',
     emp: r.responsables||[], status: r.status, aclaracion: r.aclaracion||'',
-    fechaCierre: r.fecha_cierre, delay: r.delay_cerrado||0, fechaLimite: r.fecha_limite||null,
+    fechaCierre: r.fecha_cierre, delay: r.delay_cerrado||0, fechaLimite: r.fecha_limite||null, proyectoId: r.proyecto_id||null,
   };
 }
 async function tacticalTareasCargar(){
@@ -669,6 +672,35 @@ async function tacticalTareasCargar(){
 async function tacticalSyncTarea(t){
   const { error } = await tacticalSupabase.from('tareas').upsert(tacticalTareaADb(t));
   if(error){ console.error('Error guardando tarea en Supabase:', error); tacticalAvisoErrorGuardado('Error guardando tarea en Supabase'); }
+}
+// Proyectos del Plan de Tareas (Conde 2026-10-07)
+function tacticalProyectoADb(p){
+  return {
+    id: p.id, nombre: p.nombre, corto: p.corto||'', color: p.color||'#378ADD', objetivo: p.objetivo||'',
+    si_hace: p.siHace||'', no_hace: p.noHace||'', fecha_inicio: p.fechaInicio||null, fecha_fin: p.fechaFin||null,
+    estado: p.estado||'activo', orden: p.orden||0,
+  };
+}
+function tacticalProyectoDeDb(r){
+  return {
+    id: r.id, nombre: r.nombre, corto: r.corto||'', color: r.color||'#378ADD', objetivo: r.objetivo||'',
+    siHace: r.si_hace||'', noHace: r.no_hace||'', fechaInicio: r.fecha_inicio||null, fechaFin: r.fecha_fin||null,
+    estado: r.estado||'activo', orden: r.orden||0,
+  };
+}
+async function tacticalProyectosCargar(){
+  const { data, error } = await tacticalSupabase.from('proyectos').select('*').order('orden');
+  window.tacticalProyectosOk = !error;
+  if(error){ console.error('Error cargando proyectos de Supabase:', error); return []; }
+  return data.map(tacticalProyectoDeDb);
+}
+async function tacticalSyncProyecto(p){
+  const { error } = await tacticalSupabase.from('proyectos').upsert(tacticalProyectoADb(p));
+  if(error){ console.error('Error guardando proyecto en Supabase:', error); tacticalAvisoErrorGuardado('Error guardando proyecto en Supabase'); }
+}
+async function tacticalEliminarProyectoRemoto(id){
+  const { error } = await tacticalSupabase.from('proyectos').delete().eq('id', id);
+  if(error){ console.error('Error eliminando proyecto en Supabase:', error); tacticalAvisoErrorGuardado('Error eliminando proyecto en Supabase'); }
 }
 async function tacticalEliminarTareaRemoto(id){
   const { error } = await tacticalSupabase.from('tareas').delete().eq('id', id);
