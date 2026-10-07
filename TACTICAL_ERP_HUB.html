@@ -7344,7 +7344,7 @@
           overlay.innerHTML = `
             <div style="background:#fff; border-radius:10px; padding:22px; max-width:440px; width:100%; max-height:80vh; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.35); font-family:'Segoe UI', Tahoma, sans-serif;">
               <div style="font-weight:800; font-size:1.02rem; color:#1a202c; margin-bottom:4px;">¿Cuál producto de este pedido quieres editar?</div>
-              <div style="font-size:0.78rem; color:#718096; margin-bottom:14px;">Toca un producto para reabrirlo en su calculadora (crea una versión nueva de ESE producto). Con "Ajustar precio" cambias descripción, cantidad o precio a mano directo en este pedido, y con "+ Agregar otro producto" anexas uno nuevo sin rehacer los demás. Las líneas en gris son de antes de que se guardara el detalle por producto: solo se pueden ajustar a mano.</div>
+              <div style="font-size:0.78rem; color:#718096; margin-bottom:14px;">Toca un producto para reabrirlo en su calculadora (crea una versión nueva de ESE producto). Con "Ajustar precio" cambias descripción, cantidad o precio a mano, y con "+ Agregar otro producto" anexas uno nuevo; en ambos casos se crea una cotización nueva con el mismo número y letra de versión (-B, -C...) y la original queda intacta. Las líneas en gris son de antes de que se guardara el detalle por producto: solo se pueden ajustar a mano.</div>
               ${filasHtml}
               <button type="button" onclick="document.getElementById('tactical-edicion-multi-overlay').remove();" style="width:100%; margin-top:6px; padding:9px; border:1px solid #cbd5e0; background:#fff; color:#4a5568; border-radius:6px; font-weight:700; cursor:pointer;">Cancelar</button>
             </div>`;
@@ -7389,42 +7389,42 @@
           document.getElementById('tfl-total').textContent = 'Total de la línea' + (aplicaIva?' con IVA: ':': ') + cotFormatoCop(Math.round(c*u*(aplicaIva?1.19:1)));
         }
         function tacticalGuardarLineaPedido(idPedido, lineaIdx, aplicaIva){
-          const activo = db_opps.find(o => o.id === idPedido);
-          const target = activo || db_historial_cierres.find(o => o.id === idPedido);
-          if(!target) return;
+          const original = db_opps.find(o => o.id === idPedido) || db_historial_cierres.find(o => o.id === idPedido);
+          if(!original) return;
           const desc = document.getElementById('tfl-desc').value.trim();
           const cant = parseFloat(document.getElementById('tfl-cant').value);
           const unit = parseFloat(document.getElementById('tfl-unit').value);
           if(!desc || !(cant > 0) || !(unit >= 0)){ alert('Completa descripción, cantidad y precio.'); return; }
           const monto = Math.round(cant*unit*(aplicaIva?1.19:1));
-          // Un pedido de UN solo producto guardado como línea normal (sin lineas[]) pasa a 'multi'
-          // al anexarle otro, conservando el producto original como primera línea.
-          if(!Array.isArray(target.lineas) || !target.lineas.length){
-            target.lineas = [{linea: target.linea, desc: target.desc, cantidad: target.cantidad||1, monto: target.monto, precioUnitario: target.monto/(target.cantidad||1)/(aplicaIva?1.19:1)}];
-            target.linea = 'multi';
+          // Conde 2026-10-07: "al hacer cambios se cree una nueva cotización, mismo número pero con
+          // B, C, D según la versión" -- el pedido original NO se toca: se clona como cotización
+          // nueva (activa, etapa 'cot') con OT base + siguiente letra libre.
+          const { estado, motivo, fechaCierre, _historialRowId, ...base } = original;
+          const nuevo = JSON.parse(JSON.stringify(base));
+          const otBase = cotOtBase(original.ot);
+          nuevo.id = crypto.randomUUID();
+          nuevo.ot = otBase + '-' + cotSiguienteSufijoOT(otBase);
+          nuevo.etapa = 'cot';
+          nuevo.fecha = new Date().toISOString();
+          // Un pedido de UN solo producto (sin lineas[]) pasa a 'multi' al anexarle otro.
+          if(!Array.isArray(nuevo.lineas) || !nuevo.lineas.length){
+            nuevo.lineas = [{linea: nuevo.linea, desc: nuevo.desc, cantidad: nuevo.cantidad||1, monto: nuevo.monto, precioUnitario: nuevo.monto/(nuevo.cantidad||1)/(aplicaIva?1.19:1)}];
+            nuevo.linea = 'multi';
           }
           if(lineaIdx >= 0){
-            Object.assign(target.lineas[lineaIdx], {desc, cantidad: cant, precioUnitario: unit, monto, ajusteManual: true});
+            Object.assign(nuevo.lineas[lineaIdx], {desc, cantidad: cant, precioUnitario: unit, monto, ajusteManual: true});
           } else {
-            target.lineas.push({linea:'manual', desc, cantidad: cant, precioUnitario: unit, monto, ajusteManual: true});
+            nuevo.lineas.push({linea:'manual', desc, cantidad: cant, precioUnitario: unit, monto, ajusteManual: true});
           }
-          const diff = target.lineas.reduce((s,x)=>s+(x.monto||0),0) - (target.monto||0);
-          target.monto = target.lineas.reduce((s,x)=>s+(x.monto||0),0);
-          target.cantidad = target.lineas.reduce((s,x)=>s+(x.cantidad||0),0);
-          target.desc = target.lineas.map(x=>x.desc).join(' + ');
-          if(activo){
-            tacticalSyncOpps([activo]);
-          } else {
-            const { estado, motivo, fechaCierre, _historialRowId, ...snapshot } = target;
-            tacticalCorregirVendedorHistorial(idPedido, snapshot);
-            if(estado === 'ganado' && diff){
-              const cli = db_clientes.find(c => c.id === target.idCli);
-              if(cli){ cli.ltv = Math.max(0, (cli.ltv||0) + diff); tacticalSyncClientes(db_clientes); }
-            }
-          }
+          nuevo.monto = nuevo.lineas.reduce((s,x)=>s+(x.monto||0),0);
+          nuevo.cantidad = nuevo.lineas.reduce((s,x)=>s+(x.cantidad||0),0);
+          nuevo.desc = nuevo.lineas.map(x=>x.desc).join(' + ');
+          db_opps.push(nuevo);
+          tacticalSyncOpps([nuevo]);
+          const ov = document.getElementById('tactical-edicion-multi-overlay'); if(ov) ov.remove();
           renderBuscadorCotizaciones();
           if(typeof renderComercial === 'function') renderComercial();
-          tacticalAbrirEdicionMulti(idPedido);
+          alert(`Se creó la cotización ${nuevo.ot} (versión nueva de ${original.ot}). La original queda intacta.`);
         }
         async function tacticalElegirLineaMulti(idPedido, lineaIdx){
           const overlay = document.getElementById('tactical-edicion-multi-overlay');
