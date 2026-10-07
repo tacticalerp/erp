@@ -1664,6 +1664,19 @@
                             <select id="rep-periodo-linea" onchange="renderReportes()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;"><option value="">Todas las líneas</option></select>
                         </div>
                         <div class="dash-grid" id="rep-comercial-kpis"></div>
+                        <!-- Conde 2026-10-07: gráficos de barras de Ventas y Comercial -- comparativa de
+                             cotizaciones enviadas vs aprobadas, y ventas por comercial; respetan el período,
+                             el vendedor y la línea elegidos arriba (ver repRenderGraficosComercial). -->
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:12px; margin-top:15px;">
+                            <div class="data-card">
+                                <div class="card-title" style="font-size:1rem;">Cotizaciones enviadas vs. aprobadas</div>
+                                <div style="position:relative; height:240px; margin-top:8px;"><canvas id="rep-chart-env-aprob"></canvas></div>
+                            </div>
+                            <div class="data-card">
+                                <div class="card-title" style="font-size:1rem;">Ventas por comercial (valor ganado)</div>
+                                <div style="position:relative; height:240px; margin-top:8px;"><canvas id="rep-chart-vendedor"></canvas></div>
+                            </div>
+                        </div>
                         <div class="card-grid" style="margin-top:15px;">
                             <div class="data-card">
                                 <div class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>Top Clientes (LTV histórico total)</div>
@@ -2752,6 +2765,9 @@
                 // con tamaño 0 -- .resize() los recalcula contra el tamaño real que ya tienen ahora.
                 if (sectionId === 'rep-historico') {
                     [thChartMes, thChartAnual, thChartBalance, thChartMargen].forEach(c => { if (c) c.resize(); });
+                }
+                if (sectionId === 'rep-comercial') {
+                    [repChartEnvAprob, repChartVendedor].forEach(c => { if (c) c.resize(); });
                 }
                 if (sectionId === 'rep-rompe-pers') {
                     [rpChartMeses, rpChartAnual].forEach(c => { if (c) c.resize(); });
@@ -9800,6 +9816,57 @@
           }
           requestAnimationFrame(() => [rpChartMeses, rpChartAnual].forEach(c => { if(c) c.resize(); }));
         }
+        // Conde 2026-10-07: gráficos de barras de Ventas y Comercial. El eje de tiempo del primer
+        // gráfico se adapta al período: por semanas del mes si el rango es de ~2 meses o menos, por
+        // meses si es más largo (trimestre, semestre, año, rango personalizado grande).
+        let repChartEnvAprob = null, repChartVendedor = null;
+        function repRenderGraficosComercial(todas, ganadas, inicio, fin){
+          if(typeof Chart === 'undefined') return;
+          const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+          const dias = (fin - inicio) / 86400000;
+          const porSemana = dias <= 62;
+          const claveYEtiqueta = (f) => {
+            if(porSemana){
+              const sem = Math.floor((f.getDate() - 1) / 7);
+              return { k: f.getFullYear()*10000 + f.getMonth()*100 + sem, e: `${f.getDate() - ((f.getDate()-1)%7)}-${Math.min(f.getDate() - ((f.getDate()-1)%7) + 6, new Date(f.getFullYear(), f.getMonth()+1, 0).getDate())} ${MESES[f.getMonth()]}` };
+            }
+            return { k: f.getFullYear()*100 + f.getMonth(), e: `${MESES[f.getMonth()]} ${String(f.getFullYear()).slice(2)}` };
+          };
+          const cubos = new Map();
+          const sumar = (lista, campo) => lista.forEach(c => {
+            const f = fechaDeRegistro(c); if(!f) return;
+            const { k, e } = claveYEtiqueta(f);
+            if(!cubos.has(k)) cubos.set(k, { e, env: 0, apr: 0 });
+            cubos.get(k)[campo]++;
+          });
+          sumar(todas, 'env'); sumar(ganadas, 'apr');
+          const filas = [...cubos.entries()].sort((a, b) => a[0] - b[0]).map(x => x[1]);
+          const ctx1 = document.getElementById('rep-chart-env-aprob');
+          if(ctx1){
+            if(repChartEnvAprob) repChartEnvAprob.destroy();
+            repChartEnvAprob = new Chart(ctx1, {
+              type: 'bar',
+              data: { labels: filas.map(f => f.e), datasets: [
+                { label: 'Enviadas', data: filas.map(f => f.env), backgroundColor: '#94a3b8' },
+                { label: 'Aprobadas', data: filas.map(f => f.apr), backgroundColor: '#38a169' },
+              ] },
+              options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+            });
+          }
+          const porVend = {};
+          ganadas.forEach(g => { const v = g.vendedor || 'Sin asignar'; (porVend[v] = porVend[v] || { total: 0, n: 0 }); porVend[v].total += g.monto || 0; porVend[v].n++; });
+          const vend = Object.keys(porVend).sort((a, b) => porVend[b].total - porVend[a].total);
+          const ctx2 = document.getElementById('rep-chart-vendedor');
+          if(ctx2){
+            if(repChartVendedor) repChartVendedor.destroy();
+            repChartVendedor = new Chart(ctx2, {
+              type: 'bar',
+              data: { labels: vend, datasets: [{ label: 'Valor ganado', data: vend.map(v => porVend[v].total), backgroundColor: '#c53030' }] },
+              options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => cotFormatoCop(c.parsed.x), afterLabel: (c) => porVend[vend[c.dataIndex]].n + ' venta(s) aprobada(s)' } } }, scales: { x: { ticks: { callback: (v) => cotFormatoCop(v) } } } }
+            });
+          }
+          requestAnimationFrame(() => [repChartEnvAprob, repChartVendedor].forEach(c => { if(c) c.resize(); }));
+        }
         let repPeriodoTipo = 'mensual', repPeriodoOffset = 0;
         function repCambiarTipo(v){ repPeriodoTipo = v; repPeriodoOffset = 0; renderReportes(); }
         function repActualizarControlesPeriodo(){
@@ -9857,6 +9924,7 @@
             <div class="kpi-box" style="border-color:var(--primary);"><div class="kpi-label">Valor Ganado</div><div class="kpi-value" style="color:var(--primary);">${cotFormatoCop(valorGanado)}</div>${ganadas.length?`<div style="font-size:0.8rem; color:#64748b; margin-top:3px;">≈ ${cotFormatoCop(Math.round(valorGanadoNeto))} sin IVA (neto)</div>`:''}<span style="font-size:0.78rem; color:var(--primary); cursor:pointer; text-decoration:underline;" onclick="const d=this.nextElementSibling; const abrir=d.style.display==='none'; d.style.display=abrir?'block':'none'; this.textContent=abrir?'Ocultar detalle ▴':'¿De dónde viene esto? ▾';">¿De dónde viene esto? ▾</span><div style="display:none; margin-top:6px; text-align:left; max-height:220px; overflow-y:auto; font-size:0.78rem; color:#4a5568;">${contDetalleVentasGanadasHtml(ganadas)}</div></div>
             <div class="kpi-box"><div class="kpi-label">Ticket Promedio (Ganado)</div><div class="kpi-value">${cotFormatoCop(ticketProm)}</div></div>
           `;
+          repRenderGraficosComercial(todasCotizaciones, ganadas, inicio, fin);
           const clientesEnFiltro = new Set(todasCotizaciones.map(c=>c.idCli));
           const topCli = [...db_clientes].filter(c=>!filtroVendedor && !filtroLinea ? true : clientesEnFiltro.has(c.id)).sort((a,b)=>b.ltv-a.ltv).slice(0,5);
           document.getElementById('rep-top-clientes').innerHTML = topCli.length ? topCli.map(c=>`• ${c.empresa}: <strong>${cotFormatoCop(c.ltv)}</strong>`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin datos en este período.</span>';
