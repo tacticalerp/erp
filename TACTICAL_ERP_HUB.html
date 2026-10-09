@@ -420,7 +420,10 @@
         @media (max-width:768px), (hover:none) {
           .kb-flechas { gap:6px; }
           .kb-flechas .btn-action.kb-mini, .kanban-card-actions .btn-action.kb-mini { padding:7px 12px; font-size:0.82rem; line-height:1; border-radius:5px; opacity:1; }
-          .kb-ver-detalle { font-size:0.82rem; padding:8px 6px; }
+          /* Conde 2026-10-09: las flechas miden LO MISMO en todas las columnas (con 3 o con 4 flechas): ancho fijo,
+             y es "Ver detalle" el que se encoge cuando falta espacio. */
+          .kb-flechas .btn-action.kb-mini { flex:0 0 36px; width:36px; padding:7px 0; text-align:center; box-sizing:border-box; }
+          .kb-ver-detalle { font-size:0.82rem; padding:8px 4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
           .kanban-card-compacta .kanban-card-title { font-size:0.97rem !important; }
           .kanban-card-compacta .kanban-card-meta { font-size:0.86rem !important; }
           .kanban-card-compacta .kanban-card-meta span[title^="Comercial"] { font-size:0.76rem !important; }
