@@ -395,6 +395,20 @@
            Ver OT/Diseño Aprobado/Editar/Urgente/Eliminar dejaron de ser ancho:100% cada uno (1 por
            fila) para compartir fila de a 2 dentro de este contenedor flex-wrap. */
         .kanban-btn-grupo { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+        /* Conde 2026-10-09: botones de la ficha abierta = SOLO ícono, chicos y cada uno de un color
+           (azul Orden de Producción, ámbar Editar, rojo Urgente, NEGRO Eliminar); el texto aparece al
+           pasar el mouse (data-tip). Los de la izquierda abren el texto hacia la derecha y los de la
+           derecha hacia la izquierda para que la lista de la columna no lo recorte. */
+        .kb-ico-fila { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
+        .kb-ico { position:relative; width:28px; height:26px; padding:0; border:none; border-radius:5px; color:#fff; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+        .kb-ico:hover { filter:brightness(1.15); }
+        .kb-ico:disabled { opacity:0.45; cursor:default; }
+        .kb-ico svg { margin:0 !important; }
+        .kb-ico-azul { background:#2b6cb0; } .kb-ico-verde { background:#2f855a; } .kb-ico-ambar { background:#d97706; }
+        .kb-ico-rojo { background:#dc2626; } .kb-ico-rojo-oscuro { background:#7a1f14; } .kb-ico-negro { background:#111827; }
+        .kb-ico:hover::after { content:attr(data-tip); position:absolute; bottom:calc(100% + 6px); background:#111827; color:#fff; font-size:0.72rem; font-weight:600; padding:3px 8px; border-radius:4px; white-space:nowrap; z-index:60; pointer-events:none; }
+        .kb-ico.kb-tip-izq:hover::after { left:0; }
+        .kb-ico.kb-tip-der:hover::after { right:0; }
         .kanban-btn-mitad { flex:1 1 calc(50% - 3px); min-width:118px; box-sizing:border-box; }
         /* "en el celular cambia... por un boton mas corto" -- el texto largo (desktop) y el corto
            (celular) viven ambos en el botón, se alterna por CSS según el ancho de pantalla, sin
@@ -5441,12 +5455,12 @@
               <div style="font-size:0.72rem; color:var(--info); font-weight:bold;">▲ Ocultar detalle</div>
             </div>
             ${checklist.length ? `<div class="kanban-checklist" style="margin-top:8px;">${checklistHtml}<div style="font-size:0.7rem; color:#a0aec0; margin-top:2px;">${hechos}/${checklist.length} completado</div></div>` : ''}
-            <div class="kanban-btn-grupo">
-              ${f.origen!=='b2c' ? `<button class="kanban-btn-mitad" style="background:var(--secondary); color:#fff; border:none; border-radius:5px; padding:8px; font-weight:700; font-size:0.85rem; cursor:pointer;" onclick="verOrdenProduccionFicha('${f.id}')">${ticon('factory')}<span class="kanban-btn-larga">Ver Orden de Producción</span><span class="kanban-btn-corta">Ver OT</span></button>` : ''}
-              ${f.columna==='diseno' ? `<button class="kanban-btn-mitad" ${f.disenoAprobado?'disabled':''} style="background:${f.disenoAprobado?'#cbd5e0':'var(--ganado)'}; color:${f.disenoAprobado?'#718096':'#fff'}; border:none; border-radius:5px; padding:8px; font-weight:700; font-size:0.85rem; cursor:${f.disenoAprobado?'default':'pointer'};" onclick="marcarDisenoAprobado('${f.id}')">${f.disenoAprobado?ticon('check'):ticon('palette')} <span class="kanban-btn-larga">Diseño Aprobado</span><span class="kanban-btn-corta">OK DISE</span></button>` : ''}
-              <button class="kanban-btn-mitad" style="background:none; color:var(--primary); border:1px solid var(--primary); border-radius:5px; padding:8px; font-weight:700; font-size:0.85rem; cursor:pointer;" onclick="toggleEditarFicha('${f.id}')">${editando?ticon('x')+' <span class="kanban-btn-larga">Cerrar edición</span><span class="kanban-btn-corta">Cerrar</span>':ticon('edit')+' <span class="kanban-btn-larga">Editar datos / fecha de entrega</span><span class="kanban-btn-corta">Editar</span>'}</button>
-              <button class="kanban-btn-mitad" style="background:${f.urgente?'#7a1f14':'var(--peligro)'}; color:#fff; border:none; border-radius:5px; padding:10px; font-weight:900; font-size:0.92rem; cursor:pointer;" onclick="toggleUrgente('${f.id}')">${f.urgente?ticon('x')+' <span class="kanban-btn-larga">QUITAR URGENTE</span><span class="kanban-btn-corta">URG</span>':ticon('alert')+' <span class="kanban-btn-larga">MARCAR URGENTE</span><span class="kanban-btn-corta">URG</span>'}</button>
-              <button class="kanban-btn-mitad" style="background:none; color:var(--peligro); border:1px solid var(--peligro); border-radius:5px; padding:8px; font-weight:700; font-size:0.85rem; cursor:pointer;" onclick="eliminarFichaKanban('${f.id}')">${ticon('trash')}<span class="kanban-btn-larga">Eliminar ficha</span><span class="kanban-btn-corta">Eliminar</span></button>
+            <div class="kb-ico-fila">
+              ${f.origen!=='b2c' ? `<button type="button" class="kb-ico kb-ico-azul kb-tip-izq" data-tip="Ver Orden de Producción" aria-label="Ver Orden de Producción" onclick="verOrdenProduccionFicha('${f.id}')">${ticon('factory',{noMargin:true,size:15})}</button>` : ''}
+              ${f.columna==='diseno' ? `<button type="button" class="kb-ico kb-ico-verde kb-tip-izq" ${f.disenoAprobado?'disabled':''} data-tip="${f.disenoAprobado?'Diseño aprobado':'Marcar diseño aprobado'}" aria-label="Diseño aprobado" onclick="marcarDisenoAprobado('${f.id}')">${f.disenoAprobado?ticon('check',{noMargin:true,size:15}):ticon('palette',{noMargin:true,size:15})}</button>` : ''}
+              <button type="button" class="kb-ico kb-ico-ambar kb-tip-izq" data-tip="${editando?'Cerrar edición':'Editar datos / fecha de entrega'}" aria-label="Editar datos / fecha de entrega" onclick="toggleEditarFicha('${f.id}')">${editando?ticon('x',{noMargin:true,size:15}):ticon('edit',{noMargin:true,size:15})}</button>
+              <button type="button" class="kb-ico ${f.urgente?'kb-ico-rojo-oscuro':'kb-ico-rojo'} kb-tip-der" data-tip="${f.urgente?'Quitar urgente':'Marcar urgente'}" aria-label="Marcar urgente" onclick="toggleUrgente('${f.id}')">${f.urgente?ticon('x',{noMargin:true,size:15}):ticon('alert',{noMargin:true,size:15})}</button>
+              <button type="button" class="kb-ico kb-ico-negro kb-tip-der" data-tip="Eliminar ficha" aria-label="Eliminar ficha" onclick="eliminarFichaKanban('${f.id}')">${ticon('trash',{noMargin:true,size:15})}</button>
             </div>
             ${fotosSectionHtml}
             ${editSectionHtml}
