@@ -183,10 +183,10 @@
            TODOS los td, incluidos estos; sin !important acá esa regla más general ganaba igual y
            los dejaba visibles siempre. */
         /* Conde 2026-10-09: "esos menús desplegables ocultalos, que solo sean visibles si se expande la
-           ficha" -- Responsable (agregar), Estado y Proyecto se ven SOLO con la fila expandida (▶); cerrada
-           queda la tarea + la fecha. Una tarea Urgente se sigue viendo por su borde/fondo rojo. */
+           ficha" -- Responsable (agregar) y Proyecto se ven SOLO con la fila expandida (▶); cerrada
+           queda la tarea + la fecha + el selector de Estado (⏳/🚨/✅), que Conde pidió dejar visible sin expandir
+           (2026-10-09). Una tarea Urgente además se ve por su borde/fondo rojo. */
         #view-tareas tr:not(.tarea-expandida) .task-emp-add,
-        #view-tareas tr:not(.tarea-expandida) .status-select,
         #view-tareas tr:not(.tarea-expandida) .task-proyecto { display: none !important; }
         #view-tareas td.td-detalle-desktop { display: none !important; flex-basis: 100%; order: 6; }
         #view-tareas tr.tarea-expandida td.td-detalle-desktop { display: block !important; }
