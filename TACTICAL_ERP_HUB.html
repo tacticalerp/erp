@@ -467,6 +467,10 @@
           .kanban-btn-corta { display:inline; }
           .kanban-btn-larga { display:none; }
         }
+        /* Conde 2026-10-09: botón de actualizar en amarillo junto a "Nueva Ficha"; en celular se quita el texto "Actualizado hh:mm" (tapaba la opción de ver los productos). */
+        .kb-btn-refrescar { background:#f6c343; border-color:#d69e2e; color:#1a202c; }
+        .kb-btn-refrescar:hover { background:#ecb62a; }
+        @media (max-width:768px), (hover:none) { #kb-actualizado { display:none !important; } }
         .kanban-toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
         .kanban-toolbar select { padding:8px 10px; border:1px solid #cbd5e0; border-radius:4px; }
         .kb-menu-plantillas { display:none; position:absolute; top:110%; right:0; background:white; border:1px solid #cbd5e0; border-radius:6px; box-shadow:0 6px 16px rgba(0,0,0,0.15); z-index:20; min-width:250px; overflow:hidden; }
@@ -2150,7 +2154,7 @@
                         <option value="manual"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>Otro/Maquila</option>
                     </select>
                     <span id="kb-actualizado" style="font-size:0.74rem; color:#94a3b8; white-space:nowrap;" title="El Kanban se actualiza solo cada 45 segundos con los cambios de los demás"></span>
-                    <button class="btn-action" type="button" onclick="kanbanRefrescar(true)" title="Traer ahora los cambios de los demás" style="padding:6px 9px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin:0;"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg></button>
+                    <button class="btn-action kb-btn-refrescar" type="button" onclick="kanbanRefrescar(true)" title="Traer ahora los cambios de los demás" style="padding:6px 9px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin:0;"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg></button>
                     <div class="kb-plantillas-wrap" style="position:relative;">
                         <button class="btn-action" onclick="toggleMenuPlantillas()" id="kb-btn-plantillas"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>Nueva Ficha ▾</button>
                         <div id="kb-menu-plantillas" class="kb-menu-plantillas">
