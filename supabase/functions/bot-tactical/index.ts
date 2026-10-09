@@ -755,22 +755,22 @@ Digital ("impresora láser"/Konica, precio por CLIC -- una pasada de la hoja por
 Cuadernos -- Carta: color $750 / negro $350 | Octavo: color $900 / negro $450 | Pliego máximo: color $1.000 / negro $550
 Resto de líneas (Bolsas, Carpetas, Cajas, Rompecabezas, Volantes, Cubo Rubik) -- Carta: color $1.000 / negro $250 | Octavo: color $1.400 / negro $350 | Pliego máximo: color $2.200 / negro $550
 
-CATÁLOGO DE ROMPECABEZAS (línea B2C -- sacado directo de modulo_montajes_rompecabezas.html):
+CATÁLOGO DE ROMPECABEZAS (línea B2C -- sacado directo de modulo_montajes_rompecabezas.html; lista de precios vigente desde el 5 de octubre de 2026):
 
 Troquelados (mayorista, mínimo 50 unidades -- SIN precio de lista fijo, siempre se cotiza con un asesor humano, no inventes un precio para esto):
 6f: 10x10cm o 18.3x11.7cm | 12f: 18x14cm o 27x23cm | 21f: 20x10cm | 24f: 17x11cm | 30f: 21.5x17cm, 28x20cm o 30x22cm | 48f: 21.5x28cm | 70f: 49x33.5cm | 208f: 43x29.5cm | 252f: 48x33.5cm | 500f: 48x34cm | 1000f: 68x48cm
 
 Láser Rectangular (precio de lista real en COP, venta directa):
-20f 24x16cm $49.000 | 30f 32x24cm $55.000 | 80f 32x24cm $65.000 | 100f 32x32cm $73.000 | 150f 32x32cm $83.000 | 100f 50x33cm $85.000 | 200f 50x33cm $99.000 | 300f 50x33cm $125.000 | 500f 50x33cm $142.000 | 200f 66x50cm $139.000 | 300f 66x50cm $149.000 | 500f 66x50cm $159.000 | 1000f 66x50cm $189.000 | 1000f 100x66cm $219.000 | 1500f 100x66cm $240.000 | 2000f 100x66cm $259.000 | 3000f 100x66cm $329.000 | 4000f 90x130cm $380.000 | 5000f 90x130cm $490.000
+20f 24x16cm $55.000 | 30f 32x24cm $65.000 | 80f 32x24cm $75.000 | 100f 32x32cm $79.000 | 150f 32x32cm $89.000 | 100f 50x33cm $92.000 | 200f 50x33cm $115.000 | 300f 50x33cm $129.000 | 500f 50x33cm $149.000 | 200f 66x50cm $155.000 | 300f 66x50cm $169.000 | 500f 66x50cm $189.000 | 1000f 66x50cm $209.000 | 1000f 100x66cm $269.000 | 1500f 100x66cm $289.000 | 2000f 100x66cm $319.000 | 3000f 100x66cm $399.000 | 4000f 90x130cm $489.000 | 5000f 90x130cm $599.000
 
 Láser Portarretrato:
-30f 25x16cm $65.000 | 50f 28x22cm $79.000 | 80f 28x22cm $95.000 | 90f 12x17cm (marco de madera) $65.000 | 200f 33x50cm $129.000
+30f 25x16cm $69.000 | 50f 28x22cm $85.000 | 80f 28x22cm $99.000 | 90f 12x17cm (marco de madera) $69.000 | 200f 33x50cm $139.000
 
 Láser Corazón:
-30f 32x24cm $75.000 | 60f 32x24cm $85.000 | 90f 32x24cm $95.000 | 160f 50x33cm $110.000 | 90f 32x24cm (corazón + portarretrato) $125.000
+30f 32x24cm $79.000 | 60f 32x24cm $89.000 | 90f 32x24cm $99.000 | 160f 50x33cm $119.000 | 90f 32x24cm (corazón + portarretrato) $135.000
 
 Láser Círculo:
-50f (diámetro 32cm) $73.000 | 110f (diámetro 32cm) $83.000 | 700f (diámetro 60cm) $219.000
+50f (diámetro 32cm) $85.000 | 110f (diámetro 32cm) $95.000 | 700f (diámetro 60cm) $249.000
 
 Nota importante sobre esta línea: los precios de Rompecabezas Láser SÍ son precio de lista fijo (no dependen de una fórmula variable), por eso se pueden dar directo. Aplica 20% de descuento automático en cada unidad PAR del pedido (2a, 4a, 6a...) si preguntan por varias unidades. El resto de líneas del ERP (Cuadernos, Carpetas, Bolsas, Cajas, Cubo Rubik, Promocionales) NO tienen precio de lista fijo -- sus precios dependen de cantidad/material/tintas y requieren el motor de cálculo real, que todavía no está conectado a este bot (Volantes SÍ ya está conectado, ver la herramienta cotizar_volante).
 
