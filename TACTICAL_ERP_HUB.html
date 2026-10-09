@@ -626,15 +626,14 @@
             #print-area, #print-area * { visibility: visible; }
             #print-area { display: block !important; position: absolute; left: 0; top: 0; width: 100%; padding: 20px; box-sizing: border-box; }
         }
-            /* Conde 2026-10-09: en la Calculadora de Corte, "Piezas por lámina" es el dato principal -- ficha
-           destacada (fondo oscuro, número grande, ocupa todo el ancho en celular). */
-        #corte-kpis .corte-kpi-principal { background: var(--dark); border: 2px solid var(--primary); border-bottom-width: 4px; color: #fff; box-shadow: 0 3px 10px rgba(0,0,0,0.25); }
-        #corte-kpis .corte-kpi-principal .kpi-label { color: #cbd5e0; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-        #corte-kpis .corte-kpi-principal .kpi-value { color: #fff; font-size: 3rem; line-height: 1; }
+            /* Conde 2026-10-09: en la Calculadora de Corte, "Piezas por lámina" es el dato principal -- mismo
+           tamaño de ficha que las demás, con fondo azul claro y texto en negrilla un punto más grande. */
+        #corte-kpis .corte-kpi-principal { background: #dbeafe; border-color: #93c5fd; border-bottom: 3px solid var(--info); }
+        #corte-kpis .corte-kpi-principal .kpi-label { color: #1e3a5f; font-weight: 800; }
+        #corte-kpis .corte-kpi-principal .kpi-value { color: #1e3a5f; font-weight: 900; font-size: 2.4rem; }
         @media (max-width: 768px) {
-            #view-corte #corte-kpis .corte-kpi-principal { grid-column: 1 / -1; padding: 10px 6px; }
-            #view-corte #corte-kpis .corte-kpi-principal .kpi-value { font-size: 2.8rem; margin: 4px 0 0; }
-            #view-corte #corte-kpis .corte-kpi-principal .kpi-label { font-size: 0.8rem; }
+            #view-corte #corte-kpis .corte-kpi-principal .kpi-label { font-size: 0.78rem; }
+            #view-corte #corte-kpis .corte-kpi-principal .kpi-value { font-size: 1.5rem; }
         }
         /* Conde 2026-10-09: Kanban en celular -- encabezado mínimo (sin subtítulo), buscador arriba y
            filtro de línea + Nueva Ficha en una sola fila, menos espacios para ver más fichas. Escritorio igual. */
