@@ -2418,7 +2418,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="tactical-supabase.js?v=20261009b"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
-    <script src="precios_tactical.js?v=20260929a"></script>
+    <script src="precios_tactical.js?v=20261009a"></script>
     <script src="precios_promocionales.js?v=20260919a"></script>
     <script>
         // NAVEGACIÓN SPA DEL HUB
@@ -2729,10 +2729,10 @@
             // Conde 2026-10-07: en vez de "E 25AGO" muestra cuántos días faltan (verde, amarillo si
             // faltan 5 o menos, rojo si es hoy o ya está atrasada); la fecha exacta queda al pasar el mouse.
             if(!input.value){ txt.textContent = ''; txt.title = ''; return; }
-            const hoy = new Date(); hoy.setHours(0,0,0,0);
-            const n = Math.round((new Date(input.value + 'T00:00:00') - hoy) / 86400000);
+            // Conde 2026-10-09: días HÁBILES (sin sábados, domingos ni festivos).
+            const n = tacticalDiasHabilesHasta(input.value);
             txt.textContent = n < 0 ? `${-n} d atraso` : (n === 0 ? 'Hoy' : `Faltan ${n} d`);
-            txt.title = tareaEntregaTexto(input.value) + ' -- toca ▶ para cambiarla';
+            txt.title = tareaEntregaTexto(input.value) + ' -- días hábiles (sin sábados, domingos ni festivos) -- toca ▶ para cambiarla';
             txt.style.color = n <= 0 ? 'var(--peligro)' : (n <= 5 ? '#b7791f' : '#2f855a');
             txt.style.fontWeight = n <= 5 ? '800' : '600';
         }
@@ -2754,8 +2754,7 @@
         function proyCuenta(p){
             if(p.estado === 'terminado') return {txt:'Terminado', bg:'#edf2f7', fg:'#4a5568'};
             if(!p.fechaFin) return null;
-            const hoy = new Date(); hoy.setHours(0,0,0,0);
-            const n = Math.round((new Date(p.fechaFin + 'T00:00:00') - hoy) / 86400000);
+            const n = tacticalDiasHabilesHasta(p.fechaFin); // días hábiles, igual que las entregas de tareas
             if(n < 0) return {txt:`Vencido hace ${-n} d`, bg:'#fed7d7', fg:'#c53030'};
             if(n <= 5) return {txt:`Faltan ${n} d`, bg:'#fed7d7', fg:'#c53030'};
             if(n <= 10) return {txt:`Faltan ${n} d`, bg:'#fefcbf', fg:'#975a16'};
@@ -4389,10 +4388,9 @@
           document.getElementById('kb-cantidad').value=1; document.getElementById('kb-fechaEntrega').value='';
           renderKanban();
         }
+        // Conde 2026-10-09: los días para la entrega son DÍAS HÁBILES (sin sábados, domingos ni festivos de Colombia).
         function kanbanDiasHasta(fechaStr){
-          const hoy = new Date(); hoy.setHours(0,0,0,0);
-          const f = new Date(fechaStr+'T00:00:00');
-          return Math.round((f-hoy)/(1000*60*60*24));
+          return tacticalDiasHabilesHasta(fechaStr);
         }
         const KANBAN_DIAS_SEMANA = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
         const KANBAN_MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -4405,11 +4403,11 @@
           const dias = kanbanDiasHasta(fechaStr);
           const fechaTxt = kanbanFormatearFecha(fechaStr);
           let cls, txtDias;
-          if(dias<0){ cls='kanban-due-vencido'; txtDias = `Vencida hace ${Math.abs(dias)} día${Math.abs(dias)!==1?'s':''}`; }
+          if(dias<0){ cls='kanban-due-vencido'; txtDias = `Vencida hace ${Math.abs(dias)} día${Math.abs(dias)!==1?'s':''} hábil${Math.abs(dias)!==1?'es':''}`; }
           else if(dias===0){ cls='kanban-due-vencido'; txtDias = 'Entrega HOY'; }
-          else if(dias<=3){ cls='kanban-due-vencido'; txtDias = `Faltan ${dias} día${dias!==1?'s':''}`; }
-          else if(dias<=7){ cls='kanban-due-pronto'; txtDias = `Faltan ${dias} días`; }
-          else { cls='kanban-due-ok'; txtDias = `Faltan ${dias} días`; }
+          else if(dias<=3){ cls='kanban-due-vencido'; txtDias = `Faltan ${dias} día${dias!==1?'s':''} hábil${dias!==1?'es':''}`; }
+          else if(dias<=7){ cls='kanban-due-pronto'; txtDias = `Faltan ${dias} días hábiles`; }
+          else { cls='kanban-due-ok'; txtDias = `Faltan ${dias} días hábiles`; }
           return `<span class="kanban-due ${cls}">${ticon('calendar')}${fechaTxt} — ${txtDias}</span>`;
         }
         function toggleChecklistItem(id, idx){

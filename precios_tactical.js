@@ -1103,3 +1103,57 @@ function tacticalCotSiguienteSufijoOT(otBase, dbOpps, dbHistorial){
   });
   return String.fromCharCode(maxCode + 1);
 }
+
+/* ==========================================
+   DÍAS HÁBILES DE COLOMBIA (Conde 2026-10-09)
+   "En los días que se restan para entregas no tengas en cuenta sábados, domingos ni festivos" -- ej. hoy
+   viernes 9 de octubre, la entrega del martes 13 está a 1 día (el lunes 12 es festivo), no a 4.
+   Festivos: Ley Emiliani (varios pasan al lunes siguiente) + Semana Santa sobre la Pascua real.
+   Nombres con prefijo tacticalHabil* a propósito: modulo_montajes_rompecabezas.html ya tiene sus propias
+   tacticalFestivosColombia/tacticalEsHabilColombia (para SUMAR días hábiles) y no deben chocar.
+   ========================================== */
+function tacticalHabilPascua(anio){
+  const a = anio % 19, b = Math.floor(anio/100), c = anio % 100;
+  const d = Math.floor(b/4), e = b % 4, f = Math.floor((b+8)/25), g = Math.floor((b-f+1)/3);
+  const h = (19*a + b - d - g + 15) % 30, i = Math.floor(c/4), k = c % 4;
+  const l = (32 + 2*e + 2*i - h - k) % 7, m = Math.floor((a + 11*h + 22*l)/451);
+  const mes = Math.floor((h + l - 7*m + 114)/31), dia = ((h + l - 7*m + 114) % 31) + 1;
+  return new Date(anio, mes - 1, dia);
+}
+function tacticalHabilLunes(fecha){ const d = new Date(fecha); const dow = d.getDay(); if(dow !== 1) d.setDate(d.getDate() + ((8 - dow) % 7 || 7)); return d; }
+function tacticalHabilMas(fecha, n){ const d = new Date(fecha); d.setDate(d.getDate() + n); return d; }
+const _tacticalHabilFestivos = {};
+function tacticalHabilClave(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function tacticalHabilFestivos(anio){
+  if(_tacticalHabilFestivos[anio]) return _tacticalHabilFestivos[anio];
+  const P = tacticalHabilPascua(anio);
+  const f = [
+    new Date(anio,0,1), tacticalHabilLunes(new Date(anio,0,6)), tacticalHabilLunes(new Date(anio,2,19)),
+    tacticalHabilMas(P,-3), tacticalHabilMas(P,-2), new Date(anio,4,1),
+    tacticalHabilLunes(tacticalHabilMas(P,39)), tacticalHabilLunes(tacticalHabilMas(P,60)), tacticalHabilLunes(tacticalHabilMas(P,68)),
+    tacticalHabilLunes(new Date(anio,5,29)), new Date(anio,6,20), new Date(anio,7,7),
+    tacticalHabilLunes(new Date(anio,7,15)), tacticalHabilLunes(new Date(anio,9,12)), tacticalHabilLunes(new Date(anio,10,1)),
+    tacticalHabilLunes(new Date(anio,10,11)), new Date(anio,11,8), new Date(anio,11,25),
+  ];
+  return (_tacticalHabilFestivos[anio] = new Set(f.map(tacticalHabilClave)));
+}
+function tacticalEsDiaHabil(fecha){
+  const dow = fecha.getDay();
+  if(dow === 0 || dow === 6) return false;
+  return !tacticalHabilFestivos(fecha.getFullYear()).has(tacticalHabilClave(fecha));
+}
+// Días HÁBILES que faltan hasta fechaStr ('AAAA-MM-DD'): >0 faltan, 0 = hoy, <0 = atraso (en días hábiles).
+// Se cuenta desde mañana hasta la fecha de entrega inclusive. Si la fecha cae en fin de semana/festivo y no hay
+// ningún día hábil en medio, se muestra 1 (no 0, para no decir "HOY" de algo que aún no llega).
+function tacticalDiasHabilesHasta(fechaStr, desde){
+  const hoy = desde ? new Date(desde) : new Date(); hoy.setHours(0,0,0,0);
+  const meta = new Date(fechaStr + 'T00:00:00');
+  if(isNaN(meta)) return 0;
+  if(meta.getTime() === hoy.getTime()) return 0;
+  const adelante = meta > hoy;
+  const ini = adelante ? hoy : meta, fin = adelante ? meta : hoy;
+  let n = 0; const d = new Date(ini);
+  while(d < fin){ d.setDate(d.getDate() + 1); if(tacticalEsDiaHabil(d)) n++; }
+  if(n === 0) n = 1;
+  return adelante ? n : -n;
+}
