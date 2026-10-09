@@ -5310,7 +5310,8 @@
           const palabras = String(f.nombreCli || '').trim().split(/\s+/);
           const negrilla = resumenCotEsc(palabras.slice(0, 2).join(' '));
           const resto = resumenCotEsc(palabras.slice(2).join(' '));
-          const nombreHtml = '<strong>' + negrilla + '</strong>' + (resto ? ' ' + resto : '');
+          // Conde 2026-10-09: el nombre del cliente va en azul (el comercial queda en su pastilla gris).
+          const nombreHtml = '<span style="color:#2b6cb0;"><strong>' + negrilla + '</strong>' + (resto ? ' ' + resto : '') + '</span>';
           const comercial = f.vendedor || ((f.origen === 'b2c' || f.origen === 'bot_whatsapp') ? 'Norely Sarmiento' : '');
           const comercialHtml = comercial ? ' <span title="Comercial encargado -- a quien preguntar si hay dudas" style="display:inline-block; font-size:0.7rem; background:#edf2f7; color:#2d3748; border-radius:10px; padding:1px 8px; margin-left:4px; white-space:nowrap;">' + resumenCotEsc(comercial) + '</span>' : '';
           return nombreHtml + comercialHtml;
