@@ -201,7 +201,7 @@
         .kanban-card-title[onclick] { cursor: pointer; }
         .kanban-card-title .t-largo { display: none; }
         .kanban-card-title.expandido .t-corto { display: none; }
-        .kanban-card-title.expandido .t-largo { display: inline; }
+        .kanban-card-title.expandido .t-largo { display: block; }
         .kanban-card-title.expandido .kanban-ver-mas { display: none; }
         .kanban-ver-mas { color: var(--info); font-weight: normal; font-size: 0.75rem; }
         .card-title { font-size: 1.25rem; font-weight: bold; color: var(--dark); margin: 0; }
@@ -350,7 +350,7 @@
            columna usa el mismo gris corporativo (--secondary) como color SÓLIDO -- 3 escalones bien
            distintos: página (casi negro) -> columna (gris medio) -> tarjeta (blanca). El texto del
            encabezado pasa a blanco porque ya no está sobre un fondo claro. */
-        .kanban-col { flex:0 0 300px; background:var(--secondary); border-radius:8px; padding:10px; min-height:120px; }
+        .kanban-col { flex:0 0 300px; background:var(--kb-col-bg, var(--secondary)); border-radius:8px; padding:10px; min-height:120px; }
         .kanban-col-header { font-weight:800; color:#fff; padding:6px 8px 12px; display:flex; justify-content:space-between; align-items:center; font-size:1.12rem; border-bottom:2px solid rgba(255,255,255,0.18); margin-bottom:8px; }
         .kanban-col-cards { max-height:65vh; overflow-y:auto; padding-right:4px; }
         .kanban-scroll-row { display:flex; align-items:center; gap:10px; margin:10px 0; }
@@ -368,8 +368,23 @@
         .fototeca-paste-zone { min-height:130px; border:2px dashed #cbd5e0; border-radius:8px; display:flex; align-items:center; justify-content:center; text-align:center; padding:10px; cursor:pointer; background:#f8fafc; color:#94a3b8; font-size:0.82rem; outline:none; }
         .fototeca-paste-zone:focus { border-color:var(--primary); background:#fff5f5; }
         .fototeca-paste-zone img { max-width:100%; max-height:160px; border-radius:6px; }
-        .kanban-card { background:white; border:1px solid #e2e8f0; border-radius:6px; padding:10px 12px; margin-bottom:10px; box-shadow:0 1px 3px rgba(0,0,0,0.06); border-left:4px solid var(--secondary); cursor:grab; }
-        .kanban-card.urgente { border-left-color:var(--peligro); }
+        /* Conde 2026-10-09: cada columna lleva su propio color (tinte medio sobre el gris de siempre) y las
+           fichas heredan el color de su columna en el borde izquierdo + una etiqueta con el nombre de la
+           columna, para saber dónde está una ficha aunque se baje el scroll. Los colores salen de
+           KANBAN_COLUMNA_COLOR (JS) vía las variables --kb-col-bg y --kb-ac. La urgencia ya no usa el borde
+           (ese es de la columna): se ve por la etiqueta roja URGENTE y un anillo rojo alrededor de la ficha. */
+        .kanban-card { background:white; border:1px solid #e2e8f0; border-radius:6px; padding:10px 12px; margin-bottom:10px; box-shadow:0 1px 3px rgba(0,0,0,0.06); border-left:4px solid var(--kb-ac, var(--secondary)); cursor:grab; }
+        .kanban-card.urgente { box-shadow:0 0 0 2px var(--peligro); }
+        .kb-col-tag { display:inline-block; color:#fff; border-radius:3px; padding:0 6px; font-size:0.66rem; font-weight:700; margin-left:4px; white-space:nowrap; vertical-align:1px; }
+        /* Título que se abre en párrafos al tocarlo (una línea por cada coma / punto) */
+        .kb-tit-click { cursor:pointer; }
+        .kb-tit-par { display:none; }
+        .kb-titulo-abierto .kb-tit-corto { display:none; }
+        .kb-titulo-abierto .kb-tit-par { display:block; }
+        .kb-tit-par > span { display:block; padding-left:8px; border-left:2px solid #e2e8f0; margin:2px 0; font-weight:normal; line-height:1.35; }
+        .kb-tit-par > span:first-child { font-weight:bold; }
+        .kanban-card-title.expandido .t-largo > span.kb-par { display:block; padding-left:8px; border-left:2px solid #e2e8f0; margin:2px 0; font-weight:normal; line-height:1.35; }
+        .kanban-card-title.expandido .t-largo > span.kb-par:first-child { font-weight:bold; }
         /* Tarjeta cerrada (colapsada) -- info reducida, un poco menos de aire que la abierta para
            que quepan ~3 en pantalla sin perder la foto. */
         .kanban-card-compacta { padding:8px 10px; margin-bottom:8px; }
@@ -4036,6 +4051,44 @@
           aprobada:'Cotización Aprobada', diseno:'Diseño', preparacion:'Preparación Producción',
           terminados:'Terminados y Revisión', entregar:'Para Entregar', postventa:'Postventa',
         };
+        // Conde 2026-10-09: color por columna, intensidad MEDIA (42% del color mezclado con el gris
+        // corporativo #4a5568 de las columnas). "ac" = color vivo (borde de ficha / etiqueta), "bg" = fondo.
+        const KANBAN_COLUMNA_COLOR = (function(){
+          const vivos = { aprobada:'#3b82c4', diseno:'#d99a2b', preparacion:'#1fa3a8', terminados:'#8a63d6', entregar:'#4fa869', postventa:'#8a93a3' };
+          const base = [74, 85, 104], t = 0.42, out = {};
+          Object.keys(vivos).forEach(k => {
+            const c = vivos[k], v = [parseInt(c.slice(1,3),16), parseInt(c.slice(3,5),16), parseInt(c.slice(5,7),16)];
+            out[k] = { ac: c, bg: 'rgb(' + v.map((x, i) => Math.round(base[i] * (1 - t) + x * t)).join(',') + ')' };
+          });
+          return out;
+        })();
+        const KANBAN_COLUMNA_CORTO = { aprobada:'Cotización', diseno:'Diseño', preparacion:'Preparación', terminados:'Terminados', entregar:'Para entregar', postventa:'Postventa' };
+        // Conde 2026-10-09: "al tocar los datos (CARTILLAS Tamaño...) se amplíe de inmediato toda la
+        // información del producto; si hay comas o puntos, un espacio como de párrafo". Parte el texto en
+        // una línea por coma / punto / " — ", sin partir números como 21,5 o 1.000.
+        function kanbanTituloPartes(txt){
+          const t = String(txt || '');
+          const out = []; let cur = '';
+          for(let i = 0; i < t.length; i++){
+            const ch = t[i]; cur += ch;
+            if((ch === ',' || ch === '.') && t[i+1] === ' '){
+              if(/\d/.test(t[i-1] || '') && /\d/.test(t[i+2] || '')) continue; // número con coma/punto decimal
+              out.push(cur.trim()); cur = ''; i++;
+            } else if(ch === ' ' && t.slice(i, i + 3) === ' — '){
+              out.push(cur.trim()); cur = ''; i += 2;
+            }
+          }
+          if(cur.trim()) out.push(cur.trim());
+          return out.filter(Boolean);
+        }
+        function kanbanTituloParrafosHtml(txt, claseParrafo){
+          return kanbanTituloPartes(txt).map(p => '<span' + (claseParrafo ? ' class="' + claseParrafo + '"' : '') + '>' + cotTextoConNegrilla(p) + '</span>').join('');
+        }
+        const kanbanTitulosAbiertos = new Set();
+        function kanbanToggleTitulo(id){
+          if(kanbanTitulosAbiertos.has(id)) kanbanTitulosAbiertos.delete(id); else kanbanTitulosAbiertos.add(id);
+          renderKanban();
+        }
         const KANBAN_COLUMNA_ICONO = {
           aprobada:'✅', diseno:'🎨', preparacion:'⚙️', terminados:'📦', entregar:'🚚', postventa:'🤝',
         };
@@ -5335,7 +5388,9 @@
           const nombreHtml = '<span style="color:#2b6cb0;"><strong>' + negrilla + '</strong>' + (resto ? ' ' + resto : '') + '</span>';
           const comercial = f.vendedor || ((f.origen === 'b2c' || f.origen === 'bot_whatsapp') ? 'Norely Sarmiento' : '');
           const comercialHtml = comercial ? ' <span title="Comercial encargado -- a quien preguntar si hay dudas" style="display:inline-block; font-size:0.7rem; background:#edf2f7; color:#2d3748; border-radius:10px; padding:1px 8px; margin-left:4px; white-space:nowrap;">' + resumenCotEsc(comercial) + '</span>' : '';
-          return nombreHtml + comercialHtml;
+          const colorCol = KANBAN_COLUMNA_COLOR[f.columna];
+          const etiquetaCol = colorCol ? ` <span class="kb-col-tag" style="background:${colorCol.ac};" title="Columna: ${KANBAN_COLUMNA_NOMBRE[f.columna]||''}">${KANBAN_COLUMNA_CORTO[f.columna]||''}</span>` : '';
+          return nombreHtml + comercialHtml + etiquetaCol;
         }
         function renderFichaKanbanHtml(f){
           const checklist = KANBAN_MOSTRAR_CHECKLIST ? (f.checklist || []) : [];
@@ -5366,7 +5421,7 @@
           const tituloCorto = tituloTexto.length > 40 ? tituloTexto.slice(0,40).trim() + '…' : tituloTexto;
           const tituloEsLargo = tituloTexto.length > 40;
           const tituloHtml = tituloEsLargo
-            ? `<span class="t-corto">${cotTextoConNegrilla(tituloCorto)}</span><span class="t-largo">${cotTextoConNegrilla(tituloTexto)}</span> <span class="kanban-ver-mas">(ver más)</span>`
+            ? `<span class="t-corto">${cotTextoConNegrilla(tituloCorto)}</span><span class="t-largo">${kanbanTituloParrafosHtml(tituloTexto, 'kb-par')}</span> <span class="kanban-ver-mas">(ver más)</span>`
             : cotTextoConNegrilla(tituloTexto);
           const cabeceraHtml = `
             ${fotoHtml}
@@ -5410,7 +5465,7 @@
           const cabeceraCompactaHtml = `
             ${fotoCompactaHtml}
             ${f.urgente?'<div style="font-size:0.68rem; font-weight:900; color:#fff; background:var(--peligro); padding:2px 6px; border-radius:4px; margin-bottom:3px; display:inline-block;">🚨 URGENTE</div>':''}
-            <div class="kanban-card-title" style="font-size:0.85rem; margin-bottom:2px;">${dotsHtml}${tituloCortoCompacto}</div>
+            <div class="kanban-card-title kb-tit-click ${kanbanTitulosAbiertos.has(f.id)?'kb-titulo-abierto':''}" style="font-size:0.85rem; margin-bottom:2px;" title="Toca para ver todo el texto del producto" onclick="event.stopPropagation(); kanbanToggleTitulo('${f.id}')">${dotsHtml}<span class="kb-tit-corto">${tituloCortoCompacto}</span><span class="kb-tit-par">${kanbanTituloParrafosHtml(tituloTexto)}</span></div>
             ${productosCompactoHtml}
             <div class="kanban-card-meta" style="margin-bottom:3px;">${ticon('user')}${kanbanClienteYComercialHtml(f)}</div>
             ${dueCompactoHtml}
@@ -5430,7 +5485,7 @@
                 </div>
                 <button type="button" class="kb-ver-detalle" ontouchstart="event.stopPropagation();" onclick="toggleExpandirFicha('${f.id}')">▼ Ver detalle${checklist.length ? ` (${checklist.filter(c=>c.hecho).length}/${checklist.length})` : ''}</button>
               </div>`;
-            return `<div class="kanban-card kanban-card-compacta ${f.urgente?'urgente':''}" style="cursor:pointer;" draggable="true" data-ficha-id="${f.id}" ondragstart="kanbanDragStart(event,'${f.id}')" ondragend="kanbanDragEnd(event)" ondragover="kanbanDragOverFicha(event)" ondragleave="kanbanDragLeaveFicha(event)" ondrop="kanbanDropSobreFicha(event,'${f.id}')" ontouchstart="kanbanTouchStart(event,'${f.id}')" ontouchmove="kanbanTouchMove(event)" ontouchend="kanbanTouchEnd(event)" onclick="toggleExpandirFicha('${f.id}')" title="Toca ◀/▶ para mover de columna, mantén presionado y arrastra para reordenar, o toca el resto de la tarjeta para ver checklist y opciones">
+            return `<div class="kanban-card kanban-card-compacta ${f.urgente?'urgente':''}" style="cursor:pointer; --kb-ac:${(KANBAN_COLUMNA_COLOR[f.columna]||{}).ac||'#4a5568'};" draggable="true" data-ficha-id="${f.id}" ondragstart="kanbanDragStart(event,'${f.id}')" ondragend="kanbanDragEnd(event)" ondragover="kanbanDragOverFicha(event)" ondragleave="kanbanDragLeaveFicha(event)" ondrop="kanbanDropSobreFicha(event,'${f.id}')" ontouchstart="kanbanTouchStart(event,'${f.id}')" ontouchmove="kanbanTouchMove(event)" ontouchend="kanbanTouchEnd(event)" onclick="toggleExpandirFicha('${f.id}')" title="Toca ◀/▶ para mover de columna, mantén presionado y arrastra para reordenar, o toca el resto de la tarjeta para ver checklist y opciones">
               ${cabeceraCompactaHtml}
               ${flechasHtml}
             </div>`;
@@ -5482,7 +5537,7 @@
                 <button class="btn-action" style="flex:1;" onclick="toggleEditarFicha('${f.id}')">Cancelar</button>
               </div>
             </div>` : '';
-          return `<div class="kanban-card ${f.urgente?'urgente':''}" draggable="true" data-ficha-id="${f.id}" ondragstart="kanbanDragStart(event,'${f.id}')" ondragend="kanbanDragEnd(event)" ondragover="kanbanDragOverFicha(event)" ondragleave="kanbanDragLeaveFicha(event)" ondrop="kanbanDropSobreFicha(event,'${f.id}')" ontouchstart="kanbanTouchStart(event,'${f.id}')" ontouchmove="kanbanTouchMove(event)" ontouchend="kanbanTouchEnd(event)">
+          return `<div class="kanban-card ${f.urgente?'urgente':''}" style="--kb-ac:${(KANBAN_COLUMNA_COLOR[f.columna]||{}).ac||'#4a5568'};" draggable="true" data-ficha-id="${f.id}" ondragstart="kanbanDragStart(event,'${f.id}')" ondragend="kanbanDragEnd(event)" ondragover="kanbanDragOverFicha(event)" ondragleave="kanbanDragLeaveFicha(event)" ondrop="kanbanDropSobreFicha(event,'${f.id}')" ontouchstart="kanbanTouchStart(event,'${f.id}')" ontouchmove="kanbanTouchMove(event)" ontouchend="kanbanTouchEnd(event)">
             <div style="cursor:pointer;" onclick="toggleExpandirFicha('${f.id}')" title="Mantén presionado y arrastra la tarjeta para mover de columna, o toca aquí para colapsar">
               ${cabeceraHtml}
               <div style="font-size:0.72rem; color:var(--info); font-weight:bold;">▲ Ocultar detalle</div>
@@ -5583,7 +5638,7 @@
               notaOcultas = `<div style="text-align:center; padding:8px 0;"><button class="btn-action" style="font-size:0.72rem; padding:5px 10px;" onclick="kanbanColumnasExpandidas.add('${col}'); renderKanban();">Ver las ${totalReal} fichas ▾</button></div>`;
             }
             const cardsHtml = (fichas.length ? fichas.map(renderFichaKanbanHtml).join('') : '<div style="color:#a0aec0; font-size:0.8rem; padding:10px 0;">Sin fichas.</div>') + notaOcultas;
-            return `<div class="kanban-col" data-columna="${col}" ondragover="kanbanDragOver(event)" ondragleave="kanbanDragLeave(event)" ondrop="kanbanDrop(event,'${col}')">
+            return `<div class="kanban-col" data-columna="${col}" style="--kb-col-bg:${KANBAN_COLUMNA_COLOR[col].bg};" ondragover="kanbanDragOver(event)" ondragleave="kanbanDragLeave(event)" ondrop="kanbanDrop(event,'${col}')">
               <div class="kanban-col-header"><span>${KANBAN_COLUMNA_ICONO[col]||''} ${KANBAN_COLUMNA_NOMBRE[col]}</span><span class="kanban-col-count">${totalReal}</span></div>
               <div class="kanban-col-cards">${cardsHtml}</div>
             </div>`;
