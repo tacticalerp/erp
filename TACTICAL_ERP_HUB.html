@@ -5575,7 +5575,10 @@
           const checklist = KANBAN_MOSTRAR_CHECKLIST ? (f.checklist || []) : [];
           const idx = KANBAN_COLUMNAS.indexOf(f.columna);
           const puedeAtras = idx>0, puedeAdelante = idx<KANBAN_COLUMNAS.length-1;
-          const dueHtml = f.fechaEntrega ? `${kanbanBadgeEntrega(f.fechaEntrega)}<br>` : '<span style="font-size:0.72rem; color:#a0aec0;">Sin fecha de entrega</span><br>';
+          // Conde 2026-10-09: en Postventa la ficha YA se entregó al cliente -- nunca debe decir "vencida"; dice "Entregado".
+          const dueHtml = f.columna === 'postventa'
+            ? `<span class="kanban-due kanban-due-ok"${f.fechaEntrega ? ` title="Fecha de entrega prevista: ${kanbanFormatearFecha(f.fechaEntrega)}"` : ''}>${ticon('check')}Entregado</span><br>`
+            : (f.fechaEntrega ? `${kanbanBadgeEntrega(f.fechaEntrega)}<br>` : '<span style="font-size:0.72rem; color:#a0aec0;">Sin fecha de entrega</span><br>');
           // Conde 2026-08-20: fecha de aprobación (cuándo se creó la ficha, que es justo el momento
           // en que se marcó Ganado o se aprobó el pedido) junto a la de entrega.
           const fechaAprobacionTxt = f.fechaCreacion ? new Date(f.fechaCreacion).toLocaleDateString('es-CO', {day:'numeric', month:'short', year:'numeric'}) : null;
@@ -5624,7 +5627,9 @@
           // Conde 2026-09-18: "que el texto tenga unos 15 o 20 caracteres mas" -- subido de 26 a 45.
           const tituloCortoCompacto = cotTextoConNegrilla(tituloTexto.length > 45 ? tituloTexto.slice(0,45).trim() + '…' : tituloTexto);
           let dueCompactoHtml;
-          if(f.fechaEntrega){
+          if(f.columna === 'postventa'){
+            dueCompactoHtml = `<span class="kanban-due kanban-due-ok" style="font-size:0.68rem; padding:1px 6px;"${f.fechaEntrega ? ` title="Fecha de entrega prevista: ${kanbanFormatearFecha(f.fechaEntrega)}"` : ''}>${ticon('check')}Entregado</span>`;
+          } else if(f.fechaEntrega){
             const dias = kanbanDiasHasta(f.fechaEntrega);
             let clsCompacto, txtCompacto;
             if(dias<0){ clsCompacto='kanban-due-vencido'; txtCompacto=`Vencida ${Math.abs(dias)}d`; }
