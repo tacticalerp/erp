@@ -391,6 +391,27 @@
         .kanban-card-actions { gap:3px; margin-top:4px; }
         .kanban-card-actions .btn-action.kb-mini { padding:0 6px; font-size:0.62rem; line-height:1.5; min-width:0; margin-right:0; border-radius:3px; opacity:0.85; }
         .kanban-card-actions .btn-action.kb-mini:hover { opacity:1; background:#e2e8f0; }
+        /* Conde 2026-10-09: ficha cerrada -- las flechas ▲▼◀▶ a la IZQUIERDA de "Ver detalle", los dos en
+           una misma fila que ocupa todo el ancho (antes quedaban pegadas encima del texto y en el celular
+           era difícil acertarles). */
+        .kb-fila-compacta { display:flex; align-items:center; gap:8px; margin-top:6px; }
+        .kb-flechas { display:flex; gap:4px; flex:0 0 auto; }
+        .kb-flechas .btn-action.kb-mini { padding:0 7px; font-size:0.62rem; line-height:1.7; min-width:0; margin:0; border-radius:3px; opacity:0.85; }
+        .kb-flechas .btn-action.kb-mini:hover { opacity:1; background:#e2e8f0; }
+        .kb-ver-detalle { flex:1 1 auto; min-width:0; background:#ebf4ff; border:1px solid #bee3f8; color:var(--info); font-weight:700; font-size:0.72rem; border-radius:5px; padding:3px 6px; cursor:pointer; text-align:center; }
+        .kb-ver-detalle:hover { background:#dbeafe; }
+        /* Celular / táctil: flechas más grandes para poder tocarlas, y el texto de la ficha cerrada un poco más
+           grande ("solo un poco"). Los estilos inline de la ficha llevan !important para poder ganarles. */
+        @media (max-width:768px), (hover:none) {
+          .kb-flechas { gap:6px; }
+          .kb-flechas .btn-action.kb-mini, .kanban-card-actions .btn-action.kb-mini { padding:7px 12px; font-size:0.82rem; line-height:1; border-radius:5px; opacity:1; }
+          .kb-ver-detalle { font-size:0.82rem; padding:8px 6px; }
+          .kanban-card-compacta .kanban-card-title { font-size:0.97rem !important; }
+          .kanban-card-compacta .kanban-card-meta { font-size:0.86rem !important; }
+          .kanban-card-compacta .kanban-card-meta span[title^="Comercial"] { font-size:0.76rem !important; }
+          .kanban-card-compacta .kanban-due { font-size:0.78rem !important; }
+          .kanban-card-compacta [style*="font-size:0.68rem"] { font-size:0.76rem !important; }
+        }
         /* Conde 2026-08-24: "quiero que en la fila puedan quedar al menos 2 botones y no solo 1" --
            Ver OT/Diseño Aprobado/Editar/Urgente/Eliminar dejaron de ser ancho:100% cada uno (1 por
            fila) para compartir fila de a 2 dentro de este contenedor flex-wrap. */
@@ -5399,17 +5420,19 @@
             // avanzar/atrás quedan visibles también en la tarjeta cerrada (antes solo
             // aparecían al entrar al detalle), con stopPropagation para que tocarlas no abra
             // el detalle de paso.
-            const flechasHtml = (puedeAtras || puedeAdelante) ? `
-              <div class="kanban-card-actions" onclick="event.stopPropagation();">
-                <button class="btn-action kb-mini" ontouchstart="event.stopPropagation();" onclick="kanbanMoverEnColumna('${f.id}',-1)" title="Subir una posición en esta columna">▲</button>
-                <button class="btn-action kb-mini" ontouchstart="event.stopPropagation();" onclick="kanbanMoverEnColumna('${f.id}',1)" title="Bajar una posición en esta columna">▼</button>
-                ${puedeAtras?`<button class="btn-action kb-mini" ontouchstart="event.stopPropagation();" onclick="moverFicha('${f.id}',-1)" title="Mover a la columna anterior">◀</button>`:''}
-                ${puedeAdelante?`<button class="btn-action kb-mini" ontouchstart="event.stopPropagation();" onclick="moverFicha('${f.id}',1)" title="Mover a la siguiente columna">▶</button>`:''}
-              </div>` : '';
+            const flechasHtml = `
+              <div class="kb-fila-compacta" onclick="event.stopPropagation();" ontouchstart="event.stopPropagation();">
+                <div class="kb-flechas">
+                  <button class="btn-action kb-mini" ontouchstart="event.stopPropagation();" onclick="kanbanMoverEnColumna('${f.id}',-1)" title="Subir una posición en esta columna">▲</button>
+                  <button class="btn-action kb-mini" ontouchstart="event.stopPropagation();" onclick="kanbanMoverEnColumna('${f.id}',1)" title="Bajar una posición en esta columna">▼</button>
+                  ${puedeAtras?`<button class="btn-action kb-mini" ontouchstart="event.stopPropagation();" onclick="moverFicha('${f.id}',-1)" title="Mover a la columna anterior">◀</button>`:''}
+                  ${puedeAdelante?`<button class="btn-action kb-mini" ontouchstart="event.stopPropagation();" onclick="moverFicha('${f.id}',1)" title="Mover a la siguiente columna">▶</button>`:''}
+                </div>
+                <button type="button" class="kb-ver-detalle" ontouchstart="event.stopPropagation();" onclick="toggleExpandirFicha('${f.id}')">▼ Ver detalle${checklist.length ? ` (${checklist.filter(c=>c.hecho).length}/${checklist.length})` : ''}</button>
+              </div>`;
             return `<div class="kanban-card kanban-card-compacta ${f.urgente?'urgente':''}" style="cursor:pointer;" draggable="true" data-ficha-id="${f.id}" ondragstart="kanbanDragStart(event,'${f.id}')" ondragend="kanbanDragEnd(event)" ondragover="kanbanDragOverFicha(event)" ondragleave="kanbanDragLeaveFicha(event)" ondrop="kanbanDropSobreFicha(event,'${f.id}')" ontouchstart="kanbanTouchStart(event,'${f.id}')" ontouchmove="kanbanTouchMove(event)" ontouchend="kanbanTouchEnd(event)" onclick="toggleExpandirFicha('${f.id}')" title="Toca ◀/▶ para mover de columna, mantén presionado y arrastra para reordenar, o toca el resto de la tarjeta para ver checklist y opciones">
               ${cabeceraCompactaHtml}
               ${flechasHtml}
-              <div style="font-size:0.68rem; color:var(--info); font-weight:bold;">▼ Ver detalle${checklist.length ? ` (${checklist.filter(c=>c.hecho).length}/${checklist.length})` : ''}</div>
             </div>`;
           }
           const rielAOk = !checklist.some(c=>c.riel==='A' && !c.hecho);
@@ -5466,7 +5489,7 @@
             </div>
             ${checklist.length ? `<div class="kanban-checklist" style="margin-top:8px;">${checklistHtml}<div style="font-size:0.7rem; color:#a0aec0; margin-top:2px;">${hechos}/${checklist.length} completado</div></div>` : ''}
             <div class="kb-ico-fila">
-              ${f.origen!=='b2c' ? `<button type="button" class="kb-ico kb-ico-azul kb-tip-izq" data-tip="Ver Orden de Producción" aria-label="Ver Orden de Producción" onclick="verOrdenProduccionFicha('${f.id}')">${ticon('factory',{noMargin:true,size:15})}<span class="kb-ico-txt">Orden</span></button>` : ''}
+              ${f.origen!=='b2c' ? `<button type="button" class="kb-ico kb-ico-azul kb-tip-izq" data-tip="Ver Orden de Producción" aria-label="Ver Orden de Producción" onclick="verOrdenProduccionFicha('${f.id}')">${ticon('factory',{noMargin:true,size:15})}<span class="kb-ico-txt">OP</span></button>` : ''}
               ${f.columna==='diseno' ? `<button type="button" class="kb-ico kb-ico-verde kb-tip-izq" ${f.disenoAprobado?'disabled':''} data-tip="${f.disenoAprobado?'Diseño aprobado':'Marcar diseño aprobado'}" aria-label="Diseño aprobado" onclick="marcarDisenoAprobado('${f.id}')">${f.disenoAprobado?ticon('check',{noMargin:true,size:15}):ticon('palette',{noMargin:true,size:15})}<span class="kb-ico-txt">Diseño</span></button>` : ''}
               <button type="button" class="kb-ico kb-ico-ambar kb-tip-izq" data-tip="${editando?'Cerrar edición':'Editar datos / fecha de entrega'}" aria-label="Editar datos / fecha de entrega" onclick="toggleEditarFicha('${f.id}')">${editando?ticon('x',{noMargin:true,size:15}):ticon('edit',{noMargin:true,size:15})}<span class="kb-ico-txt">${editando?'Cerrar':'Editar'}</span></button>
               <button type="button" class="kb-ico ${f.urgente?'kb-ico-rojo-oscuro':'kb-ico-rojo'} kb-tip-der" data-tip="${f.urgente?'Quitar urgente':'Marcar urgente'}" aria-label="Marcar urgente" onclick="toggleUrgente('${f.id}')">${f.urgente?ticon('x',{noMargin:true,size:15}):ticon('alert',{noMargin:true,size:15})}<span class="kb-ico-txt">${f.urgente?'Quitar':'Urgente'}</span></button>
