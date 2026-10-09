@@ -817,6 +817,17 @@
                     <div class="card-footer">Ingresar al Módulo ➔</div>
                 </div>
 
+                <!-- CALCULADORA DE CORTE (Conde 2026-10-09) -- abierta a todos los usuarios registrados -->
+                <div class="hub-card active-card" onclick="showView('corte')">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg>Calculadora de Corte</h3>
+                            <span class="badge badge-active">Nuevo</span>
+                        </div>
+                    </div>
+                    <div class="card-footer">Ingresar al Módulo ➔</div>
+                </div>
+
                 <!-- MÓDULO 10: FOTOTECA DE PRODUCTOS -->
                 <div class="hub-card active-card" onclick="showView('fototeca')">
                     <div>
@@ -2192,6 +2203,54 @@
             </div>
         </div>
 
+        <!-- VISTA: CALCULADORA DE CORTE
+             Conde 2026-10-09: "una herramienta aparte" para calcular cuántas piezas salen de una lámina
+             (cartón, papel, ecocuero, MDF, acrílico, microcorrugado) sin límite de tamaño, con plano y PDF.
+             La puede usar cualquier usuario registrado (no está en TACTICAL_ROLES_POR_VISTA). -->
+        <div id="view-corte" class="app-view">
+            <div style="padding:10px;">
+                <div class="data-card" style="margin-bottom:16px;">
+                    <div class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg>Calculadora de Corte</div>
+                    <p style="color:#64748b; margin:8px 0 0;">Elige el material y la lámina, escribe la medida de la pieza y mira cuántas salen y cómo acomodarlas. Sin límite de tamaño. El botón de abajo genera el plano en PDF para imprimir o enviar.</p>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header active" id="head-corte-datos" onclick="toggleSection('corte-datos')">
+                        <span>1. Material, lámina y pieza</span><span class="arrow" id="arrow-corte-datos">▼</span>
+                    </div>
+                    <div id="corte-datos" class="accordion-content active">
+                        <div class="form-grid">
+                            <div class="form-group"><label>Material:</label><select id="corte-material" onchange="corteCambiarMaterial()"></select></div>
+                            <div class="form-group"><label>Lámina:</label><select id="corte-lamina" onchange="corteCambiarLamina()"></select></div>
+                            <div class="form-group"><label>Ancho de la lámina (cm):</label><input type="text" inputmode="decimal" id="corte-W" oninput="corteCalcular()"></div>
+                            <div class="form-group"><label>Largo de la lámina (cm):</label><input type="text" inputmode="decimal" id="corte-H" oninput="corteCalcular()"></div>
+                        </div>
+                        <div class="form-grid">
+                            <div class="form-group"><label>Ancho de la pieza (cm):</label><input type="text" inputmode="decimal" id="corte-w" value="50" oninput="corteCalcular()"></div>
+                            <div class="form-group"><label>Largo de la pieza (cm):</label><input type="text" inputmode="decimal" id="corte-h" value="30" oninput="corteCalcular()"></div>
+                            <div class="form-group"><label>Cantidad de piezas que necesito:</label><input type="text" inputmode="numeric" id="corte-q" value="100" oninput="corteCalcular()"></div>
+                            <div class="form-group"><label>Margen del borde de la lámina (cm):</label><input type="text" inputmode="decimal" id="corte-mg" value="0" oninput="corteCalcular()"></div>
+                        </div>
+                        <div class="checkbox-row" style="margin-bottom:6px;"><input type="checkbox" id="corte-rot" checked onchange="corteCalcular()"><label for="corte-rot" style="font-weight:normal; margin:0;">Puedo girar la pieza 90° (desmarca si el material tiene veta o dibujo que debe ir en un solo sentido)</label></div>
+                        <p style="font-size:0.78rem; color:#94a3b8; margin:6px 0 0;">Las láminas de la lista son medidas de ejemplo -- si la tuya es distinta, elige "Otra medida..." y escribe el ancho y el largo.</p>
+                    </div>
+                </div>
+
+                <div class="accordion-item" style="margin-top:12px;">
+                    <div class="accordion-header active" id="head-corte-plano" onclick="toggleSection('corte-plano')">
+                        <span>2. Resultado y plano de corte</span><span class="arrow" id="arrow-corte-plano">▼</span>
+                    </div>
+                    <div id="corte-plano" class="accordion-content active">
+                        <div id="corte-chips" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;"></div>
+                        <div class="dash-grid" id="corte-kpis"></div>
+                        <div id="corte-svg" style="margin-top:12px; background:#fff; border:1px solid #cbd5e0; border-radius:6px; padding:8px;"></div>
+                        <p id="corte-nota" style="font-size:0.85rem; color:#64748b; margin:8px 0 0;"></p>
+                        <button class="btn-submit" style="margin-top:12px;" onclick="corteImprimirPlano()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>Generar PDF del plano de corte</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- VISTA: BOT WHATSAPP (Rompecabezas B2C) -->
         <div id="view-botwa" class="app-view">
             <div style="padding:10px;">
@@ -2512,6 +2571,11 @@
                 subTitle.innerText = "Fuente única de precios para las 8 herramientas (2026)";
                 if (typeof renderPanelPrecios === 'function') renderPanelPrecios();
                 if (typeof renderPanelRecomendaciones === 'function') renderPanelRecomendaciones();
+            } else if (viewId === 'corte') {
+                navContainer.style.display = 'block';
+                mainTitle.innerText = "CALCULADORA DE CORTE";
+                subTitle.innerText = "Cuántas piezas salen de una lámina y cómo acomodarlas (2026)";
+                if (typeof corteInit === 'function') corteInit();
             } else if (viewId === 'fototeca') {
                 navContainer.style.display = 'block';
                 mainTitle.innerText = "FOTOTECA DE PRODUCTOS";
@@ -9948,6 +10012,178 @@
             return `<div style="padding:3px 0; border-bottom:1px solid #edf2f7;">${idx+1}. ${r.nombreCliente}${r.nit ? ` <span style="color:#a0aec0; font-size:0.78rem;">(${r.nit})</span>` : ''}: <strong>${cotFormatoCop(r.valor)}</strong>${r.numFacturas ? ` — ${r.numFacturas} factura(s)` : ''} <span style="color:#a0aec0; font-size:0.78rem;">(${pct.toFixed(1)}%)</span>${badge}${otrosHtml}</div>`;
           }).join('') || '<span style="color:#a0aec0; font-style:italic;">Ningún cliente coincide con la búsqueda.</span>';
         }
+        /* ============ CALCULADORA DE CORTE ============
+           Conde 2026-10-09: herramienta aparte (inspirada en la calculadora de corte de Copel, pero SIN el
+           tope de 125 cm que tiene esa: una lámina de MDF mide 244 x 184). Calcula cuántas piezas w x h salen
+           de una lámina W x H (rotables 90° o no) con el mejor acomodo de guillotina (cada corte cruza la pieza
+           entera, como en una mesa de corte), dibuja el plano y genera un PDF. Medidas en mm enteros por dentro.
+           Cuando el cálculo exacto sería muy pesado (piezas muy chicas en láminas muy grandes) se usa un acomodo
+           por dos franjas, que es casi igual de bueno y instantáneo. Por ahora SIN grueso de corte ni precios
+           (decisión de Conde); una sola medida de pieza (varias medidas = segunda etapa). */
+        const CORTE_MATERIALES = {
+          'Cartón':                 [[100,70],[110,80],[120,80]],
+          'Papel':                  [[100,70],[90,60],[70,50]],
+          'Ecocuero (rollo 140 cm)': [[140,100],[140,200],[140,500]],
+          'MDF':                    [[244,122],[244,153],[244,183]],
+          'Acrílico':               [[244,122],[200,100],[122,61]],
+          'Microcorrugado':         [[100,70],[120,80],[140,100]],
+        };
+        let corteModo = 'best', corteUltimo = null, corteIniciado = false;
+        function corteNum(v){ const n = parseFloat(String(v == null ? '' : v).replace(',', '.')); return isNaN(n) ? 0 : n; }
+        function corteInit(){
+          if(corteIniciado){ corteCalcular(); return; }
+          corteIniciado = true;
+          document.getElementById('corte-material').innerHTML = Object.keys(CORTE_MATERIALES).map(k => `<option>${k}</option>`).join('');
+          document.getElementById('corte-material').value = 'MDF';
+          corteCambiarMaterial();
+        }
+        function corteCambiarMaterial(){
+          const lams = CORTE_MATERIALES[document.getElementById('corte-material').value] || [];
+          document.getElementById('corte-lamina').innerHTML = lams.map((l, i) => `<option value="${i}">${l[0]} × ${l[1]} cm</option>`).join('') + '<option value="otra">Otra medida...</option>';
+          document.getElementById('corte-lamina').value = '0';
+          corteCambiarLamina();
+        }
+        function corteCambiarLamina(){
+          const v = document.getElementById('corte-lamina').value;
+          const lams = CORTE_MATERIALES[document.getElementById('corte-material').value] || [];
+          if(v !== 'otra' && lams[v]){ document.getElementById('corte-W').value = lams[v][0]; document.getElementById('corte-H').value = lams[v][1]; }
+          corteCalcular();
+        }
+        // Posiciones "normales" de corte: combinaciones a*w + b*h <= L (alcanzan para el óptimo de guillotina).
+        function corteNormales(L, a, b){
+          const s = new Set([0]);
+          for(let i = 0; i * a <= L; i++) for(let j = 0; i * a + j * b <= L; j++) s.add(i * a + j * b);
+          return [...s].sort((x, y) => x - y);
+        }
+        function corteIdx(arr, v){ let lo = 0, hi = arr.length - 1, r = 0; while(lo <= hi){ const m = (lo + hi) >> 1; if(arr[m] <= v){ r = m; lo = m + 1; } else hi = m - 1; } return r; }
+        function corteGrid(W, H, w, h){
+          const nx = Math.floor(W / w), ny = Math.floor(H / h), p = [];
+          for(let a = 0; a < nx; a++) for(let b = 0; b < ny; b++) p.push([a * w, b * h, w, h]);
+          return { n: nx * ny, p };
+        }
+        // Dos franjas (como el "Máximo" de Copel): parte la lámina en 2 por un corte y llena cada lado con la mejor cuadrícula.
+        function corteDosFranjas(W, H, w, h, rot){
+          let mejor = corteGrid(W, H, w, h);
+          const cand = (r) => { if(r.n > mejor.n) mejor = r; };
+          if(rot) cand(corteGrid(W, H, h, w));
+          const llena = (ancho, alto, ox, oy) => {
+            const a = corteGrid(ancho, alto, w, h), b = rot ? corteGrid(ancho, alto, h, w) : { n: -1, p: [] };
+            const m = a.n >= b.n ? a : b;
+            return { n: Math.max(m.n, 0), p: m.p.map(q => [q[0] + ox, q[1] + oy, q[2], q[3]]) };
+          };
+          const pasos = [w, h]; if(!rot) pasos.length = 1;
+          for(const paso of pasos){
+            for(let x = paso; x < W; x += paso){ const A = llena(x, H, 0, 0), B = llena(W - x, H, x, 0); cand({ n: A.n + B.n, p: A.p.concat(B.p) }); }
+            for(let y = paso; y < H; y += paso){ const A = llena(W, y, 0, 0), B = llena(W, H - y, 0, y); cand({ n: A.n + B.n, p: A.p.concat(B.p) }); }
+          }
+          return mejor;
+        }
+        function corteMejor(W, H, w, h, rot){
+          const X = corteNormales(W, w, h), Y = corteNormales(H, w, h);
+          if(X.length * Y.length * (X.length + Y.length) / 2 > 4e7) return corteDosFranjas(W, H, w, h, rot);
+          const memo = new Map();
+          function f(ix, iy){
+            const k = ix * 100000 + iy;
+            const g = memo.get(k); if(g) return g;
+            const x = X[ix], y = Y[iy];
+            const a = Math.floor(x / w) * Math.floor(y / h), b = rot ? Math.floor(x / h) * Math.floor(y / w) : 0;
+            let best = { v: Math.max(a, b), t: 'b', o: a >= b ? 0 : 1 };
+            for(let i = 1; i < ix; i++){ const x1 = X[i]; if(x1 > x / 2 + 0.5) break; const j = corteIdx(X, x - x1); const v = f(i, iy).v + f(j, iy).v; if(v > best.v) best = { v, t: 'x', i, j }; }
+            for(let i = 1; i < iy; i++){ const y1 = Y[i]; if(y1 > y / 2 + 0.5) break; const j = corteIdx(Y, y - y1); const v = f(ix, i).v + f(ix, j).v; if(v > best.v) best = { v, t: 'y', i, j }; }
+            memo.set(k, best); return best;
+          }
+          const out = [];
+          function colocar(ix, iy, x0, y0){
+            const n = f(ix, iy);
+            if(n.v === 0) return;
+            if(n.t === 'b'){
+              const pw = n.o ? h : w, ph = n.o ? w : h, nx = Math.floor(X[ix] / pw), ny = Math.floor(Y[iy] / ph);
+              for(let a = 0; a < nx; a++) for(let b = 0; b < ny; b++) out.push([x0 + a * pw, y0 + b * ph, pw, ph]);
+            } else if(n.t === 'x'){ colocar(n.i, iy, x0, y0); colocar(n.j, iy, x0 + X[n.i], y0); }
+            else { colocar(ix, n.i, x0, y0); colocar(ix, n.j, x0, y0 + Y[n.i]); }
+          }
+          const r = f(X.length - 1, Y.length - 1);
+          colocar(X.length - 1, Y.length - 1, 0, 0);
+          return { n: r.v, p: out };
+        }
+        // Dibuja el plano (SVG) -- 'impresion' lo deja en blanco y negro con medidas, apto para PDF.
+        function corteSvg(c, impresion){
+          const sc = 640 / c.W, VH = c.H * sc;
+          let s = `<svg viewBox="0 0 ${640 + 24} ${VH + 34}" width="100%" role="img" aria-label="Plano de corte" style="display:block; background:#fff;">`;
+          s += `<g transform="translate(12,6)"><rect x="0" y="0" width="640" height="${VH}" fill="#f1f5f9" stroke="#475569" stroke-width="1.2"/>`;
+          if(c.mg > 0) s += `<rect x="${c.mg*sc}" y="${c.mg*sc}" width="${c.uw*sc}" height="${c.uh*sc}" fill="none" stroke="#94a3b8" stroke-dasharray="5 4"/>`;
+          const fill = impresion ? '#dbeafe' : '#3182ce', op = impresion ? 1 : 0.35, st = impresion ? '#1e3a5f' : '#2b6cb0';
+          const grande = c.sel.p.length <= 60;
+          c.sel.p.forEach((p, i) => {
+            const x = (c.mg + p[0] / 10) * sc, y = (c.mg + p[1] / 10) * sc, pw = p[2] / 10 * sc, ph = p[3] / 10 * sc;
+            s += `<rect x="${x}" y="${y}" width="${pw}" height="${ph}" fill="${fill}" fill-opacity="${op}" stroke="${st}" stroke-width="${impresion ? 0.8 : 1}"/>`;
+            if(impresion && grande && pw > 26 && ph > 13) s += `<text x="${x + pw/2}" y="${y + ph/2 + 4}" text-anchor="middle" font-size="${Math.min(13, pw/4)}" fill="#1e3a5f">${i + 1}</text>`;
+          });
+          s += `<text x="320" y="${VH + 22}" text-anchor="middle" font-size="13" fill="#334155">${c.W} cm × ${c.H} cm</text></g></svg>`;
+          return s;
+        }
+        function corteCalcular(){
+          if(!document.getElementById('corte-W')) return;
+          const W = corteNum(document.getElementById('corte-W').value), H = corteNum(document.getElementById('corte-H').value);
+          const w = corteNum(document.getElementById('corte-w').value), h = corteNum(document.getElementById('corte-h').value);
+          const q = Math.round(corteNum(document.getElementById('corte-q').value));
+          const mg = corteNum(document.getElementById('corte-mg').value), rot = document.getElementById('corte-rot').checked;
+          const svgBox = document.getElementById('corte-svg'), kpis = document.getElementById('corte-kpis'), chips = document.getElementById('corte-chips'), nota = document.getElementById('corte-nota');
+          corteUltimo = null;
+          if(!(W > 0 && H > 0 && w > 0 && h > 0)){ svgBox.innerHTML = '<p style="color:#94a3b8; margin:6px;">Escribe las medidas de la lámina y de la pieza.</p>'; kpis.innerHTML = ''; chips.innerHTML = ''; nota.textContent = ''; return; }
+          const uw = W - 2 * mg, uh = H - 2 * mg;
+          if(uw <= 0 || uh <= 0){ svgBox.innerHTML = '<p style="color:#c53030; margin:6px;">El margen es mayor que la lámina.</p>'; kpis.innerHTML = ''; chips.innerHTML = ''; return; }
+          const S = 10, Wm = Math.round(uw * S), Hm = Math.round(uh * S), wm = Math.round(w * S), hm = Math.round(h * S);
+          const res = { h: corteGrid(Wm, Hm, wm, hm), v: rot ? corteGrid(Wm, Hm, hm, wm) : { n: 0, p: [] }, best: corteMejor(Wm, Hm, wm, hm, rot) };
+          if(corteModo === 'v' && !rot) corteModo = 'best';
+          const nombres = { best: 'Mejor acomodo', h: 'Cuadrícula normal', v: 'Cuadrícula girada' };
+          chips.innerHTML = ['best', 'h', 'v'].filter(k => k !== 'v' || rot).map(k => `<button type="button" class="btn-action" style="${corteModo === k ? 'background:var(--primary); color:#fff; border-color:var(--primary);' : ''}" onclick="corteModo='${k}'; corteCalcular();">${nombres[k]}: ${res[k].n} piezas</button>`).join('');
+          const sel = res[corteModo], n = sel.n;
+          const laminas = n > 0 ? Math.ceil(q / n) : 0, uso = n * w * h / (W * H) * 100;
+          corteUltimo = { W, H, w, h, q, mg, rot, uw, uh, sel, n, laminas, uso, modo: corteModo, nombreModo: nombres[corteModo], material: document.getElementById('corte-material').value };
+          kpis.innerHTML = `
+            <div class="kpi-box" style="border-color:var(--primary);"><div class="kpi-label">Piezas por lámina</div><div class="kpi-value">${n}</div></div>
+            <div class="kpi-box" style="border-color:var(--info);"><div class="kpi-label">Láminas necesarias${q > 0 ? ` (para ${q.toLocaleString('es-CO')})` : ''}</div><div class="kpi-value">${laminas}</div></div>
+            <div class="kpi-box" style="border-color:var(--ganado);"><div class="kpi-label">Uso de la lámina</div><div class="kpi-value">${uso.toFixed(1)}%</div></div>
+            <div class="kpi-box"><div class="kpi-label">Desperdicio</div><div class="kpi-value">${(100 - uso).toFixed(1)}%</div></div>`;
+          svgBox.innerHTML = n > 0 ? corteSvg(corteUltimo, false) : '<p style="color:#c53030; margin:6px;">La pieza no cabe en esta lámina.</p>';
+          const dif = res.best.n - Math.max(res.h.n, res.v.n);
+          nota.textContent = (n === 0 ? '' : (dif > 0 ? `El mejor acomodo saca ${dif} pieza${dif > 1 ? 's' : ''} más por lámina que una cuadrícula simple. ` : 'En este caso la cuadrícula simple ya es el mejor acomodo. ')) + (laminas * n > q && q > 0 ? `Sobran ${laminas * n - q} piezas de la última lámina.` : '');
+        }
+        // PDF del plano: usa el mismo área de impresión y el mismo logo que las cotizaciones.
+        function corteImprimirPlano(){
+          const c = corteUltimo;
+          if(!c || c.n <= 0){ alert('Primero escribe las medidas para ver el plano de corte.'); return; }
+          const fecha = new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+          const orient = { n: 0, g: 0 };
+          c.sel.p.forEach(p => { if(Math.round(p[2]) === Math.round(c.w * 10) && Math.round(p[3]) === Math.round(c.h * 10)) orient.n++; else orient.g++; });
+          if(Math.round(c.w * 10) === Math.round(c.h * 10)){ orient.n = c.sel.p.length; orient.g = 0; }
+          const usuario = (window.tacticalUsuarioPerfil && (window.tacticalUsuarioPerfil.nombre || window.tacticalUsuarioPerfil.email)) || '';
+          const html = `
+            <div class="doc-header">
+              <div><img src="${TACTICAL_LOGO_B64}" style="height:68px; margin-bottom:8px; display:block;" alt="Tactical Marketing"><div class="doc-tipo">PLAN DE CORTE</div></div>
+              <div class="doc-empresa-datos">${TACTICAL_INFO.nit}<br>${TACTICAL_INFO.direccion}<br>${TACTICAL_INFO.web}<br>${fecha}${usuario ? '<br>Elaborado por: <strong>' + usuario + '</strong>' : ''}</div>
+            </div>
+            <div class="doc-section-title">Datos</div>
+            <table class="doc-table">
+              <tr><th>Material</th><td>${c.material}</td><th>Lámina</th><td>${c.W} × ${c.H} cm</td></tr>
+              <tr><th>Pieza</th><td>${c.w} × ${c.h} cm</td><th>Cantidad pedida</th><td>${c.q > 0 ? c.q.toLocaleString('es-CO') : '-'}</td></tr>
+              <tr><th>Margen del borde</th><td>${c.mg} cm</td><th>Girar la pieza 90°</th><td>${c.rot ? 'Sí' : 'No'}</td></tr>
+            </table>
+            <div class="doc-section-title">Resultado (${c.nombreModo})</div>
+            <table class="doc-table">
+              <tr><th>Piezas por lámina</th><td><strong>${c.n}</strong></td><th>Láminas necesarias</th><td><strong>${c.laminas}</strong></td></tr>
+              <tr><th>Uso de la lámina</th><td>${c.uso.toFixed(1)}%</td><th>Desperdicio</th><td>${(100 - c.uso).toFixed(1)}%</td></tr>
+              <tr><th>Piezas en posición normal</th><td>${orient.n}</td><th>Piezas giradas 90°</th><td>${orient.g}</td></tr>
+            </table>
+            <div class="doc-section-title">Plano de corte (cada pieza numerada)</div>
+            ${corteSvg(c, true)}
+            <p style="font-size:11px; color:#64748b; margin-top:8px;">Los cortes se hacen de lado a lado de la lámina. El plano está a escala.</p>`;
+          document.getElementById('print-area').innerHTML = html;
+          document.getElementById('print-area').style.display = 'block';
+          tacticalImprimirConTitulo(`Plan de corte - ${c.material} ${c.W}x${c.H} - pieza ${c.w}x${c.h}`);
+        }
+
         /* ============ ROMPECABEZAS PERSONALIZADOS (canal Personalizado, mes a mes) ============
            Conde 2026-10-03. Fuente: db_historicoMensual (canal 'personalizado', cuadro de Fany) y,
            para los meses que el histórico todavía no cubre (desde jul-2026), los pedidos B2C
