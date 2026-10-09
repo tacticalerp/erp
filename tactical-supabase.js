@@ -402,7 +402,10 @@ function tacticalFichaKanbanDeDb(r, lineas, checklist, fotos){
 // solo falle este guardado y NO el de la ficha completa.
 let tacticalAvisoOrdenKanbanMostrado = false;
 async function tacticalGuardarOrdenKanban(cambios){
-  const resultados = await Promise.all(cambios.map(c => tacticalSupabase.from('kanban_fichas').update({ orden: c.orden }).eq('id', c.id)));
+  tacticalKanbanGuardando++;
+  let resultados;
+  try{ resultados = await Promise.all(cambios.map(c => tacticalSupabase.from('kanban_fichas').update({ orden: c.orden }).eq('id', c.id))); }
+  finally { tacticalKanbanGuardando--; tacticalKanbanUltimoGuardado = Date.now(); }
   const fallo = resultados.find(r => r.error);
   if(fallo && !tacticalAvisoOrdenKanbanMostrado){
     tacticalAvisoOrdenKanbanMostrado = true;
@@ -437,14 +440,17 @@ function tacticalLineaKanbanDeDb(r){
     recomendaciones: r.recomendaciones, fotoUrl: r.foto_url, videoUrl: r.video_url,
   };
 }
-async function tacticalFichasKanbanCargar(){
+// "estricto" = devuelve null (no []) si la consulta falla -- el refresco automático del Kanban lo usa para NO
+// vaciar la lista que ya tiene la persona en pantalla cuando se cae la conexión.
+async function tacticalFichasKanbanCargar(estricto){
   const [rf, rl, rc, rp] = await Promise.all([
     tacticalSupabase.from('kanban_fichas').select('*').order('created_at'),
     tacticalSupabase.from('kanban_lineas').select('*'),
     tacticalSupabase.from('kanban_checklist').select('*').order('orden'),
     tacticalSupabase.from('kanban_fotos').select('*').order('created_at'),
   ]);
-  if(rf.error){ console.error('Error cargando fichas kanban de Supabase:', rf.error); return []; }
+  if(rf.error){ console.error('Error cargando fichas kanban de Supabase:', rf.error); return estricto ? null : []; }
+  if(estricto && (rl.error || rc.error || rp.error)){ console.error('Error cargando detalle de fichas kanban:', rl.error || rc.error || rp.error); return null; }
   const lineas = rl.data||[], checklist = rc.data||[], fotos = rp.data||[];
   const fichas = (rf.data||[]).map(f => tacticalFichaKanbanDeDb(f,
     lineas.filter(l=>l.ficha_id===f.id).map(tacticalLineaKanbanDeDb),
@@ -458,7 +464,38 @@ async function tacticalFichasKanbanCargar(){
 // Rompecabezas (B2C) llamaba esto sin esperar el resultado y mostraba "Pedido aprobado" siempre,
 // aunque el guardado real fallara (ej. sin conexión, o la sesión ya no era válida) -- el usuario
 // nunca se enteraba. Ahora quien llame puede `await` y reaccionar si de verdad falló.
+// Conde 2026-10-09: (1) cuenta los guardados en curso y la hora del último, para que el refresco automático del
+// Kanban no pise un cambio local que todavía no terminó de guardarse; (2) si el guardado FALLA ahora avisa en
+// pantalla (antes solo quedaba en la consola técnica y la persona creía que se había guardado).
+let tacticalKanbanGuardando = 0, tacticalKanbanUltimoGuardado = 0;
+function tacticalKanbanFalloGuardado(){ tacticalAvisoErrorGuardado('No se pudo guardar el cambio en el Kanban -- recarga la página para ver el estado real'); }
 async function tacticalSyncFichaKanban(f){
+  tacticalKanbanGuardando++;
+  try{
+    const ok = await tacticalSyncFichaKanbanInterno(f);
+    if(!ok) tacticalKanbanFalloGuardado();
+    return ok;
+  } finally { tacticalKanbanGuardando--; tacticalKanbanUltimoGuardado = Date.now(); }
+}
+// Guarda SOLO los campos que cambiaron (ej. columna, urgente, notas) en vez de reenviar la ficha completa: así,
+// si otra persona cambió otra cosa de la misma ficha desde su pantalla, no se le pisa. "campos" usa los nombres
+// de la ficha en JS ({columna, urgente, fechaEntrega, entrega, responsable, titulo, disenoAprobado, vendedor}).
+const TACTICAL_KANBAN_CAMPOS_DB = {
+  columna: 'columna', urgente: 'urgente', fechaEntrega: 'fecha_entrega', entrega: 'entrega', responsable: 'responsable',
+  titulo: 'titulo', disenoAprobado: 'diseno_aprobado', vendedor: 'vendedor',
+};
+async function tacticalGuardarCamposFicha(id, campos){
+  const cambios = {};
+  Object.keys(campos).forEach(k => { if(TACTICAL_KANBAN_CAMPOS_DB[k]) cambios[TACTICAL_KANBAN_CAMPOS_DB[k]] = (campos[k] === undefined || campos[k] === '') && k !== 'urgente' && k !== 'disenoAprobado' ? null : campos[k]; });
+  if(!Object.keys(cambios).length) return true;
+  tacticalKanbanGuardando++;
+  try{
+    const { error } = await tacticalSupabase.from('kanban_fichas').update(cambios).eq('id', id);
+    if(error){ console.error('Error guardando campos de ficha kanban:', error); tacticalKanbanFalloGuardado(); return false; }
+    return true;
+  } finally { tacticalKanbanGuardando--; tacticalKanbanUltimoGuardado = Date.now(); }
+}
+async function tacticalSyncFichaKanbanInterno(f){
   const { error: errF } = await tacticalSupabase.from('kanban_fichas').upsert(tacticalFichaKanbanADb(f));
   if(errF){ console.error('Error guardando ficha kanban:', errF); return false; }
   await tacticalSupabase.from('kanban_lineas').delete().eq('ficha_id', f.id);

@@ -2149,6 +2149,8 @@
                         <option value="promocionales"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="20 12 20 22 4 22 4 12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path></svg>Promocionales</option>
                         <option value="manual"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>Otro/Maquila</option>
                     </select>
+                    <span id="kb-actualizado" style="font-size:0.74rem; color:#94a3b8; white-space:nowrap;" title="El Kanban se actualiza solo cada 45 segundos con los cambios de los demás"></span>
+                    <button class="btn-action" type="button" onclick="kanbanRefrescar(true)" title="Traer ahora los cambios de los demás" style="padding:6px 9px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin:0;"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg></button>
                     <div class="kb-plantillas-wrap" style="position:relative;">
                         <button class="btn-action" onclick="toggleMenuPlantillas()" id="kb-btn-plantillas"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>Nueva Ficha ▾</button>
                         <div id="kb-menu-plantillas" class="kb-menu-plantillas">
@@ -2410,7 +2412,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Conde 2026-09-16: "convertir esos informes en graficos" (Tendencia Histórica en Reportes) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-    <script src="tactical-supabase.js?v=20261009a"></script>
+    <script src="tactical-supabase.js?v=20261009b"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
     <script src="precios_tactical.js?v=20260929a"></script>
     <script src="precios_promocionales.js?v=20260919a"></script>
@@ -2620,6 +2622,7 @@
                 mainTitle.innerText = "KANBAN DE PRODUCCIÓN";
                 subTitle.innerText = "Cotización Aprobada → Postventa (2026)";
                 if (typeof renderKanban === 'function') renderKanban();
+                if (typeof kanbanRefrescar === 'function') kanbanRefrescar(true); // trae lo que cambió mientras no mirabas
             } else if (viewId === 'precios') {
                 navContainer.style.display = 'block';
                 mainTitle.innerText = "PANEL DE PRECIOS";
@@ -3760,7 +3763,7 @@
           // ya cumplieron su propósito de alertar a producción, no debían seguir marcadas.
           db_kanban.filter(f => f.urgente && (f.columna==='entregar' || f.columna==='postventa')).forEach(f => {
             f.urgente = false;
-            tacticalSyncFichaKanban(f);
+            kanbanGuardarCampos(f, ['urgente']);
           });
           db_cotizaciones = await tacticalCotizacionesCargar();
           db_historicoAnual = await tacticalHistoricoAnualCargar();
@@ -4321,7 +4324,7 @@
           const resumen = (f.lineas && f.lineas.length) ? f.lineas.map(resumenLineaParaTarea).join('; ') : f.titulo;
           crearTareaAutomatica('diseno', `Diseño aprobado: ${f.nombreCli} — ${resumen}`);
           f.disenoAprobado = true;
-          tacticalSyncFichaKanban(f);
+          kanbanGuardarCampos(f, ['disenoAprobado']);
           // Conde 2026-09-28: "en el modulo comercial no se ve reflejado cuando se aprueba el diseño
           // en kanban" -- la columna "Pendiente" de Personalizados (B2C) era texto libre que Conde
           // escribía a mano ("aprobado") sin ninguna conexión real con el Kanban. Ahora se
@@ -4420,7 +4423,7 @@
           f.columna = KANBAN_COLUMNAS[nuevo];
           avisarSiPasaAEntregar(f, columnaAnterior, f.columna);
           db_kanban.splice(db_kanban.indexOf(f), 1); db_kanban.push(f); // llega al final de la columna nueva
-          tacticalSyncFichaKanban(f);
+          kanbanGuardarCampos(f, ['columna', 'urgente']);
           kanbanPersistirOrden(f.columna);
           renderKanban();
         }
@@ -5197,7 +5200,7 @@
             if(cantidadUrgentes>=2){ alert('Ya hay 2 fichas marcadas como urgente. Solo puede haber 2 a la vez — quítale la marca a alguna antes de marcar esta.'); return; }
           }
           f.urgente = !f.urgente;
-          tacticalSyncFichaKanban(f);
+          kanbanGuardarCampos(f, ['urgente']);
           renderKanban();
         }
         // Colapsadas por defecto (Conde 2026-08-06: a veces hay más de 10 fichas en proceso y la
@@ -5229,7 +5232,7 @@
           ficha.fechaEntrega = fecha || null;
           ficha.entrega = entrega;
           ficha.responsable = responsable;
-          tacticalSyncFichaKanban(ficha);
+          kanbanGuardarCampos(ficha, ['titulo', 'fechaEntrega', 'entrega', 'responsable']);
           kanbanEditando.delete(id);
           renderKanban();
         }
@@ -5246,6 +5249,44 @@
         //  4) Soltar en el espacio vacío de una columna no hacía nada visible: ahora manda la ficha al final.
         //  5) El orden dentro de una columna se perdía al recargar (nunca se guardaba): ahora se guarda
         //     (requiere supabase/migracion_kanban_orden.sql) y hay botones ▲▼ para subir/bajar una posición.
+        // Conde 2026-10-09: varios usuarios editan el mismo Kanban. (1) kanbanGuardarCampos guarda SOLO los campos que
+        // cambiaron (no la ficha completa), (2) kanbanRefrescar trae los cambios de los demás sin recargar la página,
+        // (3) si un guardado falla, tactical-supabase.js avisa en pantalla (tacticalKanbanFalloGuardado).
+        function kanbanGuardarCampos(f, claves){
+          const campos = {};
+          claves.forEach(k => { campos[k] = f[k]; });
+          return tacticalGuardarCamposFicha(f.id, campos);
+        }
+        let kanbanRefrescando = false, kanbanUltimaActualizacion = null;
+        function kanbanVistaActiva(){ const v = document.getElementById('view-kanban'); return !!(v && v.classList.contains('active-view')); }
+        // No se refresca mientras la persona está haciendo algo con una ficha (arrastrando, editando, escribiendo) ni
+        // mientras hay un guardado en curso o recién terminado (la base podría devolver todavía el dato anterior).
+        function kanbanOcupado(){
+          const ae = document.activeElement;
+          const escribiendo = !!(ae && ae.closest && ae.closest('#view-kanban') && ['INPUT', 'TEXTAREA', 'SELECT'].includes(ae.tagName));
+          return kanbanArrastrando || !!kanbanTouch || kanbanEditando.size > 0 || escribiendo ||
+            tacticalKanbanGuardando > 0 || (Date.now() - tacticalKanbanUltimoGuardado) < 4000;
+        }
+        function kanbanFirma(lista){
+          return JSON.stringify(lista.map(f => [f.id, f.columna, f.urgente, f.titulo, f.fechaEntrega, f.entrega, f.responsable, f.disenoAprobado, f.vendedor, f.orden, (f.lineas || []).length, (f.fotos || []).length, (f.checklist || []).length]));
+        }
+        async function kanbanRefrescar(forzar){
+          if(kanbanRefrescando) return;
+          if(!forzar && (document.hidden || !kanbanVistaActiva())) return;
+          if(kanbanOcupado()) return;
+          kanbanRefrescando = true;
+          try{
+            const nuevas = await tacticalFichasKanbanCargar(true);
+            if(!nuevas || kanbanOcupado()) return; // falló la consulta o la persona empezó a hacer algo mientras tanto
+            kanbanUltimaActualizacion = new Date();
+            const marca = document.getElementById('kb-actualizado');
+            if(marca) marca.textContent = 'Actualizado ' + kanbanUltimaActualizacion.toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'});
+            if(kanbanFirma(nuevas) !== kanbanFirma(db_kanban)){ db_kanban = nuevas; renderKanban(); }
+          } catch(e){ console.warn('No se pudo refrescar el Kanban:', e); }
+          finally { kanbanRefrescando = false; }
+        }
+        setInterval(() => kanbanRefrescar(false), 45000);
+        document.addEventListener('visibilitychange', () => { if(!document.hidden) kanbanRefrescar(false); });
         let kanbanArrastrando = false, kanbanAutoScrollPos = null, kanbanAutoScrollId = null;
         function kanbanAutoScrollIniciar(){
           kanbanArrastrando = true;
@@ -5360,7 +5401,7 @@
           ficha.columna = destino ? destino.columna : ficha.columna;
           avisarSiPasaAEntregar(ficha, columnaAnterior, ficha.columna);
           db_kanban.splice(iDestino===-1 ? db_kanban.length : iDestino + (despues ? 1 : 0), 0, ficha);
-          tacticalSyncFichaKanban(ficha);
+          kanbanGuardarCampos(ficha, ['columna', 'urgente']);
           kanbanPersistirOrden(ficha.columna);
           renderKanban();
         }
@@ -5394,7 +5435,7 @@
           f.columna = columnaDestino;
           avisarSiPasaAEntregar(f, columnaAnterior, columnaDestino);
           db_kanban.push(f);
-          tacticalSyncFichaKanban(f);
+          kanbanGuardarCampos(f, ['columna', 'urgente']);
           kanbanPersistirOrden(columnaDestino);
           renderKanban();
         }
