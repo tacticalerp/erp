@@ -392,8 +392,22 @@ function tacticalFichaKanbanDeDb(r, lineas, checklist, fotos){
     columna: r.columna, urgente: r.urgente, fechaEntrega: r.fecha_entrega, entrega: r.entrega,
     responsable: r.responsable, origen: r.origen, disenoAprobado: !!r.diseno_aprobado, fechaCreacion: r.created_at,
     opNotasManual: r.op_notas_manual||'', vendedor: r.vendedor||'',
+    orden: r.orden==null ? null : Number(r.orden),
     lineas: lineas||[], checklist: checklist||[], fotos: fotos||[],
   };
+}
+// Conde 2026-10-09: el orden de las fichas DENTRO de una columna nunca se guardaba (al recargar volvían
+// al orden de creación). Columna "orden" en kanban_fichas -- ver supabase/migracion_kanban_orden.sql.
+// Se guarda aparte (no dentro de tacticalFichaKanbanADb) para que, si la columna todavía no existe,
+// solo falle este guardado y NO el de la ficha completa.
+let tacticalAvisoOrdenKanbanMostrado = false;
+async function tacticalGuardarOrdenKanban(cambios){
+  const resultados = await Promise.all(cambios.map(c => tacticalSupabase.from('kanban_fichas').update({ orden: c.orden }).eq('id', c.id)));
+  const fallo = resultados.find(r => r.error);
+  if(fallo && !tacticalAvisoOrdenKanbanMostrado){
+    tacticalAvisoOrdenKanbanMostrado = true;
+    console.warn('No se pudo guardar el orden del Kanban (¿falta correr supabase/migracion_kanban_orden.sql?):', fallo.error);
+  }
 }
 // Conde 2026-08-24: guardado suelto (solo esta columna) -- tacticalSyncFichaKanban() de arriba
 // borra y reinserta líneas/checklist cada vez que se llama, innecesario y arriesgado solo para
@@ -432,11 +446,13 @@ async function tacticalFichasKanbanCargar(){
   ]);
   if(rf.error){ console.error('Error cargando fichas kanban de Supabase:', rf.error); return []; }
   const lineas = rl.data||[], checklist = rc.data||[], fotos = rp.data||[];
-  return (rf.data||[]).map(f => tacticalFichaKanbanDeDb(f,
+  const fichas = (rf.data||[]).map(f => tacticalFichaKanbanDeDb(f,
     lineas.filter(l=>l.ficha_id===f.id).map(tacticalLineaKanbanDeDb),
     checklist.filter(c=>c.ficha_id===f.id).map(c=>({texto:c.texto, hecho:c.hecho, riel:c.riel})),
     fotos.filter(p=>p.ficha_id===f.id).map(p=>({url:p.url, etiqueta:p.etiqueta})),
   ));
+  // Orden guardado dentro de cada columna; las fichas sin orden (nuevas) quedan al final, en orden de creación.
+  return fichas.map((f, i) => ({ f, i })).sort((a, b) => ((a.f.orden == null ? 1e12 + a.i : a.f.orden) - (b.f.orden == null ? 1e12 + b.i : b.f.orden))).map(x => x.f);
 }
 // Conde 2026-08-22: devuelve true/false (antes no devolvía nada) -- el módulo de Montajes de
 // Rompecabezas (B2C) llamaba esto sin esperar el resultado y mostraba "Pedido aprobado" siempre,

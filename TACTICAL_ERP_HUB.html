@@ -182,6 +182,12 @@
            (que sí necesita !important para ganarle al bloque genérico de @media móvil) aplica a
            TODOS los td, incluidos estos; sin !important acá esa regla más general ganaba igual y
            los dejaba visibles siempre. */
+        /* Conde 2026-10-09: "esos menús desplegables ocultalos, que solo sean visibles si se expande la
+           ficha" -- Responsable (agregar), Estado y Proyecto se ven SOLO con la fila expandida (▶); cerrada
+           queda la tarea + la fecha. Una tarea Urgente se sigue viendo por su borde/fondo rojo. */
+        #view-tareas tr:not(.tarea-expandida) .task-emp-add,
+        #view-tareas tr:not(.tarea-expandida) .status-select,
+        #view-tareas tr:not(.tarea-expandida) .task-proyecto { display: none !important; }
         #view-tareas td.td-detalle-desktop { display: none !important; flex-basis: 100%; order: 6; }
         #view-tareas tr.tarea-expandida td.td-detalle-desktop { display: block !important; }
         #view-tareas tr.tarea-expandida td.td-detalle-desktop[style*="text-align:center"] { display: flex !important; gap: 6px; flex-basis: auto; }
@@ -369,7 +375,8 @@
         .kanban-card-compacta { padding:8px 10px; margin-bottom:8px; }
         .kanban-card.dragging { opacity:0.4; }
         .kanban-col.drag-over { background:#dbeafe; outline:2px dashed var(--info); outline-offset:-2px; }
-        .kanban-card.drag-over-ficha { border-top:3px solid var(--info); }
+        .kanban-card.drag-over-ficha { border-top:4px solid var(--info); }
+        .kanban-card.drag-over-ficha-abajo { border-bottom:4px solid var(--info); }
         .kanban-card-title { font-weight:bold; font-size:0.9rem; color:var(--dark); margin-bottom:3px; }
         .kanban-card-meta { font-size:0.76rem; color:#718096; margin-bottom:6px; }
         .kanban-due { display:inline-block; padding:2px 7px; border-radius:10px; font-size:0.72rem; font-weight:bold; color:white; margin-bottom:6px; }
@@ -380,6 +387,10 @@
         .kanban-riel-label { font-size:0.68rem; text-transform:uppercase; color:#a0aec0; font-weight:bold; margin:6px 0 2px; }
         .kanban-card-actions { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
         .kanban-card-actions .btn-action { flex:0 0 auto; }
+        /* Botones de mover ficha (▲ ▼ ◀ ▶): mini, para que no estorben en la tarjeta */
+        .kanban-card-actions { gap:3px; margin-top:4px; }
+        .kanban-card-actions .btn-action.kb-mini { padding:0 6px; font-size:0.62rem; line-height:1.5; min-width:0; margin-right:0; border-radius:3px; opacity:0.85; }
+        .kanban-card-actions .btn-action.kb-mini:hover { opacity:1; background:#e2e8f0; }
         /* Conde 2026-08-24: "quiero que en la fila puedan quedar al menos 2 botones y no solo 1" --
            Ver OT/Diseño Aprobado/Editar/Urgente/Eliminar dejaron de ser ancho:100% cada uno (1 por
            fila) para compartir fila de a 2 dentro de este contenedor flex-wrap. */
@@ -2223,7 +2234,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Conde 2026-09-16: "convertir esos informes en graficos" (Tendencia Histórica en Reportes) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-    <script src="tactical-supabase.js?v=20261007a"></script>
+    <script src="tactical-supabase.js?v=20261009a"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
     <script src="precios_tactical.js?v=20260929a"></script>
     <script src="precios_promocionales.js?v=20260919a"></script>
@@ -4183,7 +4194,9 @@
           const columnaAnterior = f.columna;
           f.columna = KANBAN_COLUMNAS[nuevo];
           avisarSiPasaAEntregar(f, columnaAnterior, f.columna);
+          db_kanban.splice(db_kanban.indexOf(f), 1); db_kanban.push(f); // llega al final de la columna nueva
           tacticalSyncFichaKanban(f);
+          kanbanPersistirOrden(f.columna);
           renderKanban();
         }
         // Orden de Producción reimprimible desde el Kanban, para cualquier línea que corte de un
@@ -4996,13 +5009,81 @@
           renderKanban();
         }
         // Arrastrar y soltar entre columnas (API nativa de HTML5 — sin librerías).
+        // Conde 2026-10-09: "cuando quiero mover las fichas del kanban de arriba hacia abajo o viceversa
+        // no es fluido, es complejo el desplazamiento". Causas encontradas y arregladas aquí:
+        //  1) Soltar sobre una ficha SIEMPRE insertaba ANTES de ella -> para bajar una ficha había que
+        //     soltarla sobre la siguiente a la que se quería. Ahora la mitad de arriba de la ficha
+        //     inserta antes y la mitad de abajo DESPUÉS (con una línea azul que lo muestra).
+        //  2) Nada hacía scroll mientras se arrastraba: las columnas tienen su propia barra (65vh),
+        //     así que mover una ficha lejos obligaba a soltar, desplazarse y volver a empezar. Ahora
+        //     se auto-desplaza (columna, tablero lateral y página) al acercarse a un borde.
+        //  3) El resaltado de la columna parpadeaba (dragleave se disparaba al pasar por cada hijo).
+        //  4) Soltar en el espacio vacío de una columna no hacía nada visible: ahora manda la ficha al final.
+        //  5) El orden dentro de una columna se perdía al recargar (nunca se guardaba): ahora se guarda
+        //     (requiere supabase/migracion_kanban_orden.sql) y hay botones ▲▼ para subir/bajar una posición.
+        let kanbanArrastrando = false, kanbanAutoScrollPos = null, kanbanAutoScrollId = null;
+        function kanbanAutoScrollIniciar(){
+          kanbanArrastrando = true;
+          const board = document.getElementById('kanban-board');
+          if(board) board.style.scrollBehavior = 'auto'; // el "smooth" del CSS haría laggy el desplazamiento por pasos
+          if(!kanbanAutoScrollId) kanbanAutoScrollId = requestAnimationFrame(kanbanAutoScrollTick);
+        }
+        function kanbanAutoScrollDetener(){
+          kanbanArrastrando = false; kanbanAutoScrollPos = null;
+          if(kanbanAutoScrollId){ cancelAnimationFrame(kanbanAutoScrollId); kanbanAutoScrollId = null; }
+          const board = document.getElementById('kanban-board');
+          if(board) board.style.scrollBehavior = '';
+        }
+        function kanbanAutoScrollTick(){
+          kanbanAutoScrollId = null;
+          if(!kanbanArrastrando) return;
+          const p = kanbanAutoScrollPos;
+          if(p){
+            const BORDE = 70, MAX = 18;
+            const vel = (d) => d < BORDE ? Math.max(1, Math.ceil(MAX * (1 - Math.max(d, 0) / BORDE))) : 0;
+            // 1) la lista de la columna que está bajo el puntero
+            const el = document.elementFromPoint(p.x, p.y);
+            const lista = el ? el.closest('.kanban-col-cards') : null;
+            if(lista){
+              const r = lista.getBoundingClientRect();
+              const sube = vel(p.y - r.top), baja = vel(r.bottom - p.y);
+              if(sube && lista.scrollTop > 0) lista.scrollTop -= sube;
+              else if(baja && lista.scrollTop + lista.clientHeight < lista.scrollHeight - 1) lista.scrollTop += baja;
+            }
+            // 2) el tablero (columnas a los lados)
+            const board = document.getElementById('kanban-board');
+            if(board){
+              const r = board.getBoundingClientRect();
+              const izq = vel(p.x - r.left), der = vel(r.right - p.x);
+              if(izq && board.scrollLeft > 0) board.scrollLeft -= izq;
+              else if(der && board.scrollLeft + board.clientWidth < board.scrollWidth - 1) board.scrollLeft += der;
+            }
+            // 3) la página (para llegar a columnas altas o al pie)
+            const arriba = vel(p.y), abajo = vel(window.innerHeight - p.y);
+            if(arriba && window.scrollY > 0) window.scrollBy(0, -arriba);
+            else if(abajo) window.scrollBy(0, abajo);
+          }
+          kanbanAutoScrollId = requestAnimationFrame(kanbanAutoScrollTick);
+        }
+        document.addEventListener('dragover', (ev) => { if(kanbanArrastrando) kanbanAutoScrollPos = { x: ev.clientX, y: ev.clientY }; });
+        function kanbanMitadInferior(ev, el){
+          const r = el.getBoundingClientRect();
+          return ev.clientY > r.top + r.height / 2;
+        }
+        function kanbanLimpiarMarcasFicha(){
+          document.querySelectorAll('.kanban-card.drag-over-ficha, .kanban-card.drag-over-ficha-abajo').forEach(el => el.classList.remove('drag-over-ficha', 'drag-over-ficha-abajo'));
+        }
         function kanbanDragStart(ev, id){
           ev.dataTransfer.setData('text/plain', id);
           ev.dataTransfer.effectAllowed = 'move';
           ev.currentTarget.classList.add('dragging');
+          kanbanAutoScrollIniciar();
         }
         function kanbanDragEnd(ev){
           ev.currentTarget.classList.remove('dragging');
+          kanbanAutoScrollDetener();
+          kanbanLimpiarMarcasFicha();
+          document.querySelectorAll('.kanban-col.drag-over').forEach(el => el.classList.remove('drag-over'));
         }
         function kanbanDragOver(ev){
           ev.preventDefault();
@@ -5010,24 +5091,40 @@
           ev.currentTarget.classList.add('drag-over');
         }
         function kanbanDragLeave(ev){
+          if(ev.relatedTarget && ev.currentTarget.contains(ev.relatedTarget)) return; // sigue dentro de la columna (pasó a un hijo)
           ev.currentTarget.classList.remove('drag-over');
         }
         // Reordenar dentro de la misma columna (o mover a otra soltando justo sobre una ficha
-        // específica) -- arrastra y suelta encima de la ficha donde la quieres dejar (Conde 2026-08-13).
+        // específica) -- mitad de arriba = antes de esa ficha, mitad de abajo = después.
         function kanbanDragOverFicha(ev){
           ev.preventDefault();
           ev.stopPropagation();
           ev.dataTransfer.dropEffect = 'move';
-          ev.currentTarget.classList.add('drag-over-ficha');
+          const abajo = kanbanMitadInferior(ev, ev.currentTarget);
+          ev.currentTarget.classList.toggle('drag-over-ficha', !abajo);
+          ev.currentTarget.classList.toggle('drag-over-ficha-abajo', abajo);
         }
         function kanbanDragLeaveFicha(ev){
-          ev.currentTarget.classList.remove('drag-over-ficha');
+          if(ev.relatedTarget && ev.currentTarget.contains(ev.relatedTarget)) return;
+          ev.currentTarget.classList.remove('drag-over-ficha', 'drag-over-ficha-abajo');
+        }
+        // Guarda el orden de UNA columna en Supabase (columna "orden" de kanban_fichas, ver
+        // supabase/migracion_kanban_orden.sql): solo se actualizan las fichas cuyo número cambió.
+        // Si la columna todavía no existe en Supabase, falla en silencio (el orden vale solo hasta recargar).
+        function kanbanPersistirOrden(columna){
+          const lista = db_kanban.filter(f => f.columna === columna);
+          const cambios = [];
+          lista.forEach((f, i) => {
+            const nuevo = (i + 1) * 1000;
+            if(f.orden !== nuevo){ f.orden = nuevo; cambios.push({ id: f.id, orden: nuevo }); }
+          });
+          if(cambios.length && typeof tacticalGuardarOrdenKanban === 'function') tacticalGuardarOrdenKanban(cambios);
         }
         // Conde 2026-08-21: lógica de "soltar sobre otra ficha" separada del evento nativo de drag
         // (ev.dataTransfer) para poder reutilizarla también desde el drag por TOUCH (celular) --
         // ver kanbanTouchEnd más abajo, el HTML5 drag-and-drop nativo no dispara en pantallas
         // táctiles, así que no hay dataTransfer que leer ahí.
-        function kanbanMoverFichaSobreFicha(idOrigen, idDestino){
+        function kanbanMoverFichaSobreFicha(idOrigen, idDestino, despues){
           if(!idOrigen || idOrigen === idDestino) return;
           const iOrigen = db_kanban.findIndex(x=>x.id===idOrigen);
           if(iOrigen===-1) return;
@@ -5037,15 +5134,18 @@
           const columnaAnterior = ficha.columna;
           ficha.columna = destino ? destino.columna : ficha.columna;
           avisarSiPasaAEntregar(ficha, columnaAnterior, ficha.columna);
-          db_kanban.splice(iDestino===-1 ? db_kanban.length : iDestino, 0, ficha);
+          db_kanban.splice(iDestino===-1 ? db_kanban.length : iDestino + (despues ? 1 : 0), 0, ficha);
           tacticalSyncFichaKanban(ficha);
+          kanbanPersistirOrden(ficha.columna);
           renderKanban();
         }
         function kanbanDropSobreFicha(ev, idDestino){
           ev.preventDefault();
           ev.stopPropagation();
-          ev.currentTarget.classList.remove('drag-over-ficha');
-          kanbanMoverFichaSobreFicha(ev.dataTransfer.getData('text/plain'), idDestino);
+          const despues = kanbanMitadInferior(ev, ev.currentTarget);
+          ev.currentTarget.classList.remove('drag-over-ficha', 'drag-over-ficha-abajo');
+          kanbanAutoScrollDetener();
+          kanbanMoverFichaSobreFicha(ev.dataTransfer.getData('text/plain'), idDestino, despues);
         }
         // Conde 2026-08-20: al pasar una ficha de "Terminados y Revisión" a "Para Entregar", se crea
         // sola una tarea de Comercial para facturar -- así no depende de que alguien se acuerde.
@@ -5060,19 +5160,38 @@
             f.urgente = false;
           }
         }
+        // Soltar en la columna (no sobre una ficha concreta): la ficha queda al FINAL de esa columna.
         function kanbanMoverFichaAColumna(id, columnaDestino){
-          const f = db_kanban.find(x=>x.id===id);
-          if(!f) return;
+          const iOrigen = db_kanban.findIndex(x=>x.id===id);
+          if(iOrigen === -1) return;
+          const [f] = db_kanban.splice(iOrigen, 1);
           const columnaAnterior = f.columna;
           f.columna = columnaDestino;
           avisarSiPasaAEntregar(f, columnaAnterior, columnaDestino);
+          db_kanban.push(f);
           tacticalSyncFichaKanban(f);
+          kanbanPersistirOrden(columnaDestino);
           renderKanban();
         }
         function kanbanDrop(ev, columnaDestino){
           ev.preventDefault();
           ev.currentTarget.classList.remove('drag-over');
+          kanbanAutoScrollDetener();
           kanbanMoverFichaAColumna(ev.dataTransfer.getData('text/plain'), columnaDestino);
+        }
+        // Subir / bajar UNA posición dentro de su columna (botones ▲▼ de la ficha) -- para moverlas
+        // sin arrastrar, sobre todo en el celular y en columnas largas.
+        function kanbanMoverEnColumna(id, delta){
+          const f = db_kanban.find(x=>x.id===id);
+          if(!f) return;
+          const lista = db_kanban.filter(x => x.columna === f.columna);
+          const i = lista.indexOf(f), j = i + delta;
+          if(j < 0 || j >= lista.length) return;
+          const vecino = lista[j];
+          db_kanban.splice(db_kanban.indexOf(f), 1);
+          db_kanban.splice(db_kanban.indexOf(vecino) + (delta > 0 ? 1 : 0), 0, f);
+          kanbanPersistirOrden(f.columna);
+          renderKanban();
         }
         // ==== Drag por TOUCH (celular) ====
         // Conde 2026-08-21: "cuando se arrastra una ficha del kanban... no guarda el movimiento,
@@ -5094,11 +5213,14 @@
             if(!kanbanTouch) return;
             kanbanTouch.dragging = true;
             kanbanTouch.cardEl.classList.add('dragging');
+            kanbanAutoScrollIniciar();
+            kanbanAutoScrollPos = { x: kanbanTouch.startX, y: kanbanTouch.startY };
             if(navigator.vibrate) navigator.vibrate(15);
           }, KANBAN_TOUCH_LONGPRESS_MS);
         }
         function kanbanTouchLimpiarResaltado(){
-          document.querySelectorAll('.kanban-col.drag-over, .kanban-card.drag-over-ficha').forEach(el=>el.classList.remove('drag-over','drag-over-ficha'));
+          document.querySelectorAll('.kanban-col.drag-over').forEach(el=>el.classList.remove('drag-over'));
+          kanbanLimpiarMarcasFicha();
         }
         function kanbanTouchMove(ev){
           if(!kanbanTouch) return;
@@ -5115,11 +5237,15 @@
             return;
           }
           ev.preventDefault();
+          kanbanAutoScrollPos = { x: t.clientX, y: t.clientY };
           kanbanTouchLimpiarResaltado();
           const el = document.elementFromPoint(t.clientX, t.clientY);
           const cardTarget = el ? el.closest('.kanban-card') : null;
           const colTarget = el ? el.closest('.kanban-col') : null;
-          if(cardTarget && cardTarget !== kanbanTouch.cardEl) cardTarget.classList.add('drag-over-ficha');
+          if(cardTarget && cardTarget !== kanbanTouch.cardEl){
+            const abajo = kanbanMitadInferior({clientY: t.clientY}, cardTarget);
+            cardTarget.classList.add(abajo ? 'drag-over-ficha-abajo' : 'drag-over-ficha');
+          }
           else if(colTarget) colTarget.classList.add('drag-over');
         }
         function kanbanTouchEnd(ev){
@@ -5128,6 +5254,7 @@
           const { id, dragging, cardEl } = kanbanTouch;
           cardEl.classList.remove('dragging');
           kanbanTouchLimpiarResaltado();
+          kanbanAutoScrollDetener();
           if(dragging){
             // Evita que el "click" fantasma que el navegador dispara después del touch termine
             // abriendo/cerrando la ficha (toggleExpandirFicha) justo después de soltarla.
@@ -5137,7 +5264,7 @@
             const cardTarget = el ? el.closest('.kanban-card') : null;
             const idDestinoCard = cardTarget ? cardTarget.dataset.fichaId : null;
             if(idDestinoCard && idDestinoCard !== id){
-              kanbanMoverFichaSobreFicha(id, idDestinoCard);
+              kanbanMoverFichaSobreFicha(id, idDestinoCard, kanbanMitadInferior({clientY: t.clientY}, cardTarget));
             } else {
               const colTarget = el ? el.closest('.kanban-col') : null;
               const columnaDestino = colTarget ? colTarget.dataset.columna : null;
@@ -5243,8 +5370,10 @@
             // el detalle de paso.
             const flechasHtml = (puedeAtras || puedeAdelante) ? `
               <div class="kanban-card-actions" onclick="event.stopPropagation();">
-                ${puedeAtras?`<button class="btn-action" ontouchstart="event.stopPropagation();" onclick="moverFicha('${f.id}',-1)" title="Mover a la columna anterior">◀</button>`:''}
-                ${puedeAdelante?`<button class="btn-action" ontouchstart="event.stopPropagation();" onclick="moverFicha('${f.id}',1)" title="Mover a la siguiente columna">▶</button>`:''}
+                <button class="btn-action kb-mini" ontouchstart="event.stopPropagation();" onclick="kanbanMoverEnColumna('${f.id}',-1)" title="Subir una posición en esta columna">▲</button>
+                <button class="btn-action kb-mini" ontouchstart="event.stopPropagation();" onclick="kanbanMoverEnColumna('${f.id}',1)" title="Bajar una posición en esta columna">▼</button>
+                ${puedeAtras?`<button class="btn-action kb-mini" ontouchstart="event.stopPropagation();" onclick="moverFicha('${f.id}',-1)" title="Mover a la columna anterior">◀</button>`:''}
+                ${puedeAdelante?`<button class="btn-action kb-mini" ontouchstart="event.stopPropagation();" onclick="moverFicha('${f.id}',1)" title="Mover a la siguiente columna">▶</button>`:''}
               </div>` : '';
             return `<div class="kanban-card kanban-card-compacta ${f.urgente?'urgente':''}" style="cursor:pointer;" draggable="true" data-ficha-id="${f.id}" ondragstart="kanbanDragStart(event,'${f.id}')" ondragend="kanbanDragEnd(event)" ondragover="kanbanDragOverFicha(event)" ondragleave="kanbanDragLeaveFicha(event)" ondrop="kanbanDropSobreFicha(event,'${f.id}')" ontouchstart="kanbanTouchStart(event,'${f.id}')" ontouchmove="kanbanTouchMove(event)" ontouchend="kanbanTouchEnd(event)" onclick="toggleExpandirFicha('${f.id}')" title="Toca ◀/▶ para mover de columna, mantén presionado y arrastra para reordenar, o toca el resto de la tarjeta para ver checklist y opciones">
               ${cabeceraCompactaHtml}
@@ -5315,8 +5444,10 @@
             ${fotosSectionHtml}
             ${editSectionHtml}
             <div class="kanban-card-actions">
-              ${puedeAtras?`<button class="btn-action" onclick="moverFicha('${f.id}',-1)" title="Mover a la columna anterior">◀</button>`:''}
-              ${puedeAdelante?`<button class="btn-action" onclick="moverFicha('${f.id}',1)" title="Mover a la siguiente columna">▶</button>`:''}
+              <button class="btn-action kb-mini" onclick="kanbanMoverEnColumna('${f.id}',-1)" title="Subir una posición en esta columna">▲</button>
+              <button class="btn-action kb-mini" onclick="kanbanMoverEnColumna('${f.id}',1)" title="Bajar una posición en esta columna">▼</button>
+              ${puedeAtras?`<button class="btn-action kb-mini" onclick="moverFicha('${f.id}',-1)" title="Mover a la columna anterior">◀</button>`:''}
+              ${puedeAdelante?`<button class="btn-action kb-mini" onclick="moverFicha('${f.id}',1)" title="Mover a la siguiente columna">▶</button>`:''}
             </div>
           </div>`;
         }
