@@ -4190,7 +4190,7 @@
         let db_kanban = [];
         const KANBAN_COLUMNAS = ['aprobada','diseno','preparacion','terminados','entregar','postventa'];
         const KANBAN_COLUMNA_NOMBRE = {
-          aprobada:'Cotización Aprobada', diseno:'Diseño', preparacion:'Preparación Producción',
+          aprobada:'Cotización Aprobada', diseno:'Diseño', preparacion:'En Producción',
           terminados:'Terminados y Revisión', entregar:'Para Entregar', postventa:'Postventa',
         };
         // Conde 2026-10-09: color por columna, intensidad MEDIA (42% del color mezclado con el gris
@@ -4204,7 +4204,7 @@
           });
           return out;
         })();
-        const KANBAN_COLUMNA_CORTO = { aprobada:'Cotización', diseno:'Diseño', preparacion:'Preparación', terminados:'Terminados', entregar:'Para entregar', postventa:'Postventa' };
+        const KANBAN_COLUMNA_CORTO = { aprobada:'Cotización', diseno:'Diseño', preparacion:'En Producción', terminados:'Terminados', entregar:'Para entregar', postventa:'Postventa' };
         // Conde 2026-10-09: "al tocar los datos (CARTILLAS Tamaño...) se amplíe de inmediato toda la
         // información del producto; si hay comas o puntos, un espacio como de párrafo". Parte el texto en
         // una línea por coma / punto / " — ", sin partir números como 21,5 o 1.000.
