@@ -2457,6 +2457,19 @@
             alert(`No tienes permiso para entrar aquí.\nEsta sección es solo para: ${rolesPermitidos.join(', ')}.`);
             return false;
         }
+        // Conde 2026-10-09: "para los usuarios que no tienen acceso a alguna herramienta, déjalas ocultas, no quiero
+        // que vean qué más hace el ERP" -- en el Hub se ocultan las tarjetas de las vistas que el rol NO puede abrir
+        // (según TACTICAL_ROLES_POR_VISTA) y las tarjetas "todavía no construido" (solo el administrador las ve).
+        // Es visibilidad, no seguridad: tacticalAccesoPermitido() sigue bloqueando la entrada directa.
+        function tacticalAplicarVisibilidadHub(){
+            const rol = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol;
+            document.querySelectorAll('#view-hub .hub-card').forEach(card => {
+                const m = (card.getAttribute('onclick') || '').match(/showView\('([^']+)'\)/);
+                const roles = m ? TACTICAL_ROLES_POR_VISTA[m[1]] : null;
+                const oculta = (roles && !roles.includes(rol)) || (card.classList.contains('disabled-card') && rol !== 'administrador');
+                card.style.display = oculta ? 'none' : '';
+            });
+        }
         // Conde 2026-08-20: dentro de Precios y de Gestionar Personal, VER está permitido a varios
         // roles (según la matriz de arriba), pero MODIFICAR (guardar precios, agregar/eliminar
         // papeles o acabados, crear/borrar personas) es solo para administrador.
@@ -3744,6 +3757,7 @@
         // Se llama automático (ver tactical-supabase.js) apenas el login confirma
         // sesión válida -- trae los datos reales compartidos entre los 6 usuarios.
         window.tacticalOnLogin = async function(){
+          tacticalAplicarVisibilidadHub();
           // Conde 2026-09-28: "le doy clic una vez no actúa, la segunda me manda al hub" -- en
           // "Nueva cotización" el 2do clic SÍ dispara un reload real (el 1ro solo cambia el hash sin
           // recargar), y ese reload repite esta función entera de cero -- unos 25 `await` seguidos
