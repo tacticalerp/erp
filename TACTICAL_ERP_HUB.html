@@ -726,6 +726,17 @@
                     <div class="card-footer">Ingresar al Módulo ➔</div>
                 </div>
 
+                <!-- CALCULADORA DE CORTE (Conde 2026-10-09) -- abierta a todos los usuarios registrados -->
+                <div class="hub-card active-card" onclick="showView('corte')">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg>Calculadora de Corte</h3>
+                            <span class="badge badge-active">Nuevo</span>
+                        </div>
+                    </div>
+                    <div class="card-footer">Ingresar al Módulo ➔</div>
+                </div>
+
                 <!-- MÓDULO 3: MONTAJES ROMPECABEZAS B2C -->
                 <div class="hub-card active-card" onclick="location.href='modulo_montajes_rompecabezas.html'">
                     <div>
@@ -761,15 +772,6 @@
 
                 <!-- MÓDULO 5B: SEGMENTOS DE CLIENTES -- Conde 2026-10-01: filtrar compradores por
                      línea/tamaño/fecha/estado para armar listas de campañas (ej. navideñas). -->
-                <div class="hub-card active-card" onclick="showView('segmentos')">
-                    <div>
-                        <div class="card-header">
-                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>Segmentos de Clientes</h3>
-                            <span class="badge badge-active">Beta</span>
-                        </div>
-                    </div>
-                    <div class="card-footer">Ingresar al Módulo ➔</div>
-                </div>
 
                 <!-- MÓDULO 6: RADAR Y REPORTES (Conde 2026-08-28: unificados en una sola herramienta
                      -- antes eran 2 tarjetas separadas, showView('reportes') ahora también pinta las
@@ -806,6 +808,16 @@
                     <div class="card-footer">Ingresar al Módulo ➔</div>
                 </div>
 
+                <div class="hub-card active-card" onclick="showView('segmentos')">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>Segmentos de Clientes</h3>
+                            <span class="badge badge-active">Beta</span>
+                        </div>
+                    </div>
+                    <div class="card-footer">Ingresar al Módulo ➔</div>
+                </div>
+
                 <!-- MÓDULO 9: PANEL DE PRECIOS -->
                 <div class="hub-card active-card" onclick="showView('precios')">
                     <div>
@@ -817,16 +829,6 @@
                     <div class="card-footer">Ingresar al Módulo ➔</div>
                 </div>
 
-                <!-- CALCULADORA DE CORTE (Conde 2026-10-09) -- abierta a todos los usuarios registrados -->
-                <div class="hub-card active-card" onclick="showView('corte')">
-                    <div>
-                        <div class="card-header">
-                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg>Calculadora de Corte</h3>
-                            <span class="badge badge-active">Nuevo</span>
-                        </div>
-                    </div>
-                    <div class="card-footer">Ingresar al Módulo ➔</div>
-                </div>
 
                 <!-- MÓDULO 10: FOTOTECA DE PRODUCTOS -->
                 <div class="hub-card active-card" onclick="showView('fototeca')">
@@ -10034,7 +10036,7 @@
           if(corteIniciado){ corteCalcular(); return; }
           corteIniciado = true;
           document.getElementById('corte-material').innerHTML = Object.keys(CORTE_MATERIALES).map(k => `<option>${k}</option>`).join('');
-          document.getElementById('corte-material').value = 'MDF';
+          document.getElementById('corte-material').value = 'Papel'; // Conde 2026-10-09: que inicie por defecto en Papel
           corteCambiarMaterial();
         }
         function corteCambiarMaterial(){
