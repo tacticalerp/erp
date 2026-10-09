@@ -400,7 +400,16 @@
            pasar el mouse (data-tip). Los de la izquierda abren el texto hacia la derecha y los de la
            derecha hacia la izquierda para que la lista de la columna no lo recorte. */
         .kb-ico-fila { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
-        .kb-ico { position:relative; width:28px; height:26px; padding:0; border:none; border-radius:5px; color:#fff; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+        .kb-ico-fila { flex-wrap:nowrap; }
+        .kb-ico { position:relative; flex:1 1 0; min-width:0; height:26px; padding:0; border:none; border-radius:5px; color:#fff; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+        .kb-ico-txt { display:none; }
+        /* Celular / pantallas táctiles (no hay mouse para el tooltip): ícono arriba y texto corto debajo,
+           Conde 2026-10-09: "que sí se active texto en el celular". */
+        @media (max-width:768px), (hover:none) {
+          .kb-ico { flex-direction:column; height:42px; gap:2px; padding:3px 1px; }
+          .kb-ico-txt { display:block; font-size:0.6rem; font-weight:700; line-height:1; white-space:nowrap; }
+          .kb-ico:hover::after { display:none; }
+        }
         .kb-ico:hover { filter:brightness(1.15); }
         .kb-ico:disabled { opacity:0.45; cursor:default; }
         .kb-ico svg { margin:0 !important; }
@@ -5456,11 +5465,11 @@
             </div>
             ${checklist.length ? `<div class="kanban-checklist" style="margin-top:8px;">${checklistHtml}<div style="font-size:0.7rem; color:#a0aec0; margin-top:2px;">${hechos}/${checklist.length} completado</div></div>` : ''}
             <div class="kb-ico-fila">
-              ${f.origen!=='b2c' ? `<button type="button" class="kb-ico kb-ico-azul kb-tip-izq" data-tip="Ver Orden de Producción" aria-label="Ver Orden de Producción" onclick="verOrdenProduccionFicha('${f.id}')">${ticon('factory',{noMargin:true,size:15})}</button>` : ''}
-              ${f.columna==='diseno' ? `<button type="button" class="kb-ico kb-ico-verde kb-tip-izq" ${f.disenoAprobado?'disabled':''} data-tip="${f.disenoAprobado?'Diseño aprobado':'Marcar diseño aprobado'}" aria-label="Diseño aprobado" onclick="marcarDisenoAprobado('${f.id}')">${f.disenoAprobado?ticon('check',{noMargin:true,size:15}):ticon('palette',{noMargin:true,size:15})}</button>` : ''}
-              <button type="button" class="kb-ico kb-ico-ambar kb-tip-izq" data-tip="${editando?'Cerrar edición':'Editar datos / fecha de entrega'}" aria-label="Editar datos / fecha de entrega" onclick="toggleEditarFicha('${f.id}')">${editando?ticon('x',{noMargin:true,size:15}):ticon('edit',{noMargin:true,size:15})}</button>
-              <button type="button" class="kb-ico ${f.urgente?'kb-ico-rojo-oscuro':'kb-ico-rojo'} kb-tip-der" data-tip="${f.urgente?'Quitar urgente':'Marcar urgente'}" aria-label="Marcar urgente" onclick="toggleUrgente('${f.id}')">${f.urgente?ticon('x',{noMargin:true,size:15}):ticon('alert',{noMargin:true,size:15})}</button>
-              <button type="button" class="kb-ico kb-ico-negro kb-tip-der" data-tip="Eliminar ficha" aria-label="Eliminar ficha" onclick="eliminarFichaKanban('${f.id}')">${ticon('trash',{noMargin:true,size:15})}</button>
+              ${f.origen!=='b2c' ? `<button type="button" class="kb-ico kb-ico-azul kb-tip-izq" data-tip="Ver Orden de Producción" aria-label="Ver Orden de Producción" onclick="verOrdenProduccionFicha('${f.id}')">${ticon('factory',{noMargin:true,size:15})}<span class="kb-ico-txt">Orden</span></button>` : ''}
+              ${f.columna==='diseno' ? `<button type="button" class="kb-ico kb-ico-verde kb-tip-izq" ${f.disenoAprobado?'disabled':''} data-tip="${f.disenoAprobado?'Diseño aprobado':'Marcar diseño aprobado'}" aria-label="Diseño aprobado" onclick="marcarDisenoAprobado('${f.id}')">${f.disenoAprobado?ticon('check',{noMargin:true,size:15}):ticon('palette',{noMargin:true,size:15})}<span class="kb-ico-txt">Diseño</span></button>` : ''}
+              <button type="button" class="kb-ico kb-ico-ambar kb-tip-izq" data-tip="${editando?'Cerrar edición':'Editar datos / fecha de entrega'}" aria-label="Editar datos / fecha de entrega" onclick="toggleEditarFicha('${f.id}')">${editando?ticon('x',{noMargin:true,size:15}):ticon('edit',{noMargin:true,size:15})}<span class="kb-ico-txt">${editando?'Cerrar':'Editar'}</span></button>
+              <button type="button" class="kb-ico ${f.urgente?'kb-ico-rojo-oscuro':'kb-ico-rojo'} kb-tip-der" data-tip="${f.urgente?'Quitar urgente':'Marcar urgente'}" aria-label="Marcar urgente" onclick="toggleUrgente('${f.id}')">${f.urgente?ticon('x',{noMargin:true,size:15}):ticon('alert',{noMargin:true,size:15})}<span class="kb-ico-txt">${f.urgente?'Quitar':'Urgente'}</span></button>
+              <button type="button" class="kb-ico kb-ico-negro kb-tip-der" data-tip="Eliminar ficha" aria-label="Eliminar ficha" onclick="eliminarFichaKanban('${f.id}')">${ticon('trash',{noMargin:true,size:15})}<span class="kb-ico-txt">Borrar</span></button>
             </div>
             ${fotosSectionHtml}
             ${editSectionHtml}
