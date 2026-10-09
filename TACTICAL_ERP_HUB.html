@@ -4056,7 +4056,13 @@
           const palabras = (l.desc||'').trim().split(/\s+/).filter(Boolean);
           return palabras.slice(0, maxPalabras).join(' ') || (NOMBRES_LINEA_PRODUCTO[l.linea]||l.linea);
         }
+        // Conde 2026-10-09: "quiero que omitas toda esta información que no la estamos usando" (la lista de
+        // pasos Impresión / Brillo UV / Empaque... de cada ficha). Ninguna línea la usa -- se apaga para
+        // TODAS: las fichas nuevas nacen sin checklist y las que ya existían no la muestran. Los datos
+        // viejos NO se borran; para volver a verla basta cambiar esto a true.
+        const KANBAN_MOSTRAR_CHECKLIST = false;
         function generarChecklistParaFicha(opp){
+          if(!KANBAN_MOSTRAR_CHECKLIST) return [];
           const lineasOpp = (opp.lineas && opp.lineas.length) ? opp.lineas : [{linea: opp.linea, desc: opp.desc}];
           let items = [];
           const prefijoNecesario = lineasOpp.length > 1;
@@ -5287,6 +5293,7 @@
           return nombreHtml + comercialHtml;
         }
         function renderFichaKanbanHtml(f){
+          const checklist = KANBAN_MOSTRAR_CHECKLIST ? (f.checklist || []) : [];
           const idx = KANBAN_COLUMNAS.indexOf(f.columna);
           const puedeAtras = idx>0, puedeAdelante = idx<KANBAN_COLUMNAS.length-1;
           const dueHtml = f.fechaEntrega ? `${kanbanBadgeEntrega(f.fechaEntrega)}<br>` : '<span style="font-size:0.72rem; color:#a0aec0;">Sin fecha de entrega</span><br>';
@@ -5378,13 +5385,13 @@
             return `<div class="kanban-card kanban-card-compacta ${f.urgente?'urgente':''}" style="cursor:pointer;" draggable="true" data-ficha-id="${f.id}" ondragstart="kanbanDragStart(event,'${f.id}')" ondragend="kanbanDragEnd(event)" ondragover="kanbanDragOverFicha(event)" ondragleave="kanbanDragLeaveFicha(event)" ondrop="kanbanDropSobreFicha(event,'${f.id}')" ontouchstart="kanbanTouchStart(event,'${f.id}')" ontouchmove="kanbanTouchMove(event)" ontouchend="kanbanTouchEnd(event)" onclick="toggleExpandirFicha('${f.id}')" title="Toca ◀/▶ para mover de columna, mantén presionado y arrastra para reordenar, o toca el resto de la tarjeta para ver checklist y opciones">
               ${cabeceraCompactaHtml}
               ${flechasHtml}
-              <div style="font-size:0.68rem; color:var(--info); font-weight:bold;">▼ Ver detalle (${f.checklist.filter(c=>c.hecho).length}/${f.checklist.length})</div>
+              <div style="font-size:0.68rem; color:var(--info); font-weight:bold;">▼ Ver detalle${checklist.length ? ` (${checklist.filter(c=>c.hecho).length}/${checklist.length})` : ''}</div>
             </div>`;
           }
-          const rielAOk = !f.checklist.some(c=>c.riel==='A' && !c.hecho);
-          const rielBOk = !f.checklist.some(c=>c.riel==='B' && !c.hecho);
-          const hechos = f.checklist.filter(c=>c.hecho).length;
-          const checklistHtml = f.checklist.map((c,i)=>{
+          const rielAOk = !checklist.some(c=>c.riel==='A' && !c.hecho);
+          const rielBOk = !checklist.some(c=>c.riel==='B' && !c.hecho);
+          const hechos = checklist.filter(c=>c.hecho).length;
+          const checklistHtml = checklist.map((c,i)=>{
             const bloqueado = c.riel==='gate' && !(rielAOk && rielBOk);
             return `<div class="kanban-checklist-item">
               <input type="checkbox" ${c.hecho?'checked':''} ${bloqueado?'disabled':''} onchange="toggleChecklistItem('${f.id}',${i})">
@@ -5433,7 +5440,7 @@
               ${cabeceraHtml}
               <div style="font-size:0.72rem; color:var(--info); font-weight:bold;">▲ Ocultar detalle</div>
             </div>
-            ${f.checklist.length ? `<div class="kanban-checklist" style="margin-top:8px;">${checklistHtml}<div style="font-size:0.7rem; color:#a0aec0; margin-top:2px;">${hechos}/${f.checklist.length} completado</div></div>` : ''}
+            ${checklist.length ? `<div class="kanban-checklist" style="margin-top:8px;">${checklistHtml}<div style="font-size:0.7rem; color:#a0aec0; margin-top:2px;">${hechos}/${checklist.length} completado</div></div>` : ''}
             <div class="kanban-btn-grupo">
               ${f.origen!=='b2c' ? `<button class="kanban-btn-mitad" style="background:var(--secondary); color:#fff; border:none; border-radius:5px; padding:8px; font-weight:700; font-size:0.85rem; cursor:pointer;" onclick="verOrdenProduccionFicha('${f.id}')">${ticon('factory')}<span class="kanban-btn-larga">Ver Orden de Producción</span><span class="kanban-btn-corta">Ver OT</span></button>` : ''}
               ${f.columna==='diseno' ? `<button class="kanban-btn-mitad" ${f.disenoAprobado?'disabled':''} style="background:${f.disenoAprobado?'#cbd5e0':'var(--ganado)'}; color:${f.disenoAprobado?'#718096':'#fff'}; border:none; border-radius:5px; padding:8px; font-weight:700; font-size:0.85rem; cursor:${f.disenoAprobado?'default':'pointer'};" onclick="marcarDisenoAprobado('${f.id}')">${f.disenoAprobado?ticon('check'):ticon('palette')} <span class="kanban-btn-larga">Diseño Aprobado</span><span class="kanban-btn-corta">OK DISE</span></button>` : ''}
