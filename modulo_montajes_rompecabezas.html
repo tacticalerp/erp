@@ -298,7 +298,7 @@ function tacticalIrHub(vista){
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="tactical-supabase.js?v=20261009b"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
-<script src="precios_tactical.js?v=20261009a"></script>
+<script src="precios_tactical.js?v=20261013a"></script>
 <script src="template_svg_data.js?v=7"></script>
 <script>
 /* =====================  CATÁLOGOS  ===================== */
@@ -1125,6 +1125,11 @@ function tacticalSumarDiasHabilesColombia(fechaInicio, n){
 async function aprobarPedido(id){
   const pedido = db_ventas_b2c.find(p=>p.id===id);
   if(!pedido) return;
+  // Conde 2026-10-13: antes de aprobar se pregunta si requiere diseño o solo impresión (ver
+  // tacticalPreguntarDisenoOImpresion en precios_tactical.js). Cancelar = no se aprueba nada.
+  const itemsPreg = pedidoItems(pedido);
+  const decision = await tacticalPreguntarDisenoOImpresion(pedido.nombre, tacticalResumenItemsRompecabezas(itemsPreg));
+  if(!decision) return;
   pedido.estado = 'aprobado';
   pedido.fechaAprobado = new Date().toISOString();
 
@@ -1174,7 +1179,10 @@ async function aprobarPedido(id){
   const ficha = {
     id: crypto.randomUUID(), ot: null,
     idCli: cli.id, nombreCli: tacticalNombreCliente(cli), titulo,
-    columna: 'diseno', lineas: lineasFicha,
+    // Requiere diseño -> Cotización Aprobada; solo impresión -> Diseño (Conde 2026-10-13).
+    columna: decision === 'diseno' ? 'aprobada' : 'diseno', lineas: lineasFicha,
+    // Solo impresión: no hay diseño que aprobar -> nace con el diseño resuelto y el Kanban omite el botón "Diseño aprobado".
+    disenoAprobado: decision !== 'diseno',
     checklist: [], urgente:false, fechaEntrega, entrega: pedido.entrega||'',
     fechaCreacion: new Date().toISOString(), responsable:'', origen:'b2c',
   };
@@ -1182,12 +1190,14 @@ async function aprobarPedido(id){
   // quedara guardada en Supabase -- si el guardado fallaba (sin conexión, sesión vencida, etc.)
   // el mensaje decía éxito igual y la ficha nunca aparecía en el Kanban del Hub, sin ningún aviso.
   const guardadoOk = await tacticalSyncFichaKanban(ficha);
+  // Tarea en el área Diseño del Plan de Tareas: "Diseño|Impresión rompecabezas — nombre — fichas — tamaño".
+  tacticalCrearTareaRompecabezas(decision, pedido.nombre, items);
 
   pedido.idKanban = ficha.id;
   tacticalSyncB2CPedido(pedido);
   renderBusqueda();
   if(guardadoOk){
-    alert(`Pedido aprobado. Se creó la ficha de producción en el Kanban del Hub (columna Diseño, entrega estimada ${fechaEntrega}) y se registró la venta.`);
+    alert(`Pedido aprobado (${decision === 'diseno' ? 'requiere diseño' : 'solo impresión'}). Se creó la tarea en Diseño y la ficha de producción en el Kanban del Hub (columna ${decision === 'diseno' ? 'Cotización Aprobada' : 'Diseño'}, entrega estimada ${fechaEntrega}) y se registró la venta.`);
   } else {
     alert(`⚠️ El pedido quedó marcado como aprobado, pero la ficha de producción NO se pudo guardar en el Kanban del Hub (revisa tu conexión a internet o vuelve a intentar). Avísale a soporte si esto se repite.`);
   }

@@ -1157,3 +1157,42 @@ function tacticalDiasHabilesHasta(fechaStr, desde){
   if(n === 0) n = 1;
   return adelante ? n : -n;
 }
+
+/* ==========================================
+   APROBAR ROMPECABEZAS PERSONALIZADO: ¿diseño o impresión? (Conde 2026-10-13)
+   Al aprobar un rompecabezas personalizado (Montajes B2C o pedido del bot de WhatsApp) se pregunta:
+   - "Requiere diseño"  -> tarea en Diseño "Diseño rompecabezas — nombre — fichas — tamaño"  + ficha del Kanban en "Cotización Aprobada"
+   - "Solo impresión"   -> tarea en Diseño "Impresión rompecabezas — nombre — fichas — tamaño" + ficha del Kanban en "Diseño"
+   ========================================== */
+function tacticalPreguntarDisenoOImpresion(nombre, resumenItems){
+  return new Promise(resolve => {
+    const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed; inset:0; background:rgba(26,32,44,0.6); z-index:999999; display:flex; align-items:center; justify-content:center; padding:20px;';
+    ov.innerHTML = `<div role="dialog" aria-modal="true" style="background:#fff; border-radius:10px; padding:22px; max-width:420px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,0.35); font-family:'Segoe UI', Tahoma, sans-serif;">
+      <div style="font-weight:800; font-size:1.05rem; color:#1a202c; margin-bottom:6px;">¿Este rompecabezas requiere diseño?</div>
+      <div style="font-size:0.88rem; color:#4a5568; margin-bottom:16px; line-height:1.4;"><strong>${esc(nombre)}</strong><br>${esc(resumenItems)}</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <button type="button" data-r="diseno" style="padding:12px; border:none; border-radius:6px; background:#cc0000; color:#fff; font-weight:700; font-size:0.95rem; cursor:pointer;">Requiere diseño<br><span style="font-weight:400; font-size:0.78rem;">Ficha en Cotización Aprobada + tarea de diseño</span></button>
+        <button type="button" data-r="impresion" style="padding:12px; border:none; border-radius:6px; background:#2d3748; color:#fff; font-weight:700; font-size:0.95rem; cursor:pointer;">Solo impresión<br><span style="font-weight:400; font-size:0.78rem;">Ficha en Diseño + tarea de impresión</span></button>
+        <button type="button" data-r="" style="padding:10px; border:1px solid #cbd5e0; border-radius:6px; background:#fff; color:#4a5568; font-weight:700; cursor:pointer;">Cancelar (no aprobar todavía)</button>
+      </div></div>`;
+    const cerrar = (r) => { document.removeEventListener('keydown', alTeclear); ov.remove(); resolve(r || null); };
+    const alTeclear = (e) => { if(e.key === 'Escape') cerrar(null); };
+    ov.querySelectorAll('button').forEach(b => b.addEventListener('click', () => cerrar(b.dataset.r)));
+    document.addEventListener('keydown', alTeclear);
+    document.body.appendChild(ov);
+  });
+}
+// items: [{fichas, medida, cantidad}] -> "30 fichas 32x24cm + 2x 80 fichas 32x24cm"
+function tacticalResumenItemsRompecabezas(items){
+  return (items || []).map(it => ((it.cantidad || 1) > 1 ? it.cantidad + 'x ' : '') + it.fichas + ' fichas ' + it.medida + 'cm').join(' + ');
+}
+// Crea la tarea en el área Diseño del Plan de Tareas. En el Hub usa crearTareaAutomatica (la fila aparece al instante);
+// desde Montajes (otra página) solo se guarda en Supabase y aparece en el Plan de Tareas al abrirlo/recargarlo.
+function tacticalCrearTareaRompecabezas(tipo, nombre, items){
+  const desc = (tipo === 'diseno' ? 'Diseño' : 'Impresión') + ' rompecabezas — ' + nombre + ' — ' + tacticalResumenItemsRompecabezas(items);
+  if(typeof crearTareaAutomatica === 'function'){ crearTareaAutomatica('diseno', desc); return desc; }
+  tacticalSyncTarea({ id: crypto.randomUUID(), area: 'diseno', desc, espec: '', emp: [], status: 'pendiente', aclaracion: '', fechaOrigen: new Date().toISOString(), orden: Date.now() });
+  return desc;
+}

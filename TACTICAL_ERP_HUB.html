@@ -2418,7 +2418,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="tactical-supabase.js?v=20261009b"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
-    <script src="precios_tactical.js?v=20261009a"></script>
+    <script src="precios_tactical.js?v=20261013a"></script>
     <script src="precios_promocionales.js?v=20260919a"></script>
     <script>
         // NAVEGACIÓN SPA DEL HUB
@@ -4945,11 +4945,15 @@
             if(holder) holder.innerText = 'No se pudo cargar el comprobante: ' + e.message;
           }
         }
-        function botwaAprobar(id){
+        async function botwaAprobar(id){
           const p = botwaPedidos.find(x=>x.id===id);
           if(!p) return;
           const totalTxt = p.total!=null ? '$'+Math.round(p.total).toLocaleString('es-CO') : 'este pedido';
           if(!confirm(`¿Confirmas que YA VERIFICASTE el pago de ${p.nombre} por ${totalTxt}?\n\nEsto crea el cliente en el CRM y la ficha de producción en el Kanban.`)) return;
+          // Conde 2026-10-13: igual que en Montajes B2C, se pregunta si requiere diseño o solo impresión.
+          const itemsBot = [{ fichas: p.fichas, medida: p.medida, cantidad: p.cantidad }];
+          const decision = await tacticalPreguntarDisenoOImpresion(p.nombre, tacticalResumenItemsRompecabezas(itemsBot));
+          if(!decision) return;
 
           let cli = db_clientes.find(c => c.wp === p.cel);
           if(!cli){
@@ -4970,17 +4974,19 @@
           const ficha = {
             id: crypto.randomUUID(), ot: null,
             idCli: cli.id, nombreCli: tacticalNombreCliente(cli), titulo,
-            columna: 'aprobada', lineas: [{linea:'rompecabezas', desc: titulo, cantidad: p.cantidad}],
+            // Requiere diseño -> Cotización Aprobada; solo impresión -> Diseño (Conde 2026-10-13).
+            columna: decision === 'diseno' ? 'aprobada' : 'diseno', disenoAprobado: decision !== 'diseno', lineas: [{linea:'rompecabezas', desc: titulo, cantidad: p.cantidad}],
             checklist: checklistBase, urgente: !!p.express, fechaEntrega:'',
             fechaCreacion: new Date().toISOString(), responsable:'', origen:'bot_whatsapp',
           };
           db_kanban.push(ficha);
           tacticalSyncFichaKanban(ficha);
+          tacticalCrearTareaRompecabezas(decision, p.nombre, itemsBot);
 
           botwaMarcarImportadoEnBot(p.id);
           botwaPedidos = botwaPedidos.filter(x=>x.id!==id);
           renderBotwaLista();
-          alert('Pedido aprobado. Se creó el cliente en el CRM y la ficha en el Kanban.');
+          alert(`Pedido aprobado (${decision === 'diseno' ? 'requiere diseño' : 'solo impresión'}). Se creó el cliente en el CRM, la tarea en Diseño y la ficha en el Kanban (columna ${decision === 'diseno' ? 'Cotización Aprobada' : 'Diseño'}).`);
         }
         function botwaMarcarContactado(id){
           const p = botwaPedidos.find(x=>x.id===id);
@@ -5729,7 +5735,7 @@
             ${checklist.length ? `<div class="kanban-checklist" style="margin-top:8px;">${checklistHtml}<div style="font-size:0.7rem; color:#a0aec0; margin-top:2px;">${hechos}/${checklist.length} completado</div></div>` : ''}
             <div class="kb-ico-fila">
               ${f.origen!=='b2c' ? `<button type="button" class="kb-ico kb-ico-azul kb-tip-izq" data-tip="Ver Orden de Producción" aria-label="Ver Orden de Producción" onclick="verOrdenProduccionFicha('${f.id}')">${ticon('factory',{noMargin:true,size:15})}<span class="kb-ico-txt">OP</span></button>` : ''}
-              ${f.columna==='diseno' ? `<button type="button" class="kb-ico kb-ico-verde kb-tip-izq" ${f.disenoAprobado?'disabled':''} data-tip="${f.disenoAprobado?'Diseño aprobado':'Marcar diseño aprobado'}" aria-label="Diseño aprobado" onclick="marcarDisenoAprobado('${f.id}')">${f.disenoAprobado?ticon('check',{noMargin:true,size:15}):ticon('palette',{noMargin:true,size:15})}<span class="kb-ico-txt">Diseño</span></button>` : ''}
+              ${(f.columna==='diseno' && !f.disenoAprobado) ? `<button type="button" class="kb-ico kb-ico-verde kb-tip-izq" ${f.disenoAprobado?'disabled':''} data-tip="${f.disenoAprobado?'Diseño aprobado':'Marcar diseño aprobado'}" aria-label="Diseño aprobado" onclick="marcarDisenoAprobado('${f.id}')">${f.disenoAprobado?ticon('check',{noMargin:true,size:15}):ticon('palette',{noMargin:true,size:15})}<span class="kb-ico-txt">Diseño</span></button>` : ''}
               <button type="button" class="kb-ico kb-ico-ambar kb-tip-izq" data-tip="${editando?'Cerrar edición':'Editar datos / fecha de entrega'}" aria-label="Editar datos / fecha de entrega" onclick="toggleEditarFicha('${f.id}')">${editando?ticon('x',{noMargin:true,size:15}):ticon('edit',{noMargin:true,size:15})}<span class="kb-ico-txt">${editando?'Cerrar':'Editar'}</span></button>
               <button type="button" class="kb-ico ${f.urgente?'kb-ico-rojo-oscuro':'kb-ico-rojo'} kb-tip-der" data-tip="${f.urgente?'Quitar urgente':'Marcar urgente'}" aria-label="Marcar urgente" onclick="toggleUrgente('${f.id}')">${f.urgente?ticon('x',{noMargin:true,size:15}):ticon('alert',{noMargin:true,size:15})}<span class="kb-ico-txt">${f.urgente?'Quitar':'Urgente'}</span></button>
               <button type="button" class="kb-ico kb-ico-negro kb-tip-der" data-tip="Eliminar ficha" aria-label="Eliminar ficha" onclick="eliminarFichaKanban('${f.id}')">${ticon('trash',{noMargin:true,size:15})}<span class="kb-ico-txt">Borrar</span></button>
