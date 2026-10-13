@@ -567,14 +567,17 @@ async function tacticalB2CPedidosCargar(){
   const items = ri.data||[];
   return (rp.data||[]).map(p => tacticalB2CPedidoDeDb(p, items.filter(it=>it.pedido_id===p.id).map(tacticalB2CItemDeDb)));
 }
+// Conde 2026-10-13: devuelve true/false (antes no devolvía nada) para poder confirmarle al usuario, con el nombre del
+// cliente, que el pedido SÍ quedó guardado -- y avisar si no.
 async function tacticalSyncB2CPedido(p){
   const { error: errP } = await tacticalSupabase.from('b2c_pedidos').upsert(tacticalB2CPedidoADb(p));
-  if(errP){ console.error('Error guardando pedido B2C:', errP); return; }
+  if(errP){ console.error('Error guardando pedido B2C:', errP); return false; }
   await tacticalSupabase.from('b2c_pedido_items').delete().eq('pedido_id', p.id);
   if(p.items && p.items.length){
     const { error } = await tacticalSupabase.from('b2c_pedido_items').insert(p.items.map(it=>tacticalB2CItemADb(p.id, it)));
-    if(error){ console.error('Error guardando items de pedido B2C:', error); tacticalAvisoErrorGuardado('Error guardando items de pedido B2C'); }
+    if(error){ console.error('Error guardando items de pedido B2C:', error); tacticalAvisoErrorGuardado('Error guardando items de pedido B2C'); return false; }
   }
+  return true;
 }
 // Conde 2026-08-28: "borrar los aprobados que fueron pruebas" -- borra el pedido y sus ítems.
 // b2c_pedido_items no tiene ON DELETE CASCADE confirmado, así que se borra explícito primero.

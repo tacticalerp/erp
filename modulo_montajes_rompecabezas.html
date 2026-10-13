@@ -183,7 +183,7 @@
         <h2>4 · Cantidad de rompecabezas del pedido</h2>
         <input type="number" id="cantidadPedido" min="1" value="1" step="1">
         <div class="price-box" id="priceBox" style="margin-top:8px;"></div>
-        <div class="note" style="margin-top:6px;">Descuento automático: 20% en cada unidad <strong>par</strong> del pedido (2ª, 4ª, 6ª...). La 1ª, 3ª, 5ª... van a precio normal.</div>
+        <div class="note" style="margin-top:6px;">Descuento automático: 20% en la 2ª, 4ª, 6ª... unidad del <strong>pedido completo</strong>, aunque sean de distinto tamaño. Se ordenan de mayor a menor valor, así que el descuento cae siempre en la de menor o igual valor de cada pareja. El total se va actualizando al agregar rompecabezas.</div>
       </div>
 
       <div>
@@ -296,7 +296,7 @@ function tacticalIrHub(vista){
      y además entiende lenguaje natural en vez de necesitar la palabra clave exacta. -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="tactical-supabase.js?v=20261009b"></script>
+<script src="tactical-supabase.js?v=20261013a"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
 <script src="precios_tactical.js?v=20261013a"></script>
 <script src="template_svg_data.js?v=7"></script>
@@ -570,28 +570,78 @@ document.getElementById('precioUnitInput').addEventListener('change', function()
   updatePriceBox();
 });
 
-function calcularPrecioTotal(){
-  const precioUnit = precioUnitOverride!=null ? precioUnitOverride : (itemActivo && itemActivo.precio!=null ? itemActivo.precio : null);
+// Conde 2026-10-13: el descuento del 20% se aplica sobre el PEDIDO COMPLETO, no por línea. Antes cada tamaño
+// contaba sus unidades desde 1, así que en un pedido de varios tamaños (ej. 1 de 150 fichas + 1 de 100 fichas)
+// ninguna era "la 2ª" y no se descontaba nada. Ahora se juntan TODAS las unidades del pedido (las ya agregadas al
+// carrito + la que se está configurando), se ordenan de mayor a menor valor y el 20% cae en la 2ª, 4ª, 6ª...
+// -- o sea, siempre en la unidad de menor o igual valor de cada pareja.
+const DESCUENTO_UNIDAD_PAR = 0.2;
+function repartirDescuentoPedido(lineas){
+  // lineas: [{precioUnitario, cantidad}] -> devuelve las unidades (con su valor ya descontado) y asigna lineas[i].totalConDescuento
+  const unidades = [];
+  lineas.forEach((l, li) => {
+    l.totalConDescuento = 0;
+    if(l.precioUnitario==null) return;
+    for(let k=0;k<(l.cantidad||1);k++) unidades.push({ li, precio: l.precioUnitario, orden: unidades.length });
+  });
+  unidades.sort((a,b) => (b.precio - a.precio) || (a.orden - b.orden));
+  unidades.forEach((u, i) => {
+    u.esDescuento = (i % 2 === 1);
+    u.valor = u.esDescuento ? Math.round(u.precio * (1 - DESCUENTO_UNIDAD_PAR)) : u.precio;
+    lineas[u.li].totalConDescuento += u.valor;
+  });
+  return unidades;
+}
+function precioUnitarioActual(){
+  return precioUnitOverride!=null ? precioUnitOverride : (itemActivo && itemActivo.precio!=null ? itemActivo.precio : null);
+}
+// El pedido tal como quedaría ahora: lo ya agregado al carrito + el rompecabezas que se está configurando.
+function pedidoEnCurso(){
+  const car = carritoActivo();
+  const lineas = (car ? car.items : []).map(it => ({ etiqueta: it.fichas + ' fichas ' + it.medida + 'cm', precioUnitario: it.precioUnitario, cantidad: it.cantidad||1, enCarrito: true }));
   const cant = Math.max(1, parseInt(cantidadPedido.value)||1);
-  const detalle = [];
-  let total = 0;
-  for(let i=1;i<=cant;i++){
-    const esPar = i%2===0;
-    const valorUnidad = precioUnit==null ? null : (esPar ? precioUnit*0.8 : precioUnit);
-    if(valorUnidad!=null) total += valorUnidad;
-    detalle.push({unidad:i, esPar, valor:valorUnidad});
+  let actual = null;
+  if(itemActivo){
+    actual = { etiqueta: itemActivo.fichas + ' fichas ' + itemActivo.w + 'x' + itemActivo.h + 'cm', precioUnitario: precioUnitarioActual(), cantidad: cant, actual: true };
+    lineas.push(actual);
   }
-  return {precioUnit, cant, detalle, total};
+  const unidades = repartirDescuentoPedido(lineas);
+  return { lineas, unidades, actual };
+}
+// Recalcula el total de cada línea de una lista de items del pedido (ya guardados) con el descuento del pedido completo.
+function recalcularTotalesItems(items){
+  const lineas = items.map(it => ({ precioUnitario: it.precioUnitario, cantidad: it.cantidad||1 }));
+  repartirDescuentoPedido(lineas);
+  items.forEach((it, i) => { if(it.precioUnitario!=null) it.total = lineas[i].totalConDescuento; });
+  return items;
+}
+
+// Total de la línea que se está configurando (con el descuento del pedido completo ya repartido).
+function calcularPrecioTotal(){
+  const precioUnit = precioUnitarioActual();
+  const cant = Math.max(1, parseInt(cantidadPedido.value)||1);
+  const ped = pedidoEnCurso();
+  const total = ped.actual ? ped.actual.totalConDescuento : 0;
+  return {precioUnit, cant, detalle: [], total};
 }
 
 function updatePriceBox(){
-  const r = calcularPrecioTotal();
-  if(r.precioUnit==null){
+  const precioUnit = precioUnitarioActual();
+  if(precioUnit==null){
     priceBox.innerHTML = `<div class="line">Línea Troquelados: sin precio de lista (mayorista, mínimo 50u).</div><div class="line total">Total: A cotizar con asesor</div>`;
     return;
   }
-  let html = r.detalle.map(d=>`<div class="line"><span>Unidad ${d.unidad}${d.esPar?' (20% desc.)':''}</span><span>${cop(d.valor)}</span></div>`).join('');
-  html += `<div class="line total"><span>Total (${r.cant} und.)</span><span>${cop(r.total)}</span></div>`;
+  const ped = pedidoEnCurso();
+  const sinDesc = ped.unidades.reduce((s,u)=>s+u.precio,0);
+  const total = ped.unidades.reduce((s,u)=>s+u.valor,0);
+  const hayVariasLineas = ped.lineas.length > 1;
+  let html = ped.unidades.map((u,i)=>{
+    const l = ped.lineas[u.li];
+    const etq = hayVariasLineas ? ' · ' + l.etiqueta + (l.actual ? ' (este)' : '') : '';
+    return `<div class="line"><span>Unidad ${i+1}${etq}${u.esDescuento?' (20% desc.)':''}</span><span>${cop(u.valor)}</span></div>`;
+  }).join('');
+  if(sinDesc - total > 0) html += `<div class="line"><span>Descuento aplicado</span><span>-${cop(sinDesc - total)}</span></div>`;
+  html += `<div class="line total"><span>Total pedido (${ped.unidades.length} und.)</span><span>${cop(total)}</span></div>`;
   priceBox.innerHTML = html;
 }
 
@@ -715,8 +765,9 @@ document.getElementById('fileInput').addEventListener('change', (e)=>{
   cargarFotoDesdeArchivo(e.target.files[0]);
 });
 function fotoZonaPegar(event){
-  const items = (event.clipboardData || window.clipboardData).items;
-  for(const item of items){
+  const cd = event.clipboardData || window.clipboardData;
+  if(!cd || !cd.items) return;
+  for(const item of cd.items){
     if(item.kind === 'file' && item.type.startsWith('image/')){
       event.preventDefault();
       cargarFotoDesdeArchivo(item.getAsFile());
@@ -724,6 +775,10 @@ function fotoZonaPegar(event){
     }
   }
 }
+// Conde 2026-10-13: "al darle Ctrl+V no deba dar clic 2 veces, que lo tome de inmediato" -- antes solo funcionaba con la
+// zona de pegado enfocada. Ahora Ctrl+V en cualquier parte de la página toma la imagen del portapapeles (si lo copiado es
+// solo texto, no se toca y se pega normal en los campos). La zona de arriba ya la maneja con onpaste (defaultPrevented).
+document.addEventListener('paste', (e)=>{ if(!e.defaultPrevented) fotoZonaPegar(e); });
 zoomSlider.addEventListener('input', ()=>{ zoomVal.textContent = zoomSlider.value+'%'; fitPhotoCover(); });
 
 stage.addEventListener('pointerdown', (e)=>{
@@ -965,6 +1020,7 @@ function refrescarBannerCarrito(){
   const el = document.getElementById('carritoBanner');
   if(!el) return;
   if(!car || car.items.length===0){ el.style.display='none'; return; }
+  recalcularTotalesItems(car.items);
   const total = car.items.reduce((s,it)=>s+(it.total||0),0);
   el.style.display = 'block';
   el.innerHTML = `🧩 Pedido en curso — <strong>${car.items.length} rompecabezas</strong>, ${cop(total)}<br>
@@ -976,9 +1032,11 @@ document.getElementById('btnAgregarOtro').addEventListener('click', async ()=>{
   let car = carritoActivo();
   if(!car) car = { items: [] };
   car.items.push(await itemActualComoLinea());
+  recalcularTotalesItems(car.items); // el descuento depende de TODO el pedido: al sumar un tamaño nuevo puede cambiar cuál unidad se descuenta
   window.tacticalB2CCarritoCache = car;
   tacticalGuardarB2CCarrito(car);
   refrescarBannerCarrito();
+  updatePriceBox();
   alert(`Agregado. Este pedido ya tiene ${car.items.length} rompecabezas. Ahora configura el siguiente tamaño/forma/foto y agrégalo también, o guarda el pedido completo con "Guardar pedido" cuando termines.`);
 });
 function cancelarCarrito(){
@@ -986,6 +1044,7 @@ function cancelarCarrito(){
   window.tacticalB2CCarritoCache = null;
   tacticalEliminarB2CCarrito();
   refrescarBannerCarrito();
+  updatePriceBox();
 }
 
 document.getElementById('btnGuardarPedido').addEventListener('click', async ()=>{
@@ -999,6 +1058,7 @@ document.getElementById('btnGuardarPedido').addEventListener('click', async ()=>
   const items = (car && car.items.length) ? [...car.items] : [];
   if(itemActivo) items.push(await itemActualComoLinea());
   if(items.length===0){ alert('Selecciona una medida del catálogo, o agrega al menos un rompecabezas al pedido.'); return; }
+  recalcularTotalesItems(items); // total de cada línea con el descuento del pedido completo
 
   const total = items.reduce((s,it)=>s+(it.total||0),0);
   const cantidad = items.reduce((s,it)=>s+(it.cantidad||0),0);
@@ -1014,12 +1074,21 @@ document.getElementById('btnGuardarPedido').addEventListener('click', async ()=>
     notaComercial: 'Pendiente aprobación diseño', observacionesComercial: '',
   };
   db_ventas_b2c.push(pedido);
-  tacticalSyncB2CPedido(pedido);
+  // Conde 2026-10-13: "cuando se creó el pedido, si se creó OK debe salir un anuncio que diga pedido guardado con el nombre
+  // del cliente". Solo se anuncia si Supabase confirmó el guardado; si falló, se avisa y el pedido/carrito NO se pierden.
+  const guardadoOk = await tacticalSyncB2CPedido(pedido);
+  if(!guardadoOk){
+    const iPedido = db_ventas_b2c.indexOf(pedido);
+    if(iPedido > -1) db_ventas_b2c.splice(iPedido, 1);
+    alert(`⚠️ El pedido de ${nombre} NO se pudo guardar (revisa tu conexión a internet y vuelve a intentar). Lo que armaste sigue en pantalla.`);
+    return;
+  }
   window.tacticalB2CCarritoCache = null;
   tacticalEliminarB2CCarrito();
   refrescarBannerCarrito();
   document.getElementById('notaGuardado').innerHTML = `<div class="note ok">Pedido guardado como <strong>Pendiente</strong> (${items.length} rompecabezas). Búscalo en la pestaña "Buscar / Aprobar Pedidos" cuando el cliente confirme el pago.</div>`;
   renderBusqueda();
+  alert(`✅ Pedido guardado — ${nombre}\n${items.length} rompecabezas, total ${cop(total)}. Quedó Pendiente hasta que el cliente confirme el pago.`);
 });
 
 /* =====================  BUSCAR / APROBAR  ===================== */
