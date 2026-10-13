@@ -157,7 +157,7 @@
       <div class="fila">
         <div class="campo">
           <label>Cliente:</label>
-          <input type="text" id="in-cli-empresa" list="cli-datalist" placeholder="Nombre de la empresa o persona" oninput="autocompletarCliente()">
+          <input type="text" id="in-cli-empresa" list="cli-datalist" placeholder="Nombre de la empresa o persona" oninput="autocompletarCliente('empresa')">
           <datalist id="cli-datalist"></datalist>
           <div id="cli-existente-nota" style="display:none; font-size:0.8rem; color:var(--verde); margin-top:2px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>Cliente existente — datos cargados automáticamente</div>
         </div>
@@ -165,7 +165,7 @@
         <div class="campo"><label>Teléfono:</label><input type="text" id="in-cli-telefono" placeholder="Ej: 3001234567"></div>
         <div class="campo">
           <label>Correo:</label>
-          <input type="text" id="in-cli-correo" list="cli-correo-datalist" placeholder="cliente@empresa.com" oninput="autocompletarCliente()">
+          <input type="text" id="in-cli-correo" list="cli-correo-datalist" placeholder="cliente@empresa.com" oninput="autocompletarCliente('correo')">
           <datalist id="cli-correo-datalist"></datalist>
         </div>
       </div>
@@ -180,6 +180,13 @@
         </div>
         <div class="campo"><label>Identificación (NIT / CC):</label><input type="text" id="in-cli-identificacion" placeholder="Ej: 900.123.456-7"></div>
         <div class="campo"><label>Vendedor a cargo:</label><select id="in-vendedor"></select></div>
+      </div>
+      <!-- Conde 2026-10-13: "que aquí se pueda adicionar o actualizar los datos del cliente sin necesidad de acudir a otra
+           herramienta" -- guarda en el CRM (tabla clientes) sin tener que hacer ni guardar la cotización. -->
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:4px;">
+        <button type="button" id="btn-cli-actualizar" onclick="actualizarClienteClick()" style="display:none; background:var(--verde); color:#fff;"></button>
+        <button type="button" id="btn-cli-nuevo" onclick="crearClienteClick()" style="background:#64748b; color:#fff;">+ Guardar como cliente nuevo</button>
+        <span id="cli-guardado-msg" style="font-size:0.82rem; color:var(--verde);"></span>
       </div>
     </div>
 
@@ -1038,7 +1045,10 @@ function refrescarDatalistClientes(){
   dlEmpresa.innerHTML = db_clientes.filter(c=>!c.soloB2C).map(c => `<option value="${c.empresa}${c.nombre?' -- '+c.nombre:''}">${c.nombre||''}</option>`).join('');
   dlCorreo.innerHTML = db_clientes.filter(c=>c.correo && !c.soloB2C).map(c => `<option value="${c.correo}"></option>`).join('');
 }
-function autocompletarCliente(){
+// origen: 'empresa' | 'correo' = el campo que se está escribiendo. Cada campo busca solo por SÍ MISMO: antes, al escribir otro
+// nombre de empresa, el correo del cliente anterior (que seguía en su campo) encontraba al cliente viejo y le devolvía todos
+// sus datos, deshaciendo lo que se estaba escribiendo (Conde 2026-10-13, al poder agregar/actualizar clientes desde aquí).
+function autocompletarCliente(origen){
   let empresaVal = document.getElementById('in-cli-empresa').value.trim();
   const correoVal = document.getElementById('in-cli-correo').value.trim();
   const nota = document.getElementById('cli-existente-nota');
@@ -1058,8 +1068,8 @@ function autocompletarCliente(){
   // siempre; el correo solo sirve de respaldo cuando NO se eligió un contacto puntual.
   const cli = db_clientes.find(c =>
     (nombreVal && c.empresa.toLowerCase() === empresaVal.toLowerCase() && (c.nombre||'').toLowerCase() === nombreVal.toLowerCase()) ||
-    (!nombreVal && correoVal && c.correo && c.correo.toLowerCase() === correoVal.toLowerCase()) ||
-    (!nombreVal && empresaVal && c.empresa.toLowerCase() === empresaVal.toLowerCase())
+    (origen !== 'empresa' && !nombreVal && correoVal && c.correo && c.correo.toLowerCase() === correoVal.toLowerCase()) ||
+    (origen !== 'correo' && !nombreVal && empresaVal && c.empresa.toLowerCase() === empresaVal.toLowerCase())
   );
   if(cli){
     document.getElementById('in-cli-empresa').value = cli.empresa;
@@ -1069,9 +1079,74 @@ function autocompletarCliente(){
     document.getElementById('in-cli-tipo').value = cli.tipo || '';
     document.getElementById('in-cli-identificacion').value = cli.identificacion || '';
     nota.style.display = 'block';
+    clienteEditandoId = cli.id;
+    actualizarBotonesCliente();
   } else {
     nota.style.display = 'none';
+    // Si se vació el campo Cliente (se va a empezar con otro), ya no hay un cliente "cargado".
+    if(!document.getElementById('in-cli-empresa').value.trim()) clienteEditandoId = null;
+    actualizarBotonesCliente();
   }
+}
+// Cliente del CRM que está cargado en el formulario (se queda "pegado" aunque se corrija su nombre, para poder ACTUALIZARLO
+// en vez de crear uno nuevo).
+let clienteEditandoId = null;
+function datosClienteForm(){
+  return {
+    empresa: document.getElementById('in-cli-empresa').value.trim().replace(/\s+--\s+.*$/, ''), // quita el sufijo " -- Contacto" del desplegable
+    encargado: document.getElementById('in-cli-encargado').value.trim(),
+    telefono: document.getElementById('in-cli-telefono').value.trim(),
+    correo: document.getElementById('in-cli-correo').value.trim(),
+    tipo: document.getElementById('in-cli-tipo').value,
+    identificacion: document.getElementById('in-cli-identificacion').value.trim(),
+  };
+}
+function actualizarBotonesCliente(){
+  const btn = document.getElementById('btn-cli-actualizar');
+  const cli = db_clientes.find(c => c.id === clienteEditandoId);
+  if(!btn) return;
+  if(cli){ btn.style.display = 'inline-block'; btn.textContent = 'Actualizar datos de «' + (cli.empresa.length > 28 ? cli.empresa.slice(0, 28) + '…' : cli.empresa) + '»'; }
+  else btn.style.display = 'none';
+}
+function mensajeCliente(txt, ok){
+  const el = document.getElementById('cli-guardado-msg');
+  if(!el) return;
+  el.style.color = ok ? 'var(--verde)' : '#c53030';
+  el.textContent = txt;
+}
+async function actualizarClienteClick(){
+  const cli = db_clientes.find(c => c.id === clienteEditandoId);
+  if(!cli){ alert('Primero elige un cliente existente de la lista para poder actualizarlo.'); return; }
+  const d = datosClienteForm();
+  if(!d.empresa && !d.encargado){ alert('Escribe al menos el Cliente o el Encargado.'); return; }
+  if(!confirm('¿Actualizar en el CRM los datos de «' + cli.empresa + (cli.nombre ? ' — ' + cli.nombre : '') + '» con lo que está escrito aquí?' + ((d.empresa && d.empresa !== cli.empresa) ? '\n\nEl nombre pasará a: ' + d.empresa : ''))) return;
+  const nuevo = { ...cli, empresa: d.empresa || cli.empresa, nombre: d.encargado || 'Sin contacto directo', wp: d.telefono, correo: d.correo, tipo: d.tipo, identificacion: d.identificacion };
+  mensajeCliente('Guardando...', true);
+  const ok = await tacticalActualizarDatosCliente(nuevo);
+  if(!ok){ mensajeCliente('No se pudo guardar. Revisa tu conexión e intenta de nuevo.', false); alert('No se pudo actualizar el cliente (revisa tu conexión). No se cambió nada.'); return; }
+  Object.assign(cli, nuevo);
+  refrescarDatalistClientes(); actualizarBotonesCliente();
+  mensajeCliente('✓ Cliente actualizado en el CRM: ' + cli.empresa, true);
+}
+async function crearClienteClick(){
+  const d = datosClienteForm();
+  if(!d.empresa && !d.encargado){ alert('Escribe al menos el Cliente o el Encargado.'); return; }
+  const empresa = d.empresa || 'Cliente Particular', nombre = d.encargado || 'Sin contacto directo';
+  const existente = db_clientes.find(c => (d.correo && c.correo && c.correo.toLowerCase() === d.correo.toLowerCase()) ||
+    (c.empresa.toLowerCase() === empresa.toLowerCase() && (c.nombre || '').toLowerCase() === nombre.toLowerCase()));
+  if(existente){
+    if(!confirm('Ya existe un cliente con ese correo o con ese nombre y contacto: «' + existente.empresa + (existente.nombre ? ' — ' + existente.nombre : '') + '».\n\n¿Quieres ACTUALIZAR sus datos en vez de crear otro?')) return;
+    clienteEditandoId = existente.id; actualizarBotonesCliente();
+    return actualizarClienteClick();
+  }
+  const cli = { id: crypto.randomUUID(), empresa, nombre, wp: d.telefono, correo: d.correo, clase: 'nuevo', ltv: 0, tipo: d.tipo, identificacion: d.identificacion };
+  mensajeCliente('Guardando...', true);
+  const ok = await tacticalCrearCliente(cli);
+  if(!ok){ mensajeCliente('No se pudo guardar. Revisa tu conexión e intenta de nuevo.', false); alert('No se pudo crear el cliente (revisa tu conexión). No se guardó nada.'); return; }
+  db_clientes.push(cli);
+  clienteEditandoId = cli.id;
+  refrescarDatalistClientes(); actualizarBotonesCliente();
+  mensajeCliente('✓ Cliente nuevo guardado en el CRM: ' + cli.empresa, true);
 }
 async function siguienteOT(){
   return await tacticalSiguienteOT();

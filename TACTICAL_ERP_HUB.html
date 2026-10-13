@@ -1479,13 +1479,13 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>Cliente:</label>
-                                <input type="text" id="cot-cli-empresa" list="cot-clientes-datalist" placeholder="Nombre de la empresa o persona (si ya existe, selecciónalo de la lista)" oninput="cotAutocompletarCliente()">
+                                <input type="text" id="cot-cli-empresa" list="cot-clientes-datalist" placeholder="Nombre de la empresa o persona (si ya existe, selecciónalo de la lista)" oninput="cotAutocompletarCliente('empresa')">
                                 <datalist id="cot-clientes-datalist"></datalist>
                                 <div id="cot-cliente-existente-nota" style="display:none; font-size:0.8rem; color:var(--ganado,#2f855a); margin-top:2px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>Cliente existente — datos cargados automáticamente</div>
                             </div>
                             <div class="form-group"><label>Encargado:</label><input type="text" id="cot-cli-encargado" placeholder="Persona de contacto"></div>
                             <div class="form-group"><label>Teléfono:</label><input type="text" id="cot-cli-telefono" placeholder="Ej: 3001234567"></div>
-                            <div class="form-group"><label>Correo:</label><input type="text" id="cot-cli-correo" placeholder="cliente@empresa.com" list="cot-clientes-correo-datalist" oninput="cotAutocompletarCliente()"></div>
+                            <div class="form-group"><label>Correo:</label><input type="text" id="cot-cli-correo" placeholder="cliente@empresa.com" list="cot-clientes-correo-datalist" oninput="cotAutocompletarCliente('correo')"></div>
                             <datalist id="cot-clientes-correo-datalist"></datalist>
                             <div class="form-group">
                                 <label>Tipo de Cliente (Contabilidad):</label>
@@ -1505,6 +1505,13 @@
                             <div class="form-group">
                                 <label>Vendedor a cargo:</label>
                                 <select id="cot-vendedor"></select>
+                            </div>
+                            <!-- Conde 2026-10-13: "que aquí se pueda adicionar o actualizar los datos del cliente sin necesidad de acudir
+                                 a otra herramienta" -- guarda en el CRM (tabla clientes) sin tener que generar la cotización. -->
+                            <div style="grid-column:1/-1; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                                <button type="button" id="cot-btn-cli-actualizar" onclick="cotActualizarClienteClick()" style="display:none; background:var(--ganado,#2f855a); color:#fff;"></button>
+                                <button type="button" id="cot-btn-cli-nuevo" onclick="cotCrearClienteClick()" style="background:#64748b; color:#fff;">+ Guardar como cliente nuevo</button>
+                                <span id="cot-cli-guardado-msg" style="font-size:0.82rem; color:var(--ganado,#2f855a);"></span>
                             </div>
                         </div>
                     </div>
@@ -8183,7 +8190,9 @@
           dlCorreo.innerHTML = db_clientes.filter(c=>c.correo && !c.soloB2C).map(c => `<option value="${c.correo}"></option>`).join('');
         }
 
-        function cotAutocompletarCliente(){
+        // origen: 'empresa' | 'correo' = el campo que se está escribiendo. Cada campo busca solo por SÍ MISMO: si no, el correo
+        // del cliente anterior (que sigue en su campo) encontraba al cliente viejo al escribir otro nombre (Conde 2026-10-13).
+        function cotAutocompletarCliente(origen){
           let empresaVal = document.getElementById('cot-cli-empresa').value.trim();
           const correoVal = document.getElementById('cot-cli-correo').value.trim();
           const nota = document.getElementById('cot-cliente-existente-nota');
@@ -8203,8 +8212,8 @@
           // correo solo sirve de respaldo cuando NO se eligió un contacto puntual.
           const cli = db_clientes.find(c =>
             (nombreVal && c.empresa.toLowerCase() === empresaVal.toLowerCase() && (c.nombre||'').toLowerCase() === nombreVal.toLowerCase()) ||
-            (!nombreVal && correoVal && c.correo && c.correo.toLowerCase() === correoVal.toLowerCase()) ||
-            (!nombreVal && empresaVal && c.empresa.toLowerCase() === empresaVal.toLowerCase())
+            (origen !== 'empresa' && !nombreVal && correoVal && c.correo && c.correo.toLowerCase() === correoVal.toLowerCase()) ||
+            (origen !== 'correo' && !nombreVal && empresaVal && c.empresa.toLowerCase() === empresaVal.toLowerCase())
           );
           if(cli){
             document.getElementById('cot-cli-empresa').value = cli.empresa;
@@ -8214,9 +8223,13 @@
             document.getElementById('cot-cli-tipo').value = cli.tipo || '';
             document.getElementById('cot-cli-identificacion').value = cli.identificacion || '';
             nota.style.display = 'block';
+            cotClienteEditandoId = cli.id;
           } else {
             nota.style.display = 'none';
+            // Si se vació el campo Cliente (se va a empezar con otro), ya no hay un cliente "cargado".
+            if(!document.getElementById('cot-cli-empresa').value.trim()) cotClienteEditandoId = null;
           }
+          cotActualizarBotonesCliente();
           // Logo del cliente: si ya cotizó antes con logo, se carga solo; si cambió a OTRO cliente, el
           // logo del anterior NO se arrastra (saldría el logo equivocado en el PDF).
           cotClienteActualId = cli ? cli.id : null;
@@ -8228,6 +8241,67 @@
           } else if(cotLogoCliente.dueno){
             cotLogoAplicar({ url: '', color: '#ffffff', dueno: null });
           }
+        }
+
+        // Cliente del CRM cargado en el formulario (se queda "pegado" aunque se corrija su nombre, para poder ACTUALIZARLO
+        // en vez de crear uno nuevo).
+        let cotClienteEditandoId = null;
+        function cotDatosClienteForm(){
+          return {
+            empresa: document.getElementById('cot-cli-empresa').value.trim().replace(/\s+--\s+.*$/, '').toUpperCase(), // quita el sufijo " -- Contacto" del desplegable
+            encargado: document.getElementById('cot-cli-encargado').value.trim().toUpperCase(),
+            telefono: document.getElementById('cot-cli-telefono').value.trim(),
+            correo: document.getElementById('cot-cli-correo').value.trim(),
+            tipo: document.getElementById('cot-cli-tipo').value,
+            identificacion: document.getElementById('cot-cli-identificacion').value.trim(),
+          };
+        }
+        function cotActualizarBotonesCliente(){
+          const btn = document.getElementById('cot-btn-cli-actualizar');
+          const cli = db_clientes.find(c => c.id === cotClienteEditandoId);
+          if(!btn) return;
+          if(cli){ btn.style.display = 'inline-block'; btn.textContent = 'Actualizar datos de «' + (cli.empresa.length > 28 ? cli.empresa.slice(0, 28) + '…' : cli.empresa) + '»'; }
+          else btn.style.display = 'none';
+        }
+        function cotMensajeCliente(txt, ok){
+          const el = document.getElementById('cot-cli-guardado-msg');
+          if(!el) return;
+          el.style.color = ok ? 'var(--ganado,#2f855a)' : '#c53030';
+          el.textContent = txt;
+        }
+        async function cotActualizarClienteClick(){
+          const cli = db_clientes.find(c => c.id === cotClienteEditandoId);
+          if(!cli){ alert('Primero elige un cliente existente de la lista para poder actualizarlo.'); return; }
+          const d = cotDatosClienteForm();
+          if(!d.empresa && !d.encargado){ alert('Escribe al menos el Cliente o el Encargado.'); return; }
+          if(!confirm('¿Actualizar en el CRM los datos de «' + cli.empresa + (cli.nombre ? ' — ' + cli.nombre : '') + '» con lo que está escrito aquí?' + ((d.empresa && d.empresa !== cli.empresa) ? '\n\nEl nombre pasará a: ' + d.empresa : ''))) return;
+          const nuevo = { ...cli, empresa: d.empresa || cli.empresa, nombre: d.encargado || 'SIN CONTACTO DIRECTO', wp: d.telefono, correo: d.correo, tipo: d.tipo, identificacion: d.identificacion };
+          cotMensajeCliente('Guardando...', true);
+          const ok = await tacticalActualizarDatosCliente(nuevo);
+          if(!ok){ cotMensajeCliente('No se pudo guardar. Revisa tu conexión e intenta de nuevo.', false); alert('No se pudo actualizar el cliente (revisa tu conexión). No se cambió nada.'); return; }
+          Object.assign(cli, nuevo);
+          cotRefrescarDatalistClientes(); cotActualizarBotonesCliente();
+          cotMensajeCliente('✓ Cliente actualizado en el CRM: ' + cli.empresa, true);
+        }
+        async function cotCrearClienteClick(){
+          const d = cotDatosClienteForm();
+          if(!d.empresa && !d.encargado){ alert('Escribe al menos el Cliente o el Encargado.'); return; }
+          const empresa = d.empresa || 'CLIENTE PARTICULAR', nombre = d.encargado || 'SIN CONTACTO DIRECTO';
+          const existente = db_clientes.find(c => (d.correo && c.correo && c.correo.toLowerCase() === d.correo.toLowerCase()) ||
+            (c.empresa.toUpperCase() === empresa && (c.nombre || '').toUpperCase() === nombre));
+          if(existente){
+            if(!confirm('Ya existe un cliente con ese correo o con ese nombre y contacto: «' + existente.empresa + (existente.nombre ? ' — ' + existente.nombre : '') + '».\n\n¿Quieres ACTUALIZAR sus datos en vez de crear otro?')) return;
+            cotClienteEditandoId = existente.id; cotActualizarBotonesCliente();
+            return cotActualizarClienteClick();
+          }
+          const cli = { id: crypto.randomUUID(), empresa, nombre, wp: d.telefono, correo: d.correo, clase: 'nuevo', ltv: 0, tipo: d.tipo, identificacion: d.identificacion };
+          cotMensajeCliente('Guardando...', true);
+          const ok = await tacticalCrearCliente(cli);
+          if(!ok){ cotMensajeCliente('No se pudo guardar. Revisa tu conexión e intenta de nuevo.', false); alert('No se pudo crear el cliente (revisa tu conexión). No se guardó nada.'); return; }
+          db_clientes.push(cli);
+          cotClienteEditandoId = cli.id;
+          cotRefrescarDatalistClientes(); cotActualizarBotonesCliente();
+          cotMensajeCliente('✓ Cliente nuevo guardado en el CRM: ' + cli.empresa, true);
         }
 
         /* ============ LOGO DEL CLIENTE + MOCKUP DEL CUADERNO ============
