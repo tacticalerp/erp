@@ -274,6 +274,21 @@ async function tacticalSyncClientes(lista){
   const { error } = await tacticalSupabase.from('clientes').upsert(filas);
   if(error){ console.error('Error guardando clientes en Supabase:', error); tacticalAvisoErrorGuardado('Error guardando clientes en Supabase'); }
 }
+// Conde 2026-10-13: crear / actualizar UN cliente desde las calculadoras sin tocar el resto de la lista (tacticalSyncClientes
+// reescribe TODA la lista, incluido el LTV de los demás, desde la copia que tenga esa pantalla). Actualizar solo toca los datos
+// de contacto (NO el LTV). Devuelven true/false para poder confirmarle al usuario que de verdad quedó guardado.
+async function tacticalCrearCliente(c){
+  const { error } = await tacticalSupabase.from('clientes').insert(tacticalClienteADb(c));
+  if(error){ console.error('Error creando cliente en Supabase:', error); return false; }
+  return true;
+}
+async function tacticalActualizarDatosCliente(c){
+  const { data, error } = await tacticalSupabase.from('clientes').update({
+    empresa: c.empresa, nombre: c.nombre||'', telefono: c.wp||'', correo: c.correo||'', tipo: c.tipo||'', identificacion: c.identificacion||'',
+  }).eq('id', c.id).select('id');
+  if(error){ console.error('Error actualizando cliente en Supabase:', error); return false; }
+  return !!(data && data.length); // 0 filas = el cliente ya no existe (alguien lo borró)
+}
 async function tacticalEliminarClienteRemoto(id){
   const { error } = await tacticalSupabase.from('clientes').delete().eq('id', id);
   if(error){ console.error('Error eliminando cliente en Supabase:', error); tacticalAvisoErrorGuardado('Error eliminando cliente en Supabase'); }
