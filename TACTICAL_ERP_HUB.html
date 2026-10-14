@@ -102,6 +102,7 @@
            usa !important para forzar el layout de tarjetas apiladas de Reprocesos/Personal; sin
            !important acá esa regla le ganaría a esta por estar declarada después, aunque tengan la
            misma especificidad. */
+        .task-desc-full, .task-espec-full { display: none; }
         #view-tareas thead { display: none !important; }
         #view-tareas table, #view-tareas tbody { display: block !important; width: 100%; box-sizing: border-box; }
         /* flex-wrap:nowrap a propósito, no "wrap" -- con wrap, el navegador decide si un elemento
@@ -570,6 +571,25 @@
             #view-tareas tr.tarea-expandida .status-select {
               width: auto !important; height: auto !important; padding: 3px 5px !important; color: initial !important; -webkit-appearance: menulist; appearance: menulist;
             }
+            /* Conde 2026-10-14: tocar la fila la despliega y se lee TODO el texto. Cerrada, la descripción no recibe
+               toques (así el toque llega a la fila y no abre el teclado); desplegada, el <input> de una línea se
+               reemplaza por el texto completo con saltos de línea, y al tocarlo vuelve a ser editable. */
+            #view-tareas tr:not(.tarea-expandida) .task-desc { pointer-events: none !important; }
+            #view-tareas tr.tarea-expandida td.td-tarea { flex: 1 1 100%; align-items: flex-start; }
+            #view-tareas tr.tarea-expandida .task-desc-full:not(:empty),
+            #view-tareas tr.tarea-expandida .task-espec-full:not(:empty) {
+              display: block; flex: 1 1 0%; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere;
+              font-size: 15px; line-height: 1.35; color: var(--dark); padding: 4px 6px; border-radius: 6px; background: #f7fafc;
+            }
+            #view-tareas tr.tarea-expandida .task-desc-full:not(:empty) { font-weight: 600; }
+            #view-tareas tr.tarea-expandida .task-espec-full:not(:empty) { font-size: 14px; color: #4a5568; }
+            #view-tareas tr.tarea-expandida .task-desc-full:not(:empty) + .task-desc,
+            #view-tareas tr.tarea-expandida .task-espec-full:not(:empty) + .task-espec { display: none !important; }
+            #view-tareas tr.tarea-expandida.edit-desc .task-desc-full,
+            #view-tareas tr.tarea-expandida.edit-espec .task-espec-full { display: none !important; }
+            #view-tareas tr.tarea-expandida.edit-desc .task-desc-full:not(:empty) + .task-desc,
+            #view-tareas tr.tarea-expandida.edit-espec .task-espec-full:not(:empty) + .task-espec { display: block !important; }
+            #view-tareas tr.tarea-expandida .task-desc { white-space: normal; text-overflow: clip; }
 
             /* La regla "td { display:block }" de arriba es global y tambien
                rompia las tablas del PDF/Orden de Produccion en pantallas
@@ -3112,9 +3132,10 @@
                     ${delayBadge}
                     <button type="button" class="task-toggle" onclick="taskToggleExpandir(this)" title="Ver más detalles">▶</button>
                     <span class="task-proy-tag" style="display:none;"></span>
-                    <input type="text" style="width:95%; font-weight:bold;" placeholder="Escriba la tarea..." value="${tacticalEscAttr(desc)}" class="task-desc" onchange="guardarFila(this.closest('tr'))">
+                    <div class="task-desc-full" onclick="taskEditarTexto(this,'desc')" title="Toca para editar"></div>
+                    <input type="text" style="width:95%; font-weight:bold;" placeholder="Escriba la tarea..." value="${tacticalEscAttr(desc)}" class="task-desc" onchange="guardarFila(this.closest('tr'))" onblur="taskTerminarEdicion(this)">
                 </td>
-                <td class="td-detalle td-detalle-desktop"><input type="text" class="task-espec" placeholder="${inputPlaceholder}" value="${tacticalEscAttr(espec)}" onchange="guardarFila(this.closest('tr'))"></td>
+                <td class="td-detalle td-detalle-desktop"><div class="task-espec-full" onclick="taskEditarTexto(this,'espec')" title="Toca para editar"></div><input type="text" class="task-espec" placeholder="${inputPlaceholder}" value="${tacticalEscAttr(espec)}" onchange="guardarFila(this.closest('tr'))" onblur="taskTerminarEdicion(this)"></td>
                 <td class="td-responsable${assignedList.length ? ' resp-colapsable' : ''}">
                     <span class="resp-corto" title="Responsable(s) -- ver completo en ▶"></span>
                     <div class="task-emp-list" data-emp='${JSON.stringify(assignedList)}'></div>
@@ -3149,6 +3170,7 @@
                 </td>
             `;
             tbody.appendChild(tr);
+            taskSyncTextoCompleto(tr);
             taskRenderChips(tr.querySelector('.task-emp-list'), area);
             taskActualizarEntregaTexto(tr);
             taskPintarProyecto(tr);
@@ -3167,6 +3189,39 @@
 
         // Conde 2026-08-23: flecha para desplegar el resto de la tarea en móvil (ver arriba, en
         // addTask, por qué td-detalle empieza oculto).
+        // Conde 2026-10-14: "en el celular no se ve toda la informacion y poder leerla toda es muy complejo" --
+        // la descripción y la nota de Impresión son <input> de una sola línea (se cortan con "…" y hay que
+        // desplazar el texto con el dedo). En celular, con la fila desplegada, se muestra el texto COMPLETO
+        // en un bloque que salta de línea (.task-desc-full / .task-espec-full); tocarlo lo pasa a edición.
+        // En escritorio esos bloques nunca se ven (display:none), todo queda como siempre.
+        function taskSyncTextoCompleto(tr){
+            const d = tr.querySelector('.task-desc'), de = tr.querySelector('.task-desc-full');
+            const e = tr.querySelector('.task-espec'), ee = tr.querySelector('.task-espec-full');
+            if(d && de) de.textContent = d.value;
+            if(e && ee) ee.textContent = e.value;
+        }
+        function taskEditarTexto(div, cual){
+            const tr = div.closest('tr');
+            tr.classList.add('edit-' + cual);
+            const inp = tr.querySelector(cual === 'desc' ? '.task-desc' : '.task-espec');
+            setTimeout(() => { inp.focus(); try { inp.setSelectionRange(inp.value.length, inp.value.length); } catch(e){} }, 0);
+        }
+        function taskTerminarEdicion(inp){
+            const tr = inp.closest('tr');
+            tr.classList.remove('edit-desc', 'edit-espec');
+            taskSyncTextoCompleto(tr);
+        }
+        // Tocar cualquier parte "vacía" de la fila (no un botón, selector, campo ni chip) la despliega o la
+        // pliega, solo en celular. La descripción cerrada no recibe toques (pointer-events:none en el CSS),
+        // así el toque llega a la fila en vez de abrir el teclado.
+        document.addEventListener('click', function(ev){
+            if(!window.matchMedia('(max-width:768px)').matches) return;
+            const tr = ev.target.closest && ev.target.closest('#view-tareas tbody tr');
+            if(!tr) return;
+            if(ev.target.closest('button, select, input, textarea, a, .emp-chip, .task-desc-full, .task-espec-full')) return;
+            const btn = tr.querySelector('.task-toggle');
+            if(btn) taskToggleExpandir(btn);
+        });
         function taskToggleExpandir(btn){
             const tr = btn.closest('tr');
             const expandida = tr.classList.toggle('tarea-expandida');
