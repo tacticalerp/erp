@@ -323,10 +323,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="tactical-supabase.js?v=20261013b"></script>
+<script src="tactical-supabase.js?v=20261016a"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
 <script src="precios_promocionales.js?v=20260919a"></script>
-<script src="precios_tactical.js?v=20261013a"></script>
+<script src="precios_tactical.js?v=20261016a"></script>
 <script>
 function cop(n){ return "$" + Math.round(n).toLocaleString("es-CO"); }
 // Conde 2026-08-27: "negrilla con ** no esta funcionando en todas las calculadoras" -- esta
@@ -895,7 +895,7 @@ async function guardarCotizacionClick(){
   }
   const opp = { id: crypto.randomUUID(), ot, idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc: ultimoResultado.descripcion, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'promocionales', cantidad: ultimoParams.cantidad, maquina: null, material: null, nPliegos: null, fotoUrl: ultimoParams.fotoUrl };
   db_opps.push(opp);
-  tacticalSyncOpps(db_opps);
+  const oppGuardadoOk = await tacticalSyncOpps(db_opps);
 
   const cotizacionGuardada = {
     id: opp.id, linea: 'promocionales', ot, idOpp: opp.id, idCli: cli.id,
@@ -910,6 +910,8 @@ async function guardarCotizacionClick(){
   const nota = document.getElementById('cot-ot-nota');
   nota.style.display = 'block';
   nota.innerText = `📋 Cotización guardada en el CRM como ${ot} — cliente: ${cli.empresa}.` + (desgloseGuardadoOk ? '' : ' ⚠️ El desglose editable no se pudo guardar (revisa la consola) -- el PDF y el registro en CRM sí quedaron bien, pero "editar cotización" no la va a encontrar después.');
+  // Conde 2026-10-16: aviso de confirmación (solo si Supabase confirmó el guardado).
+  tacticalAnunciarCotizacionGuardada(oppGuardadoOk, ot, cli.empresa, ultimoResultado.precioFinalTotal, (desgloseGuardadoOk ? null : 'El desglose editable no se pudo guardar (la cotización sí quedó en el CRM).'));
 
   // Conde 2026-09-25: si hay "Extra / Ajuste adicional", sale como su propia línea del PDF.
   const lineasPdf = [{desc: ultimoResultado.descripcion, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioVentaUnitario*ultimoParams.cantidad*(ultimoResultado.aplicaIva?1.19:1)), precioUnitario: ultimoResultado.precioVentaUnitario, fotoUrl: ultimoParams.fotoUrl}];
@@ -1271,7 +1273,7 @@ function generarPDFComparativo(){
   const montoRef = Math.min(...comp.opciones.map(o=>o.resultado.precioFinalTotal));
   const opp = { id: crypto.randomUUID(), ot: comp.ot, idCli: comp.idCli, nombreCli: comp.nombreCli, desc: `Comparativa: ${comp.opciones.map(o=>o.titulo).join(' vs ')}`, monto: Math.round(montoRef), etapa: 'cot', linea: 'promocionales', cantidad: comp.opciones[0].params.cantidad, vendedor: comp.vendedor, opcionesComparativa: comp.opciones };
   db_opps.push(opp);
-  tacticalSyncOpps(db_opps);
+  tacticalSyncOpps(db_opps).then(ok => tacticalAnunciarCotizacionGuardada(ok, comp.ot, comp.nombreCli, Math.round(montoRef), null, 'Comparativa'));
   window.tacticalComparacionBorradorCache = null; tacticalEliminarComparacionBorrador();
   refrescarBannerComparacion();
 }

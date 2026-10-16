@@ -345,11 +345,14 @@ async function tacticalOppsCargar(){
   if(error){ console.error('Error cargando opps de Supabase:', error); return []; }
   return data.map(tacticalOppDeDb);
 }
+// Conde 2026-10-16: devuelve true/false (antes no devolvía nada) para poder anunciar "cotización guardada" solo cuando
+// Supabase de verdad confirmó el guardado.
 async function tacticalSyncOpps(lista){
-  if(!lista || lista.length===0) return;
+  if(!lista || lista.length===0) return true;
   const filas = lista.map(tacticalOppADb);
   const { error } = await tacticalSupabase.from('opps').upsert(filas);
-  if(error){ console.error('Error guardando opps en Supabase:', error); tacticalAvisoErrorGuardado('Error guardando opps en Supabase'); }
+  if(error){ console.error('Error guardando opps en Supabase:', error); tacticalAvisoErrorGuardado('Error guardando opps en Supabase'); return false; }
+  return true;
 }
 async function tacticalEliminarOppRemoto(id){
   const { error } = await tacticalSupabase.from('opps').delete().eq('id', id);

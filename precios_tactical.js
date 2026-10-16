@@ -1196,3 +1196,16 @@ function tacticalCrearTareaRompecabezas(tipo, nombre, items){
   tacticalSyncTarea({ id: crypto.randomUUID(), area: 'diseno', desc, espec: '', emp: [], status: 'pendiente', aclaracion: '', fechaOrigen: new Date().toISOString(), orden: Date.now() });
   return desc;
 }
+
+// Conde 2026-10-16: "al guardar la cotización de todas las calculadoras salga un aviso que diga que ya quedó guardada".
+// Un solo aviso para las 8 calculadoras + Cuadernos. Solo dice "guardada" si Supabase lo confirmó (ok === true); si no, avisa
+// que NO se guardó para que la persona no crea que quedó registrada. extra = texto opcional (ej. el desglose no se guardó).
+function tacticalAnunciarCotizacionGuardada(ok, ot, cliente, total, extra, etiqueta){
+  const que = etiqueta || 'Cotización';
+  if(!ok){
+    alert('⚠️ ' + que + ' ' + (ot || '') + ' NO se pudo guardar en el CRM (revisa tu conexión a internet).\n\nVuelve a presionar Guardar para intentarlo de nuevo.');
+    return;
+  }
+  const monto = (typeof total === 'number' && isFinite(total)) ? '\nTotal: $' + Math.round(total).toLocaleString('es-CO') : '';
+  alert('✅ ' + que + ' guardada — ' + (ot || '') + '\nCliente: ' + (cliente || '') + monto + (extra ? '\n\n' + extra : ''));
+}

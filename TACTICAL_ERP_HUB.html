@@ -2443,9 +2443,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Conde 2026-09-16: "convertir esos informes en graficos" (Tendencia Histórica en Reportes) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-    <script src="tactical-supabase.js?v=20261013b"></script>
+    <script src="tactical-supabase.js?v=20261016a"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
-    <script src="precios_tactical.js?v=20261013a"></script>
+    <script src="precios_tactical.js?v=20261016a"></script>
     <script src="precios_promocionales.js?v=20260919a"></script>
     <script>
         // NAVEGACIÓN SPA DEL HUB
@@ -8632,7 +8632,7 @@
             ot = await cotObtenerOT();
             opp.ot = ot;
           }
-          tacticalSyncOpps(db_opps);
+          const oppGuardadoOk = await tacticalSyncOpps(db_opps);
 
           const cotizacion = {
             ot, id: opp.id, idOpp: opp.id, idCli: cli.id, fecha: new Date().toISOString(),
@@ -8644,6 +8644,9 @@
           tacticalSyncCotizacion(cotizacion);
           cotRefrescarDatalistClientes();
           cotCancelarEdicion();
+
+          // Conde 2026-10-16: aviso de confirmación (solo si Supabase confirmó el guardado).
+          tacticalAnunciarCotizacionGuardada(oppGuardadoOk, ot, cli.empresa, r.precioFinalTotal, null);
 
           cotImprimirPDFCliente(cotizacion);
         }
@@ -8996,7 +8999,7 @@
           const montoRef = Math.min(...comp.opciones.map(o=>o.resultado.precioFinalTotal));
           const opp = { id: crypto.randomUUID(), ot: comp.ot, idCli: comp.idCli, nombreCli: comp.nombreCli, desc: `Comparativa: ${comp.opciones.map(o=>o.titulo).join(' vs ')}`, vendedor: comp.vendedor, monto: Math.round(montoRef), etapa: 'cot', linea: 'cuadernos', cantidad: comp.opciones[0].params.cantidad, opcionesComparativa: comp.opciones, fecha: new Date().toISOString() };
           db_opps.push(opp);
-          tacticalSyncOpps(db_opps);
+          tacticalSyncOpps(db_opps).then(ok => tacticalAnunciarCotizacionGuardada(ok, comp.ot, comp.nombreCli, Math.round(montoRef), null, 'Comparativa'));
           window.tacticalComparacionBorradorCache = null; tacticalEliminarComparacionBorrador();
           cotRefrescarBannerComparacion();
         }
