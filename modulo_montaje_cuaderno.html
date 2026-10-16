@@ -112,6 +112,7 @@
     <div><label>Gramaje de insertos (g)</label><input type="number" id="aGramIns" value="150" oninput="leerAnillado()"></div>
     <div><label>Hojas de guardas</label><input type="number" id="aHojasGuar" value="2" oninput="leerAnillado()"></div>
     <div><label>Gramaje de guardas (g)</label><input type="number" id="aGramGuar" value="150" oninput="leerAnillado()"></div>
+    <div><label>Tiras de sobrante (vacío = 2%, mín. 10)</label><input type="number" id="aSobrante" min="0" placeholder="Automático" oninput="leerAnillado()"></div>
     <div><label>Calibre del anillo</label><select id="aCalibre" onchange="leerAnillado()"><option value="0">Automático (recomendado)</option></select></div>
   </div>
   <div id="aResumen" style="margin-top:12px;font-size:13.5px;line-height:1.55;"></div>
@@ -165,6 +166,7 @@
 
 <div class="panel">
   <h2>Montajes guardados (se borran solos a los 30 días)</h2>
+  <input type="text" id="gBusca" placeholder="Buscar por cliente u OT" oninput="renderGuardados()" style="max-width:340px;margin-bottom:8px;">
   <div id="guardados"><span class="hint">Cargando…</span></div>
 </div>
 
@@ -176,14 +178,14 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="tactical-supabase.js?v=20261016a"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
-<script src="precios_tactical.js?v=20261016a"></script>
+<script src="precios_tactical.js?v=20261016d"></script>
 <script>
 if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 /* ======================= ESTADO ======================= */
 const ROLES_PERMITIDOS = ['administrador','comercial','diseno','produccion'];
 const DIAS_RETENCION = 30;
-const S = { ot:'', cliente:'', cantidad:'', ancho:16, alto:22, anilPos:'lateral', anilColor:'blanco', anilEntra:1, anilPaso:0.8467, tapaTipo:'dura', cartonCal:1.5, hojasTaco:100, gramTaco:70, hojasIns:0, gramIns:150, hojasGuar:2, gramGuar:150, calibreManual:0, reduccion:0.5, margenMin:0.7, margenAnillo:1.3, anilCobertura:'total', ver:false,
+const S = { ot:'', cliente:'', cantidad:'', ancho:16, alto:22, anilPos:'lateral', anilColor:'blanco', anilEntra:1, anilPaso:0.8467, tapaTipo:'dura', cartonCal:1.5, hojasTaco:100, gramTaco:70, hojasIns:0, gramIns:150, hojasGuar:2, gramGuar:150, calibreManual:0, sobrante:null, reduccion:0.5, margenMin:0.7, margenAnillo:1.3, anilCobertura:'total', ver:false,
   guardas:1, insertos:[], interior:'Hoja interior (cuadrícula)', slots:[], extras:[], pool:[], sel:null };
 let cotizaciones = [];
 let uid = 1;
@@ -328,7 +330,7 @@ function cargarCotizacion(id){
   S.hojasIns = insL.reduce((a,l)=>a+(l.hojasPorCuaderno||0),0);
   S.gramIns = S.hojasIns ? Math.round(insL.reduce((a,l)=>a+(l.hojasPorCuaderno||0)*((l.sustrato&&l.sustrato.gramaje)||150),0)/S.hojasIns) : 150;
   S.hojasGuar = (p.guardasCantidad != null) ? p.guardasCantidad : (S.tapaTipo==='dura' ? 2 : 0); S.gramGuar = (p.guardasSustrato && p.guardasSustrato.gramaje) || 150;
-  S.calibreManual = 0;
+  S.calibreManual = 0; S.sobrante = null;
   S.guardas = S.hojasGuar > 0 ? 1 : 0;
   S.extras = []; S.slots = []; // otro trabajo: se parte de cero
   document.getElementById('cotResultados').style.display='none';
@@ -740,49 +742,16 @@ const ANILLOS_IMG = {};
 const ANILLOS_POR_SECCION_PARCIAL = 5;
 const MARGEN_PUNTA_CM = 0.4;   // libre en cada punta del borde
 // Datos del anillado en cm: cuántos aros caben según la medida del lado donde va (paso real entre aros).
-/* ======================= ANILLO DOBLE O: CALIBRE Y LOOPS (tablas del proveedor, foto del calibrador) ======================= */
-// Capacidad en HOJAS por diámetro (mm): [carátula normal, tapa dura 1,5 mm]. Valores aproximados del proveedor.
-const CAP_BOND75 = { 6:[15,5], 8:[30,15], 9:[45,30], 11:[60,35], 12:[75,50], 14:[90,65], 16:[105,80], 19:[120,100], 22:[145,120], 25:[170,145], 28:[200,165], 32:[225,185] };
-const CAP_BOND60 = { 6:[20,5], 8:[40,20], 9:[55,35], 11:[75,45], 12:[90,60], 14:[110,80], 16:[130,100], 19:[150,120], 22:[180,150], 25:[215,180], 28:[250,205], 32:[280,230] };
-const DIAMETROS_MM = [6,8,9,11,12,14,16,19,22,25,28,32];
-// Loops (anillos) según el largo del lomo en cm, de 5 a 52. Perforado 3x1 (3 huecos por pulgada, calibres 6-14 mm) y 2x1 (2 por pulgada, 16-32 mm).
-const LOOPS_3X1 = [5,7,8,9,10,11,12,14,15,16,17,18,19,21,22,23, 24,25,27,28,29,30,31,32,34,35,36,37,38,40,41,42, 43,44,46,47,48,49,50,51,53,54,55,56,57,59,60,61];
-const LOOPS_2X1 = [4,4,5,6,7,8,8,9,10,11,12,13,13,14,15,16, 16,17,18,19,20,20,21,21,23,24,24,25,26,27,28,28, 29,30,31,31,32,33,34,35,35,36,37,38,39,39,40,40];
-const PASO_CM = { '3x1': 2.54/3, '2x1': 2.54/2 };
-const GRAM_BASE = 75;           // la tabla se usa en equivalentes de bond 75 g
-const ESPESOR_HOJA75_MM = 0.10; // para corregir cartón más grueso que 1,5 mm
-function perforadoDeDiametro(mm){ return mm <= 14 ? '3x1' : '2x1'; }
-function loopsPorLargo(largoCm, perforado){
-  const tabla = perforado==='3x1' ? LOOPS_3X1 : LOOPS_2X1, porCm = perforado==='3x1' ? 3/2.54 : 2/2.54;
-  if(largoCm < 5 || largoCm > 52) return Math.max(1, Math.floor(largoCm*porCm));
-  const i = Math.floor(largoCm), f = largoCm - i;
-  const a = tabla[i-5], b = i<52 ? tabla[i-4] : a;
-  return Math.round(a + (b-a)*f);
-}
+/* ======================= ANILLO DOBLE O: CALIBRE Y LOOPS =======================
+   El cálculo (tablas del proveedor, calibre, loops) vive en precios_tactical.js (tacticalAnilloCalcular):
+   lo comparten este módulo y las Órdenes de Producción. */
+const CAP_BOND75 = TACTICAL_ANILLO_CAP75, DIAMETROS_MM = TACTICAL_ANILLO_DIAMETROS;
 function calcularAnillado(){
-  const dura = S.tapaTipo==='dura';
-  const eq = (S.hojasTaco*S.gramTaco + S.hojasIns*S.gramIns + S.hojasGuar*S.gramGuar) / GRAM_BASE;
-  // cartón más grueso que 1,5 mm: cada mm extra de las dos tapas ocupa lugar de hojas de bond 75
-  const extraCarton = dura ? Math.max(0, S.cartonCal - 1.5) * 2 / ESPESOR_HOJA75_MM : 0;
-  const necesarias = eq + extraCarton;
-  const cap = mm => CAP_BOND75[mm][dura ? 1 : 0];
-  const minimo = DIAMETROS_MM.find(mm=>cap(mm) >= necesarias) || null;
-  const recomendado = DIAMETROS_MM.find(mm=>cap(mm) >= necesarias*1.1) || null;
-  const elegido = S.calibreManual ? S.calibreManual : (recomendado || minimo);
-  const perforado = elegido ? perforadoDeDiametro(elegido) : '3x1';
-  const largoLomo = S.anilPos==='superior' ? S.ancho : S.alto;   // la carátula completa, no la hoja interior
-  const loops = loopsPorLargo(largoLomo, perforado);
-  const cant = parseInt(String(S.cantidad).replace(/\D/g,''),10) || 0;
-  return { dura, eq, extraCarton, necesarias, minimo, recomendado, elegido, perforado, paso: PASO_CM[perforado], largoLomo, loops, cant,
-    total: loops*cant, conReserva: Math.ceil(loops*cant*1.03), capElegido: elegido ? cap(elegido) : null };
-}
-// Tapa dura: por defecto lleva 2 hojas de guarda (se puede cambiar o quitar después)
-function cambiarTapa(){
-  const t = document.getElementById('aTapa').value;
-  if(t==='dura' && !(parseFloat(document.getElementById('aHojasGuar').value) > 0)){
-    document.getElementById('aHojasGuar').value = 2; S.guardas = 1; document.getElementById('fGuardas').value = '1';
-  }
-  leerAnillado(); construirSlots(); renderTodo();
+  return tacticalAnilloCalcular({
+    tapaTipo:S.tapaTipo, cartonCal:S.cartonCal, hojasTaco:S.hojasTaco, gramTaco:S.gramTaco, hojasIns:S.hojasIns, gramIns:S.gramIns,
+    hojasGuar:S.hojasGuar, gramGuar:S.gramGuar, calibreManual:S.calibreManual, cantidad:S.cantidad, sobrante:S.sobrante,
+    largoLomo: S.anilPos==='superior' ? S.ancho : S.alto     // la carátula completa, no la hoja interior
+  });
 }
 function leerAnillado(){
   const n = (id,d) => { const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? d : v; };
@@ -790,6 +759,7 @@ function leerAnillado(){
   S.cartonCal = n('aCarton',1.5); S.hojasTaco = n('aHojasTaco',100); S.gramTaco = n('aGramTaco',70);
   S.hojasIns = n('aHojasIns',0); S.gramIns = n('aGramIns',150); S.hojasGuar = n('aHojasGuar',0); S.gramGuar = n('aGramGuar',150);
   S.calibreManual = parseInt(document.getElementById('aCalibre').value,10) || 0;
+  S.sobrante = document.getElementById('aSobrante').value === '' ? null : parseInt(document.getElementById('aSobrante').value,10);
   const llevaGuardas = S.hojasGuar > 0 ? 1 : 0;
   if(llevaGuardas !== S.guardas){ S.guardas = llevaGuardas; document.getElementById('fGuardas').value = String(llevaGuardas); construirSlots(); }
   const r = calcularAnillado(); S.anilPaso = r.paso;
@@ -803,6 +773,7 @@ function volcarAnillado(){
   const sel = document.getElementById('aCalibre');
   if(sel.options.length < 2) DIAMETROS_MM.forEach(mm=>{ const o = document.createElement('option'); o.value = mm; o.textContent = mm+' mm'; sel.appendChild(o); });
   sel.value = S.calibreManual || 0;
+  document.getElementById('aSobrante').value = S.sobrante == null ? '' : S.sobrante;
 }
 function renderAnillado(){
   const el = document.getElementById('aResumen'); if(!el) return;
@@ -816,8 +787,8 @@ function renderAnillado(){
     lin.push(`<b>Calibre mínimo:</b> ${r.minimo} mm (capacidad ${CAP_BOND75[r.minimo][r.dura?1:0]} hojas) · <b>recomendado con 10% de holgura:</b> ${r.recomendado ? r.recomendado+' mm (capacidad '+CAP_BOND75[r.recomendado][r.dura?1:0]+')' : 'no hay holgura suficiente, usar '+r.minimo+' mm'}.`);
     lin.push(`<b>Calibre a usar:</b> <span style="color:#1e3a5f;font-weight:800;">${r.elegido} mm${S.calibreManual?' (elegido a mano)':''}</span> · perforado <b>${r.perforado}</b> (paso ${(r.paso*10).toFixed(1)} mm, ${r.perforado==='3x1'?'3':'2'} huecos por pulgada).`);
     if(S.calibreManual && r.capElegido < r.necesarias) lin.push(`<b style="color:#b91c1c">⚠ El calibre elegido (${r.elegido} mm) solo admite ${r.capElegido} hojas y se necesitan ${Math.ceil(r.necesarias)}.</b>`);
-    lin.push(`<b>Loops por cuaderno:</b> <span style="color:#1e3a5f;font-weight:800;">${r.loops}</span> (lomo de ${fmtCm(r.largoLomo)} cm, ${S.anilPos==='lateral'?'anillado lateral':'anillado superior'}).`);
-    if(r.cant) lin.push(`<b>Para ${fmt(r.cant)} cuadernos: ${fmt(r.total)} loops</b>. Con 3% de reserva por mermas de armado: <b>${fmt(r.conReserva)} loops</b> de ${r.elegido} mm${S.anilColor?', color '+S.anilColor:''}.`);
+    lin.push(`<b>Cada cuaderno lleva 1 tira de</b> <span style="color:#1e3a5f;font-weight:800;">${r.loops} loops</span> (lomo de ${fmtCm(r.largoLomo)} cm, ${S.anilPos==='lateral'?'anillado lateral':'anillado superior'}).`);
+    if(r.cant) lin.push(`<b>Solicitud de compra:</b> <span style="color:#1e3a5f;font-weight:800;">${fmt(r.tirasTotal)} tiras de ${r.loops} loops</span> de ${r.elegido} mm${S.anilColor?', color '+S.anilColor:''} (${fmt(r.tiras)} cuadernos + ${fmt(r.sobrante)} de sobrante) = ${fmt(r.loopsTotal)} loops.`);
   }
   lin.push('<span class="hint" style="margin:0">Valores aproximados de la tabla del proveedor. El papel distinto de bond 75 g se convierte a hojas equivalentes por gramaje (estimado). Antes de comprar, confirma con el proveedor si el cuaderno queda justo.</span>');
   el.innerHTML = lin.join('<br>');
@@ -1065,7 +1036,7 @@ async function guardarNube(){
     if(r1.error) throw r1.error;
     const r2 = await bucket.upload(base+'.jpg', jpg, { contentType:'image/jpeg', upsert:true });
     if(r2.error){ await bucket.remove([base+'.pdf']); throw r2.error; }
-    const fila = { ot:S.ot||null, cliente:S.cliente||null, descripcion: `${S.ancho} x ${S.alto} cm · ${S.slots.length} cuadros`,
+    const fila = { ot:S.ot||null, cliente:S.cliente||null, descripcion: (()=>{ const ra = calcularAnillado(); return `${S.alto} x ${S.ancho} cm · ${S.slots.length} cuadros` + (S.anilPos!=='ninguno' && ra.elegido ? ` · anillo ${ra.elegido} mm, ${ra.tirasTotal} tiras de ${ra.loops} loops` : ''); })(),
       ruta_pdf: base+'.pdf', ruta_jpg: base+'.jpg', url_pdf: bucket.getPublicUrl(base+'.pdf').data.publicUrl, url_jpg: bucket.getPublicUrl(base+'.jpg').data.publicUrl,
       creado_por: (window.tacticalUsuarioPerfil && (window.tacticalUsuarioPerfil.nombre||window.tacticalUsuarioPerfil.email)) || null };
     const { error } = await tacticalSupabase.from('montajes_cuaderno').insert(fila);
@@ -1088,14 +1059,23 @@ async function limpiarVencidos(){
     await tacticalSupabase.from('montajes_cuaderno').delete().in('id', data.map(r=>r.id));
   } catch(e){ console.error('Limpieza de montajes:', e); }
 }
+let montajesGuardados = [];
 async function cargarGuardados(){
   const cont = document.getElementById('guardados');
-  const { data, error } = await tacticalSupabase.from('montajes_cuaderno').select('*').order('created_at', {ascending:false}).limit(60);
+  const { data, error } = await tacticalSupabase.from('montajes_cuaderno').select('*').order('created_at', {ascending:false}).limit(300);
   if(error){ cont.innerHTML = '<span class="hint">Aún no está creada la tabla de montajes (supabase/migracion_montajes_cuaderno.sql).</span>'; return; }
-  if(!data.length){ cont.innerHTML = '<span class="hint">No hay montajes guardados.</span>'; return; }
-  cont.innerHTML = data.map(r=>{
+  montajesGuardados = data || [];
+  renderGuardados();
+}
+function renderGuardados(){
+  const cont = document.getElementById('guardados');
+  const q = (document.getElementById('gBusca') ? document.getElementById('gBusca').value : '').trim().toLowerCase();
+  const lista = montajesGuardados.filter(r=>!q || (r.cliente||'').toLowerCase().includes(q) || (r.ot||'').toLowerCase().includes(q));
+  if(!montajesGuardados.length){ cont.innerHTML = '<span class="hint">No hay montajes guardados.</span>'; return; }
+  if(!lista.length){ cont.innerHTML = '<span class="hint">Ningún montaje coincide con la búsqueda.</span>'; return; }
+  cont.innerHTML = lista.map(r=>{
     const dias = DIAS_RETENCION - Math.floor((Date.now() - new Date(r.created_at))/86400000);
-    return `<div class="fila"><b>${esc(r.ot||'sin OT')}</b> ${esc(r.cliente||'')} <span class="hint" style="margin:0">${new Date(r.created_at).toLocaleDateString('es-CO')} · se borra en ${Math.max(0,dias)} día(s)</span>
+    return `<div class="fila"><b>${esc(r.ot||'sin OT')}</b> <b style="color:#1e3a5f">${esc(r.cliente||'')}</b> <span class="hint" style="margin:0">${new Date(r.created_at).toLocaleDateString('es-CO')} · ${esc(r.descripcion||'')} · se borra en ${Math.max(0,dias)} día(s)</span>
       <a href="${r.url_pdf}" target="_blank">PDF</a><a href="${r.url_jpg||'#'}" target="_blank">JPG</a></div>`;
   }).join('');
 }

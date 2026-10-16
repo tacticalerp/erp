@@ -2458,7 +2458,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="tactical-supabase.js?v=20261016a"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
-    <script src="precios_tactical.js?v=20261016a"></script>
+    <script src="precios_tactical.js?v=20261016d"></script>
     <script src="precios_promocionales.js?v=20260919a"></script>
     <script>
         // NAVEGACIÓN SPA DEL HUB
@@ -4602,6 +4602,7 @@
                   <div style="border:1px solid #d7dee5; border-radius:3px; padding:4px 9px; margin-bottom:6px; break-inside:avoid; font-size:${TACTICAL_OP_FONT_SIZE};">
                     <div style="font-weight:bold;">${linea.desc||''} <span style="font-weight:normal; color:#718096;">(${pFresco.cantidad||linea.cantidad||'-'} u.)</span></div>
                     <div style="color:#4a5568;">Tapa: <strong>${nombresTapaOP[pFresco.tapaTipo]||pFresco.tapaTipo||'-'}</strong> — Encuadernación: <strong>${pFresco.encuadernacionTipo||'-'}${pFresco.anilladoDosSecciones?' (2 secciones)':''}</strong></div>
+                    ${tacticalAnilloBloqueOP(pFresco, TACTICAL_OP_FONT_SIZE)}
                     ${subBloques}
                     ${cartonHtml}
                     ${recsHtmlFicha}
@@ -9180,6 +9181,7 @@
             ${bloques}
             <div class="doc-section-title" style="font-size:${TACTICAL_OP_FONT_SIZE}; padding:3px 9px; margin:4px 0 4px;">Armado / Encuadernación</div>
             <p style="font-size:${TACTICAL_OP_FONT_SIZE}; margin:2px 0;"><strong>${nombresLinea[p.lineaProducto]} — ${p.encuadernacionTipo}${p.anilladoDosSecciones?' — Anillado en 2 secciones':''}</strong></p>
+            ${tacticalAnilloBloqueOP(p, TACTICAL_OP_FONT_SIZE)}
             ${recsHtmlOP}
           `;
           document.getElementById('print-area').innerHTML = html;

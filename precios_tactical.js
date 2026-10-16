@@ -1209,3 +1209,83 @@ function tacticalAnunciarCotizacionGuardada(ok, ot, cliente, total, extra, etiqu
   const monto = (typeof total === 'number' && isFinite(total)) ? '\nTotal: $' + Math.round(total).toLocaleString('es-CO') : '';
   alert('✅ ' + que + ' guardada — ' + (ot || '') + '\nCliente: ' + (cliente || '') + monto + (extra ? '\n\n' + extra : ''));
 }
+
+
+/* ======================= ANILLO DOBLE O: CALIBRE Y LOOPS (fuente única) =======================
+   Conde 2026-10-16: el cálculo del anillo vive acá para que lo usen igual el módulo "Montaje de Cuaderno"
+   y las Órdenes de Producción (desde el cotizador y desde la ficha del Kanban). Tablas del proveedor
+   (foto del calibrador): capacidad en HOJAS por diámetro, perforado 3x1 / 2x1 y loops por cm de lomo.
+   Valores aproximados del proveedor; papeles distintos de bond 75 g se convierten por gramaje (estimado). */
+const TACTICAL_ANILLO_DIAMETROS = [6,8,9,11,12,14,16,19,22,25,28,32];
+// [carátula normal, tapa dura 1,5 mm] -- columna Bond 75 g
+const TACTICAL_ANILLO_CAP75 = { 6:[15,5], 8:[30,15], 9:[45,30], 11:[60,35], 12:[75,50], 14:[90,65], 16:[105,80], 19:[120,100], 22:[145,120], 25:[170,145], 28:[200,165], 32:[225,185] };
+const TACTICAL_ANILLO_CAP60 = { 6:[20,5], 8:[40,20], 9:[55,35], 11:[75,45], 12:[90,60], 14:[110,80], 16:[130,100], 19:[150,120], 22:[180,150], 25:[215,180], 28:[250,205], 32:[280,230] };
+// Loops según el largo del lomo en cm (5 a 52). 3x1 = 3 huecos por pulgada (calibres 6-14 mm); 2x1 = 2 por pulgada (16-32 mm).
+const TACTICAL_ANILLO_LOOPS_3X1 = [5,7,8,9,10,11,12,14,15,16,17,18,19,21,22,23, 24,25,27,28,29,30,31,32,34,35,36,37,38,40,41,42, 43,44,46,47,48,49,50,51,53,54,55,56,57,59,60,61];
+const TACTICAL_ANILLO_LOOPS_2X1 = [4,4,5,6,7,8,8,9,10,11,12,13,13,14,15,16, 16,17,18,19,20,20,21,21,23,24,24,25,26,27,28,28, 29,30,31,31,32,33,34,35,35,36,37,38,39,39,40,40];
+// Sobrante de tiras al pedir el anillo: poco, porque en pedidos grandes no se compra un 10% extra (Conde 2026-10-16)
+const TACTICAL_ANILLO_SOBRANTE_PCT = 0.02, TACTICAL_ANILLO_SOBRANTE_MIN = 10;
+const TACTICAL_ANILLO_PASO_CM = { '3x1': 2.54/3, '2x1': 2.54/2 };
+function tacticalAnilloPerforado(mm){ return mm <= 14 ? '3x1' : '2x1'; }
+function tacticalAnilloLoopsPorLargo(largoCm, perforado){
+  const tabla = perforado==='3x1' ? TACTICAL_ANILLO_LOOPS_3X1 : TACTICAL_ANILLO_LOOPS_2X1, porCm = perforado==='3x1' ? 3/2.54 : 2/2.54;
+  if(largoCm < 5 || largoCm > 52) return Math.max(1, Math.floor(largoCm*porCm));
+  const i = Math.floor(largoCm), f = largoCm - i;
+  const a = tabla[i-5], b = i<52 ? tabla[i-4] : a;
+  return Math.round(a + (b-a)*f);
+}
+// cfg: { tapaTipo:'dura'|'semidura'|'blanda', cartonCal, hojasTaco, gramTaco, hojasIns, gramIns, hojasGuar, gramGuar, largoLomo, cantidad, calibreManual }
+function tacticalAnilloCalcular(cfg){
+  const dura = cfg.tapaTipo==='dura';
+  const eq = ((cfg.hojasTaco||0)*(cfg.gramTaco||75) + (cfg.hojasIns||0)*(cfg.gramIns||150) + (cfg.hojasGuar||0)*(cfg.gramGuar||150)) / 75;
+  const extraCarton = dura ? Math.max(0, (cfg.cartonCal||1.5) - 1.5) * 2 / 0.10 : 0;   // cartón más grueso que 1,5 mm come capacidad
+  const necesarias = eq + extraCarton;
+  const cap = mm => TACTICAL_ANILLO_CAP75[mm][dura ? 1 : 0];
+  const D = TACTICAL_ANILLO_DIAMETROS;
+  const minimo = D.find(mm=>cap(mm) >= necesarias) || null;
+  const recomendado = D.find(mm=>cap(mm) >= necesarias*1.1) || null;
+  const elegido = cfg.calibreManual ? cfg.calibreManual : (recomendado || minimo);
+  const perforado = elegido ? tacticalAnilloPerforado(elegido) : '3x1';
+  const loops = tacticalAnilloLoopsPorLargo(cfg.largoLomo, perforado);
+  const cant = parseInt(String(cfg.cantidad==null?'':cfg.cantidad).replace(/\D/g,''),10) || 0;
+  return { dura, eq, extraCarton, necesarias, minimo, recomendado, elegido, perforado, paso: TACTICAL_ANILLO_PASO_CM[perforado], largoLomo: cfg.largoLomo,
+    loops, cant, capElegido: elegido ? cap(elegido) : null,
+    // Se pide en TIRAS: una tira por cuaderno (con los loops de ese lomo) + sobrante. Sobrante por defecto: 2% de la cantidad con mínimo de 10 tiras (100 cuadernos -> 10; 1.000 -> 20).
+    tiras: cant, sobrante: (cfg.sobrante != null && cfg.sobrante !== '') ? Math.max(0, parseInt(cfg.sobrante,10)||0) : (cant ? Math.max(TACTICAL_ANILLO_SOBRANTE_MIN, Math.ceil(cant*TACTICAL_ANILLO_SOBRANTE_PCT)) : 0),
+    get tirasTotal(){ return this.tiras + this.sobrante; }, get loopsTotal(){ return (this.tiras + this.sobrante) * this.loops; } };
+}
+// Arma la configuración desde los parámetros guardados de una cotización de Cuadernos (null si no lleva anillo doble O)
+function tacticalAnilloCfgDeParams(p){
+  if(!p || p.encuadernacionTipo !== 'anillo_doble_o') return null;
+  const lineas = p.lineasImpresion || [];
+  const taco = lineas.find(l=>l.rol==='taco'), ins = lineas.filter(l=>l.rol==='inserto');
+  const hojasIns = ins.reduce((a,l)=>a+(l.hojasPorCuaderno||0),0);
+  const gramIns = hojasIns ? ins.reduce((a,l)=>a+(l.hojasPorCuaderno||0)*((l.sustrato&&l.sustrato.gramaje)||150),0)/hojasIns : 150;
+  const lados = [p.anchoCm||0, p.altoCm||0];
+  // cuaderno anillado: lomo en el lado largo (anillado lateral); libreta: anillo arriba, en el lado corto
+  const largoLomo = p.lineaProducto==='libretas' ? Math.min(...lados) : Math.max(...lados);
+  return { tapaTipo: p.tapaTipo, cartonCal: p.cartonCalibreMm || 1.5,
+    hojasTaco: p.tacoHojas || (taco && taco.hojasPorCuaderno) || 0, gramTaco: (taco && taco.sustrato && taco.sustrato.gramaje) || 75,
+    hojasIns, gramIns, hojasGuar: p.guardasCantidad != null ? p.guardasCantidad : (p.tapaTipo==='dura' ? 2 : 0),
+    gramGuar: (p.guardasSustrato && p.guardasSustrato.gramaje) || 150, largoLomo, cantidad: p.cantidad, calibreManual: 0, sobrante: null };
+}
+// Bloque HTML para la Orden de Producción ('' si el cuaderno no lleva anillo doble O)
+function tacticalAnilloBloqueOP(p, fontSize){
+  const cfg = tacticalAnilloCfgDeParams(p); if(!cfg) return '';
+  const r = tacticalAnilloCalcular(cfg), fmt = n => Number(n).toLocaleString('es-CO');
+  const fs = fontSize || '12.5px';
+  if(!r.minimo) return `<div style="border:1px solid #f0d98c; background:#fff3cd; color:#7a5b00; border-radius:4px; padding:4px 9px; margin:4px 0; font-size:${fs};"><strong>Anillo doble O:</strong> ⚠ ${fmt(cfg.hojasTaco+cfg.hojasIns+cfg.hojasGuar)} hojas superan el calibre más grande de la tabla (32 mm). Consultar al proveedor.</div>`;
+  const partes = [
+    `Calibre <strong>${r.elegido} mm</strong>${r.recomendado && r.recomendado!==r.minimo ? ` (mínimo ${r.minimo} mm)` : ''}`,
+    `perforado <strong>${r.perforado}</strong> (paso ${(r.paso*10).toFixed(1)} mm)`,
+    `lomo ${Math.round(r.largoLomo*10)/10} cm → 1 tira de <strong>${r.loops} loops</strong> por cuaderno`,
+  ];
+  const compra = r.cant ? `Solicitar: <strong>${fmt(r.tirasTotal)} tiras de ${r.loops} loops</strong> de ${r.elegido} mm (${fmt(r.tiras)} + ${fmt(r.sobrante)} de sobrante) = ${fmt(r.loopsTotal)} loops` : '';
+  const hojas = cfg.hojasTaco + cfg.hojasIns + cfg.hojasGuar;
+  const dos = p.anilladoDosSecciones ? ' — anillado en 2 secciones (tramos parciales): confirmar con el proveedor cuántas tiras y de cuántos loops' : '';
+  return `<div style="border:1px solid #bfdbfe; background:#eff6ff; border-radius:4px; padding:4px 9px; margin:4px 0; font-size:${fs}; color:#1e3a5f; line-height:1.3;">
+    <div><strong>Anillo doble O:</strong> ${partes.join(' — ')}${dos}</div>
+    ${compra ? `<div>${compra}</div>` : ''}
+    <div style="color:#64748b; font-size:calc(${fs} - 1.5px);">${fmt(hojas)} hojas dentro del anillo (≈ ${fmt(Math.round(r.eq))} de bond 75 g), tapa ${r.dura ? 'dura' : (cfg.tapaTipo==='semidura'?'semidura':'blanda')}. Valores aproximados de la tabla del proveedor.</div>
+  </div>`;
+}
