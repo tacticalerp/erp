@@ -17,7 +17,28 @@
   header h1{margin:0;font-size:16px;color:#fff;}
   header p{margin:2px 0 0;font-size:12.5px;color:#cbd8e8;}
   .nav-btn-hub{background:#cc0000;color:#fff;border:none;padding:8px 16px;border-radius:4px;font-weight:bold;cursor:pointer;font-size:0.9rem;margin-left:auto;}
-  main{padding:16px;max-width:1400px;margin:0 auto;}
+  main{padding:16px;max-width:1600px;margin:0 auto;}
+  main.layout{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px;align-items:start;}
+  .col-izq,.col-der{min-width:0;}
+  .col-der{position:sticky;top:10px;max-height:calc(100vh - 20px);overflow:auto;}
+  .col-der .panel{margin-bottom:0;}
+  #lienzoWrap{max-height:calc(100vh - 230px);}
+  .abajo{grid-column:1 / -1;}
+  @media(max-width:1100px){ main.layout{grid-template-columns:1fr;} .col-der{position:static;max-height:none;} #lienzoWrap{max-height:none;} }
+  .res{font-weight:600;font-size:12px;color:#475569;margin-left:auto;text-align:right;}
+  .panel h2 .res{margin-left:10px;font-weight:600;}
+  .res.mal{color:#b91c1c;}
+  .acc-grupo{margin-top:12px;display:flex;flex-direction:column;gap:6px;}
+  details.acc{background:#eef2f6;border:1px solid var(--border);border-radius:7px;}
+  details.acc.panel{margin-bottom:16px;background:var(--panel);}
+  details.acc>summary{list-style:none;cursor:pointer;padding:10px 14px;display:flex;align-items:center;gap:10px;font-weight:800;font-size:13.5px;color:var(--azul);}
+  details.acc>summary::-webkit-details-marker{display:none;}
+  details.acc>summary::before{content:'▸';font-size:13px;transition:transform .15s;color:#64748b;}
+  details.acc[open]>summary::before{transform:rotate(90deg);}
+  details.acc[open]>summary{border-bottom:1px solid var(--border);}
+  details.acc>summary:hover{background:#e3e9f0;border-radius:7px;}
+  .acc-cuerpo{padding:12px 14px 14px;}
+  details.acc.panel .acc-cuerpo{padding:12px 4px 4px;}
   .panel{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:16px;}
   .panel h2{margin:0 0 10px;font-size:15px;color:var(--azul);font-weight:800;}
   .panel h2 .n{display:inline-block;background:var(--azul);color:#fff;border-radius:50%;width:22px;height:22px;text-align:center;line-height:22px;font-size:12px;margin-right:6px;}
@@ -74,68 +95,105 @@
   <div><h1>Montaje para el cliente</h1><p>Cuadernos, cajas, carpetas o cualquier otro producto: sube los archivos y se arma el montaje con la plantilla de Tactical, listo para que el cliente apruebe por WhatsApp.</p></div>
   <button class="nav-btn-hub" onclick="location.href='TACTICAL_ERP_HUB.html'">Volver al Hub</button>
 </header>
-<main>
+<main class="layout">
 
-<div class="panel">
+<section class="col-izq">
+
+<div class="panel" id="pnlDatos">
   <h2><span class="n">1</span>Datos del trabajo</h2>
-  <div class="grid" style="margin-bottom:10px;">
+  <div class="grid">
     <div><label>Tipo de montaje</label><select id="fModo" onchange="cambiarModo()"><option value="cuaderno">Cuaderno (anillado)</option><option value="general">Otro producto (caja, carpeta, sobre, bolsa, sticker…)</option></select></div>
-  </div>
-  <p class="hint solo-cuaderno"><b>Reglas del anillado:</b> las hojas interiores (cuadrícula, insertos) miden 5 mm menos que la carátula en ancho y en alto (ej. 24 x 17 → 23,5 x 16,5). La cuadrícula debe quedar mínimo a 7 mm del borde del papel y a 13 mm en el lado del anillado. El módulo lo revisa y avisa.</p>
-  <p class="hint solo-cuaderno">Busca la cotización de Cuadernos por OT o por cliente y se llenan solos los cuadros (portada, guardas, insertos, hoja interior). También puedes llenarlo a mano.</p>
-  <label class="solo-cuaderno">Buscar cotización (OT o cliente)</label>
-  <input class="solo-cuaderno" type="text" id="buscaCot" placeholder="Ej: OT-1234 o nombre del cliente" oninput="buscarCotizacion()">
-  <div id="cotResultados"></div>
-  <div class="grid" style="margin-top:12px;">
     <div><label>Cliente</label><input type="text" id="fCliente" oninput="leerForm(false)"></div>
     <div><label>OT</label><input type="text" id="fOt" oninput="leerForm(false)"></div>
-    <div><label>Comercial que aprueba</label><select id="fComercial" onchange="elegirComercial()"><option value="">Otro (escribir abajo)</option></select></div>
-    <div><label>WhatsApp del comercial (con código de país)</label><input type="text" id="fWaCom" placeholder="Ej: 573001234567" oninput="leerForm(false)"></div>
-    <div><label>Nombre del comercial</label><input type="text" id="fNomCom" placeholder="Ej: Norely" oninput="leerForm(false)"></div>
-    <div><label>WhatsApp del cliente (opcional)</label><input type="text" id="fWaCli" placeholder="Ej: 573001234567" oninput="leerForm(false)"></div>
     <div class="solo-cuaderno"><label>Cantidad de cuadernos</label><input type="number" id="fCantidad" min="1" oninput="leerForm(false)"></div>
-    <div class="solo-cuaderno"><label>Ancho cerrado (cm)</label><input type="number" id="fAncho" step="0.1" value="16" oninput="leerForm(true)"></div>
-    <div class="solo-cuaderno"><label>Alto cerrado (cm)</label><input type="number" id="fAlto" step="0.1" value="22" oninput="leerForm(true)"> <button class="btn gris mini" style="margin-top:4px;" onclick="girarMedidas()">⟳ Girar ancho/alto</button></div>
-    <div class="solo-cuaderno"><label>Anillado</label><select id="fAnilPos" onchange="leerForm(false)"><option value="lateral">Lateral (cuaderno)</option><option value="superior">Superior (libreta)</option><option value="ninguno">Sin anillado</option></select></div>
-    <div class="solo-cuaderno"><label>Hojas interiores más pequeñas que la carátula (cm)</label><input type="number" id="fReduccion" step="0.1" min="0" value="0.5" oninput="leerForm(false)"></div>
-    <div class="solo-cuaderno"><label>Margen mínimo de la cuadrícula al borde (cm)</label><input type="number" id="fMargenMin" step="0.1" min="0" value="0.7" oninput="leerForm(false)"></div>
-    <div class="solo-cuaderno"><label>Margen mínimo de la cuadrícula en el lado del anillado (cm)</label><input type="number" id="fMargenAnillo" step="0.1" min="0" value="1.3" oninput="leerForm(false)"></div>
-        <div class="solo-cuaderno"><label>El anillo entra en el diseño (cm)</label><input type="number" id="fAnilEntra" step="0.1" min="0.3" value="1" oninput="leerForm(false)"></div>
-    <div class="solo-cuaderno"><label>Cobertura del anillo</label><select id="fAnilCob" onchange="leerForm(false)"><option value="total">Total (todo el lado)</option><option value="parcial">Parcial (2 secciones)</option></select></div>
-    <div class="solo-cuaderno"><label>Color del anillo</label><select id="fAnilColor" onchange="leerForm(false)"><option value="blanco">Blanco</option><option value="negro">Negro</option></select></div>
-    <div class="solo-cuaderno"><label>Guardas (hojas de adentro de las tapas)</label><select id="fGuardas" onchange="leerForm(true)"><option value="0">No lleva</option><option value="1">Sí lleva</option></select></div>
-    <div class="solo-cuaderno"><label>Cantidad de insertos</label><input type="number" id="fInsertos" min="0" max="12" value="0" oninput="leerForm(true)"></div>
-    <div class="solo-cuaderno"><label>Nombre de la hoja interior</label><input type="text" id="fInterior" value="Hoja interior (cuadrícula)" oninput="leerForm(true)"></div>
   </div>
-  <div class="solo-general" style="margin-top:14px;">
-    <p class="hint"><b>Piezas del trabajo.</b> Agrega una fila por cada pieza que se aprueba (caja, carpeta, sobre, sticker…). Cada una va con su nombre, cantidad y medida final; el montaje las rotula y les pone las cotas. Si la pieza tiene reverso distinto, marca "Reverso".</p>
+  <div class="solo-cuaderno" style="margin-top:10px;">
+    <label>Buscar cotización de Cuadernos (OT o cliente) para llenar todo solo</label>
+    <input type="text" id="buscaCot" placeholder="Ej: OT-1234 o nombre del cliente" oninput="buscarCotizacion()">
+    <div id="cotResultados"></div>
+  </div>
+  <div class="solo-general" style="margin-top:12px;">
+    <p class="hint"><b>Piezas del trabajo.</b> Una fila por cada pieza que se aprueba (caja, carpeta, sobre, sticker…), con nombre, cantidad y medida final. Si tiene reverso distinto, marca "Reverso".</p>
     <div id="piezasEditor"></div>
     <div class="row2"><button class="btn gris mini" onclick="agregarPieza()">+ Agregar pieza</button></div>
   </div>
-  <div id="infoAnillos" class="hint solo-cuaderno" style="margin-top:8px;font-weight:700;color:#1e3a5f;"></div>
-  <div class="row2 solo-cuaderno"><button class="btn gris mini" onclick="agregarPiezaExtra()">+ Agregar otra pieza (ej. hoja de stickers)</button></div>
-</div>
 
-<div class="panel solo-cuaderno">
-  <h2><span class="n">1b</span>Anillo: calibre y loops para comprar</h2>
-  <p class="hint">Con las hojas, el papel y el tipo de tapa se calcula el calibre del anillo doble O (tabla de capacidad del proveedor) y cuántos loops lleva cada cuaderno según el largo del lomo. Esto es interno: no sale en el montaje del cliente.</p>
-  <div class="grid">
-    <div><label>Tipo de tapa</label><select id="aTapa" onchange="cambiarTapa()"><option value="dura">Dura</option><option value="semidura">Semidura</option><option value="blanda">Blanda</option></select></div>
-    <div><label>Calibre del cartón (mm)</label><input type="number" id="aCarton" step="0.1" value="1.5" oninput="leerAnillado()"></div>
-    <div><label>Hojas del taco</label><input type="number" id="aHojasTaco" value="100" oninput="leerAnillado()"></div>
-    <div><label>Gramaje del taco (g)</label><input type="number" id="aGramTaco" value="70" oninput="leerAnillado()"></div>
-    <div><label>Hojas de insertos</label><input type="number" id="aHojasIns" value="0" oninput="leerAnillado()"></div>
-    <div><label>Gramaje de insertos (g)</label><input type="number" id="aGramIns" value="150" oninput="leerAnillado()"></div>
-    <div><label>Hojas de guardas</label><input type="number" id="aHojasGuar" value="2" oninput="leerAnillado()"></div>
-    <div><label>Gramaje de guardas (g)</label><input type="number" id="aGramGuar" value="150" oninput="leerAnillado()"></div>
-    <div><label>Tiras de sobrante (vacío = 2%, mín. 10)</label><input type="number" id="aSobrante" min="0" placeholder="Automático" oninput="leerAnillado()"></div>
-    <div><label>Calibre del anillo</label><select id="aCalibre" onchange="leerAnillado()"><option value="0">Automático (recomendado)</option></select></div>
+  <div class="acc-grupo">
+    <details class="acc solo-cuaderno">
+      <summary><span class="t">Medidas y anillado</span><span class="res" id="rMedidas"></span></summary>
+      <div class="acc-cuerpo">
+        <div class="grid">
+          <div class="solo-cuaderno"><label>Ancho cerrado (cm)</label><input type="number" id="fAncho" step="0.1" value="16" oninput="leerForm(true)"></div>
+      <div class="solo-cuaderno"><label>Alto cerrado (cm)</label><input type="number" id="fAlto" step="0.1" value="22" oninput="leerForm(true)"> <button class="btn gris mini" style="margin-top:4px;" onclick="girarMedidas()">⟳ Girar ancho/alto</button></div>
+      <div class="solo-cuaderno"><label>Anillado</label><select id="fAnilPos" onchange="leerForm(false)"><option value="lateral">Lateral (cuaderno)</option><option value="superior">Superior (libreta)</option><option value="ninguno">Sin anillado</option></select></div>
+      <div class="solo-cuaderno"><label>Color del anillo</label><select id="fAnilColor" onchange="leerForm(false)"><option value="blanco">Blanco</option><option value="negro">Negro</option></select></div>
+      <div class="solo-cuaderno"><label>Cobertura del anillo</label><select id="fAnilCob" onchange="leerForm(false)"><option value="total">Total (todo el lado)</option><option value="parcial">Parcial (2 secciones)</option></select></div>
+        </div>
+        <div id="infoAnillos" class="hint" style="margin-top:8px;font-weight:700;color:#1e3a5f;"></div>
+      </div>
+    </details>
+
+    <details class="acc solo-cuaderno">
+      <summary><span class="t">Componentes del cuaderno</span><span class="res" id="rComp"></span></summary>
+      <div class="acc-cuerpo">
+        <div class="grid">
+          <div class="solo-cuaderno"><label>Guardas (hojas de adentro de las tapas)</label><select id="fGuardas" onchange="leerForm(true)"><option value="0">No lleva</option><option value="1">Sí lleva</option></select></div>
+      <div class="solo-cuaderno"><label>Cantidad de insertos</label><input type="number" id="fInsertos" min="0" max="12" value="0" oninput="leerForm(true)"></div>
+      <div class="solo-cuaderno"><label>Nombre de la hoja interior</label><input type="text" id="fInterior" value="Hoja interior (cuadrícula)" oninput="leerForm(true)"></div>
+        </div>
+        <div class="row2"><button class="btn gris mini" onclick="agregarPiezaExtra()">+ Agregar otra pieza (ej. hoja de stickers)</button></div>
+      </div>
+    </details>
+
+    <details class="acc solo-cuaderno">
+      <summary><span class="t">Anillo: calibre y loops para comprar</span><span class="res" id="rAnillo"></span></summary>
+      <div class="acc-cuerpo">
+        <p class="hint">Con las hojas, el papel y el tipo de tapa se calcula el calibre del anillo doble O (tabla del proveedor) y cuántas tiras pedir. Es interno: no sale en el montaje del cliente.</p>
+        <div class="grid">
+          <div><label>Tipo de tapa</label><select id="aTapa" onchange="cambiarTapa()"><option value="dura">Dura</option><option value="semidura">Semidura</option><option value="blanda">Blanda</option></select></div>
+      <div><label>Calibre del cartón (mm)</label><input type="number" id="aCarton" step="0.1" value="1.5" oninput="leerAnillado()"></div>
+      <div><label>Hojas del taco</label><input type="number" id="aHojasTaco" value="100" oninput="leerAnillado()"></div>
+      <div><label>Gramaje del taco (g)</label><input type="number" id="aGramTaco" value="70" oninput="leerAnillado()"></div>
+      <div><label>Hojas de insertos</label><input type="number" id="aHojasIns" value="0" oninput="leerAnillado()"></div>
+      <div><label>Gramaje de insertos (g)</label><input type="number" id="aGramIns" value="150" oninput="leerAnillado()"></div>
+      <div><label>Hojas de guardas</label><input type="number" id="aHojasGuar" value="2" oninput="leerAnillado()"></div>
+      <div><label>Gramaje de guardas (g)</label><input type="number" id="aGramGuar" value="150" oninput="leerAnillado()"></div>
+      <div><label>Tiras de sobrante (vacío = 2%, mín. 10)</label><input type="number" id="aSobrante" min="0" placeholder="Automático" oninput="leerAnillado()"></div>
+      <div><label>Calibre del anillo</label><select id="aCalibre" onchange="leerAnillado()"><option value="0">Automático (recomendado)</option></select></div>
+        </div>
+        <div id="aResumen" style="margin-top:12px;font-size:13.5px;line-height:1.55;"></div>
+      </div>
+    </details>
+
+    <details class="acc solo-cuaderno">
+      <summary><span class="t">Reglas de preprensa</span><span class="res" id="rReglas"></span></summary>
+      <div class="acc-cuerpo">
+        <p class="hint">Las hojas interiores miden 5 mm menos que la carátula en ancho y en alto (ej. 24 x 17 → 23,5 x 16,5). La cuadrícula debe quedar mínimo a 7 mm del borde del papel y a 13 mm del lado del anillado. El módulo revisa y avisa.</p>
+        <div class="grid">
+          <div class="solo-cuaderno"><label>Hojas interiores más pequeñas que la carátula (cm)</label><input type="number" id="fReduccion" step="0.1" min="0" value="0.5" oninput="leerForm(false)"></div>
+      <div class="solo-cuaderno"><label>Margen mínimo de la cuadrícula al borde (cm)</label><input type="number" id="fMargenMin" step="0.1" min="0" value="0.7" oninput="leerForm(false)"></div>
+      <div class="solo-cuaderno"><label>Margen mínimo de la cuadrícula en el lado del anillado (cm)</label><input type="number" id="fMargenAnillo" step="0.1" min="0" value="1.3" oninput="leerForm(false)"></div>
+      <div class="solo-cuaderno"><label>El anillo entra en el diseño (cm)</label><input type="number" id="fAnilEntra" step="0.1" min="0.3" value="1" oninput="leerForm(false)"></div>
+        </div>
+      </div>
+    </details>
+
+    <details class="acc">
+      <summary><span class="t">Aprobación por WhatsApp</span><span class="res" id="rWa"></span></summary>
+      <div class="acc-cuerpo">
+        <div class="grid">
+          <div><label>Comercial que aprueba</label><select id="fComercial" onchange="elegirComercial()"><option value="">Otro (escribir abajo)</option></select></div>
+      <div><label>WhatsApp del comercial (con código de país)</label><input type="text" id="fWaCom" placeholder="Ej: 573001234567" oninput="leerForm(false)"></div>
+      <div><label>Nombre del comercial</label><input type="text" id="fNomCom" placeholder="Ej: Norely" oninput="leerForm(false)"></div>
+      <div><label>WhatsApp del cliente (opcional)</label><input type="text" id="fWaCli" placeholder="Ej: 573001234567" oninput="leerForm(false)"></div>
+        </div>
+      </div>
+    </details>
   </div>
-  <div id="aResumen" style="margin-top:12px;font-size:13.5px;line-height:1.55;"></div>
 </div>
 
 <div class="panel">
-  <h2><span class="n">2</span>Archivos del cliente</h2>
+  <h2><span class="n">2</span>Archivos del cliente <span class="res" id="rArch"></span></h2>
   <p class="hint">Arrastra aquí todo junto: PDF (con todas las páginas), .ai guardado con compatibilidad PDF, JPG o PNG. Cada página aparece como una miniatura.</p>
   <div id="drop" onclick="document.getElementById('archivos').click()">Arrastra los archivos aquí o haz clic para elegirlos</div>
   <input type="file" id="archivos" multiple accept=".pdf,.ai,.jpg,.jpeg,.png,.webp" style="display:none" onchange="ingerirArchivos(this.files); this.value='';">
@@ -145,29 +203,37 @@
     <button class="btn" onclick="autoAsignar()">Asignar automáticamente en orden</button>
     <button class="btn gris" onclick="limpiarArchivos()">Quitar todos los archivos</button>
   </div>
+
 </div>
 
 <div class="panel">
-  <h2><span class="n">3</span>Cada cuadro del montaje</h2>
+  <h2><span class="n">3</span>Cada cuadro del montaje <span class="res" id="rCuadros"></span></h2>
   <p class="hint">Arrastra una miniatura sobre el cuadro que le corresponde (o toca la miniatura y luego el cuadro). Puedes arrastrar de un cuadro a otro para intercambiarlos.</p>
   <div id="slots"></div>
+
 </div>
 
+</section>
+
+<aside class="col-der">
 <div class="panel">
   <h2><span class="n">4</span>Vista previa (lo que verá el cliente)</h2>
-  <div id="lienzoWrap"><canvas id="lienzo"></canvas></div>
-  <div class="row2">
+  <div class="row2" style="margin:0 0 10px;">
     <button class="btn rojo" onclick="descargar('pdf')">Descargar PDF</button>
-    <button class="btn rojo" onclick="descargar('jpg')">Descargar JPG alta</button>
-    <button class="btn verde" onclick="guardarNube()">Guardar en la nube (1 mes)</button>
+    <button class="btn rojo" onclick="descargar('jpg')">Descargar JPG</button>
+    <button class="btn verde" onclick="guardarNube()">Guardar en la nube</button>
     <button class="btn" style="background:#128c7e" onclick="enviarWaCliente()">Enviar al cliente por WhatsApp</button>
-    <span id="msgGuardar" style="font-size:12.5px;font-weight:700;"></span>
   </div>
+  <div id="msgGuardar" style="font-size:12.5px;font-weight:700;margin-bottom:8px;"></div>
+  <div id="lienzoWrap"><canvas id="lienzo"></canvas></div>
 </div>
+</aside>
 
-<div class="panel">
-  <h2><span class="n">5</span>Prueba de impresión (tamaño real, lista para la impresora)</h2>
-  <p class="hint">Acomoda todas las piezas a tamaño real dentro de hojas del tamaño máximo de la impresora, con marcas de corte y sangrado, para imprimir sin volver a editar los archivos. Las piezas en blanco no se imprimen.</p>
+<div class="abajo">
+  <details class="acc panel">
+    <summary><span class="t">5 · Prueba de impresión (tamaño real, lista para la impresora)</span><span class="res" id="rPrueba"></span></summary>
+    <div class="acc-cuerpo">
+      <p class="hint">Acomoda todas las piezas a tamaño real dentro de hojas del tamaño máximo de la impresora, con marcas de corte y sangrado, para imprimir sin volver a editar los archivos. Las piezas en blanco no se imprimen.</p>
   <div class="grid">
     <div><label>Ancho de hoja (cm)</label><input type="number" id="pHojaW" step="0.1" value="50" oninput="planPrueba()"></div>
     <div><label>Alto de hoja (cm)</label><input type="number" id="pHojaH" step="0.1" value="33" oninput="planPrueba()"></div>
@@ -179,12 +245,17 @@
   <div id="pResumen" style="margin-top:10px;font-weight:700;font-size:13.5px;color:#1e3a5f;"></div>
   <div id="pVista" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;"></div>
   <div class="row2"><button class="btn rojo" onclick="descargarPrueba()">Descargar PDF de prueba (tamaño real)</button><span id="msgPrueba" style="font-size:12.5px;font-weight:700;"></span></div>
-</div>
 
-<div class="panel">
-  <h2>Montajes guardados (se borran solos a los 30 días)</h2>
-  <input type="text" id="gBusca" placeholder="Buscar por cliente u OT" oninput="renderGuardados()" style="max-width:340px;margin-bottom:8px;">
+    </div>
+  </details>
+  <details class="acc panel">
+    <summary><span class="t">Montajes guardados (se borran solos a los 30 días)</span></summary>
+    <div class="acc-cuerpo">
+      <input type="text" id="gBusca" placeholder="Buscar por cliente u OT" oninput="renderGuardados()" style="max-width:340px;margin-bottom:8px;">
   <div id="guardados"><span class="hint">Cargando…</span></div>
+
+    </div>
+  </details>
 </div>
 
 </main>
@@ -759,7 +830,26 @@ function infoAnillos(){
   const usados = (S.anilCobertura==='parcial' && da.n > ANILLOS_POR_SECCION_PARCIAL*2) ? ANILLOS_POR_SECCION_PARCIAL*2 : da.n;
   el.textContent = `Anillado ${S.anilPos==='lateral'?'lateral':'superior'} sobre ${da.largo} cm: lleva ${da.n} loops (paso ${(S.anilPaso*10).toFixed(1)} mm)${usados<da.n?', se dibujan '+usados+' en 2 secciones':''}. El anillo entra ${S.anilEntra} cm en el diseño.`;
 }
-function renderTodo(){ infoAnillos(); renderPool(); renderSlots(); dibujarMontaje(); if(typeof planPrueba==='function') planPrueba(); }
+function actualizarResumenes(){
+  const set = (id, txt, mal)=>{ const el = document.getElementById(id); if(el){ el.textContent = txt; el.classList.toggle('mal', !!mal); } };
+  const pos = { lateral:'lateral', superior:'superior', ninguno:'sin anillado' }[S.anilPos] || '';
+  set('rMedidas', `${fmtCm(S.ancho)} x ${fmtCm(S.alto)} cm · ${pos}${S.anilPos!=='ninguno' ? ' '+S.anilColor+(S.anilCobertura==='parcial'?' (parcial)':'') : ''}`);
+  set('rComp', `${S.guardas ? 'con guardas' : 'sin guardas'} · ${S.insertos.length} inserto(s)`);
+  set('rReglas', `hoja interior −${fmtCm(S.reduccion*10)} mm · márgenes ${Math.round(S.margenMin*10)}/${Math.round(S.margenAnillo*10)} mm`);
+  set('rWa', S.waCom ? `${S.nomCom||'Comercial'} · +${waNumero(S.waCom)}` : 'falta el número', !S.waCom);
+  if(S.anilPos==='ninguno'){ set('rAnillo', 'sin anillado'); }
+  else {
+    const r = calcularAnillado();
+    if(!r.minimo) set('rAnillo', 'las hojas no caben en el anillo más grande', true);
+    else set('rAnillo', `${r.elegido} mm · ${r.perforado} · ${r.loops} loops` + (r.cant ? ` · ${r.tirasTotal} tiras` : ''), !!(S.calibreManual && r.capElegido < r.necesarias));
+  }
+  const asign = S.slots.filter(sl=>sl.poolId || sl.blanco).length;
+  set('rArch', S.pool.length ? `${S.pool.length} página(s) cargadas` : '');
+  set('rCuadros', `${asign} de ${S.slots.length} con archivo`, asign < S.slots.length);
+  const pl = (typeof planificarHojas==='function') ? planificarHojas() : null;
+  set('rPrueba', pl && pl.total ? `${pl.hojas.length} hoja(s) de ${pl.P.W} x ${pl.P.H} cm` : '');
+}
+function renderTodo(){ actualizarResumenes(); infoAnillos(); renderPool(); renderSlots(); dibujarMontaje(); if(typeof planPrueba==='function') planPrueba(); }
 
 /* ======================= DIBUJO DEL MONTAJE ======================= */
 const LW = 2400;               // ancho del lienzo en px
