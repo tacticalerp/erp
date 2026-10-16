@@ -836,6 +836,18 @@
                     <div class="card-footer">Abrir módulo ➔</div>
                 </div>
 
+                <!-- MONTAJES (Conde 2026-10-16) -- montaje de IMPRESIÓN (marcas, pinza, tiro/retiro); archivo aparte, independiente
+                     de "Montaje de Cuaderno". Solo administrador y diseño (data-roles, ver tacticalAplicarVisibilidadHub). -->
+                <div class="hub-card active-card" data-roles="administrador,diseno" onclick="location.href='modulo_montajes_impresion.html'">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>Montajes</h3>
+                            <span class="badge badge-active">Nuevo</span>
+                        </div>
+                    </div>
+                    <div class="card-footer">Abrir módulo ➔</div>
+                </div>
+
                 <!-- MÓDULO 4: KANBAN DE PRODUCCIÓN -->
                 <div class="hub-card active-card" onclick="showView('kanban')">
                     <div>
@@ -2505,7 +2517,9 @@
             const rol = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol;
             document.querySelectorAll('#view-hub .hub-card').forEach(card => {
                 const m = (card.getAttribute('onclick') || '').match(/showView\('([^']+)'\)/);
-                const roles = m ? TACTICAL_ROLES_POR_VISTA[m[1]] : null;
+                // Conde 2026-10-16: tarjetas que abren un archivo aparte (location.href) declaran sus roles en data-roles.
+                const dr = card.getAttribute('data-roles');
+                const roles = dr ? dr.split(',') : (m ? TACTICAL_ROLES_POR_VISTA[m[1]] : null);
                 const oculta = (roles && !roles.includes(rol)) || (card.classList.contains('disabled-card') && rol !== 'administrador');
                 card.style.display = oculta ? 'none' : '';
             });

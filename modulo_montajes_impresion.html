@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tactical — Montajes</title>
+<style>
+  /* Conde 2026-10-16: herramienta "Montajes" = montaje de IMPRESIÓN (acomoda las páginas en la hoja con marcas,
+     pinza, tiro/retiro). Es independiente de "Montaje de Cuaderno" (pruebas para el cliente). Mismo look del ERP.
+     Fase 1: litografía -- taco pata con pata, taco tiro/retiro y agenda. */
+  :root{ --panel:#dde3ea; --border:#94a3b8; --text:#1a202c; --muted:#5a6472; --accent:#cc0000; --azul:#1e3a5f; --ok:#1a7d3f; --warn:#b45309; --danger:#b91c1c; }
+  *{box-sizing:border-box;}
+  body{margin:0;background:#12161d;color:var(--text);font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
+  header{padding:14px 22px;background:var(--azul);display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  header img{height:38px;background:#fff;border-radius:4px;padding:2px 6px;}
+  header h1{margin:0;font-size:16px;color:#fff;}
+  header p{margin:2px 0 0;font-size:12.5px;color:#cbd8e8;}
+  .nav-btn-hub{background:#cc0000;color:#fff;border:none;padding:8px 16px;border-radius:4px;font-weight:bold;cursor:pointer;font-size:0.9rem;margin-left:auto;}
+  main{padding:16px;max-width:1300px;margin:0 auto;}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:16px;}
+  .panel h2{margin:0 0 10px;font-size:15px;color:var(--azul);font-weight:800;}
+  .panel h2 .n{display:inline-block;background:var(--azul);color:#fff;border-radius:50%;width:22px;height:22px;text-align:center;line-height:22px;font-size:12px;margin-right:6px;}
+  .hint{font-size:12.5px;color:var(--muted);margin:0 0 10px;}
+  label{display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:3px;}
+  input[type=text],input[type=number],select{width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:5px;font-size:14px;background:#fff;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;}
+  button.btn{background:var(--azul);color:#fff;border:none;border-radius:5px;padding:9px 16px;font-size:13.5px;font-weight:700;cursor:pointer;}
+  button.btn:hover{filter:brightness(1.12);}
+  button.btn.verde{background:var(--ok);} button.btn.gris{background:#64748b;}
+  button.btn:disabled{opacity:.5;cursor:default;}
+  button.btn.mini{padding:4px 10px;font-size:12.5px;}
+  #drop{border:2px dashed #64748b;border-radius:8px;background:#f1f5f9;padding:22px;text-align:center;color:#475569;cursor:pointer;font-size:14px;}
+  #drop.sobre{background:#dbeafe;border-color:var(--azul);}
+  #progreso{font-size:12.5px;color:var(--azul);margin-top:6px;min-height:16px;font-weight:600;}
+  #pool{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+  .thumb{width:96px;background:#fff;border:2px solid var(--border);border-radius:6px;padding:4px;font-size:10.5px;text-align:center;}
+  .thumb{position:relative;}
+  .thumb .x{position:absolute;top:2px;right:2px;width:22px;height:22px;line-height:18px;padding:0;border:1px solid #94a3b8;border-radius:50%;background:#fff;color:#b91c1c;font-weight:700;cursor:pointer;font-size:12px;}
+  .thumb .x:hover{background:#fee2e2;}
+  .thumb img{width:100%;height:100px;object-fit:contain;background:#f1f5f9;display:block;}
+  .thumb .nom{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;color:#334155;}
+  .thumb.t{border-color:#2563eb;} .thumb.r{border-color:#d97706;}
+  .avisos{margin-top:10px;display:flex;flex-direction:column;gap:6px;}
+  .av{padding:8px 12px;border-radius:6px;font-size:13px;background:#fef3c7;color:#78350f;border:1px solid #f59e0b;}
+  .av.err{background:#fee2e2;color:#7f1d1d;border-color:#ef4444;}
+  .av.ok{background:#dcfce7;color:#14532d;border-color:#22c55e;}
+  #lienzoWrap{background:#fff;border:1px solid var(--border);border-radius:6px;overflow:auto;}
+  #lienzo{display:block;width:100%;height:auto;}
+  .info{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-top:10px;}
+  .info div{background:#fff;border:1px solid #c5cdd8;border-radius:6px;padding:6px 10px;}
+  .info span{display:block;font-size:11.5px;color:var(--muted);} .info b{font-size:13.5px;}
+  .proximo{color:#94a3b8;}
+  .hojas{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0;}
+  .hojas button{background:#fff;border:1px solid var(--border);border-radius:5px;padding:4px 10px;cursor:pointer;font-size:12.5px;}
+  .hojas button.on{background:var(--azul);color:#fff;border-color:var(--azul);}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;}
+  .tl{text-align:left;background:#fff;border:1px solid var(--border);border-radius:6px;padding:9px 12px;cursor:pointer;font-size:13.5px;}
+  .tl.sel{border:2px solid var(--azul);padding:8px 11px;}
+  .tl.off{opacity:.5;cursor:default;}
+  .tl b{display:flex;gap:8px;align-items:center;color:var(--azul);}
+  .tl small{display:block;color:var(--muted);font-size:12px;margin-top:3px;}
+  .tag{font-size:11px;padding:1px 8px;border-radius:4px;margin-left:auto;background:#fef3c7;color:#78350f;font-weight:700;}
+  .tag.ok{background:#dcfce7;color:#14532d;} .tag.no{background:#e2e8f0;color:#475569;}
+  .prepPanel{margin-top:10px;border-top:1px solid var(--border);padding-top:10px;}
+  .dg{font-size:12.5px;margin:6px 0;padding:6px 10px;background:#fff;border:1px solid #c5cdd8;border-radius:6px;}
+  .dg b{color:var(--azul);} .dg .m{color:#78350f;}
+  .quecambio{background:#dcfce7;border:1px solid #22c55e;border-radius:6px;padding:8px 12px;margin-top:10px;font-size:13px;color:#14532d;}
+  .quecambio ul{margin:4px 0 0;padding-left:18px;}
+  .row3{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:6px 0;}
+  .row3 label{display:flex;gap:6px;align-items:center;margin:0;font-weight:600;}
+  .row3 input[type=number]{width:70px;}
+  .lnk{background:none;border:0;color:var(--azul);font-size:12.5px;cursor:pointer;text-decoration:underline;padding:0;}
+</style>
+</head>
+<body>
+<header>
+  <img src="logo_tactical.png" alt="Tactical">
+  <div><h1>Montajes</h1><p>Acomoda las páginas en la hoja de impresión: marcas de corte, pinza, tiro y retiro. Fase 1: litografía.</p></div>
+  <button class="nav-btn-hub" onclick="location.href='TACTICAL_ERP_HUB.html'">Volver al Hub</button>
+</header>
+<main>
+
+<div class="panel">
+  <h2><span class="n">1</span>¿Qué vas a montar?</h2>
+  <div class="grid">
+    <div><label>Tipo de montaje</label>
+      <select id="tipo" onchange="cambioTipo()">
+        <option value="taco">Taco de cuaderno</option>
+        <option value="agenda">Agenda (incluye cuaderno escolar)</option>
+        <option value="caratula">Carátula de cuaderno (sin lomo)</option>
+        <option value="catalogo">Catálogo (páginas distintas)</option>
+        <option value="libre">Montaje libre (tarjetas, etiquetas…)</option>
+      </select></div>
+    <div id="wGiro"><label>Giro del taco</label>
+      <select id="giro" onchange="recalcular()">
+        <option value="pata">Cuaderno pata con pata</option>
+        <option value="tr" selected>Cuaderno tiro retiro</option>
+      </select></div>
+    <div id="wPinza"><label>¿Tiro y retiro con la misma pinza?</label>
+      <select id="pinza" onchange="recalcular()"><option value="no">No</option><option value="si" selected>Sí</option></select></div>
+    <div><label>Hoja de impresión (cm)</label>
+      <select id="hoja" onchange="cambioHoja()">
+        <option value="70x50">70 × 50 (medio pliego)</option>
+        <option value="60x45">60 × 45</option>
+        <option value="50x35">50 × 35 (cuarto)</option>
+        <option value="42x28">42 × 28 (digital, carátulas de cuaderno)</option>
+        <option value="35x25">35 × 25 (digital)</option>
+        <option value="50x33">50 × 33 (digital, máximo)</option>
+        <option value="custom">Otra medida…</option>
+      </select></div>
+    <div id="wCorte"><label>Corte</label>
+      <select id="corte" onchange="cambioCorte()"><option value="unico">Único (piezas pegadas)</option><option value="doble">Doble corte</option></select></div>
+    <div id="wGap" style="display:none"><label>Separación entre piezas (mm)</label><input type="number" id="gap" value="4" min="1" max="10" step="0.5" oninput="cambioCorte()"></div>
+    <div id="wCustom" style="display:none"><label>Hoja personalizada (largo × corto, cm)</label>
+      <div style="display:flex;gap:6px"><input type="number" id="cw" value="70" step="0.1" oninput="recalcular()"><input type="number" id="ch" value="50" step="0.1" oninput="recalcular()"></div></div>
+  </div>
+  <p class="hint" style="margin-top:10px">Litografía: el área real de imagen es menor que la hoja por la pinza (70×50 → 69,5×49; 50×35 → 49,5×34). Las marcas y los textos nunca salen de esa área. Para 60×45 aún no hay dato de pinza: se estima (confírmalo).</p>
+</div>
+
+<div class="panel">
+  <h2><span class="n">2</span>Diseño (PDF o .ai)</h2>
+  <div id="drop" onclick="document.getElementById('archivos').click()">Arrastra aquí el PDF del diseño, o haz clic para elegirlo<br><span style="font-size:12px">Taco: tiro en la página 1 y retiro en la página 2 (o dos archivos). Agenda: una página por hoja de montaje.</span></div>
+  <input type="file" id="archivos" accept=".pdf,.ai,application/pdf" multiple style="display:none" onchange="cargarArchivos(this.files)">
+  <div id="progreso"></div>
+  <div id="accArch" style="display:none;margin-top:8px"><button class="btn gris" onclick="limpiarArchivos()">Quitar todos los archivos</button> <span class="hint" style="margin:0 0 0 6px">También puedes quitar uno con la ✕ de su miniatura.</span></div>
+  <div id="pool"></div>
+  <div class="grid" id="asignaciones" style="margin-top:10px">
+    <div id="wT"><label>Tiro (frente)</label><select id="selT" onchange="recalcular()"></select></div>
+    <div id="wR"><label>Retiro (reverso)</label><select id="selR" onchange="recalcular()"></select></div>
+    <div><label>Formato final / cartón (mm, opcional)</label>
+      <div style="display:flex;gap:6px"><input type="number" id="fw" placeholder="ancho" oninput="cambioFormato()"><input type="number" id="fh" placeholder="alto" oninput="cambioFormato()"></div></div>
+  </div>
+  <p class="hint" style="margin-top:8px">Si el PDF trae su TrimBox, se usa ese formato. Si no, se usa la página completa; si el archivo trae sangrado, escribe aquí el formato final y se recorta centrado. En carátulas, si lo dejas vacío se redondea al múltiplo de 5 mm más cercano (171,5×240,2 → 170×240).</p>
+</div>
+
+<div class="panel" id="pPrep" style="display:none">
+  <h2><span class="n">2b</span>Preparar archivo <span style="font-weight:400;font-size:12px;color:var(--muted)">opcional · el original no se toca</span></h2>
+  <div id="prepBody"></div>
+</div>
+
+<div class="panel" id="pLibre" style="display:none">
+  <h2><span class="n">2c</span>Referencias del montaje <span style="font-weight:400;font-size:12px;color:var(--muted)">una por archivo o por página · cuántas por hoja</span></h2>
+  <div class="row3"><label><input type="checkbox" id="lbDorso" onchange="recalcular()"> Cada referencia trae frente y dorso (páginas consecutivas)</label></div>
+  <div id="libreBody"></div>
+</div>
+
+<div class="panel">
+  <h2><span class="n">3</span>Datos del margen de la hoja</h2>
+  <div class="grid">
+    <div><label>OT</label><input type="text" id="ot" placeholder="OT-1234" oninput="recalcular()"></div>
+    <div><label>Hoja n</label><input type="number" id="hn" value="1" min="1" oninput="recalcular()"></div>
+    <div><label>de m (vacío = automático)</label><input type="number" id="hm" min="1" oninput="recalcular()"></div>
+    <div><label>Tinta</label>
+      <select id="tinta" onchange="recalcular()"><option value="Negro">Negro</option><option value="Cool Gray 7">Cool Gray 7</option><option value="custom">Personalizado…</option></select></div>
+    <div id="wTintaC" style="display:none"><label>Tinta personalizada</label><input type="text" id="tintaC" placeholder="Pantone 286 C + Negro" oninput="recalcular()"></div>
+  </div>
+  <p class="hint" style="margin-top:8px">Texto de 8 pt como máximo y nunca a menos de 5 mm de la imagen: si no cabe, no se imprime y se avisa.</p>
+</div>
+
+<div class="panel">
+  <h2><span class="n">4</span>Vista previa y descarga</h2>
+  <div class="hojas" id="hojasSel"></div>
+  <div id="lienzoWrap"><svg id="lienzo" viewBox="0 0 680 400" role="img" aria-label="Vista previa del montaje"></svg></div>
+  <div class="info" id="info"></div>
+  <div class="avisos" id="avisos"></div>
+  <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <button class="btn verde" id="btnPdf" onclick="descargarPdf()">Descargar PDF montado</button>
+    <span id="msgPdf" style="font-size:12.5px;font-weight:600"></span>
+  </div>
+</div>
+
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="tactical-supabase.js?v=20261016a"></script>
+<script src="montajes_ajuste_pdf.js?v=20261016a"></script>
+<script>
+if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+/* ======================= CONSTANTES ======================= */
+const ROLES_PERMITIDOS = ['administrador','diseno'];
+const PT = 72/25.4;                       // puntos por mm
+const TXT_PT = 8, TXT = TXT_PT*25.4/72;   // texto máximo 8 pt (Conde): alto en mm
+const TXT_MIN_GAP = 5;                    // mm: nunca texto a menos de 5 mm de la imagen (Conde)
+const MARCA_LARGO = 4, MARCA_DIST = 4;    // mm: guías de 4 mm, mín. 3 mm de la línea de corte (Conde) -- aquí a 4
+const MARCA_GROSOR_MM = 0.2;              // trazo de 0,2 mm (Conde)
+const MARGEN_EXTRA = MARCA_LARGO + MARCA_DIST; // 8 mm que ocupan las marcas a cada lado de la grilla
+// Área REAL de imagen por hoja litográfica (ya sin pinza), [lado largo, lado corto] en mm. Mismos números de
+// OFFSET_FORMATOS_IMPRESION_CM de las calculadoras (49x69.5 / 34x49.5). 60x45 NO tiene dato confirmado: estimado.
+const AREA_PINZA = { '70x50':[695,490], '60x45':[595,440], '50x35':[495,340] };
+const AREA_ESTIMADA = { '60x45':true };
+
+const S = { files:[], pool:[], nextId:1, plan:null, hojaVer:0 };
+// Guías de corte: tamaño normal (4 mm de largo a 4 mm del corte) y dos reducciones automáticas para ganar piezas.
+// Nunca a menos de 3 mm de la línea de corte. Si ni reducidas caben pero la gráfica sí, se le pregunta al usuario si monta sin guías.
+const GUIAS_NIVELES = [ { dist:4, len:4 }, { dist:3, len:3 }, { dist:3, len:2 } ];
+let SIN_GUIAS = false;
+function activarSinGuias(v){ SIN_GUIAS = (v !== false); recalcular(); }
+const DIGITALES = ['42x28','35x25','50x33'];   // hojas de impresión digital (sin pinza)
+const r5 = v => Math.abs(v - Math.round(v/5)*5) <= 3 ? Math.round(v/5)*5 : v;   // redondeo a múltiplos de 5 mm
+// Sangrados automáticos (carátulas). Reglas validadas con archivos reales el 2026-10-16:
+//  - 10 mm de imagen + 5 mm de papel donde van las marcas; espejo de la MISMA imagen (sin recomprimir)
+//  - la copia en espejo se mete 0,5 mm bajo la imagen (si no, queda una línea blanca por antialias)
+//  - se recorta la franja de borde aclarada que traen algunas exportaciones antes de reflejar
+const RENDER_DPI = 150, AVISO_BORDE_MM = 5, TRASLAPE_MM = 0.5, PAPEL_EXTRA_MM = 5;
+const LIBRE = { cant:{} };   // cantidad por hoja que el usuario fija a mano para cada referencia
+const PREP = { aplicado:false, B:10, fringe:true, forzar:false, abierto:false, adv:false, analizando:false, analizado:false, progreso:0 };
+
+function esc(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmt(n){ return (Math.round(n*10)/10).toString().replace('.', ','); }
+function $(id){ return document.getElementById(id); }
+
+/* ======================= HOJA ======================= */
+function leerHoja(){
+  const v = $('hoja').value;
+  let W, H;
+  if(v==='custom'){ W = Math.max(+$('cw').value||0, +$('ch').value||0)*10; H = Math.min(+$('cw').value||0, +$('ch').value||0)*10; }
+  else { const [a,b] = v.split('x').map(Number); W = Math.max(a,b)*10; H = Math.min(a,b)*10; }
+  if($('tipo').value==='caratula' || DIGITALES.includes(v)) return { key:v, W, H, aW:W, aH:H, estimada:false };   // digital: sin pinza
+  let area = AREA_PINZA[v];
+  let estimada = !!AREA_ESTIMADA[v];
+  if(!area){ area = [W-5, H-10]; estimada = true; } // misma regla de 70x50 (-0,5 cm largo, -1 cm corto), sin confirmar
+  return { key:v, W, H, aW:area[0], aH:area[1], estimada };
+}
+function cambioHoja(){ $('wCustom').style.display = $('hoja').value==='custom' ? '' : 'none'; recalcular(); }
+function cambioTipo(){
+  const t = $('tipo').value;
+  $('wGiro').style.display = t==='taco' ? '' : 'none';
+  $('wPinza').style.display = (t==='taco' && $('giro').value==='tr') ? '' : 'none';
+  $('wT').style.display = t==='taco' ? '' : 'none';
+  $('wR').style.display = t==='taco' ? '' : 'none';
+  $('wCorte').style.display = (t==='taco' || t==='catalogo' || t==='libre') ? '' : 'none';
+  $('wGap').style.display = ((t==='taco' || t==='catalogo' || t==='libre') && $('corte').value==='doble') ? '' : 'none';
+  if(t==='caratula' && !['42x28','35x25','50x33','custom'].includes($('hoja').value)){ $('hoja').value = '42x28'; $('wCustom').style.display = 'none'; }
+  if(t!=='caratula' && t!=='catalogo' && t!=='libre' && DIGITALES.includes($('hoja').value)){ $('hoja').value = '70x50'; }
+  recalcular();
+  if(prepActivo() && S.pool.length && !PREP.analizado && !PREP.analizando) analizarTodo();
+}
+// Doble corte: franja entre piezas que se corta por los dos lados; cada pieza necesita la mitad de la franja como sangrado
+function corteGap(){ return $('corte').value==='doble' ? Math.max(1, Math.min(10, +$('gap').value || 4)) : 0; }
+function bleedNecesario(){ const t = $('tipo').value; if(t==='caratula') return PREP.B; return corteGap()/2; }
+function prepActivo(){ const t = $('tipo').value; return t==='caratula' || ((t==='taco' || t==='catalogo' || t==='libre') && corteGap()>0); }
+function cambioCorte(){
+  const t = $('tipo').value;
+  $('wGap').style.display = ((t==='taco' || t==='catalogo' || t==='libre') && $('corte').value==='doble') ? '' : 'none';
+  PREP.analizado = false;
+  recalcular();
+  if(prepActivo() && S.pool.length) analizarTodo();
+}
+let _tmFormato = null;
+function cambioFormato(){
+  recalcular();
+  clearTimeout(_tmFormato);
+  _tmFormato = setTimeout(()=>{ PREP.analizado = false; analizarTodo(); }, 800);   // el análisis depende del formato final
+}
+
+/* ======================= ARCHIVOS ======================= */
+const drop = $('drop');
+['dragover','dragenter'].forEach(e=>drop.addEventListener(e, ev=>{ ev.preventDefault(); drop.classList.add('sobre'); }));
+['dragleave','drop'].forEach(e=>drop.addEventListener(e, ev=>{ ev.preventDefault(); drop.classList.remove('sobre'); }));
+drop.addEventListener('drop', ev=>{ if(ev.dataTransfer && ev.dataTransfer.files) cargarArchivos(ev.dataTransfer.files); });
+
+async function cargarArchivos(fileList){
+  const prog = $('progreso');
+  for(const f of Array.from(fileList)){
+    try{
+      prog.textContent = 'Leyendo ' + f.name + '…';
+      const bytes = new Uint8Array(await f.arrayBuffer());
+      await agregarArchivo(f.name, bytes);
+    }catch(e){ console.error(e); prog.textContent = 'No se pudo leer ' + f.name + ': ' + e.message; return; }
+  }
+  prog.textContent = '';
+  $('archivos').value = '';
+  autoAsignar();
+  renderPool();
+  PREP.analizado = false;
+  recalcular();
+  analizarTodo();
+}
+
+async function agregarArchivo(nombre, bytes){
+  const doc = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption:true });
+  const fid = S.files.length;
+  S.files.push({ nombre, bytes, doc, pj:null });
+  try{ if(window.pdfjsLib) S.files[fid].pj = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise; }catch(e){ console.warn('pdf.js no pudo abrir el archivo para el análisis', e); }
+  const pages = doc.getPages();
+  let thumbs = [];
+  try{ thumbs = await miniaturas(bytes, pages.length); }catch(e){ console.warn('sin miniaturas', e); }
+  pages.forEach((p, i)=>{
+    const mb = p.getMediaBox(), tb = p.getTrimBox();
+    const conTrim = Math.abs(tb.width-mb.width)>0.5 || Math.abs(tb.height-mb.height)>0.5;
+    S.pool.push({ id:S.nextId++, fid, pidx:i, nombre,
+      mb:{x:mb.x,y:mb.y,w:mb.width,h:mb.height}, tb:{x:tb.x,y:tb.y,w:tb.width,h:tb.height}, conTrim,
+      rot: p.getRotation().angle||0, thumb: thumbs[i]||'' });
+  });
+}
+
+async function miniaturas(bytes, n){
+  if(!window.pdfjsLib) return [];
+  const pdf = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+  const out = [];
+  const max = Math.min(n, 60);
+  for(let i=1;i<=max;i++){
+    const pg = await pdf.getPage(i);
+    const vp0 = pg.getViewport({scale:1});
+    const sc = 260/Math.max(vp0.width, vp0.height);
+    const vp = pg.getViewport({scale:sc});
+    const c = document.createElement('canvas'); c.width = Math.ceil(vp.width); c.height = Math.ceil(vp.height);
+    const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,c.width,c.height);
+    await pg.render({ canvasContext: ctx, viewport: vp }).promise;
+    out.push(c.toDataURL('image/jpeg', 0.8));
+  }
+  return out;
+}
+
+// Quitar archivos para subir otros (el análisis y los sangrados se vuelven a calcular con lo que queda)
+function quitarArchivo(fid){
+  const f = S.files[fid]; if(!f) return;
+  if(!confirm('¿Quitar «'+f.nombre+'» del montaje?')) return;
+  S.files[fid] = null;
+  S.pool = S.pool.filter(p=>p.fid!==fid);
+  trasQuitar();
+}
+function limpiarArchivos(){
+  if(S.pool.length && !confirm('¿Quitar todos los archivos cargados?')) return;
+  S.files = []; S.pool = []; S.nextId = 1;
+  trasQuitar();
+}
+function trasQuitar(){
+  MED.aplicado = false; MED.analizado = false; MED.an = {}; MED.informe = null; TIN.aplicado = false; TIN.informe = null;
+  PREP.aplicado = false; PREP.analizado = false; PREP.abierto = false; S.hojaVer = 0;
+  $('archivos').value = '';
+  autoAsignar(); renderPool(); recalcular();
+  if(S.pool.length) analizarTodo();
+}
+function poolPorId(id){ return S.pool.find(p=>p.id===+id) || null; }
+function etiquetaPool(p){
+  const t = piezaMm(p);
+  return p.nombre + ' · pág. ' + (p.pidx+1) + ' (' + fmt(t.w) + '×' + fmt(t.h) + ' mm)';
+}
+// Formato final de una página: el override del usuario (centrado), o su TrimBox, o la página completa
+function cajaTrim(p){
+  const ow = +$('fw').value, oh = +$('fh').value;
+  let w = 0, h = 0;
+  if(ow>0 && oh>0){ w = ow*PT; h = oh*PT; }
+  else if(!p.conTrim && $('tipo').value==='caratula'){ w = r5(p.mb.w/PT)*PT; h = r5(p.mb.h/PT)*PT; }   // 171,5×240,2 → 170×240
+  if(w>0) return { x: p.mb.x + (p.mb.w-w)/2, y: p.mb.y + (p.mb.h-h)/2, w, h };
+  return p.conTrim ? p.tb : p.mb;
+}
+function piezaMm(p){ const c = cajaTrim(p); return { w:c.w/PT, h:c.h/PT }; }
+
+function autoAsignar(){
+  const t = $('tipo').value;
+  const opts = S.pool.map(p=>'<option value="'+p.id+'">'+esc(etiquetaPool(p))+'</option>').join('');
+  $('selT').innerHTML = opts; $('selR').innerHTML = opts;
+  if(S.pool.length){ $('selT').value = S.pool[0].id; $('selR').value = (S.pool[1]||S.pool[0]).id; }
+}
+function renderPool(){
+  $('accArch').style.display = S.pool.length ? '' : 'none';
+  const tid = +$('selT').value, rid = +$('selR').value, taco = $('tipo').value==='taco';
+  $('pool').innerHTML = S.pool.map(p=>{
+    const cls = taco ? (p.id===tid ? 't' : (p.id===rid ? 'r' : '')) : '';
+    const tag = taco ? (p.id===tid ? ' · TIRO' : (p.id===rid ? ' · RETIRO' : '')) : '';
+    return '<div class="thumb '+cls+'"><button class="x" title="Quitar este archivo" onclick="quitarArchivo('+p.fid+')">✕</button>'+(p.thumb?'<img src="'+p.thumb+'">':'<div style="height:100px"></div>')+'<div class="nom">'+esc(p.nombre)+'</div><div>pág. '+(p.pidx+1)+tag+'</div></div>';
+  }).join('');
+}
+
+/* ======================= MOTOR DE PLANTILLAS ======================= */
+function marcasExteriores(celdas, out, cfg){
+  if(cfg === null) return;                                   // montaje sin guías
+  cfg = cfg || { dist:MARCA_DIST, len:MARCA_LARGO };
+  const r2 = v=>Math.round(v*100)/100;
+  const xs = [...new Set(celdas.flatMap(c=>[r2(c.x), r2(c.x+c.w)]))];
+  const ys = [...new Set(celdas.flatMap(c=>[r2(c.y), r2(c.y+c.h)]))];
+  const L = Math.min(...xs), R = Math.max(...xs), T = Math.min(...ys), B = Math.max(...ys);
+  const a = cfg.dist, b = cfg.dist+cfg.len;
+  xs.forEach(x=>{ out.push([x,T-b,x,T-a],[x,B+a,x,B+b]); });
+  ys.forEach(y=>{ out.push([L-b,y,L-a,y],[R+a,y,R+b,y]); });
+}
+// Mejor acomodo de la grilla: prueba la pieza derecha y girada 90° y se queda con la que da más piezas
+function mejorGrilla(pw, ph, hoja, modo, g, m){
+  g = g || 0; if(m === undefined) m = MARGEN_EXTRA;
+  const probar = (w,h,rot)=>{
+    let cols = Math.floor((hoja.aW - 2*m + g + 0.05)/(w+g));
+    let rows = Math.floor((hoja.aH - 2*m + g + 0.05)/(h+g));
+    if(modo==='pata'){ if(rows<2) return null; rows = 2; }
+    if(modo==='tr'){ cols -= cols%2; }
+    if(cols<1 || rows<1) return null;
+    return { cols, rows, w, h, rot, n: cols*rows };
+  };
+  const a = probar(pw, ph, 0), b = (Math.abs(pw-ph)>0.5) ? probar(ph, pw, 90) : null;
+  if(a && b) return b.n > a.n ? b : a;
+  return a || b;
+}
+// Elige el mejor acomodo probando las guías normales, las reducidas y, solo si el usuario lo acepta, sin guías
+function elegirGrilla(pw, ph, hoja, modo, gap, notas){
+  const cand = GUIAS_NIVELES.map(cfg=>({ cfg, g: mejorGrilla(pw, ph, hoja, modo, gap, cfg.dist+cfg.len) }));
+  const sin = mejorGrilla(pw, ph, hoja, modo, gap, 0);
+  const medida = fmt(pw)+'×'+fmt(ph)+' mm';
+  if(SIN_GUIAS){
+    if(!sin){ notas.push({ t:'err', m:'La pieza ('+medida+') no cabe en la hoja ni siquiera sin guías.' }); return null; }
+    notas.push({ t:'warn', m:'Montaje SIN guías de corte, a pedido tuyo. Caben '+sin.n+' piezas.', accion:{ txt:'Volver a poner guías', fn:'activarSinGuias(false)' } });
+    return { g:sin, cfg:null };
+  }
+  let best = null;
+  cand.forEach(c=>{ if(c.g && (!best || c.g.n > best.g.n)) best = c; });      // si empatan, gana la guía más grande
+  if(!best){
+    if(sin) notas.push({ t:'err', m:'La pieza ('+medida+') cabe en la hoja, pero no con guías de corte, ni reducidas. Sin guías caben '+sin.n+'. ¿Hago el montaje sin guías?', accion:{ txt:'Sí, montar sin guías', fn:'activarSinGuias(true)' } });
+    else notas.push({ t:'err', m:'La pieza ('+medida+') no cabe en la hoja con sus marcas dentro del área de imagen.' });
+    return null;
+  }
+  if(best.cfg !== GUIAS_NIVELES[0]) notas.push({ t:'warn', m:'Las guías se redujeron a '+best.cfg.len+' mm (a '+best.cfg.dist+' mm del corte) para que cupieran '+best.g.n+' piezas.' });
+  if(sin && sin.n > best.g.n) notas.push({ t:'warn', m:'Con guías caben '+best.g.n+' piezas y sin guías caben '+sin.n+'. ¿Hago el montaje sin guías para ganar '+(sin.n-best.g.n)+'?', accion:{ txt:'Sí, montar sin guías', fn:'activarSinGuias(true)' } });
+  return best;
+}
+function cajasImagen(celdas){ return celdas.map(c=>({x:c.x,y:c.y,w:c.w,h:c.h})); }
+function distRects(a,b){
+  const dx = Math.max(b.x-(a.x+a.w), a.x-(b.x+b.w), 0), dy = Math.max(b.y-(a.y+a.h), a.y-(b.y+b.h), 0);
+  return Math.hypot(dx,dy);
+}
+function centroHueco(hoja, marcas, arriba){
+  const xs = marcas.filter(m=>m[0]===m[2] && (arriba ? m[1] < hoja.H/2 : m[1] > hoja.H/2)).map(m=>m[0]);
+  const p = [0, ...new Set(xs), hoja.W].sort((a,b)=>a-b);
+  let best = 0, bc = hoja.W/2;
+  for(let i=0;i<p.length-1;i++){ const g = p[i+1]-p[i]; if(g>best){ best = g; bc = (p[i]+p[i+1])/2; } }
+  return bc;
+}
+function ponerTexto(hoja, hojaPlan, texto, base, etiqueta, negrita, notas, acotarArea){
+  const w = texto.length*TXT*0.55;
+  const cx = centroHueco(hoja, hojaPlan.marcas, base < hoja.H/2);
+  const caja = { x:cx-w/2, y:base-TXT, w, h:TXT };
+  const gp = Math.min(...(hojaPlan.cajasImg || cajasImagen(hojaPlan.celdas)).map(c=>distRects(caja,c)));
+  if(gp < TXT_MIN_GAP){ notas.push({ t:'warn', m: etiqueta+' no se imprimió: quedaría a '+fmt(gp)+' mm de la imagen (mínimo '+TXT_MIN_GAP+' mm). Va solo en la ficha.' }); return; }
+  if(acotarArea){
+    const ax0 = (hoja.W-hoja.aW)/2, ay0 = (hoja.H-hoja.aH)/2;
+    if(caja.x < ax0 || caja.x+caja.w > ax0+hoja.aW || caja.y < ay0 || caja.y+caja.h > ay0+hoja.aH){
+      notas.push({ t:'warn', m: etiqueta+' no se imprimió: queda fuera del área real de imagen de la hoja (pinza).' }); return;
+    }
+  }
+  hojaPlan.textos.push({ texto, x:cx, y:base, negrita });
+}
+
+function libreCant(id, v){ if(v===''||v==null) delete LIBRE.cant[id]; else LIBRE.cant[id] = Math.max(0, Math.round(+v)); recalcular(); }
+function libreRepartir(){ Object.keys(LIBRE.cant).forEach(k=>delete LIBRE.cant[k]); recalcular(); }
+function renderLibre(){
+  const caja = $('pLibre');
+  if($('tipo').value!=='libre' || !S.pool.length){ caja.style.display = 'none'; return; }
+  caja.style.display = '';
+  const pl = S.plan && S.plan.libre;
+  if(!pl){ $('libreBody').innerHTML = '<p class="hint">Sube los archivos para repartir la hoja.</p>'; return; }
+  const dorso = $('lbDorso').checked;
+  let h = '<table style="width:100%;border-collapse:collapse;font-size:13px"><tr style="text-align:left;color:var(--muted)"><th style="padding:4px 6px">Referencia</th><th style="padding:4px 6px">Archivo</th><th style="padding:4px 6px">Por hoja</th></tr>';
+  pl.refs.forEach((id,i)=>{
+    const p = S.pool.find(x=>x.id===id); if(!p) return;
+    const dd = dorso ? ' + pág. '+(p.pidx+2) : '';
+    h += '<tr style="border-top:1px solid #c5cdd8"><td style="padding:4px 6px"><b>Ref '+(i+1)+'</b></td><td style="padding:4px 6px">'+esc(p.nombre)+' · pág. '+(p.pidx+1)+dd+'</td>'+
+      '<td style="padding:4px 6px"><input type="number" min="0" style="width:80px" value="'+(LIBRE.cant[id]!==undefined?LIBRE.cant[id]:'')+'" placeholder="'+pl.cant[i]+'" onchange="libreCant('+id+',this.value)"></td></tr>';
+  });
+  h += '</table><div style="margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn gris" onclick="libreRepartir()">Repartir en partes iguales</button><span class="hint" style="margin:0">En la hoja caben '+pl.n+' piezas. Lo que dejes vacío se reparte solo.</span></div>';
+  $('libreBody').innerHTML = h;
+}
+function notasAvisos(pgs, notas){
+  const lados = { l:'lateral izquierdo', r:'lateral derecho', t:'borde superior', b:'borde inferior' };
+  pgs.slice(0,40).forEach(p=>{ ((p.diag && p.diag.avisos) || []).forEach(av=>{
+    notas.push({ t:'warn', m:etiquetaPag(p)+' · '+lados[av.lado]+': '+av.fuente+' a '+fmt(av.d)+' mm del corte'+(av.tramo?' (tramo '+av.tramo+')':'')+'. Revisar.' });
+  }); });
+}
+function planificar(){
+  const tipo = $('tipo').value, giro = $('giro').value;
+  const hoja = leerHoja();
+  const notas = [], info = [];
+  const plan = { hoja, hojas:[], notas, info, listo:false };
+  if(!S.pool.length){ notas.push({ t:'warn', m:'Sube el PDF del diseño para ver el montaje.' }); return plan; }
+  if(hoja.estimada) notas.push({ t:'warn', m:'Hoja '+hoja.key+': el área real de imagen (pinza) es una estimación de '+fmt(hoja.aW)+'×'+fmt(hoja.aH)+' mm. Confirma el dato real.' });
+
+  const ot = $('ot').value.trim();
+  const hn0 = Math.max(1, Math.round(+$('hn').value||1));
+  const tintaSel = $('tinta').value;
+  const tinta = tintaSel==='custom' ? $('tintaC').value.trim() : tintaSel;
+  const tintaLinea = tinta ? 'Tinta: '+tinta : '';
+
+  if(tipo==='taco'){
+    const pT = poolPorId($('selT').value), pR = poolPorId($('selR').value);
+    if(!pT || !pR){ notas.push({ t:'err', m:'Elige el tiro y el retiro.' }); return plan; }
+    if(pT.id===pR.id) notas.push({ t:'warn', m:'El tiro y el retiro son la misma página. Revisa que el archivo tenga el retiro en otra página.' });
+    const a = piezaMm(pT), b = piezaMm(pR);
+    if(Math.abs(a.w-b.w)>0.5 || Math.abs(a.h-b.h)>0.5)
+      notas.push({ t:'warn', m:'Tamaños distintos: el tiro mide '+fmt(a.w)+'×'+fmt(a.h)+' mm y el retiro '+fmt(b.w)+'×'+fmt(b.h)+' mm. Se usa el del tiro.' });
+    const gap = corteGap();
+    const eg = elegirGrilla(a.w, a.h, hoja, giro, gap, notas);
+    if(!eg) return plan;
+    const g = eg.g, guias = eg.cfg;
+    const gw = g.cols*g.w + (g.cols-1)*gap, gh = g.rows*g.h + (g.rows-1)*gap, x0 = (hoja.W-gw)/2, y0 = (hoja.H-gh)/2;
+    const celdas = [];
+    for(let r=0;r<g.rows;r++) for(let c=0;c<g.cols;c++){
+      let src, rot = g.rot, label;
+      if(giro==='pata'){ if(r===0){ src = pT; label='T'; } else { src = pR; label='R'; rot = (g.rot+180)%360; } }
+      else { const der = c >= g.cols/2; src = der ? pR : pT; label = der ? 'R' : 'T'; }
+      celdas.push({ x:x0+c*(g.w+gap), y:y0+r*(g.h+gap), w:g.w, h:g.h, rot, src, label, sangrar:gap>0, bmm:gap/2, dec: gap>0 ? decision(src) : 'sin' });
+    }
+    const Bd = gap/2;
+    const cajasImgT = celdas.map(c=>({ x:c.x-Bd, y:c.y-Bd, w:c.w+2*Bd, h:c.h+2*Bd }));
+    const hp = { celdas, marcas:[], textos:[], cajasImg:cajasImgT, sangrados: (gap>0 && PREP.aplicado) ? cajasImgT : [], eje: giro==='tr' ? hoja.W/2 : null, titulo:'Hoja 1' };
+    marcasExteriores(celdas, hp.marcas, guias);
+    const hm = Math.max(hn0, Math.round(+$('hm').value||hn0));
+    if(giro==='pata') ponerTexto(hoja, hp, 'DOBLE PINZA', y0-6, 'La guía "DOBLE PINZA"', true, notas, true);
+    else if($('pinza').value==='si') ponerTexto(hoja, hp, 'TIRO RETIRO CON LA MISMA PINZA', y0-6, 'La guía "TIRO RETIRO CON LA MISMA PINZA"', true, notas, true);
+    const slug = [ot, 'Hoja '+hn0+'/'+hm, tintaLinea].filter(Boolean).join('  ·  ');
+    const ay1 = (hoja.H+hoja.aH)/2;
+    ponerTexto(hoja, hp, slug, ay1-1.5, 'La línea de OT', false, notas, true);
+    plan.hojas.push(hp);
+    info.push(['Hoja', fmt(hoja.W/10)+'×'+fmt(hoja.H/10)+' cm'], ['Área de imagen', fmt(hoja.aW)+'×'+fmt(hoja.aH)+' mm'],
+      ['Pieza', fmt(a.w)+'×'+fmt(a.h)+' mm'+(g.rot?' (girada 90°)':'')], ['Cuadrícula', g.cols+' × '+g.rows+' = '+g.n+' piezas'],
+      ['Márgenes', fmt(x0)+' mm lados · '+fmt(y0)+' mm arriba/abajo'],
+      ['Giro', giro==='pata' ? 'Pata con pata: fila inferior rotada 180°' : 'Tiro/retiro: mitad derecha = retiro'],
+      ['Corte', gap>0 ? 'Doble corte, franja de '+fmt(gap)+' mm ('+fmt(gap/2)+' mm de sangrado por lado)' : 'Único, piezas pegadas']);
+    if(gap>0){
+      notasAvisos([pT, pR], notas);
+      if(!PREP.aplicado && [pT, pR].some(p=>decision(p)==='sin' && p.diag && decisionNecesita(p))) notas.push({ t:'warn', m:'Doble corte: hay páginas sin sangrado, la franja de '+fmt(gap)+' mm quedará blanca. Usa «Sangrados automáticos».' });
+      plan.sangradoB = gap/2;
+    }
+    plan.listo = true;
+    return plan;
+  }
+
+  if(tipo==='agenda'){
+    const usables = S.pool;
+    const a0 = piezaMm(usables[0]);
+    if(usables.some(p=>{ const q = piezaMm(p); return Math.abs(q.w-a0.w)>0.5 || Math.abs(q.h-a0.h)>0.5; }))
+      notas.push({ t:'warn', m:'Tamaños distintos entre las páginas del PDF: cada hoja se centra con su propia medida.' });
+    const qw = (hoja.W-2)/2, qh = (hoja.H-2)/2;
+    const hm = Math.max(hn0+usables.length-1, Math.round(+$('hm').value||0)) || (hn0+usables.length-1);
+    usables.forEach((p, i)=>{
+      const q = piezaMm(p);
+      let w = q.w, h = q.h, rot = 0;
+      if(w>qw || h>qh){ if(h<=qw && w<=qh){ w=q.h; h=q.w; rot=90; } else { notas.push({ t:'err', m:'La doble página '+(i+1)+' ('+fmt(q.w)+'×'+fmt(q.h)+' mm) no cabe en un cuadrante de '+fmt(qw)+'×'+fmt(qh)+' mm.' }); return; } }
+      const celdas = [];
+      for(let r=0;r<2;r++) for(let c=0;c<2;c++)
+        celdas.push({ x:1+c*qw+(qw-w)/2, y:1+r*qh+(qh-h)/2, w, h, rot, src:p, label:'Doble pág.' });
+      const hp = { celdas, marcas:[
+        [hoja.W/2,2,hoja.W/2,5],[hoja.W/2,hoja.H-5,hoja.W/2,hoja.H-2],[2,hoja.H/2,5,hoja.H/2],[hoja.W-5,hoja.H/2,hoja.W-2,hoja.H/2] ],
+        textos:[], eje:null, titulo:'Hoja '+(i+1) };
+      const slug = [ot, 'Hoja '+(hn0+i)+'/'+hm, tintaLinea].filter(Boolean).join('  ·  ');
+      ponerTexto(hoja, hp, slug, (hoja.H+hoja.aH)/2-1.5, 'La línea de OT (hoja '+(i+1)+')', false, notas, true);
+      plan.hojas.push(hp);
+    });
+    if(!plan.hojas.length) return plan;
+    info.push(['Hoja', fmt(hoja.W/10)+'×'+fmt(hoja.H/10)+' cm'], ['Zona útil', fmt((hoja.W-2)/10)+'×'+fmt((hoja.H-2)/10)+' cm (1 mm por lado)'],
+      ['Cuadrante', fmt(qw/10)+'×'+fmt(qh/10)+' cm'], ['Doble página', fmt(a0.w)+'×'+fmt(a0.h)+' mm, centrada'],
+      ['Hojas de salida', String(plan.hojas.length)], ['Marcas', 'solo 4, al centro de los bordes']);
+    plan.listo = true;
+    return plan;
+  }
+
+  if(tipo==='caratula'){
+    const pgs = S.pool;
+    const a = piezaMm(pgs[0]);
+    if(pgs.some(p=>{ const q = piezaMm(p); return Math.abs(q.w-a.w)>0.5 || Math.abs(q.h-a.h)>0.5; }))
+      notas.push({ t:'warn', m:'Tamaños distintos entre las páginas: se usa la medida de la primera ('+fmt(a.w)+'×'+fmt(a.h)+' mm) para todas.' });
+    const B = PREP.B, K = B + PAPEL_EXTRA_MM;
+    const cols = Math.floor(hoja.W/(a.w+2*K)), rows = Math.floor(hoja.H/(a.h+2*K));
+    if(cols<1 || rows<1){ notas.push({ t:'err', m:'El cartón de '+fmt(a.w)+'×'+fmt(a.h)+' mm con '+K+' mm de papel por lado no cabe en la hoja de '+fmt(hoja.W/10)+'×'+fmt(hoja.H/10)+' cm.' }); return plan; }
+    const gx = (hoja.W-cols*(a.w+2*K))/2 + K, gy = (hoja.H-rows*(a.h+2*K))/2 + K;
+    const celdas = []; let i = 0;
+    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+      const src = pgs[i % pgs.length]; i++;
+      celdas.push({ x:gx+c*(a.w+2*K), y:gy+r*(a.h+2*K), w:a.w, h:a.h, rot:0, src, label:'Pág. '+(src.pidx+1), car:true, sangrar:true, bmm:B, dec:decision(src) });
+    }
+    const marcas = [];
+    celdas.forEach(c=>{
+      const x1=c.x, x2=c.x+c.w, y1=c.y, y2=c.y+c.h;
+      marcas.push([x1-K,y1,x1-B,y1],[x1-K,y2,x1-B,y2],[x2+B,y1,x2+K,y1],[x2+B,y2,x2+K,y2],
+                  [x1,y1-K,x1,y1-B],[x2,y1-K,x2,y1-B],[x1,y2+B,x1,y2+K],[x2,y2+B,x2,y2+K]);
+    });
+    const cajasImg = celdas.map(c=>({ x:c.x-B, y:c.y-B, w:c.w+2*B, h:c.h+2*B }));
+    const hp = { celdas, marcas, textos:[], cajasImg, eje:null, titulo:'Frente', sangrados: PREP.aplicado ? cajasImg : [] };
+    const hr = { celdas:[], marcas: marcas.map(m=>[hoja.W-m[0], m[1], hoja.W-m[2], m[3]]), textos:[], cajasImg:[], eje:null, titulo:'Plancha del reverso', reverso:true,
+                 marcos: celdas.map(c=>({ x:hoja.W-(c.x+c.w), y:c.y, w:c.w, h:c.h })) };
+    const hm = Math.max(hn0, Math.round(+$('hm').value||hn0));
+    const slug = [ot, 'Hoja '+hn0+'/'+hm].filter(Boolean).join('  ·  ');
+    ponerTexto(hoja, hp, slug, hoja.H-2.5, 'La línea de OT', false, notas, false);
+    ponerTexto(hoja, hr, 'REVERSO  ·  '+slug, hoja.H-2.5, 'La línea de OT del reverso', false, notas, false);
+    plan.hojas.push(hp, hr);
+    plan.sangradoB = B;
+    notasAvisos(pgs, notas);
+    const dec = celdas.map(c=>c.dec);
+    info.push(['Hoja', fmt(hoja.W/10)+'×'+fmt(hoja.H/10)+' cm'], ['Cartón', fmt(a.w)+'×'+fmt(a.h)+' mm'],
+      ['Por hoja', cols*rows+' ('+cols+' × '+rows+')'],
+      ['Sangrado', PREP.aplicado ? B+' mm ('+dec.filter(d=>d==='espejo').length+' por espejo'+(dec.some(d=>d==='yatrae')?', '+dec.filter(d=>d==='yatrae').length+' ya traían':'')+(dec.some(d=>d==='blanco')?', '+dec.filter(d=>d==='blanco').length+' con borde blanco':'')+')' : 'sin agregar'],
+      ['Papel adicional', PAPEL_EXTRA_MM+' mm (marcas)'], ['Páginas del PDF', String(pgs.length)]);
+    if(!PREP.aplicado && pgs.some(p=>decisionNecesita(p))) notas.push({ t:'warn', m:'Hay páginas sin sangrado. Usa «Sangrados automáticos» o el borde del cartón puede quedar blanco.' });
+    plan.listo = true;
+    return plan;
+  }
+
+  if(tipo==='libre'){
+    const dorso = $('lbDorso').checked, paso = dorso ? 2 : 1;
+    const refs = [];
+    for(let i=0;i<S.pool.length;i+=paso) refs.push({ id:S.pool[i].id, f:S.pool[i], d: dorso ? (S.pool[i+1]||null) : null });
+    if(dorso && S.pool.length%2) notas.push({ t:'warn', m:'Número impar de páginas: la última referencia no tiene dorso.' });
+    const a = piezaMm(refs[0].f);
+    if(refs.some(r=>{ const q = piezaMm(r.f); return Math.abs(q.w-a.w)>0.5 || Math.abs(q.h-a.h)>0.5; }))
+      notas.push({ t:'warn', m:'Las referencias no miden lo mismo: se usa la medida de la primera ('+fmt(a.w)+'×'+fmt(a.h)+' mm) para todas.' });
+    const litho = !!AREA_PINZA[hoja.key] || hoja.key==='custom';
+    const gap = corteGap();
+    const egL = elegirGrilla(a.w, a.h, hoja, 'libre', gap, notas);
+    if(!egL) return plan;
+    const g = egL.g, guiasL = egL.cfg;
+    const gw = g.cols*g.w + (g.cols-1)*gap, gh = g.rows*g.h + (g.rows-1)*gap, x0 = (hoja.W-gw)/2, y0 = (hoja.H-gh)/2;
+    const n = g.cols*g.rows;
+    // cuántas piezas de cada referencia van en la hoja: lo fijado a mano; el resto se reparte en partes iguales
+    const fijo = refs.map(r=>LIBRE.cant[r.id]);
+    const sumaFija = fijo.reduce((s0,v)=>s0+(v>=0?v:0),0), sinFijar = fijo.filter(v=>!(v>=0)).length;
+    const libres = Math.max(0, n-sumaFija), baseL = sinFijar ? Math.floor(libres/sinFijar) : 0;
+    let extraL = sinFijar ? libres-baseL*sinFijar : 0;
+    const cant = fijo.map(v=>{ if(v>=0) return v; const c = baseL + (extraL>0 ? 1 : 0); if(extraL>0) extraL--; return c; });
+    const asign = []; cant.forEach((c,i)=>{ for(let k=0;k<c;k++) asign.push(i); });
+    if(asign.length>n) notas.push({ t:'warn', m:'Asignaste '+asign.length+' piezas por hoja y solo caben '+n+': se dejan las primeras '+n+'.' });
+    if(asign.length<n) notas.push({ t:'warn', m:'Quedan '+(n-asign.length)+' espacios vacíos en la hoja ('+asign.length+' de '+n+').' });
+    plan.libre = { n, cant, refs: refs.map(r=>r.id) };
+    const Bd = gap/2;
+    const completa = [];
+    for(let r=0;r<g.rows;r++) for(let c=0;c<g.cols;c++) completa.push({ x:x0+c*(g.w+gap), y:y0+r*(g.h+gap), w:g.w, h:g.h });
+    const mkHoja = (reverso)=>{
+      const celdas = [];
+      for(let idx=0; idx<Math.min(asign.length,n); idx++){
+        const r = Math.floor(idx/g.cols), c = idx%g.cols, ref = refs[asign[idx]];
+        const src = reverso ? ref.d : ref.f; if(!src) continue;
+        const cc = reverso ? g.cols-1-c : c;            // el dorso va espejado para que caiga detrás de su frente al girar la hoja
+        const box = { x:x0+cc*(g.w+gap), y:y0+r*(g.h+gap), w:g.w, h:g.h };
+        celdas.push({ ...box, rot:g.rot, src, label:'Ref '+(asign[idx]+1), sangrar:gap>0, bmm:gap/2, dec: gap>0 ? decision(src) : 'sin' });
+      }
+      const cajas = celdas.map(c=>({ x:c.x-Bd, y:c.y-Bd, w:c.w+2*Bd, h:c.h+2*Bd }));
+      const hp = { celdas, marcas:[], textos:[], cajasImg:cajas, sangrados:(gap>0 && PREP.aplicado) ? cajas : [], eje:null, titulo: reverso ? 'Dorso (espejado)' : (dorso ? 'Frente' : 'Montaje'), flecha:!litho };
+      marcasExteriores(completa, hp.marcas, guiasL);
+      const slug = [ot, (reverso ? 'DORSO' : (dorso ? 'FRENTE' : '')), litho&&tintaLinea ? tintaLinea : ''].filter(Boolean).join('  ·  ');
+      if(slug) ponerTexto(hoja, hp, slug, litho ? (hoja.H+hoja.aH)/2-1.5 : hoja.H-2.5, 'La línea de OT'+(reverso?' del dorso':''), false, notas, litho);
+      return hp;
+    };
+    plan.hojas.push(mkHoja(false));
+    if(dorso) plan.hojas.push(mkHoja(true));
+    info.push(['Hoja', fmt(hoja.W/10)+'×'+fmt(hoja.H/10)+' cm'+(litho?' (litografía)':' (digital)')], ['Pieza', fmt(a.w)+'×'+fmt(a.h)+' mm'+(g.rot?' (girada 90°)':'')],
+      ['Por hoja', n+' ('+g.cols+' × '+g.rows+')'], ['Referencias', String(refs.length)], ['Reparto', cant.map((c,i)=>'Ref '+(i+1)+': '+c).join(' · ')],
+      ['Corte', gap>0 ? 'Doble corte, franja de '+fmt(gap)+' mm' : 'Único, piezas pegadas']);
+    if(!litho) info.push(['Flecha de salida', '3 mm, centro izquierdo']);
+    if(gap>0){
+      notasAvisos(S.pool, notas);
+      if(!PREP.aplicado && S.pool.some(p=>decision(p)==='sin' && p.diag && decisionNecesita(p))) notas.push({ t:'warn', m:'Doble corte: hay referencias sin sangrado, la franja de '+fmt(gap)+' mm quedará blanca. Usa «Sangrados automáticos».' });
+      plan.sangradoB = gap/2;
+    }
+    plan.listo = true;
+    return plan;
+  }
+
+  if(tipo==='catalogo'){
+    const pgs = S.pool;
+    const a = piezaMm(pgs[0]);
+    if(pgs.some(p=>{ const q = piezaMm(p); return Math.abs(q.w-a.w)>0.5 || Math.abs(q.h-a.h)>0.5; }))
+      notas.push({ t:'warn', m:'Tamaños distintos entre las páginas del PDF: se usa la medida de la primera ('+fmt(a.w)+'×'+fmt(a.h)+' mm) para todas.' });
+    const litho = !!AREA_PINZA[hoja.key] || hoja.key==='custom';
+    const gap = corteGap();
+    const egC = elegirGrilla(a.w, a.h, hoja, 'libre', gap, notas);
+    if(!egC) return plan;
+    const g = egC.g, guiasC = egC.cfg;
+    const gw = g.cols*g.w + (g.cols-1)*gap, gh = g.rows*g.h + (g.rows-1)*gap, x0 = (hoja.W-gw)/2, y0 = (hoja.H-gh)/2;
+    const porHoja = g.cols*g.rows, nHojas = Math.ceil(pgs.length/porHoja);
+    const hm = Math.max(hn0+nHojas-1, Math.round(+$('hm').value||0)) || (hn0+nHojas-1);
+    const Bd = gap/2;
+    for(let hh=0; hh<nHojas; hh++){
+      const celdas = [], completa = [];
+      for(let r=0;r<g.rows;r++) for(let c=0;c<g.cols;c++){
+        const idx = hh*porHoja + r*g.cols + c;
+        const box = { x:x0+c*(g.w+gap), y:y0+r*(g.h+gap), w:g.w, h:g.h };
+        completa.push(box);
+        if(idx < pgs.length){ const src = pgs[idx]; celdas.push({ ...box, rot:g.rot, src, label:'Pág. '+(src.pidx+1), sangrar:gap>0, bmm:gap/2, dec: gap>0 ? decision(src) : 'sin' }); }
+      }
+      const cajasImgC = celdas.map(c=>({ x:c.x-Bd, y:c.y-Bd, w:c.w+2*Bd, h:c.h+2*Bd }));
+      const hp = { celdas, marcas:[], textos:[], cajasImg:cajasImgC, sangrados:(gap>0 && PREP.aplicado) ? cajasImgC : [], eje:null, titulo:'Hoja '+(hh+1), flecha:!litho };
+      marcasExteriores(completa, hp.marcas, guiasC);   // las marcas siguen la cuadrícula completa: la última hoja corta igual
+      const slug = [ot, 'Hoja '+(hn0+hh)+'/'+hm, litho&&tintaLinea ? tintaLinea : ''].filter(Boolean).join('  ·  ');
+      if(litho) ponerTexto(hoja, hp, slug, (hoja.H+hoja.aH)/2-1.5, 'La línea de OT (hoja '+(hh+1)+')', false, notas, true);
+      else ponerTexto(hoja, hp, slug, hoja.H-2.5, 'La línea de OT (hoja '+(hh+1)+')', false, notas, false);
+      plan.hojas.push(hp);
+    }
+    info.push(['Hoja', fmt(hoja.W/10)+'×'+fmt(hoja.H/10)+' cm'+(litho?' (litografía)':' (digital)')], ['Página', fmt(a.w)+'×'+fmt(a.h)+' mm'+(g.rot?' (girada 90°)':'')],
+      ['Por hoja', porHoja+' ('+g.cols+' × '+g.rows+')'], ['Hojas de salida', String(nHojas)], ['Páginas', String(pgs.length)],
+      ['Corte', gap>0 ? 'Doble corte, franja de '+fmt(gap)+' mm' : 'Único, piezas pegadas']);
+    if(!litho) info.push(['Flecha de salida', '3 mm, centro izquierdo']);
+    if(gap>0){
+      notasAvisos(pgs, notas);
+      if(!PREP.aplicado && pgs.some(p=>decision(p)==='sin' && p.diag && decisionNecesita(p))) notas.push({ t:'warn', m:'Doble corte: hay páginas sin sangrado, la franja de '+fmt(gap)+' mm quedará blanca. Usa «Sangrados automáticos».' });
+      plan.sangradoB = gap/2;
+    }
+    plan.listo = true;
+    return plan;
+  }
+  return plan;
+}
+
+/* ======================= VISTA PREVIA ======================= */
+function recalcular(){
+  renderPrep();
+  $('wTintaC').style.display = $('tinta').value==='custom' ? '' : 'none';
+  $('wPinza').style.display = ($('tipo').value==='taco' && $('giro').value==='tr') ? '' : 'none';
+  if(S.pool.length){ renderPool(); }
+  S.plan = planificar();
+  renderLibre();
+  if(S.hojaVer >= S.plan.hojas.length) S.hojaVer = 0;
+  dibujar();
+}
+
+function dibujar(){
+  const plan = S.plan, svg = $('lienzo');
+  const hoja = plan.hoja;
+  $('btnPdf').disabled = !plan.listo;
+  $('info').innerHTML = plan.info.map(([a,b])=>'<div><span>'+esc(a)+'</span><b>'+esc(b)+'</b></div>').join('');
+  $('avisos').innerHTML = plan.notas.map(n=>'<div class="av '+(n.t==='err'?'err':'')+'">'+esc(n.m)+(n.accion ? ' <button class="btn verde mini" style="margin-left:8px" onclick="'+n.accion.fn+'">'+esc(n.accion.txt)+'</button>' : '')+'</div>').join('');
+  $('hojasSel').innerHTML = plan.hojas.length>1 ? plan.hojas.map((h,i)=>'<button class="'+(i===S.hojaVer?'on':'')+'" onclick="S.hojaVer='+i+';dibujar()">'+esc(h.titulo)+'</button>').join('') : '';
+  const hp = plan.hojas[S.hojaVer];
+  const s = Math.min(660/hoja.W, 360/hoja.H), ox = (680-hoja.W*s)/2, oy = 10;
+  svg.setAttribute('viewBox','0 0 680 '+(hoja.H*s+20));
+  let g = '<rect x="'+ox+'" y="'+oy+'" width="'+hoja.W*s+'" height="'+hoja.H*s+'" fill="#fff" stroke="#64748b" stroke-width="1"/>';
+  // área real de imagen (pinza)
+  const ax = ox+(hoja.W-hoja.aW)/2*s, ay = oy+(hoja.H-hoja.aH)/2*s;
+  g += '<rect x="'+ax+'" y="'+ay+'" width="'+hoja.aW*s+'" height="'+hoja.aH*s+'" fill="none" stroke="#94a3b8" stroke-width="0.7" stroke-dasharray="5 4"/>';
+  if(hp){
+    (hp.sangrados||[]).forEach(b=>{ g += '<rect x="'+(ox+b.x*s)+'" y="'+(oy+b.y*s)+'" width="'+b.w*s+'" height="'+b.h*s+'" fill="#EF9F27" fill-opacity="0.32" stroke="#378ADD" stroke-width="0.8" stroke-dasharray="4 3"/>'; });
+    (hp.marcos||[]).forEach(r=>{ g += '<rect x="'+(ox+r.x*s)+'" y="'+(oy+r.y*s)+'" width="'+r.w*s+'" height="'+r.h*s+'" fill="none" stroke="#000" stroke-width="1.2"/><text x="'+(ox+(r.x+r.w/2)*s)+'" y="'+(oy+(r.y+r.h/2)*s)+'" text-anchor="middle" dominant-baseline="central" style="font-size:12px;fill:#475569">Pegar cartón</text>'; });
+    hp.celdas.forEach(c=>{
+      const X = ox+c.x*s, Y = oy+c.y*s, w = c.w*s, h = c.h*s, cx = X+w/2, cy = Y+h/2;
+      const col = c.label==='R' ? '#d97706' : '#2563eb';
+      const t = c.src && c.src.thumb;
+      if(t){
+        const pre = (c.rot%180) ? [h,w] : [w,h];
+        g += '<g transform="translate('+cx+' '+cy+') rotate('+(-c.rot)+')"><image href="'+t+'" x="'+(-pre[0]/2)+'" y="'+(-pre[1]/2)+'" width="'+pre[0]+'" height="'+pre[1]+'" preserveAspectRatio="none"/></g>';
+      }
+      g += '<rect x="'+X+'" y="'+Y+'" width="'+w+'" height="'+h+'" fill="'+(t?'none':col)+'" fill-opacity="0.15" stroke="'+col+'" stroke-width="0.8"/>';
+      if(c.label==='T'||c.label==='R'){
+        g += '<circle cx="'+(X+11)+'" cy="'+(Y+11)+'" r="8" fill="'+col+'"/><text x="'+(X+11)+'" y="'+(Y+11)+'" text-anchor="middle" dominant-baseline="central" style="font-size:10px;font-weight:700;fill:#fff">'+c.label+'</text>';
+      }
+    });
+    if(hp.flecha){ const ay2 = oy+hoja.H/2*s, ax1 = ox+4*s, ax2 = ox+7*s; g += '<path d="M'+ax2+' '+ay2+'H'+ax1+'M'+(ax1+3)+' '+(ay2-3)+'L'+ax1+' '+ay2+'L'+(ax1+3)+' '+(ay2+3)+'" fill="none" stroke="#000" stroke-width="1.2" stroke-linecap="round"/>'; }
+    if(hp.eje!=null){ const ex = ox+hp.eje*s; g += '<line x1="'+ex+'" y1="'+oy+'" x2="'+ex+'" y2="'+(oy+hoja.H*s)+'" stroke="#dc2626" stroke-width="1" stroke-dasharray="5 3"/>'; }
+    hp.marcas.forEach(m=>{ g += '<line x1="'+(ox+m[0]*s)+'" y1="'+(oy+m[1]*s)+'" x2="'+(ox+m[2]*s)+'" y2="'+(oy+m[3]*s)+'" stroke="#000" stroke-width="1.1"/>'; });
+    hp.textos.forEach(t=>{ g += '<text x="'+(ox+t.x*s)+'" y="'+(oy+t.y*s)+'" text-anchor="middle" style="font-size:'+Math.max(TXT*s,4.5)+'px;font-weight:'+(t.negrita?700:400)+';fill:#000">'+esc(t.texto)+'</text>'; });
+  }
+  svg.innerHTML = g;
+}
+
+/* ======================= PDF DE SALIDA ======================= */
+async function descargarPdf(){
+  const msg = $('msgPdf'); msg.style.color = '#1e3a5f'; msg.textContent = 'Armando el PDF…';
+  try{
+    const bytes = await construirPdf(S.plan);
+    const blob = new Blob([bytes], { type:'application/pdf' });
+    const ot = ($('ot').value.trim() || 'sin-OT').replace(/[^\w\-]+/g,'_');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'montaje_'+ot+'_'+$('tipo').value+($('tipo').value==='taco'?'_'+$('giro').value:'')+'.pdf';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+    msg.style.color = '#1a7d3f'; msg.textContent = 'Listo: PDF descargado ('+S.plan.hojas.length+' hoja'+(S.plan.hojas.length>1?'s':'')+').';
+  }catch(e){ console.error(e); msg.style.color = '#b91c1c'; msg.textContent = 'No se pudo armar el PDF: '+e.message; }
+}
+
+async function construirPdf(plan){
+  const { PDFDocument, StandardFonts, cmyk, degrees, pushGraphicsState, popGraphicsState, rectangle, clip, endPath, concatTransformationMatrix } = PDFLib;
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const fontB = await doc.embedFont(StandardFonts.HelveticaBold);
+  const K = cmyk(0,0,0,1);
+  const hoja = plan.hoja, WP = hoja.W*PT, HP = hoja.H*PT;
+  const cacheDoc = {}, cacheEmb = {};
+  async function incrustar(p){
+    if(cacheEmb[p.id]) return cacheEmb[p.id];
+    const f = S.files[p.fid];
+    if(!cacheDoc[p.fid]) cacheDoc[p.fid] = await PDFDocument.load(f.bytes, { ignoreEncryption:true });
+    const c = cajaTrim(p);
+    const [emb] = await doc.embedPages([cacheDoc[p.fid].getPage(p.pidx)], [{ left:c.x, bottom:c.y, right:c.x+c.w, top:c.y+c.h }]);
+    return cacheEmb[p.id] = emb;
+  }
+  // --- carátulas: incrustar con caja propia y dibujar el sangrado por espejo ---
+  const OV = TRASLAPE_MM*PT;
+  async function incrustarBb(p, bb){
+    const key = p.id+':'+bb.map(v=>v.toFixed(2)).join(',');
+    if(cacheEmb[key]) return cacheEmb[key];
+    const f = S.files[p.fid];
+    if(!cacheDoc[p.fid]) cacheDoc[p.fid] = await PDFDocument.load(f.bytes, { ignoreEncryption:true });
+    const [emb] = await doc.embedPages([cacheDoc[p.fid].getPage(p.pidx)], [{ left:bb[0], bottom:bb[1], right:bb[2], top:bb[3] }]);
+    return cacheEmb[key] = emb;
+  }
+  function bboxCar(c){
+    const p = c.src, T = cajaTrim(p), mb = p.mb, dec = c.dec, B_PT = (c.bmm||0)*PT;
+    if(dec==='sin' || dec==='blanco') return [T.x, T.y, T.x+T.w, T.y+T.h];
+    if(dec==='yatrae') return [Math.max(T.x-B_PT,mb.x), Math.max(T.y-B_PT,mb.y), Math.min(T.x+T.w+B_PT,mb.x+mb.w), Math.min(T.y+T.h+B_PT,mb.y+mb.h)];
+    const fr = (PREP.fringe && p.diag) ? p.diag.fringe : { l:0, r:0, t:0, b:0 };
+    return [mb.x+fr.l*PT, mb.y+fr.b*PT, mb.x+mb.w-fr.r*PT, mb.y+mb.h-fr.t*PT];
+  }
+  async function preIncrustar(){
+    const porArchivo = {};
+    for(const hp of plan.hojas) for(const c of hp.celdas){
+      if(!(c.car || c.sangrar)) continue;
+      const bb = bboxCar(c), key = c.src.id+':'+bb.map(v=>v.toFixed(2)).join(',');
+      if(cacheEmb[key]) continue;
+      (porArchivo[c.src.fid] = porArchivo[c.src.fid] || {})[key] = { p:c.src, bb };
+    }
+    for(const fid of Object.keys(porArchivo)){
+      const f = S.files[fid];
+      if(!cacheDoc[fid]) cacheDoc[fid] = await PDFDocument.load(f.bytes, { ignoreEncryption:true });
+      const items = Object.entries(porArchivo[fid]);
+      const embs = await doc.embedPages(items.map(([k,it])=>cacheDoc[fid].getPage(it.p.pidx)), items.map(([k,it])=>({ left:it.bb[0], bottom:it.bb[1], right:it.bb[2], top:it.bb[3] })));
+      items.forEach(([k], i)=>{ cacheEmb[k] = embs[i]; });
+    }
+  }
+  // Dibuja una pieza con su sangrado. Todo se calcula en coordenadas locales de la pieza (sin girar) y se coloca con una matriz,
+  // así sirve igual para piezas giradas 90° o 180° (pata con pata, catálogos con la página girada)
+  async function dibujarCaratula(page, c){
+    const p = c.src, T = cajaTrim(p), mb = p.mb, dec = c.dec, B_PT = (c.bmm||0)*PT;
+    const pw = T.w, ph = T.h;
+    const bwS = c.w*PT, bhS = c.h*PT, XS = c.x*PT, YS = (hoja.H-(c.y+c.h))*PT;
+    const th = (c.rot||0)*Math.PI/180, cs = Math.cos(th), sn = Math.sin(th);
+    const Cx = XS+bwS/2, Cy = YS+bhS/2;
+    page.pushOperators(pushGraphicsState(), concatTransformationMatrix(cs, sn, -sn, cs, Cx-(pw/2)*cs+(ph/2)*sn, Cy-(pw/2)*sn-(ph/2)*cs));
+    try{ await dibujarLocal(page, c, p, T, mb, dec, B_PT, pw, ph); } finally { page.pushOperators(popGraphicsState()); }
+  }
+  async function dibujarLocal(page, c, p, T, mb, dec, B_PT, bw, bh){
+    const X0 = 0, Y0 = 0;
+    if(dec==='sin' || dec==='blanco'){
+      const emb = await incrustarBb(p, bboxCar(c));
+      page.drawPage(emb, { x:X0, y:Y0 }); return;
+    }
+    if(dec==='yatrae'){
+      const bb = bboxCar(c);
+      const emb = await incrustarBb(p, bb);
+      page.drawPage(emb, { x:X0+(bb[0]-T.x), y:Y0+(bb[1]-T.y) }); return;
+    }
+    // espejo: se recorta la franja defectuosa del borde y se refleja la misma imagen
+    const R = bboxCar(c);
+    const emb = await incrustarBb(p, R);
+    const ix = R[2]-R[0], iy = R[3]-R[1];
+    const imgX0 = X0+(R[0]-T.x), imgY0 = Y0+(R[1]-T.y);
+    const cov = { l:T.x-R[0], r:R[2]-(T.x+T.w), b:T.y-R[1], t:R[3]-(T.y+T.h) };
+    const need = { l:cov.l<B_PT-0.01, r:cov.r<B_PT-0.01, b:cov.b<B_PT-0.01, t:cov.t<B_PT-0.01 };
+    page.pushOperators(pushGraphicsState(), rectangle(X0-B_PT, Y0-B_PT, bw+2*B_PT, bh+2*B_PT), clip(), endPath());
+    const orden = [];
+    for(const sy of [-1,0,1]) for(const sx of [-1,0,1]){
+      if(!sx && !sy) continue;
+      const nx = sx===-1 ? need.l : (sx===1 ? need.r : true), ny = sy===-1 ? need.b : (sy===1 ? need.t : true);
+      if(nx && ny) orden.push([sx, sy]);
+    }
+    orden.sort((a,b)=>(Math.abs(b[0])+Math.abs(b[1]))-(Math.abs(a[0])+Math.abs(a[1])));   // esquinas, lados y al final el centro
+    for(const [sx, sy] of orden){
+      let x = imgX0, y = imgY0, xs = 1, ys = 1;
+      if(sx===-1){ xs = -1; x = imgX0+OV; } if(sx===1){ xs = -1; x = imgX0+2*ix-OV; }
+      if(sy===-1){ ys = -1; y = imgY0+OV; } if(sy===1){ ys = -1; y = imgY0+2*iy-OV; }
+      page.drawPage(emb, { x, y, xScale:xs, yScale:ys });
+    }
+    page.drawPage(emb, { x:imgX0, y:imgY0 });
+    page.pushOperators(popGraphicsState());
+  }
+  await preIncrustar();
+  for(const hp of plan.hojas){
+    const page = doc.addPage([WP, HP]);
+    (hp.marcos||[]).forEach(r=>page.drawRectangle({ x:r.x*PT, y:(hoja.H-(r.y+r.h))*PT, width:r.w*PT, height:r.h*PT, borderColor:K, borderWidth:MARCA_GROSOR_MM*PT }));
+    for(const c of hp.celdas){
+      if(c.car || c.sangrar){ await dibujarCaratula(page, c); continue; }
+      const emb = await incrustar(c.src);
+      const bw = c.w*PT, bh = c.h*PT, X0 = c.x*PT, Y0 = (hoja.H-(c.y+c.h))*PT;
+      let x = X0, y = Y0;
+      if(c.rot===90){ x = X0+bw; y = Y0; }
+      else if(c.rot===180){ x = X0+bw; y = Y0+bh; }
+      else if(c.rot===270){ x = X0; y = Y0+bh; }
+      page.drawPage(emb, { x, y, width:(c.rot%180? bh: bw), height:(c.rot%180? bw: bh), rotate: degrees(c.rot) });
+    }
+    hp.marcas.forEach(m=>{
+      page.drawLine({ start:{x:m[0]*PT, y:HP-m[1]*PT}, end:{x:m[2]*PT, y:HP-m[3]*PT}, thickness: MARCA_GROSOR_MM*PT, color: K });
+    });
+    if(hp.flecha){
+      const yy = HP-(hoja.H/2)*PT, x1 = 4*PT, x2 = 7*PT, hd = 1.2*PT, th = MARCA_GROSOR_MM*PT;
+      page.drawLine({ start:{x:x2,y:yy}, end:{x:x1,y:yy}, thickness:th, color:K });
+      page.drawLine({ start:{x:x1,y:yy}, end:{x:x1+hd,y:yy+hd}, thickness:th, color:K });
+      page.drawLine({ start:{x:x1,y:yy}, end:{x:x1+hd,y:yy-hd}, thickness:th, color:K });
+    }
+    hp.textos.forEach(t=>{
+      const f = t.negrita ? fontB : font;
+      const w = f.widthOfTextAtSize(t.texto, TXT_PT);
+      page.drawText(t.texto, { x: t.x*PT - w/2, y: HP - t.y*PT, size: TXT_PT, font: f, color: K });
+    });
+  }
+  return await doc.save();
+}
+
+/* ======================= PREPARAR ARCHIVO: SANGRADOS AUTOMÁTICOS ======================= */
+const NOM_LADO = { l:'lateral izquierdo', r:'lateral derecho', t:'borde superior', b:'borde inferior' };
+function etiquetaPag(p){ return (S.files.length>1 ? p.nombre.replace(/\.(pdf|ai)$/i,'').slice(0,20)+' · ' : '') + 'Pág. '+(p.pidx+1); }
+function mediana(a){ const b = a.slice().sort((x,y)=>x-y); return b[Math.floor(b.length/2)]; }
+
+// Mide una página: cuánto sangrado ya trae, si el borde es blanco, franja de borde defectuosa y elementos cerca del corte
+async function analizarPagina(p){
+  const f = S.files[p.fid]; if(!f || !f.pj) return null;
+  const pg = await f.pj.getPage(p.pidx+1);
+  const sc = RENDER_DPI/72, vp = pg.getViewport({ scale:sc });
+  const W = Math.floor(vp.width), H = Math.floor(vp.height);
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d', { willReadFrequently:true }); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,W,H);
+  await pg.render({ canvasContext:ctx, viewport:vp }).promise;
+  const d = ctx.getImageData(0,0,W,H).data;
+  const L = new Float32Array(W*H);
+  for(let i=0, j=0; i<L.length; i++, j+=4) L[i] = 0.299*d[j] + 0.587*d[j+1] + 0.114*d[j+2];
+  const px = (x,y)=>L[y*W+x];
+  const v = pg.view, T = cajaTrim(p), mmpx = 25.4/RENDER_DPI;
+  const tx0 = (T.x-v[0])*sc, tx1 = tx0+T.w*sc, ty1 = (v[3]-T.y)*sc, ty0 = ty1-T.h*sc;
+  const cubre = { l:(T.x-p.mb.x)/PT, r:(p.mb.x+p.mb.w-(T.x+T.w))/PT, b:(T.y-p.mb.y)/PT, t:(p.mb.y+p.mb.h-(T.y+T.h))/PT };
+  // franja de borde aclarada (algunos exportadores dejan 1-5 px casi blancos en el borde de la imagen)
+  function perfil(lado){
+    const out = [];
+    for(let k=0;k<24;k++){
+      let s = 0, n = 0;
+      if(lado==='l' || lado==='r'){ const x = lado==='l' ? k : W-1-k; for(let y=Math.floor(H*0.1); y<Math.floor(H*0.9); y+=2){ s += px(x,y); n++; } }
+      else { const y = lado==='t' ? k : H-1-k; for(let x=Math.floor(W*0.1); x<Math.floor(W*0.9); x+=2){ s += px(x,y); n++; } }
+      out.push(s/n);
+    }
+    return out;
+  }
+  // solo cuenta lo que se ACLARA hacia el borde (el defecto del exportador es un desvanecido a blanco) y nunca más de 0,7 mm,
+  // para no confundir un degradado legítimo del diseño con una franja defectuosa
+  const kmax = Math.round(0.7/mmpx);
+  function franja(vv){ const ref = mediana(vv.slice(kmax+1, kmax+9)); let n = 0; for(let k=0;k<kmax;k++){ if(vv[k]-ref > 6) n = k+1; } return n; }
+  const fr = {}; ['l','r','t','b'].forEach(k=>{ const n = franja(perfil(k)); fr[k] = n>0 ? Math.min((n+1)*mmpx, 0.7) : 0; });
+  const salto = {}; ['l','r','t','b'].forEach(k=>{ salto[k] = Math.ceil(Math.max(0, fr[k]-cubre[k])/mmpx) + 1; });   // px del corte que ocupa la franja defectuosa
+  // borde blanco: los 3 mm exteriores del corte son blancos en los 4 lados
+  const tres = Math.round(3/mmpx);
+  function blancoLado(x0,y0,x1,y1){
+    let n = 0, osc = 0, s = 0;
+    for(let y=Math.max(0,Math.round(y0)); y<Math.min(H,Math.round(y1)); y+=2) for(let x=Math.max(0,Math.round(x0)); x<Math.min(W,Math.round(x1)); x+=2){ const q = px(x,y); s += q; n++; if(q<235) osc++; }
+    return n>0 && s/n>243 && osc/n<0.01;
+  }
+  const blanco = blancoLado(tx0,ty0,tx0+tres,ty1) && blancoLado(tx1-tres,ty0,tx1,ty1) && blancoLado(tx0,ty0,tx1,ty0+tres) && blancoLado(tx0,ty1-tres,tx1,ty1);
+  // elementos sueltos cerca del corte (sobre fondo liso): el espejo los duplicaría si el corte se corre
+  const avisos = [];
+  const win = Math.round(20/mmpx), dmax = Math.round(AVISO_BORDE_MM/mmpx);
+  ['l','r','t','b'].forEach(lado=>{
+    const len = (lado==='l'||lado==='r') ? Math.round(ty1-ty0) : Math.round(tx1-tx0);
+    const hallazgos = [];
+    for(let s0=0; s0+win<=len+1; s0+=win){
+      const stdAt = dd=>{
+        let sum = 0, sum2 = 0, n = 0;
+        for(let a=0;a<win;a++) for(let e=0;e<2;e++){
+          let x, y;
+          if(lado==='l'){ x = Math.round(tx0)+dd+e; y = Math.round(ty0)+s0+a; }
+          else if(lado==='r'){ x = Math.round(tx1)-1-dd-e; y = Math.round(ty0)+s0+a; }
+          else if(lado==='t'){ y = Math.round(ty0)+dd+e; x = Math.round(tx0)+s0+a; }
+          else { y = Math.round(ty1)-1-dd-e; x = Math.round(tx0)+s0+a; }
+          if(x<0||y<0||x>=W||y>=H) continue;
+          const q = px(x,y); sum += q; sum2 += q*q; n++;
+        }
+        if(!n) return 0; const m = sum/n; return Math.sqrt(Math.max(0, sum2/n-m*m));
+      };
+      const d0 = salto[lado];
+      if(stdAt(d0) > 6) continue;                        // el borde tiene foto o textura: no aplica
+      for(let dd=d0+1; dd<=dmax; dd++){ if(stdAt(dd) > 22){ hallazgos.push({ de:s0*mmpx, a:(s0+win)*mmpx, d:dd*mmpx }); break; } }
+    }
+    if(hallazgos.length){
+      const dmin = Math.min(...hallazgos.map(h=>h.d));
+      avisos.push({ lado, d:dmin, fuente:'elemento gráfico', tramo: fmt(Math.min(...hallazgos.map(h=>h.de)))+'–'+fmt(Math.max(...hallazgos.map(h=>h.a)))+' mm' });
+    }
+  });
+  // texto vectorial cerca del corte
+  try{
+    const tc = await pg.getTextContent();
+    const cerca = {};
+    tc.items.forEach(it=>{
+      if(!it.str || !it.str.trim()) return;
+      const x0 = it.transform[4], y0 = it.transform[5], w = it.width, h = it.height || Math.abs(it.transform[3]);
+      const ds = { l:(x0-T.x)/PT, r:((T.x+T.w)-(x0+w))/PT, b:(y0-T.y)/PT, t:((T.y+T.h)-(y0+h))/PT };
+      Object.keys(ds).forEach(k=>{ if(ds[k] < AVISO_BORDE_MM && (cerca[k]===undefined || ds[k]<cerca[k])) cerca[k] = ds[k]; });
+    });
+    Object.keys(cerca).forEach(k=>{
+      const ya = avisos.find(a=>a.lado===k);
+      if(ya){ if(cerca[k] < ya.d){ ya.d = cerca[k]; ya.fuente = 'texto'; } }
+      else avisos.push({ lado:k, d:cerca[k], fuente:'texto', tramo:'' });
+    });
+  }catch(e){ console.warn('sin análisis de texto', e); }
+  avisos.sort((a,b)=>a.d-b.d);
+  return { cubre, fringe:fr, blanco, avisos };
+}
+
+async function analizarTodo(){
+  if(!prepActivo() || !S.pool.length || PREP.analizando) return;
+  PREP.analizando = true; PREP.progreso = 0; renderPrep();
+  const n = Math.min(S.pool.length, 40);
+  for(let i=0;i<n && i<S.pool.length;i++){
+    if(!S.pool[i]) break;
+    try{ const pp = S.pool[i]; pp.diag = await analizarPagina(pp); }catch(e){ console.warn('análisis falló', e); if(S.pool[i]) S.pool[i].diag = null; }
+    PREP.progreso = i+1; renderPrep();
+  }
+  PREP.analizando = false; PREP.analizado = true;
+  recalcular();
+}
+
+// ¿esta página necesita sangrado? (el borde blanco o el sangrado ya incluido no lo necesitan)
+function decisionNecesita(p){
+  const dg = p.diag; if(!dg) return true;
+  if(dg.blanco) return false;
+  return Math.min(dg.cubre.l, dg.cubre.r, dg.cubre.t, dg.cubre.b) < bleedNecesario() - 0.05;
+}
+function decision(p){
+  const B = bleedNecesario(), dg = p.diag, esCar = $('tipo').value==='caratula';
+  const cm = dg ? Math.min(dg.cubre.l, dg.cubre.r, dg.cubre.t, dg.cubre.b) : 0;
+  if(!PREP.aplicado){
+    // con doble corte, si el archivo YA trae el sangrado se usa solo, sin tener que aplicar nada
+    if(!esCar && B>0 && dg && cm >= B - 0.05) return 'yatrae';
+    return 'sin';
+  }
+  if(!dg) return 'espejo';
+  if(!PREP.forzar && dg.blanco) return 'blanco';
+  if(!PREP.forzar && cm >= B - 0.05) return 'yatrae';
+  return 'espejo';
+}
+function estadoPagina(p){
+  const dg = p.diag; if(!dg) return 'sin analizar';
+  const cm = Math.min(dg.cubre.l, dg.cubre.r, dg.cubre.t, dg.cubre.b);
+  if(dg.blanco) return 'borde blanco: no necesita sangrado';
+  if(cm >= bleedNecesario() - 0.05) return 'ya trae '+fmt(cm)+' mm de sangrado';
+  return 'sin sangrado: ya cubre '+fmt(Math.min(dg.cubre.l,dg.cubre.r))+' mm a los lados y '+fmt(Math.min(dg.cubre.t,dg.cubre.b))+' mm arriba y abajo';
+}
+
+// Mide la franja de borde defectuosa con 600 dpi, solo en 4 tiras de 2,5 mm (el análisis general va a 150 dpi y no ve defectos de 0,07 mm)
+async function afinarBordes(p){
+  const f = S.files[p.fid]; if(!f || !f.pj || !p.diag) return;
+  const pg = await f.pj.getPage(p.pidx+1);
+  const dpi = 600, sc = dpi/72, mmpx = 25.4/dpi, banda = Math.round(2.5/mmpx);
+  const vp = pg.getViewport({ scale:sc }), Wf = Math.floor(vp.width), Hf = Math.floor(vp.height);
+  const kmax = Math.round(0.7/mmpx), fr = {};
+  for(const lado of ['l','r','t','b']){
+    const horiz = (lado==='l' || lado==='r');
+    const cw = horiz ? banda : Wf, ch = horiz ? Hf : banda;
+    const vpp = pg.getViewport({ scale:sc, offsetX: lado==='r' ? -(Wf-banda) : 0, offsetY: lado==='b' ? -(Hf-banda) : 0 });
+    const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+    const ctx = cv.getContext('2d', { willReadFrequently:true }); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,cw,ch);
+    await pg.render({ canvasContext:ctx, viewport:vpp }).promise;
+    const d = ctx.getImageData(0,0,cw,ch).data, v = [];
+    for(let k=0;k<banda;k++){
+      let s0 = 0, c = 0;
+      if(horiz){ const x = lado==='l' ? k : cw-1-k; for(let y=Math.floor(ch*0.1); y<Math.floor(ch*0.9); y+=3){ const i = (y*cw+x)*4; s0 += 0.299*d[i]+0.587*d[i+1]+0.114*d[i+2]; c++; } }
+      else { const y = lado==='t' ? k : ch-1-k; for(let x=Math.floor(cw*0.1); x<Math.floor(cw*0.9); x+=3){ const i = (y*cw+x)*4; s0 += 0.299*d[i]+0.587*d[i+1]+0.114*d[i+2]; c++; } }
+      v.push(s0/c);
+    }
+    const ref = mediana(v.slice(kmax+1, kmax+9)); let m = 0;
+    for(let k=0;k<kmax;k++) if(v[k]-ref > 6) m = k+1;
+    fr[lado] = m>0 ? Math.min((m+1)*mmpx, 0.7) : 0;
+  }
+  p.diag.fringe = fr; p.diag.afinado = true;
+}
+async function prepAplicar(v){
+  if(v && !PREP.aplicando){
+    PREP.aplicando = true;
+    try{
+      const n = S.pool.length;
+      for(let i=0;i<n;i++){
+        const p = S.pool[i];
+        PREP.msg = 'Preparando bordes… página '+(i+1)+' de '+n; renderPrep();
+        if(!p.diag){ try{ p.diag = await analizarPagina(p); }catch(e){ p.diag = null; } }
+        if(PREP.fringe && p.diag && !p.diag.afinado && (PREP.forzar || decisionNecesita(p))){ try{ await afinarBordes(p); }catch(e){ console.warn('no se pudo afinar el borde', e); } }
+      }
+    } finally { PREP.aplicando = false; PREP.msg = ''; }
+  }
+  PREP.aplicado = v; recalcular();
+}
+function prepToggle(){ PREP.abierto = !PREP.abierto; renderPrep(); }
+function prepB(v){ PREP.B = Math.max(2, Math.min(12, +v||10)); recalcular(); }
+
+function renderPrep(){
+  const caja = $('pPrep');
+  if(!S.pool.length){ caja.style.display = 'none'; return; }
+  caja.style.display = '';
+  const pgs = S.pool.slice(0,40), conDiag = pgs.filter(p=>p.diag);
+  const necesitan = conDiag.filter(decisionNecesita).length;
+  let tag = '';
+  if(PREP.aplicado) tag = '<span class="tag ok">Aplicado</span>';
+  else if(PREP.analizando) tag = '<span class="tag no">Analizando…</span>';
+  else if(PREP.analizado) tag = necesitan>0 ? '<span class="tag">Recomendado</span>' : '<span class="tag no">No hace falta</span>';
+  const tileSang = prepActivo()
+    ? '<button class="tl '+(PREP.abierto?'sel':'')+'" onclick="prepToggle()"><b>Sangrados automáticos '+tag+'</b><small>Agrega el sangrado que falta, página por página</small></button>'
+    : '<div class="tl off"><b>Sangrados automáticos</b><small>Solo con doble corte o en carátulas</small></div>';
+  const tagMed = MED.aplicado ? '<span class="tag ok">Aplicado</span>' : '';
+  let h = '<div class="tiles">'+tileSang+
+    '<button class="tl '+(MED.abierto?'sel':'')+'" onclick="medToggle()"><b>Medida y cuadrícula '+tagMed+'</b><small>Lleva el interior al formato final</small></button>'+
+    '<button class="tl '+(TIN.abierto?'sel':'')+'" onclick="tinToggle()"><b>Receta de tinta '+(TIN.aplicado?'<span class="tag ok">Aplicado</span>':'')+'</b><small>Negro o Cool Gray: grosores y tonos</small></button></div>';
+  if(PREP.analizando) h += '<div class="hint" style="margin-top:8px">Analizando páginas… '+PREP.progreso+' de '+Math.min(S.pool.length,40)+'</div>';
+  if(PREP.aplicando) h += '<div class="hint" style="margin-top:8px">'+esc(PREP.msg||'Preparando…')+'</div>';
+  if(PREP.abierto && prepActivo()){
+    h += '<div class="prepPanel">';
+    h += '<p class="hint" style="margin-top:0">Se revisa cada página: si ya trae sangrado o tiene el borde blanco, no se toca. A las demás se les refleja la propia imagen hacia afuera, sin recomprimirla ni cambiar el CMYK.</p>';
+    pgs.slice(0,8).forEach(p=>{
+      const dg = p.diag;
+      h += '<div class="dg"><b>'+esc(etiquetaPag(p))+'</b> · '+esc(estadoPagina(p));
+      if(dg){
+        const f = dg.fringe, mx = Math.max(f.l,f.r,f.t,f.b);
+        if(mx>0.05) h += '<br>Borde de la imagen con franja clara de hasta '+fmt(mx)+' mm'+(PREP.fringe?' (se recorta)':' (sin recortar)');
+        dg.avisos.forEach(av=>{ h += '<br><span class="m">Revisar: '+NOM_LADO[av.lado]+' a '+fmt(av.d)+' mm del corte ('+av.fuente+(av.tramo?', tramo '+av.tramo:'')+')</span>'; });
+      }
+      h += '</div>';
+    });
+    if(pgs.length>8) h += '<p class="hint">y '+(S.pool.length-8)+' páginas más'+(S.pool.length>40?' (se analizan las primeras 40)':'')+'</p>';
+    h += '<div class="row3">'+($('tipo').value==='caratula' ? '<label>Sangrado de imagen (mm) <input type="number" min="2" max="12" step="1" value="'+PREP.B+'" onchange="prepB(this.value)"></label>' : '<label>Sangrado necesario: '+fmt(bleedNecesario())+' mm por lado (la mitad de la franja de '+fmt(corteGap())+' mm)</label>')+
+      '<label><input type="checkbox" '+(PREP.fringe?'checked':'')+' onchange="PREP.fringe=this.checked;recalcular()"> Recortar el borde defectuoso (recomendado)</label></div>';
+    h += '<div><button class="lnk" onclick="PREP.adv=!PREP.adv;renderPrep()">'+(PREP.adv?'Ocultar avanzado':'Avanzado')+'</button></div>';
+    if(PREP.adv) h += '<div class="dg">'+($('tipo').value==='caratula' ? 'Papel adicional fijo: '+PAPEL_EXTRA_MM+' mm. ' : '')+'Traslape bajo la imagen: '+TRASLAPE_MM+' mm.<br><label style="display:inline-flex;gap:6px;align-items:center;font-weight:400"><input type="checkbox" '+(PREP.forzar?'checked':'')+' onchange="PREP.forzar=this.checked;recalcular()"> Aplicar espejo también a páginas con borde blanco o que ya traen sangrado</label></div>';
+    h += '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn verde" '+(PREP.aplicando?'disabled':'')+' onclick="prepAplicar(true)">'+(PREP.aplicado?'Volver a aplicar':'Aplicar sangrados')+'</button>'+(PREP.aplicado?'<button class="btn gris" onclick="prepAplicar(false)">Quitar sangrados</button>':'')+'</div>';
+    h += '</div>';
+  }
+  if(PREP.aplicado && prepActivo()){
+    const decs = pgs.map(p=>decision(p)), nE = decs.filter(d=>d==='espejo').length, nY = decs.filter(d=>d==='yatrae').length, nB = decs.filter(d=>d==='blanco').length;
+    const fr = pgs.map(p=>p.diag?Math.max(p.diag.fringe.l,p.diag.fringe.r,p.diag.fringe.t,p.diag.fringe.b):0).filter(x=>x>0.05);
+    h += '<div class="quecambio"><b>Qué cambió</b> (el original queda intacto)<ul><li>Sangrado de '+fmt(bleedNecesario())+' mm por espejo en '+nE+' página'+(nE===1?'':'s')+'</li>'+
+      (nY?'<li>'+nY+' ya traían sangrado: se usó el suyo</li>':'')+(nB?'<li>'+nB+' tienen el borde blanco: no se les agregó nada</li>':'')+
+      (PREP.fringe&&fr.length?'<li>Franja de borde defectuosa recortada (hasta '+fmt(Math.max(...fr))+' mm)</li>':'')+'</ul></div>';
+  }
+  h += renderMedida();
+  h += renderTinta();
+  $('prepBody').innerHTML = h;
+}
+
+/* ======================= PREPARAR ARCHIVO: MEDIDA Y CUADRÍCULA ======================= */
+// Lleva la cuadrícula de un interior a un formato final más chico (p. ej. 16,5×23,5 cm), quitando solo las líneas que sobran.
+// Márgenes de Conde: mínimo 13 mm del lado del anillado y 7 mm en los demás (se pueden sumar 1 o 2 mm).
+const MED = { abierto:false, analizando:false, analizado:false, an:{}, preset:'165x235', cw:165, ch:235, anillo:'izq', mmAnillo:13, mmOtros:9, aplicado:false, aplicando:false, informe:null, msg:'' };
+function medParams(){
+  let W, H;
+  if(MED.preset==='custom'){ W = +MED.cw || 165; H = +MED.ch || 235; } else { [W,H] = MED.preset.split('x').map(Number); }
+  return { W, H, anillo:MED.anillo, mmAnillo:MED.mmAnillo, mmOtros:MED.mmOtros };
+}
+async function medToggle(){
+  MED.abierto = !MED.abierto; renderPrep();
+  if(MED.abierto && !MED.analizado) await medAnalizar();
+}
+async function medAnalizar(){
+  if(!window.MontajesAjuste){ return; }
+  MED.analizando = true; MED.an = {}; renderPrep();
+  for(let fid=0; fid<S.files.length; fid++){
+    const f = S.files[fid]; if(!f) continue;
+    try{ MED.an[fid] = await MontajesAjuste.analizar(f.bytes); }catch(e){ console.warn(e); MED.an[fid] = [{ ok:false, motivo:'No pude leer el archivo ('+e.message+').' }]; }
+  }
+  MED.analizando = false; MED.analizado = true; renderPrep();
+}
+function medSet(k, v){ MED[k] = v; renderPrep(); }
+function svgMed(a, antes){
+  const p = medParams(), plan = MontajesAjuste.simular(a, p);
+  const pw = antes ? a.pagina.w : p.W, ph = antes ? a.pagina.h : p.H;
+  const cols = antes ? a.columnas : plan.ncols, rows = antes ? a.filas : plan.nrows, px = antes ? a.pasoX : plan.px, py = a.pasoY;
+  const L = antes ? a.margenes.izq : plan.L, T = antes ? a.margenes.arriba : plan.T0;
+  const sc = Math.min(150/pw, 215/ph), pad = 4, W = pw*sc+2*pad, H = ph*sc+2*pad;
+  let g = '<rect x="'+pad+'" y="'+pad+'" width="'+pw*sc+'" height="'+ph*sc+'" fill="#fff" stroke="#64748b"/>';
+  const gx = pad+L*sc, gy = pad+T*sc;
+  for(let i=0;i<=cols;i++) g += '<line x1="'+(gx+i*px*sc)+'" y1="'+gy+'" x2="'+(gx+i*px*sc)+'" y2="'+(gy+rows*py*sc)+'" stroke="#888780" stroke-width="'+(i===0||i===cols?0.9:0.35)+'"/>';
+  for(let j=0;j<=rows;j++) g += '<line x1="'+gx+'" y1="'+(gy+j*py*sc)+'" x2="'+(gx+cols*px*sc)+'" y2="'+(gy+j*py*sc)+'" stroke="#888780" stroke-width="'+(j===0||j===rows?0.9:0.35)+'"/>';
+  g += '<rect x="'+(gx+(cols*px-38)*sc)+'" y="'+(pad+7*sc)+'" width="'+38*sc+'" height="'+8*sc+'" fill="#444441"/><rect x="'+gx+'" y="'+(pad+(ph-9)*sc)+'" width="'+30*sc+'" height="'+2*sc+'" fill="#888780"/>';
+  return '<svg width="100%" viewBox="0 0 '+W+' '+H+'" role="img"><title>'+(antes?'Antes':'Después')+'</title>'+g+'</svg>';
+}
+async function refrescarArchivo(fid){
+  const f = S.files[fid]; if(!f) return;
+  f.doc = await PDFLib.PDFDocument.load(f.bytes, { ignoreEncryption:true });
+  try{ f.pj = await pdfjsLib.getDocument({ data: f.bytes.slice(0) }).promise; }catch(e){ f.pj = null; }
+  const pages = f.doc.getPages(); let thumbs = [];
+  try{ thumbs = await miniaturas(f.bytes, pages.length); }catch(e){}
+  S.pool.filter(p=>p.fid===fid).forEach(p=>{
+    const pg = pages[p.pidx], mb = pg.getMediaBox(), tb = pg.getTrimBox();
+    p.mb = { x:mb.x, y:mb.y, w:mb.width, h:mb.height }; p.tb = { x:tb.x, y:tb.y, w:tb.width, h:tb.height };
+    p.conTrim = Math.abs(tb.width-mb.width)>0.5 || Math.abs(tb.height-mb.height)>0.5;
+    p.thumb = thumbs[p.pidx] || ''; p.diag = null;
+  });
+}
+async function medAplicar(){
+  const p = medParams(); MED.aplicando = true; MED.msg = 'Ajustando la cuadrícula…'; renderPrep();
+  const informe = [];
+  try{
+    for(let fid=0; fid<S.files.length; fid++){
+      const f = S.files[fid]; if(!f) continue;
+      const an = MED.an[fid] || [];
+      if(!an.some(x=>x.ok)) continue;
+      MED.msg = 'Ajustando '+f.nombre+'…'; renderPrep();
+      const res = await MontajesAjuste.aplicar(f.bytes, p);
+      if(!f.bytesOrig) f.bytesOrig = f.bytes;
+      f.bytes = res.bytes;
+      await refrescarArchivo(fid);
+      res.informe.forEach(x=>informe.push(Object.assign({ archivo:f.nombre }, x)));
+    }
+    MED.informe = informe; MED.aplicado = informe.some(x=>x.ok);
+    PREP.analizado = false;
+  } catch(e){ console.error(e); alert('No se pudo ajustar la cuadrícula: '+e.message); }
+  finally { MED.aplicando = false; MED.msg = ''; }
+  recalcular();
+  if(prepActivo()) analizarTodo();
+  MED.analizado = false; if(MED.abierto) await medAnalizar();
+}
+async function medQuitar(){
+  for(let fid=0; fid<S.files.length; fid++){
+    const f = S.files[fid]; if(!f || !f.bytesOrig) continue;
+    f.bytes = f.bytesOrig; f.bytesOrig = null; await refrescarArchivo(fid);
+  }
+  MED.aplicado = false; MED.informe = null; TIN.aplicado = false; TIN.informe = null; PREP.analizado = false;
+  recalcular(); if(prepActivo()) analizarTodo();
+  MED.analizado = false; if(MED.abierto) await medAnalizar();
+}
+function medDescargar(){
+  S.files.forEach(f=>{
+    if(!f || !f.bytesOrig) return;
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([f.bytes], { type:'application/pdf' }));
+    a.download = f.nombre.replace(/\.(pdf|ai)$/i,'')+'_ajustado.pdf';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+  });
+}
+function renderMedida(){
+  let h = '';
+  if(MED.abierto){
+    const p = medParams();
+    h += '<div class="prepPanel"><p class="hint" style="margin-top:0">Lleva la cuadrícula al formato final quitando solo las líneas que sobran. El encabezado, el pie y la marca de agua se recolocan solos. Los grosores y colores de las líneas no se tocan.</p>';
+    if(MED.analizando) h += '<div class="hint">Buscando la cuadrícula…</div>';
+    let primera = null;
+    Object.keys(MED.an).forEach(fid=>{
+      (MED.an[fid]||[]).forEach((x,i)=>{
+        const pg = S.pool.find(q=>q.fid===+fid && q.pidx===i);
+        h += '<div class="dg"><b>'+esc(pg?etiquetaPag(pg):'Pág. '+(i+1))+'</b> · ';
+        if(x.ok){ if(!primera) primera = x;
+          h += 'cuadrícula '+x.columnas+' × '+x.filas+', cuadros de '+fmt(x.pasoX)+' × '+fmt(x.pasoY)+' mm<br>Márgenes: '+fmt(x.margenes.izq)+' izq. · '+fmt(x.margenes.der)+' der. · '+fmt(x.margenes.arriba)+' arriba · '+fmt(x.margenes.abajo)+' abajo (página de '+fmt(x.pagina.w)+' × '+fmt(x.pagina.h)+' mm'+(x.pagina.conGuia?'':', sin guía de página: se usa la hoja completa')+')';
+        } else h += '<span class="m">'+esc(x.motivo)+' No se toca: ajústala en Illustrator.</span>';
+        h += '</div>';
+      });
+    });
+    h += '<div class="row3"><label>Formato final <select onchange="medSet(\'preset\',this.value)"><option value="165x235" '+(MED.preset==='165x235'?'selected':'')+'>16,5 × 23,5 cm (cuaderno 24 × 17)</option><option value="140x200" '+(MED.preset==='140x200'?'selected':'')+'>14 × 20 cm</option><option value="custom" '+(MED.preset==='custom'?'selected':'')+'>Otro (mm)…</option></select></label>'+
+      (MED.preset==='custom'?'<label>Ancho × alto (mm) <input type="number" value="'+MED.cw+'" onchange="MED.cw=+this.value;renderPrep()"> <input type="number" value="'+MED.ch+'" onchange="MED.ch=+this.value;renderPrep()"></label>':'')+
+      '<label>Anillado <select onchange="medSet(\'anillo\',this.value)"><option value="izq" '+(MED.anillo==='izq'?'selected':'')+'>Izquierda</option><option value="der" '+(MED.anillo==='der'?'selected':'')+'>Derecha</option></select></label></div>'+
+      '<div class="row3"><label>Margen del anillado <select onchange="medSet(\'mmAnillo\',+this.value)">'+[13,14,15].map(v=>'<option '+(MED.mmAnillo===v?'selected':'')+'>'+v+'</option>').join('')+'</select> mm</label>'+
+      '<label>Margen contrario <select onchange="medSet(\'mmOtros\',+this.value)">'+[7,8,9].map(v=>'<option '+(MED.mmOtros===v?'selected':'')+'>'+v+'</option>').join('')+'</select> mm</label></div>'+
+      '<p class="hint" style="margin:4px 0 8px">Mínimos: 13 mm del lado del anillado y 7 mm en los demás; se pueden sumar 1 o 2 mm.</p>';
+    if(primera){
+      const plan = MontajesAjuste.simular(primera, p);
+      h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:420px"><div><div class="hint" style="margin:0">Antes: '+primera.columnas+' × '+primera.filas+'</div>'+svgMed(primera, true)+'</div><div><div class="hint" style="margin:0">Después: '+plan.ncols+' × '+plan.nrows+'</div>'+svgMed(primera, false)+'</div></div>';
+      h += '<div class="dg" style="margin-top:8px">Se quitan '+Math.max(0,plan.colsAntes-plan.ncols)+' columna(s) y '+Math.max(0,plan.filasAntes-plan.nrows)+' fila(s). El paso cambia '+fmt(plan.cambioPaso)+' % (de '+fmt(primera.pasoX)+' a '+fmt(plan.px)+' mm) para que los márgenes queden exactos'+(Math.abs(plan.cambioPaso)>2.5?'. <span class="m">Es un cambio grande: revísalo.</span>':'.')+'<br>Márgenes resultantes: '+fmt(plan.L)+' mm a la izquierda, '+fmt(plan.R)+' mm a la derecha.</div>';
+    }
+    h += '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn verde" '+((MED.aplicando||!primera)?'disabled':'')+' onclick="medAplicar()">'+(MED.aplicado?'Volver a aplicar':'Aplicar medida')+'</button>'+
+      (MED.aplicado?'<button class="btn gris" onclick="medQuitar()">Quitar los ajustes (vuelve al original)</button><button class="btn" onclick="medDescargar()">Descargar archivo ajustado</button>':'')+'</div>';
+    if(MED.aplicando) h += '<div class="hint" style="margin-top:6px">'+esc(MED.msg)+'</div>';
+    h += '</div>';
+  }
+  if(MED.aplicado && MED.informe){
+    h += '<div class="quecambio"><b>Qué cambió: medida y cuadrícula</b> (el original queda guardado: «Quitar los ajustes» lo recupera)<ul>';
+    MED.informe.forEach(x=>{
+      if(x.ok) h += '<li>'+esc(x.archivo)+' · pág. '+x.pagina+': cuadrícula '+x.antes.columnas+' × '+x.antes.filas+' → '+x.despues.columnas+' × '+x.despues.filas+'; márgenes '+fmt(x.despues.margenIzq)+' / '+fmt(x.despues.margenDer)+' mm; paso '+fmt(x.despues.cambioPasoPct)+' %</li>';
+      else h += '<li>'+esc(x.archivo)+' · pág. '+x.pagina+': no se tocó ('+esc(x.motivo)+')</li>';
+    });
+    h += '</ul></div>';
+  }
+  return h;
+}
+
+/* ======================= PREPARAR ARCHIVO: RECETA DE TINTA ======================= */
+// Plantilla "Plantilla cuadernos color y línea.ai" de Conde: grosor y tono de la cuadrícula, marca de agua y logo según la tinta. Todo en K puro.
+const TIN = { abierto:false, rec:'coolgray', aplicado:false, aplicando:false, informe:null, msg:'' };
+async function tinToggle(){
+  TIN.abierto = !TIN.abierto; renderPrep();
+  if(TIN.abierto && !MED.analizado && !MED.analizando) await medAnalizar();
+}
+function tinSet(v){ TIN.rec = v; renderPrep(); }
+async function tinAplicar(){
+  TIN.aplicando = true; TIN.msg = 'Aplicando la receta…'; renderPrep();
+  const informe = [];
+  try{
+    for(let fid=0; fid<S.files.length; fid++){
+      const f = S.files[fid]; if(!f) continue;
+      const an = MED.an[fid] || [];
+      if(!an.some(x=>x.ok)) continue;
+      TIN.msg = 'Aplicando a '+f.nombre+'…'; renderPrep();
+      const res = await MontajesAjuste.receta(f.bytes, { tinta:TIN.rec });
+      if(!f.bytesOrig) f.bytesOrig = f.bytes;
+      f.bytes = res.bytes;
+      await refrescarArchivo(fid);
+      res.informe.forEach(x=>informe.push(Object.assign({ archivo:f.nombre }, x)));
+    }
+    TIN.informe = informe; TIN.aplicado = informe.some(x=>x.ok);
+    PREP.analizado = false;
+  } catch(e){ console.error(e); alert('No se pudo aplicar la receta: '+e.message); }
+  finally { TIN.aplicando = false; TIN.msg = ''; }
+  recalcular();
+  if(prepActivo()) analizarTodo();
+  MED.analizado = false; if(MED.abierto || TIN.abierto) await medAnalizar();
+}
+function renderTinta(){
+  let h = '';
+  const R = window.MontajesAjuste ? MontajesAjuste.RECETAS : null;
+  if(TIN.abierto && R){
+    const r = R[TIN.rec], hay = Object.values(MED.an).some(v=>(v||[]).some(x=>x.ok));
+    h += '<div class="prepPanel"><p class="hint" style="margin-top:0">Pasa la cuadrícula, la marca de agua y el logo a la receta de la tinta. Todo queda en K puro: las mezclas de cian, magenta y amarillo pasan a negro. Solo se tocan las páginas donde se reconoce la cuadrícula.</p>';
+    h += '<div class="row3"><label>Tinta de impresión</label><button class="btn '+(TIN.rec==='coolgray'?'':'gris')+'" onclick="tinSet(\'coolgray\')">Cool Gray</button><button class="btn '+(TIN.rec==='negra'?'':'gris')+'" onclick="tinSet(\'negra\')">Negro</button></div>';
+    h += '<table style="width:100%;border-collapse:collapse;font-size:13px;margin:6px 0"><tr style="text-align:left;color:var(--muted)"><th style="padding:4px 6px">Elemento</th><th style="padding:4px 6px">Receta '+esc(r.nombre)+'</th></tr>'+
+      '<tr style="border-top:1px solid #c5cdd8"><td style="padding:4px 6px">Líneas de la cuadrícula</td><td style="padding:4px 6px">'+String(r.linea).replace('.',',')+' mm · Negro '+Math.round(r.kLinea*100)+' %</td></tr>'+
+      '<tr style="border-top:1px solid #c5cdd8"><td style="padding:4px 6px">Borde de la cuadrícula</td><td style="padding:4px 6px">'+String(r.borde).replace('.',',')+' mm · Negro '+Math.round(r.kBorde*100)+' %</td></tr>'+
+      '<tr style="border-top:1px solid #c5cdd8"><td style="padding:4px 6px">Marca de agua</td><td style="padding:4px 6px">Negro '+Math.round(r.kMarca*100)+' %</td></tr>'+
+      '<tr style="border-top:1px solid #c5cdd8"><td style="padding:4px 6px">Logo del encabezado</td><td style="padding:4px 6px">'+(TIN.rec==='coolgray'?'Negro '+Math.round(r.kLogo*100)+' % (gris oscuro)':'Gris '+Math.round(r.kLogo*100)+' % (entre 40 y 60 %)')+'</td></tr></table>';
+    if(MED.analizando) h += '<div class="hint">Buscando la cuadrícula…</div>';
+    else if(!hay) h += '<div class="dg"><span class="m">No reconozco una cuadrícula de trazos rectos en ningún archivo: no hay nada que ajustar. Hazlo en Illustrator.</span></div>';
+    h += '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn verde" '+((TIN.aplicando||!hay)?'disabled':'')+' onclick="tinAplicar()">'+(TIN.aplicado?'Volver a aplicar':'Aplicar receta')+'</button>'+
+      (TIN.aplicado?'<button class="btn gris" onclick="medQuitar()">Quitar los ajustes (vuelve al original)</button><button class="btn" onclick="medDescargar()">Descargar archivo ajustado</button>':'')+'</div>';
+    if(TIN.aplicando) h += '<div class="hint" style="margin-top:6px">'+esc(TIN.msg)+'</div>';
+    h += '</div>';
+  }
+  if(TIN.aplicado && TIN.informe){
+    h += '<div class="quecambio"><b>Qué cambió: receta de tinta</b> (el original queda guardado: «Quitar los ajustes» lo recupera)<ul>';
+    TIN.informe.forEach(x=>{
+      if(x.ok){
+        h += '<li>'+esc(x.archivo)+' · pág. '+x.pagina+': receta '+esc(x.receta)+'; '+x.lineas+' líneas y '+x.bordes+' del borde ajustadas, '+x.logo+' piezas del logo, marca de agua en el tono de la receta; '+x.mezclas+' mezclas de color pasadas a K puro</li>';
+        if(x.rgb>0) h += '<li><span style="color:#78350f">Aviso: '+x.rgb+' colores RGB sin convertir. Pásalos a CMYK en Illustrator.</span></li>';
+      } else h += '<li>'+esc(x.archivo)+' · pág. '+x.pagina+': no se tocó ('+esc(x.motivo)+')</li>';
+    });
+    h += '</ul></div>';
+  }
+  return h;
+}
+
+/* ======================= INICIO ======================= */
+window.tacticalOnLogin = async function(){
+  const rol = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol;
+  if(!ROLES_PERMITIDOS.includes(rol)){
+    alert('No tienes permiso para entrar a este módulo.');
+    location.href = 'TACTICAL_ERP_HUB.html';
+  }
+};
+cambioTipo();
+</script>
+</body>
+</html>
