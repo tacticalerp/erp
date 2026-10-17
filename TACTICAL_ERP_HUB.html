@@ -2378,6 +2378,15 @@
                     </div>
                     <p id="botwa-estado" style="font-size:0.85em; color:#94a3b8; margin-top:8px;"></p>
                 </div>
+                <div class="data-card" id="botwa-interruptor" style="margin-bottom:16px;">
+                    <div class="card-title">Interruptor del bot</div>
+                    <p id="botwa-interruptor-txt" style="margin:8px 0 0; color:#64748b;">Estado: sin consultar.</p>
+                    <p style="margin:6px 0 0; font-size:0.82rem; color:#94a3b8;">Apagado, el bot deja de contestar a TODOS los clientes al instante; lo que escriban queda como lead aquí en el Hub para que una persona los atienda.</p>
+                    <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
+                        <button class="btn-action" onclick="botwaConsultarInterruptor()">Consultar estado</button>
+                        <button class="btn-action" id="botwa-btn-interruptor" style="display:none;" onclick="botwaAlternarInterruptor()"></button>
+                    </div>
+                </div>
                 <div id="botwa-lista" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px;"></div>
 
                 <div class="data-card" style="margin-top:24px;">
@@ -5037,6 +5046,51 @@
           document.getElementById('botwa-url').value = localStorage.getItem('tactical_botwa_url') || '';
           document.getElementById('botwa-key').value = localStorage.getItem('tactical_botwa_key') || '';
           renderBotwaLista();
+          botwaConsultarInterruptor();
+        }
+        // Interruptor general del bot (efecto inmediato, sin redesplegar). Conde 2026-10-17.
+        let botwaEncendido = null;
+        async function botwaConsultarInterruptor(){
+          const url = botwaUrlBase(), key = botwaKey();
+          const txt = document.getElementById('botwa-interruptor-txt'), btn = document.getElementById('botwa-btn-interruptor');
+          if(!url || !key){ txt.innerText = 'Falta configurar la URL y la clave del bot (arriba) y presionar Guardar.'; return; }
+          txt.innerText = 'Consultando...';
+          try{
+            const res = await fetch(url + '/api/bot/estado', { headers: { 'x-api-key': key } });
+            if(!res.ok) throw new Error('HTTP '+res.status);
+            const e = await res.json();
+            botwaEncendido = !!e.encendido;
+            if(e.encendido){
+              txt.innerHTML = 'Estado: <b style="color:#2f855a;">ENCENDIDO</b> — el bot está contestando a los clientes.';
+              btn.innerText = 'Apagar el bot';
+            } else if(e.apagadoPorEntorno){
+              txt.innerHTML = 'Estado: <b style="color:#c53030;">APAGADO</b> desde Railway (BOT_ENABLED=0). Para encenderlo hay que cambiar esa variable en Railway.';
+              btn.style.display = 'none';
+              return;
+            } else {
+              txt.innerHTML = 'Estado: <b style="color:#c53030;">APAGADO</b> desde el Hub' + (e.desde ? ' (' + new Date(e.desde).toLocaleString('es-CO') + ')' : '') + (e.motivo ? ' — ' + e.motivo : '') + '.';
+              btn.innerText = 'Encender el bot';
+            }
+            btn.style.display = '';
+          }catch(err){
+            txt.innerText = 'No se pudo consultar el bot: ' + err.message;
+          }
+        }
+        async function botwaAlternarInterruptor(){
+          const url = botwaUrlBase(), key = botwaKey();
+          if(botwaEncendido === null) return;
+          const apagar = botwaEncendido;
+          if(apagar && !confirm('¿Apagar el bot? Dejará de contestar a TODOS los clientes ahora mismo. Lo que escriban quedará como lead para que lo atienda una persona.')) return;
+          try{
+            const res = await fetch(url + (apagar ? '/api/bot/apagar' : '/api/bot/encender'), {
+              method: 'POST', headers: { 'x-api-key': key, 'content-type': 'application/json' },
+              body: JSON.stringify(apagar ? { motivo: 'apagado manual desde el Hub' } : {})
+            });
+            if(!res.ok) throw new Error('HTTP '+res.status);
+            await botwaConsultarInterruptor();
+          }catch(err){
+            alert('No se pudo cambiar el interruptor: ' + err.message);
+          }
         }
         async function botwaCargarPedidos(){
           const url = botwaUrlBase(), key = botwaKey();
