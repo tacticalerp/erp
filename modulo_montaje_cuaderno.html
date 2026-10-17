@@ -64,9 +64,10 @@
   #drop{border:2px dashed #64748b;border-radius:8px;background:#f1f5f9;padding:22px;text-align:center;color:#475569;cursor:pointer;font-size:14px;}
   #drop.sobre{background:#dbeafe;border-color:var(--azul);}
   #progreso{font-size:12.5px;color:var(--azul);margin-top:6px;min-height:16px;font-weight:600;}
-  #pool{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
-  .thumb{width:104px;background:#fff;border:2px solid var(--border);border-radius:6px;padding:4px;cursor:grab;font-size:10.5px;text-align:center;position:relative;}
-  .thumb img{width:100%;height:112px;object-fit:contain;background:#f1f5f9;display:block;}
+  #pool{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;max-height:340px;overflow-y:auto;}
+  .thumb .num{position:absolute;bottom:20px;right:2px;background:rgba(15,23,42,.8);color:#fff;border-radius:3px;padding:0 4px;font-size:10px;font-weight:700;}
+  .thumb{width:var(--tw,104px);background:#fff;border:2px solid var(--border);border-radius:6px;padding:4px;cursor:grab;font-size:10.5px;text-align:center;position:relative;}
+  .thumb img{width:100%;height:calc(var(--tw,104px)*1.08);object-fit:contain;background:#f1f5f9;display:block;}
   .thumb.sel{border-color:var(--accent);box-shadow:0 0 0 2px rgba(204,0,0,.3);}
   .thumb.usada{opacity:.45;}
   .thumb .nom{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;color:#334155;}
@@ -216,6 +217,7 @@
     <div id="estacionLista"></div>
     <div class="row2" style="margin-top:6px"><button class="btn gris mini" onclick="estacionListar()">Actualizar lista</button></div>
   </div>
+  <div id="poolCtl" style="display:none;margin-top:8px;font-size:12.5px"><label style="display:inline-flex;gap:8px;align-items:center">Tamaño de miniaturas <input type="range" id="tmMini" min="48" max="140" step="4" value="104" oninput="tamMini(this.value,true)" style="width:160px"></label> <span class="hint" style="margin:0 0 0 6px">Con muchas páginas se achican solas; ajústalas aquí para arrastrarlas con facilidad.</span></div>
   <div id="pool"></div>
   <div class="row2">
     <button class="btn" onclick="autoAsignar()">Asignar automáticamente en orden</button>
@@ -930,16 +932,24 @@ function revisarPieza(slot){
 }
 
 /* ======================= PANELES DE LA INTERFAZ ======================= */
+let _tmManual = false;
+function tamMini(v, manual){
+  if(manual) _tmManual = true;
+  document.getElementById('pool').style.setProperty('--tw', v+'px');
+  const r = document.getElementById('tmMini'); if(r && +r.value!==+v) r.value = v;
+}
 function renderPool(){
   const cont = document.getElementById('pool');
-  if(!S.pool.length){ cont.innerHTML = ''; return; }
+  if(!S.pool.length){ cont.innerHTML = ''; document.getElementById('poolCtl').style.display = 'none'; return; }
+  document.getElementById('poolCtl').style.display = S.pool.length>4 ? '' : 'none';
+  if(!_tmManual) tamMini(S.pool.length<=6 ? 104 : S.pool.length<=12 ? 76 : 56);
   cont.innerHTML = S.pool.map(p=>{
     const usado = S.slots.find(s=>s.poolId===p.id);
     return `<div class="thumb ${S.sel===p.id?'sel':''} ${usado?'usada':''}" draggable="true" data-id="${p.id}" onclick="clickMiniatura('${p.id}')" title="${esc(p.nombre)}">
       ${usado?'<span class="tag">✓</span>':''}
       ${p.color && p.color.rgb ? '<span class="tag rgb">RGB</span>':''}
       ${pareceAbierta(p)?`<button class="abierta" title="Parece una página abierta (dos caras). Clic para cortarla por la mitad" onclick="event.stopPropagation(); dividirPagina('${p.id}')">✂ 2 caras</button>`:''}
-      <img src="${p.dataUrl}" alt=""><div class="nom">${esc(p.nombre)}</div></div>`;
+      <span class="num">${S.pool.indexOf(p)+1}</span><img src="${p.dataUrl}" alt=""><div class="nom">${esc(p.nombre)}</div></div>`;
   }).join('');
   cont.querySelectorAll('.thumb').forEach(el=>{
     el.addEventListener('dragstart', e=>{ e.dataTransfer.setData('text/plain','pool:'+el.dataset.id); });
