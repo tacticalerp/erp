@@ -5069,7 +5069,9 @@
                 </div>
               </div>`;
             }
-            const medioTxt = `${p.linea==='laser'?'Láser':'Troquel'}${p.forma?' - '+p.forma:''} — ${p.fichas} fichas (${p.medida}cm) x${p.cantidad}`;
+            const medioTxt = (p.items && p.items.length)
+              ? p.items.map(it => `${it.forma?it.forma+' — ':''}${it.fichas} fichas (${it.medida}cm) x${it.cantidad}`).join('<br>')
+              : `${p.linea==='laser'?'Láser':'Troquel'}${p.forma?' - '+p.forma:''} — ${p.fichas} fichas (${p.medida}cm) x${p.cantidad}`;
             const totalTxt = p.total!=null ? '$'+Math.round(p.total).toLocaleString('es-CO') : 'A cotizar';
             // Express (+30%, entrega en 2-3 días, URGENTE para producción) e imán (+30%, entrega normal)
             const etiquetaExpress = p.express ? `<span style="font-size:0.7rem; font-weight:bold; color:#fff; background:#c53030; padding:2px 6px; border-radius:10px; margin-left:6px;">EXPRESS x${p.cantidadExpress||1}</span>` : '';
@@ -5110,7 +5112,9 @@
           const totalTxt = p.total!=null ? '$'+Math.round(p.total).toLocaleString('es-CO') : 'este pedido';
           if(!confirm(`¿Confirmas que YA VERIFICASTE el pago de ${p.nombre} por ${totalTxt}?\n\nEsto crea el cliente en el CRM y la ficha de producción en el Kanban.`)) return;
           // Conde 2026-10-13: igual que en Montajes B2C, se pregunta si requiere diseño o solo impresión.
-          const itemsBot = [{ fichas: p.fichas, medida: p.medida, cantidad: p.cantidad }];
+          const itemsBot = (p.items && p.items.length)
+            ? p.items.map(it => ({ fichas: it.fichas, medida: it.medida, cantidad: it.cantidad }))
+            : [{ fichas: p.fichas, medida: p.medida, cantidad: p.cantidad }];
           const decision = await tacticalPreguntarDisenoOImpresion(p.nombre, tacticalResumenItemsRompecabezas(itemsBot));
           if(!decision) return;
 
@@ -5129,7 +5133,10 @@
           ];
           // Express = urgente para producción (el título lo deja a la vista); imán se marca en el título.
           const prefijoEspecial = (p.express ? `EXPRESS x${p.cantidadExpress||1} — ` : '') + (p.iman ? `CON IMÁN x${p.cantidadIman||1} — ` : '');
-          const titulo = `${prefijoEspecial}Rompecabezas B2C ${p.linea==='laser'?'Láser':'Troquel'}${p.forma?' - '+p.forma:''} — ${p.fichas}f x${p.cantidad} — ${p.nombre}${p.frase ? ` — FRASE «${p.frase}» (tipografía ${p.tipografia})` : ''}`;
+          const detalleTamanos = (p.items && p.items.length)
+            ? p.items.map(it => `${it.fichas}f x${it.cantidad}`).join(' + ')
+            : `${p.fichas}f x${p.cantidad}`;
+          const titulo = `${prefijoEspecial}Rompecabezas B2C ${p.linea==='laser'?'Láser':'Troquel'}${(!p.items || !p.items.length) && p.forma?' - '+p.forma:''} — ${detalleTamanos} — ${p.nombre}${p.frase ? ` — FRASE «${p.frase}» (tipografía ${p.tipografia})` : ''}`;
           const ficha = {
             id: crypto.randomUUID(), ot: null,
             idCli: cli.id, nombreCli: tacticalNombreCliente(cli), titulo,
