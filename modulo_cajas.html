@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tactical — Cajas a Medida</title>
+<style>
+  /* Conde 2026-10-17: módulo de cajas a medida. Genera el plano (corte + hendido) de cajas de cartulina/microcorrugado
+     para corte láser, a partir de las medidas y el grosor del material. Motor en cajas_motor.js. */
+  :root{ --panel:#dde3ea; --border:#94a3b8; --text:#1a202c; --muted:#5a6472; --accent:#cc0000; --azul:#1e3a5f; --ok:#1a7d3f; --warn:#b45309; }
+  *{box-sizing:border-box;}
+  body{margin:0;background:#12161d;color:var(--text);font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
+  header{padding:14px 22px;background:var(--azul);display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  header img{height:38px;background:#fff;border-radius:4px;padding:2px 6px;}
+  header h1{margin:0;font-size:16px;color:#fff;}
+  header p{margin:2px 0 0;font-size:12.5px;color:#cbd8e8;}
+  .nav-btn-hub{background:#cc0000;color:#fff;border:none;padding:8px 16px;border-radius:4px;font-weight:bold;cursor:pointer;font-size:0.9rem;margin-left:auto;}
+  main.layout{display:grid;grid-template-columns:minmax(0,0.9fr) minmax(0,1.1fr);gap:16px;padding:16px;max-width:1600px;margin:0 auto;align-items:start;}
+  .col-der{position:sticky;top:10px;max-height:calc(100vh - 20px);overflow:auto;}
+  @media(max-width:1000px){ main.layout{grid-template-columns:1fr;} .col-der{position:static;max-height:none;} }
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:16px;}
+  .panel h2{margin:0 0 10px;font-size:15px;color:var(--azul);font-weight:800;}
+  .panel h2 .n{display:inline-block;background:var(--azul);color:#fff;border-radius:50%;width:22px;height:22px;text-align:center;line-height:22px;font-size:12px;margin-right:6px;}
+  .hint{font-size:12.5px;color:var(--muted);margin:0 0 10px;line-height:1.45;}
+  label{display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:3px;}
+  input[type=text],input[type=number],select{width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:5px;font-size:14px;background:#fff;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;}
+  .fam{display:grid;gap:8px;}
+  .fam label.op{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid var(--border);border-radius:8px;padding:9px 12px;cursor:pointer;margin:0;font-weight:600;color:var(--text);}
+  .fam label.op.sel{border-color:var(--azul);background:#eef6ff;}
+  .fam label.op.off{opacity:.55;cursor:not-allowed;background:#f1f5f9;}
+  .fam .num{background:var(--azul);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:12px;flex:none;}
+  .fam .off .num{background:#94a3b8;}
+  .fam .est{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--muted);white-space:nowrap;}
+  .fam .est.ok{color:var(--ok);} .fam .est.warn{color:var(--warn);}
+  .seg{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px;} .seg label{display:flex;gap:6px;align-items:center;font-weight:600;font-size:13px;margin:0;}
+  button.btn{background:var(--azul);color:#fff;border:none;border-radius:5px;padding:8px 14px;font-size:13.5px;font-weight:700;cursor:pointer;}
+  button.btn:hover{filter:brightness(1.12);} button.btn.rojo{background:var(--accent);} button.btn.gris{background:#64748b;}
+  .row2{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center;}
+  #lienzoWrap{background:#fff;border:1px solid var(--border);border-radius:6px;padding:8px;}
+  #lienzoWrap svg{display:block;width:100%;height:auto;max-height:520px;}
+  .leyenda{font-size:12px;color:var(--muted);margin:6px 0 0;display:flex;gap:14px;flex-wrap:wrap;}
+  .leyenda i{display:inline-block;width:18px;height:0;border-top:2px solid #000;vertical-align:middle;margin-right:5px;} .leyenda i.r{border-top-color:#e5191f;}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:10px;}
+  .kpi{background:#fff;border:1px solid var(--border);border-radius:6px;padding:8px 10px;}
+  .kpi b{display:block;font-size:11.5px;color:var(--muted);font-weight:700;} .kpi span{font-size:16px;font-weight:800;color:var(--azul);}
+  .banner{background:#fff7e6;border:1px solid #f5c26b;border-radius:6px;padding:8px 10px;font-size:12.5px;color:#7a4a05;margin-bottom:10px;line-height:1.45;}
+  .banner.ok{background:#e9f7ee;border-color:#9ad3ae;color:#155c30;}
+  ul.av{margin:8px 0 0;padding-left:18px;font-size:13px;color:var(--warn);font-weight:600;} ol.pasos,ul.notas{margin:6px 0 0;padding-left:20px;font-size:13px;line-height:1.5;}
+  h3{margin:12px 0 2px;font-size:13px;color:var(--azul);}
+  #error{color:#b91c1c;font-weight:700;font-size:13px;}
+  .opc{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px;} .opc>div{min-width:130px;} .opc .chk{display:flex;gap:6px;align-items:center;font-size:13px;font-weight:600;margin:0 0 6px;}
+</style>
+</head>
+<body>
+<header>
+  <img src="logo_tactical.png" alt="Tactical">
+  <div><h1>Cajas a Medida</h1><p>Plano de corte y hendido para láser, a partir de las medidas y el grosor del material.</p></div>
+  <button class="nav-btn-hub" onclick="location.href='TACTICAL_ERP_HUB.html'">Volver al Hub</button>
+</header>
+
+<main class="layout">
+<div class="col-izq">
+
+  <section class="panel">
+    <h2><span class="n">1</span>Tipo de caja</h2>
+    <div class="fam" id="familias"></div>
+  </section>
+
+  <section class="panel">
+    <h2><span class="n">2</span>Medidas</h2>
+    <div class="seg">
+      <label><input type="radio" name="modo" value="exterior" checked> Exteriores (caja cerrada)</label>
+      <label><input type="radio" name="modo" value="interior"> Interiores (lo que cabe adentro)</label>
+    </div>
+    <div class="grid">
+      <div><label for="largo">Largo / ancho (cm)</label><input type="text" id="largo" inputmode="decimal" value="20"></div>
+      <div><label for="fondo">Fondo / profundo (cm)</label><input type="text" id="fondo" inputmode="decimal" value="10"></div>
+      <div><label for="alto">Alto (cm)</label><input type="text" id="alto" inputmode="decimal" value="6"></div>
+    </div>
+    <div id="opcionesFam" style="margin-top:10px"></div>
+  </section>
+
+  <section class="panel">
+    <h2><span class="n">3</span>Material</h2>
+    <div class="grid">
+      <div><label for="calibre">Calibre / papel</label><select id="calibre"></select></div>
+      <div><label for="grosor">Grosor real (mm)</label><input type="text" id="grosor" inputmode="decimal"></div>
+    </div>
+    <p class="hint" id="notaGrosor" style="margin-top:8px"></p>
+  </section>
+
+  <section class="panel">
+    <h2><span class="n">4</span>Producción</h2>
+    <div class="grid">
+      <div><label for="cantidad">Cantidad de cajas</label><input type="text" id="cantidad" inputmode="numeric" value="60"></div>
+      <div><label for="merma">Merma (%)</label><input type="text" id="merma" inputmode="decimal" value="5"></div>
+      <div><label for="hoja">Hoja</label><select id="hoja"></select></div>
+      <div><label for="margen">Margen de borde (mm)</label><input type="text" id="margen" inputmode="decimal" value="10"></div>
+      <div><label for="sep">Separación entre planos (mm)</label><input type="text" id="sep" inputmode="decimal" value="3"></div>
+    </div>
+    <div class="grid" id="hojaOtra" style="margin-top:10px;display:none">
+      <div><label for="hojaW">Hoja ancho (cm)</label><input type="text" id="hojaW" inputmode="decimal" value="100"></div>
+      <div><label for="hojaH">Hoja alto (cm)</label><input type="text" id="hojaH" inputmode="decimal" value="70"></div>
+    </div>
+  </section>
+
+</div>
+
+<div class="col-der">
+  <section class="panel">
+    <h2>Plano</h2>
+    <div class="opc">
+      <div><label for="hendido">Hendido (doblez)</label><select id="hendido"><option value="continuo">Línea continua</option><option value="punteado">Punteado</option></select></div>
+      <div id="puntos" style="display:none"><label for="raya">Raya (mm)</label><input type="text" id="raya" inputmode="decimal" value="3"></div>
+      <div id="puntos2" style="display:none"><label for="hueco">Espacio (mm)</label><input type="text" id="hueco" inputmode="decimal" value="1,5"></div>
+      <label class="chk"><input type="checkbox" id="cotas" checked> Mostrar medidas principales</label>
+    </div>
+    <div class="banner" id="banner"></div>
+    <div id="error"></div>
+    <div id="lienzoWrap"></div>
+    <div class="leyenda"><span><i></i>Corte</span><span><i class="r"></i>Hendido (doblez)</span></div>
+    <div class="kpis" id="kpis"></div>
+    <ul class="av" id="avisos"></ul>
+    <div class="row2">
+      <button class="btn rojo" onclick="descargar('svg')">Descargar SVG</button>
+      <button class="btn" onclick="descargar('dxf')">Descargar DXF</button>
+      <button class="btn gris" onclick="imprimirPlano()">Imprimir / PDF</button>
+    </div>
+    <h3>Cómo se arma</h3>
+    <ol class="pasos" id="pasos"></ol>
+    <h3>Notas del plano</h3>
+    <ul class="notas" id="notas"></ul>
+  </section>
+</div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="tactical-supabase.js?v=20261016a"></script>
+<script src="tactical-bot.js?v=20260904a"></script>
+<script src="precios_tactical.js?v=20261017a"></script>
+<script src="cajas_motor.js?v=20261017d"></script>
+<script>
+const M = window.CAJAS_MOTOR;
+const $ = id => document.getElementById(id);
+const num = s => { const v = parseFloat(String(s).replace(',','.')); return isFinite(v) ? v : NaN; };
+const f1 = x => (Math.round(x*10)/10).toLocaleString('es-CO');
+let ultimo = null;           // último resultado calculado
+let familia = 'bandeja';
+
+const AYUDA = {
+  bandeja:   { texto:'Plano deducido de tus cajas de cartón (PDF "Caja bandeja para corte laser"), con los descuentos reducidos a cartulina. Falta validar con una muestra armada.', ok:false },
+  tuck:      { texto:'BORRADOR sin validar: reglas de Packmage (tapa = fondo - 1,5 mm; guardapolvo = (tapa + lengüeta + 0,5)/2; pegue 10 a 15 mm). Hacer muestra antes de producir.', ok:false },
+  tapafondo: { texto:'BORRADOR sin validar: bandeja de esquinas pegadas; la tapa mide la base + 2 grosores + holgura. Hacer muestra antes de producir.', ok:false }
+};
+
+function guardar(){ try{ localStorage.setItem('cajas_estado', JSON.stringify({familia, largo:$('largo').value, fondo:$('fondo').value, alto:$('alto').value, calibre:$('calibre').value, cantidad:$('cantidad').value})); }catch(e){} }
+function recordar(){ try{ return JSON.parse(localStorage.getItem('cajas_estado')||'null'); }catch(e){ return null; } }
+
+function pintarFamilias(){
+  $('familias').innerHTML = M.FAMILIAS.map(f => {
+    const sel = f.id === familia, off = !f.listo;
+    return '<label class="op'+(sel?' sel':'')+(off?' off':'')+'"><input type="radio" name="fam" value="'+f.id+'"'+(sel?' checked':'')+(off?' disabled':'')+' style="display:none">'
+      + '<span class="num">'+f.num+'</span><span>'+f.nombre+'</span><span class="est '+(f.listo?(f.id==='bandeja'?'ok':'warn'):'')+'">'+f.estado+'</span></label>';
+  }).join('');
+  document.querySelectorAll('input[name=fam]').forEach(r => r.addEventListener('change', () => { familia = r.value; pintarFamilias(); pintarOpciones(); calcular(); }));
+}
+function pintarOpciones(){
+  const h = $('opcionesFam');
+  if(familia === 'tuck') h.innerHTML = '<label for="cierre">Cierre</label><select id="cierre"><option value="recto">Recto (las dos lengüetas del mismo lado)</option><option value="inverso">Inverso (lengüetas en caras opuestas)</option></select>';
+  else if(familia === 'tapafondo') h.innerHTML = '<div class="grid"><div><label for="altoTapa">Alto de pared de la tapa (cm, vacío = automático)</label><input type="text" id="altoTapa" inputmode="decimal"></div><div><label for="hol">Holgura de la tapa por lado (mm)</label><input type="text" id="hol" inputmode="decimal" value="0.4"></div></div>';
+  else h.innerHTML = '';
+  h.querySelectorAll('input,select').forEach(e => e.addEventListener('input', calcular));
+}
+
+function leerHoja(){
+  const v = $('hoja').value;
+  if(v === 'otra') return { w: num($('hojaW').value)*10, h: num($('hojaH').value)*10 };
+  return M.HOJAS.find(x => x.id === v);
+}
+
+function opcionesHendido(){
+  if($('hendido').value !== 'punteado') return {};
+  const raya = num($('raya').value), hueco = num($('hueco').value);
+  return { punteado: { raya: raya > 0 ? raya : 3, hueco: hueco > 0 ? hueco : 1.5 } };
+}
+function calcular(){
+  $('error').textContent = '';
+  const L = num($('largo').value)*10, P = num($('fondo').value)*10, A = num($('alto').value)*10;
+  const mm = num($('grosor').value);
+  if(!(L>0 && P>0 && A>0)){ $('error').textContent = 'Escribe largo, fondo y alto.'; return; }
+  if(!(mm>0)){ $('error').textContent = 'Escribe el grosor del material (mm).'; return; }
+  const t = M.espesorEfectivo(mm);
+  const par = { L, P, A, t, modo: document.querySelector('input[name=modo]:checked').value, calibre: M.CALIBRES.find(c => c.id === $('calibre').value) };
+  if(familia === 'tuck'){ const c = $('cierre'); par.cierre = c ? c.value : 'recto'; }
+  if(familia === 'tapafondo'){ const a = $('altoTapa'), h = $('hol'); if(a && num(a.value)>0) par.altoTapa = num(a.value)*10; if(h && isFinite(num(h.value))) par.hol = num(h.value); }
+  let res;
+  try{ res = M.generar(familia, par); }catch(e){ $('error').textContent = 'No se pudo generar el plano: '+e.message; return; }
+  ultimo = res;
+  const ay = AYUDA[familia];
+  $('banner').className = 'banner'+(ay.ok?' ok':''); $('banner').textContent = ay.texto;
+  $('lienzoWrap').innerHTML = M.aSVG(res, Object.assign({ preview:true, margen:5, trazo:1, cotas:$('cotas').checked }, opcionesHendido()));
+  const hoja = leerHoja(), margen = num($('margen').value), sep = num($('sep').value), cant = num($('cantidad').value), merma = num($('merma').value);
+  let ac = null;
+  if(hoja && hoja.w>0 && hoja.h>0 && isFinite(margen) && isFinite(sep)) ac = M.acomodo(res.w, res.h, hoja, margen, sep);
+  const a = res.info.armado;
+  const kp = [['Tamaño armado (cm)', f1(a.L/10)+' x '+f1(a.P/10)+' x '+f1(a.A/10)], ['Plano abierto (cm)', f1(res.w/10)+' x '+f1(res.h/10)],
+    ['Grosor efectivo', t.toFixed(2)+' mm']];
+  if(ac){
+    kp.push(['Planos por hoja', ac.n > 0 ? ac.n+(ac.girado?' (girados)':'') : 'No cabe']);
+    if(ac.n>0 && cant>0){ const hojas = Math.ceil(cant*(1+(isFinite(merma)?merma:0)/100)/ac.n); kp.push(['Hojas para '+cant.toLocaleString('es-CO')+' cajas', hojas.toLocaleString('es-CO')]); }
+  }
+  $('kpis').innerHTML = kp.map(k => '<div class="kpi"><b>'+k[0]+'</b><span>'+k[1]+'</span></div>').join('');
+  const av = res.avisos.slice(); if(ac && ac.n === 0) av.push('El plano abierto no cabe en la hoja elegida.');
+  if(par.calibre && par.calibre.aprox) av.push('El grosor de "'+par.calibre.nombre+'" es de referencia: confirma el valor real con tu proveedor.');
+  $('avisos').innerHTML = av.map(x => '<li>'+x+'</li>').join('');
+  $('pasos').innerHTML = (res.info.pasos||[]).map(x => '<li>'+x+'</li>').join('') + '<li style="list-style:none;color:#5a6472;font-size:12px;margin-top:4px">Orden deducido de la geometría: confírmalo con la muestra.</li>';
+  $('notas').innerHTML = res.info.notas.map(x => '<li>'+x+'</li>').join('');
+  guardar();
+}
+
+function nombreArchivo(ext){
+  const a = ultimo && ultimo.info.armado, c = $('calibre').value;
+  return 'caja_'+familia+'_'+(a ? Math.round(a.L)+'x'+Math.round(a.P)+'x'+Math.round(a.A) : '')+'_'+c+'.'+ext;
+}
+function descargar(tipo){
+  if(!ultimo) return;
+  const txt = tipo === 'svg' ? M.aSVG(ultimo, Object.assign({ margen:5 }, opcionesHendido())) : M.aDXF(ultimo, opcionesHendido());
+  const blob = new Blob([txt], { type: tipo === 'svg' ? 'image/svg+xml' : 'application/dxf' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombreArchivo(tipo); document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+function imprimirPlano(){
+  if(!ultimo) return;
+  const b = ultimo.bbox, w = Math.ceil(b.x1-b.x0+10), h = Math.ceil(b.y1-b.y0+10);
+  const win = window.open('', '_blank'); if(!win){ alert('El navegador bloqueó la ventana de impresión.'); return; }
+  win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+nombreArchivo('pdf')+'</title><style>@page{size:auto;margin:5mm}body{margin:0}svg{display:block;max-width:100%;height:auto}</style></head><body>'+M.aSVG(ultimo,Object.assign({margen:5, cotas:$('cotas').checked},opcionesHendido()))+'</body></html>');
+  win.document.close(); setTimeout(() => win.print(), 300);
+}
+
+function iniciar(){
+  $('calibre').innerHTML = M.CALIBRES.map(c => '<option value="'+c.id+'">'+c.nombre+' ('+c.mm.toString().replace('.',',')+' mm)</option>').join('');
+  $('hoja').innerHTML = M.HOJAS.map(h => '<option value="'+h.id+'">'+h.nombre+'</option>').join('') + '<option value="otra">Otra medida...</option>';
+  $('calibre').value = 'C16';
+  const ant = recordar();
+  if(ant){ familia = M.FAMILIAS.some(f => f.id === ant.familia && f.listo) ? ant.familia : 'bandeja';
+    ['largo','fondo','alto','cantidad'].forEach(k => { if(ant[k]) $(k).value = ant[k]; }); if(ant.calibre && M.CALIBRES.some(c => c.id === ant.calibre)) $('calibre').value = ant.calibre; }
+  const poner = () => { const c = M.CALIBRES.find(x => x.id === $('calibre').value); $('grosor').value = String(c.mm).replace('.',',');
+    $('notaGrosor').textContent = 'Espesor de la tabla de puntos (1 pt = 0,0254 mm, tolerancia ±5%). Puedes escribir el grosor real que te dé el proveedor.'; };
+  poner();
+  $('calibre').addEventListener('change', () => { poner(); calcular(); });
+  $('hoja').addEventListener('change', () => { $('hojaOtra').style.display = $('hoja').value === 'otra' ? 'grid' : 'none'; calcular(); });
+  document.querySelectorAll('.col-izq input[type=text], input[name=modo], #raya, #hueco, #cotas').forEach(e => e.addEventListener('input', calcular));
+  $('hendido').addEventListener('change', () => { const p = $('hendido').value === 'punteado'; $('puntos').style.display = $('puntos2').style.display = p ? '' : 'none'; calcular(); });
+  pintarFamilias(); pintarOpciones(); calcular();
+}
+document.addEventListener('DOMContentLoaded', iniciar);
+
+// Misma matriz de roles que la tarjeta del Hub.
+window.tacticalOnLogin = async function(){
+  const rol = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol;
+  if(!['administrador','comercial','diseno','produccion'].includes(rol)){
+    alert('Tu usuario no tiene acceso a Cajas a Medida.'); location.href = 'TACTICAL_ERP_HUB.html';
+  }
+};
+</script>
+</body>
+</html>
