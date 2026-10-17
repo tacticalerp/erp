@@ -199,6 +199,13 @@ function elegirMedida(id, idx){
   if(it.nombre.startsWith('Rompecabezas ')) it.nombre = NOMBRE_FORMA[m.forma]+' '+m.fichas+'f';
   orientarItem(it); renderItems(); planificar();
 }
+function detectarBordeBlanco(bmp){      // true si el contorno de la imagen es (casi) blanco: se le dibuja una línea fina gris para poder cortarlo
+  const k = 200/Math.max(bmp.width, bmp.height), w = Math.max(8, Math.round(bmp.width*k)), h = Math.max(8, Math.round(bmp.height*k));
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d', { willReadFrequently:true }); x.fillStyle = '#fff'; x.fillRect(0,0,w,h); x.drawImage(bmp,0,0,w,h);
+  const d = x.getImageData(0,0,w,h).data; let tot = 0, bl = 0; const t = 2;
+  for(let j=0;j<h;j++) for(let i=0;i<w;i++){ if(i>=t && i<w-t && j>=t && j<h-t) continue; const q = (j*w+i)*4; tot++; if(d[q]>=240 && d[q+1]>=240 && d[q+2]>=240) bl++; }
+  return tot>0 && bl/tot >= 0.9;
+}
 function orientarItem(it){      // la medida siempre sigue la orientación de la imagen (vertical u horizontal): no depende del usuario
   if(!it.img || !(it.w>0 && it.h>0)) return; const apaisada = it.img.width >= it.img.height;
   if((it.w >= it.h) !== apaisada && it.w !== it.h) [it.w, it.h] = [it.h, it.w];
@@ -223,7 +230,7 @@ async function cargarImagenItem(id, file){
       const cx = cv.getContext('2d'); cx.fillStyle='#fff'; cx.fillRect(0,0,cv.width,cv.height);
       await pg.render({canvasContext:cx, viewport:vp}).promise; bmp = await createImageBitmap(cv);
     } else bmp = await createImageBitmap(file);
-    it.img = bmp; it.nombreArchivo = file.name; it.enc = {cx:.5,cy:.5,z:1}; orientarItem(it);
+    it.img = bmp; it.nombreArchivo = file.name; it.enc = {cx:.5,cy:.5,z:1}; it.bordeBlanco = detectarBordeBlanco(bmp); orientarItem(it);
     const t = document.createElement('canvas'); const k = 220/Math.max(bmp.width,bmp.height); t.width = Math.round(bmp.width*k); t.height = Math.round(bmp.height*k);
     t.getContext('2d').drawImage(bmp,0,0,t.width,t.height); it.thumb = t.toDataURL('image/jpeg',0.8);
     if(it.nombre.startsWith('Rompecabezas ')) it.nombre = file.name.replace(/\.[^.]+$/,'').slice(0,40);
@@ -453,14 +460,15 @@ function sobrantesDeBin(bin){
   return L.filter(r=>Math.min(r.w,r.h) >= CFG.minB-1e-6 && Math.max(r.w,r.h) >= CFG.minA-1e-6);
 }
 function empacar(piezas, est){
-  piezas = piezas.map(p=>{ if(!est.orient || p.item.noGirar || p.w === p.h) return p; const quiereH = est.orient==='h'; return ((p.w>=p.h) === quiereH) ? p : { ...p, w:p.h, h:p.w, pre:true }; });
+  if(est.mask) piezas = piezas.map((p,i)=>(est.mask[i] && !p.item.noGirar && p.w!==p.h) ? { ...p, w:p.h, h:p.w, pre:true } : p);
+  else piezas = piezas.map(p=>{ if(!est.orient || p.item.noGirar || p.w === p.h) return p; const quiereH = est.orient==='h'; return ((p.w>=p.h) === quiereH) ? p : { ...p, w:p.h, h:p.w, pre:true }; });
   const orden = piezas.slice().sort(est.orden==='area' ? (a,b)=>b.w*b.h-a.w*a.h : (a,b)=>Math.max(b.w,b.h)-Math.max(a.w,a.h) || b.w*b.h-a.w*a.h);
   const bins = [], noCaben = [], remPool = CFG.usarSob ? SOBRANTES.map(s=>({ id:s.id, W:+s.ancho, H:+s.alto })).sort((a,b)=>a.W*a.H-b.W*b.H) : [];
   orden.forEach(p=>{
-    for(const bin of bins){ const b = intentarUbicar(bin, p.w, p.h, est.soloNecesario, p.item.noGirar); if(b){ colocar(bin, b, p.item, p.copia, p.pre); return; } }
-    for(let i=0;i<remPool.length;i++){ const r = remPool[i]; const bin = nuevoBin(r.W, r.H, 'sobrante', r.id); const b = intentarUbicar(bin, p.w, p.h, est.soloNecesario, p.item.noGirar);
+    for(const bin of bins){ const b = intentarUbicar(bin, p.w, p.h, est.soloNecesario, p.item.noGirar || !!est.mask); if(b){ colocar(bin, b, p.item, p.copia, p.pre); return; } }
+    for(let i=0;i<remPool.length;i++){ const r = remPool[i]; const bin = nuevoBin(r.W, r.H, 'sobrante', r.id); const b = intentarUbicar(bin, p.w, p.h, est.soloNecesario, p.item.noGirar || !!est.mask);
       if(b){ remPool.splice(i,1); bins.push(bin); colocar(bin, b, p.item, p.copia, p.pre); return; } }
-    const bin = est.lamRot ? nuevoBin(CFG.polH, CFG.polW, 'lamina', null) : nuevoBin(CFG.polW, CFG.polH, 'lamina', null); const b = intentarUbicar(bin, p.w, p.h, est.soloNecesario, p.item.noGirar);
+    const bin = est.lamRot ? nuevoBin(CFG.polH, CFG.polW, 'lamina', null) : nuevoBin(CFG.polW, CFG.polH, 'lamina', null); const b = intentarUbicar(bin, p.w, p.h, est.soloNecesario, p.item.noGirar || !!est.mask);
     if(!b){ noCaben.push(p); return; } bins.push(bin); colocar(bin, b, p.item, p.copia, p.pre);
   });
   return { bins, noCaben };
@@ -525,6 +533,15 @@ function planificar(){
     const r = empacar(piezas, { ...est0, orient, lamRot }); clampBins(r);
     const lay = disponer(r.bins); const pt = puntaje(r, lay);
     if(!mejor || mejorQue(pt, mejorP)){ mejor = { ...r, lay }; mejorP = pt; } })));
+  // búsqueda fina: orientación de cada pieza por separado (todas las combinaciones si son pocas, si no una muestra)
+  const n = piezas.length;
+  if(n>1 && n<=60){
+    const masks = []; if(n<=10){ for(let k=0;k<(1<<n);k++) masks.push(Array.from({length:n},(_,i)=>!!(k>>i&1))); } else { for(let k=0;k<600;k++) masks.push(Array.from({length:n},()=>Math.random()<0.5)); }
+    [false, true].forEach(lamRot=>masks.forEach(mask=>['lado','area'].forEach(orden=>{
+      const r = empacar(piezas, { orden, soloNecesario:false, mask, lamRot }); clampBins(r);
+      const lay = disponer(r.bins); const pt = puntaje(r, lay);
+      if(!mejor || mejorQue(pt, mejorP)){ mejor = { ...r, lay }; mejorP = pt; } })));
+  }
   const { bins, noCaben, lay } = mejor || { bins:[], noCaben:[], lay:{ bloques:[], guias:[], largo:2 } };
   // sobrantes que se guardarán (de cada lámina o sobrante usado)
   const snap = v=>{ const r = Math.round(v); return Math.abs(v-r) <= 0.15 ? r : Math.round(v*10)/10; };   // 49,9 -> 50 (la separación de 1 mm no se descuenta del sobrante)
@@ -550,9 +567,9 @@ function resumenPlan(){
 function dibujarPuesto(cx, p, S, ox, oy, it){        // p: puesto dentro del bloque; S px por cm
   const x = (ox + p.x)*S, y = (oy + p.y)*S, w = p.w*S, h = p.h*S;
   if(!p.item.img){ cx.fillStyle = '#d1d5db'; cx.fillRect(x,y,w,h); return; }
-  if(!p.rot){ dibujarCover(cx, p.item.img, x, y, w, h, p.item.enc); return; }
-  // girado 90°: se dibuja con la medida original y se rota
-  cx.save(); cx.translate(x + w, y); cx.rotate(Math.PI/2); dibujarCover(cx, p.item.img, 0, 0, h, w, p.item.enc); cx.restore();
+  if(!p.rot) dibujarCover(cx, p.item.img, x, y, w, h, p.item.enc);
+  else { cx.save(); cx.translate(x + w, y); cx.rotate(Math.PI/2); dibujarCover(cx, p.item.img, 0, 0, h, w, p.item.enc); cx.restore(); }   // girado 90°: se dibuja con la medida original y se rota
+  if(p.item.bordeBlanco){ const lw = Math.max(1, 0.03*S); cx.save(); cx.strokeStyle = '#d9d9d9'; cx.lineWidth = lw; cx.strokeRect(x+lw/2, y+lw/2, w-lw, h-lw); cx.restore(); }   // borde blanco: línea fina gris al 15% como guía de corte
 }
 function dibujarGuia(cx, g, S){
   const x = g.x*S, y = g.y*S, w = g.w*S, h = g.h*S;
