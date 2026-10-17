@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tactical — Montaje Rompecabezas Plotter</title>
+<style>
+  /* Conde 2026-10-17: montaje de rompecabezas para imprimir en plotter (rollo de 102 cm) sobre láminas de poliestireno de 100x66. */
+  :root{ --panel:#dde3ea; --border:#94a3b8; --text:#1a202c; --muted:#5a6472; --accent:#cc0000; --azul:#1e3a5f; --ok:#1a7d3f; --warn:#b45309; }
+  *{box-sizing:border-box;}
+  body{margin:0;background:#12161d;color:var(--text);font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
+  header{padding:14px 22px;background:var(--azul);display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  header img{height:38px;background:#fff;border-radius:4px;padding:2px 6px;}
+  header h1{margin:0;font-size:16px;color:#fff;}
+  header p{margin:2px 0 0;font-size:12.5px;color:#cbd8e8;}
+  .nav-btn-hub{background:#cc0000;color:#fff;border:none;padding:8px 16px;border-radius:4px;font-weight:bold;cursor:pointer;font-size:0.9rem;}
+  main.layout{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:16px;padding:16px;max-width:1600px;margin:0 auto;align-items:start;}
+  .col-der{position:sticky;top:10px;max-height:calc(100vh - 20px);overflow:auto;}
+  @media(max-width:1100px){ main.layout{grid-template-columns:1fr;} .col-der{position:static;max-height:none;} }
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:16px;}
+  .panel h2{margin:0 0 10px;font-size:15px;color:var(--azul);font-weight:800;}
+  .panel h2 .n{display:inline-block;background:var(--azul);color:#fff;border-radius:50%;width:22px;height:22px;text-align:center;line-height:22px;font-size:12px;margin-right:6px;}
+  .hint{font-size:12.5px;color:var(--muted);margin:0 0 10px;}
+  label{display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:3px;}
+  input[type=text],input[type=number],select{width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:5px;font-size:14px;background:#fff;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
+  button.btn{background:var(--azul);color:#fff;border:none;border-radius:5px;padding:8px 14px;font-size:13.5px;font-weight:700;cursor:pointer;}
+  button.btn:hover{filter:brightness(1.12);} button.btn.rojo{background:var(--accent);} button.btn.gris{background:#64748b;} button.btn.verde{background:var(--ok);}
+  button.btn.mini{padding:3px 8px;font-size:12px;font-weight:600;} button.btn:disabled{opacity:.5;cursor:default;}
+  .row2{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center;}
+  details.acc{background:#eef2f6;border:1px solid var(--border);border-radius:7px;margin-bottom:8px;}
+  details.acc>summary{list-style:none;cursor:pointer;padding:10px 14px;display:flex;align-items:center;gap:10px;font-weight:800;font-size:13.5px;color:var(--azul);}
+  details.acc>summary::-webkit-details-marker{display:none;}
+  details.acc>summary::before{content:'▸';font-size:13px;color:#64748b;transition:transform .15s;}
+  details.acc[open]>summary::before{transform:rotate(90deg);}
+  details.acc[open]>summary{border-bottom:1px solid var(--border);}
+  .res{font-weight:600;font-size:12px;color:#475569;margin-left:auto;text-align:right;}
+  .acc-cuerpo{padding:12px 14px 14px;}
+  /* tarjetas de rompecabezas */
+  .puz{background:#fff;border:2px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px;display:grid;grid-template-columns:130px 1fr;gap:12px;}
+  .puz.sobre{border-color:var(--azul);background:#eef6ff;}
+  .puz .mini{width:130px;height:130px;border:2px dashed #94a3b8;border-radius:6px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;text-align:center;font-size:12px;color:#64748b;cursor:pointer;overflow:hidden;}
+  .puz .mini img{width:100%;height:100%;object-fit:contain;}
+  .puz .mini.lleno{border-style:solid;border-color:#16a34a;}
+  .puz .campos{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;align-content:start;}
+  .puz .campos .ancho2{grid-column:span 2;}
+  .puz .chk{display:flex;gap:5px;align-items:center;font-weight:600;font-size:12px;margin:0;}
+  .puz .aviso{grid-column:1/-1;font-size:11.5px;font-weight:600;}
+  .aviso.mal{color:var(--warn);} .aviso.ok{color:var(--ok);}
+  .colafila{display:flex;gap:10px;align-items:center;background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:8px;}
+  .colafila img{width:64px;height:64px;object-fit:contain;background:#f1f5f9;border-radius:4px;}
+  .colafila .info{flex:1;font-size:13px;line-height:1.4;}
+  .refthumb{grid-column:1/-1;font-size:11.5px;color:#475569;display:flex;gap:8px;align-items:center;}
+  .refthumb img{height:56px;border:1px solid #94a3b8;border-radius:4px;background:#fff;}
+  #lienzoWrap{background:#fff;border:1px solid var(--border);border-radius:6px;overflow:auto;max-height:calc(100vh - 240px);}
+  #lienzo{display:block;}
+  .sob{display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #c5cdd8;font-size:13px;}
+  #modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:none;align-items:center;justify-content:center;}
+  #modal .caja{background:#fff;border-radius:8px;padding:14px;max-width:96vw;}
+  #resumen{font-size:13.5px;line-height:1.6;}
+</style>
+</head>
+<body>
+<header>
+  <img src="logo_tactical.png" alt="Tactical">
+  <div><h1>Montaje Rompecabezas Plotter</h1><p>Acomoda los rompecabezas en láminas de poliestireno de 100x66 y genera el JPG a 230 ppp para el rollo de 102 cm.</p></div>
+  <button class="nav-btn-hub" style="margin-left:auto;background:#475569" onclick="location.href='modulo_montajes.html'">← Montajes</button>
+  <button class="nav-btn-hub" onclick="location.href='TACTICAL_ERP_HUB.html'">Volver al Hub</button>
+</header>
+
+<main class="layout">
+<section class="col-izq">
+
+<div class="panel">
+  <h2>Pendientes del Kanban <span class="res" id="rCola"></span></h2>
+  <p class="hint">Son los rompecabezas que se enviaron a montaje con el botón "Enviar a montaje" de la ficha. Agrégalos al montaje y arrastra en cada miniatura la imagen en alta resolución.</p>
+  <div id="cola"></div>
+  <div class="row2"><button class="btn" onclick="agregarTodosCola()">Agregar todos al montaje</button><button class="btn gris" onclick="cargarCola()">Actualizar</button></div>
+</div>
+
+<div class="panel">
+  <h2><span class="n">1</span>Rompecabezas a montar <span class="res" id="rItems"></span></h2>
+  <p class="hint">Arrastra la imagen en alta resolución sobre la miniatura de cada rompecabezas (o toca la miniatura para elegirla). Por defecto es 1 rompecabezas; si necesitas más de la misma imagen, cambia la cantidad. Cada rompecabezas lleva su guía de armado.</p>
+  <div id="items"></div>
+  <div class="row2"><button class="btn" onclick="agregarItem(true)">+ Anexar rompecabezas</button></div>
+</div>
+
+<details class="acc">
+  <summary><span>Plantilla de la guía de armado</span><span class="res" id="rPlantilla"></span></summary>
+  <div class="acc-cuerpo">
+    <p class="hint">La plantilla es la ficha donde se coloca la misma gráfica reducida. Sube la imagen de la plantilla, indica su tamaño real y el rectángulo donde va la gráfica (medidas en cm desde la esquina superior izquierda de la plantilla).</p>
+    <div class="grid">
+      <div><label>Archivo de la plantilla (JPG/PNG)</label><input type="file" id="plFile" accept="image/*" onchange="cargarPlantilla(this.files[0])"></div>
+      <div><label>Ancho de la plantilla (cm)</label><input type="number" id="plW" step="0.1" oninput="leerPlantilla()"></div>
+      <div><label>Alto de la plantilla (cm)</label><input type="number" id="plH" step="0.1" oninput="leerPlantilla()"></div>
+      <div><label>Gráfica: izquierda (cm)</label><input type="number" id="plZx" step="0.1" oninput="leerPlantilla()"></div>
+      <div><label>Gráfica: arriba (cm)</label><input type="number" id="plZy" step="0.1" oninput="leerPlantilla()"></div>
+      <div><label>Gráfica: ancho (cm)</label><input type="number" id="plZw" step="0.1" oninput="leerPlantilla()"></div>
+      <div><label>Gráfica: alto (cm)</label><input type="number" id="plZh" step="0.1" oninput="leerPlantilla()"></div>
+    </div>
+    <div class="row2"><button class="btn verde" onclick="guardarPlantilla()">Guardar plantilla para todos</button><span id="msgPlantilla" style="font-size:12.5px;font-weight:700;"></span></div>
+    <p class="hint" style="margin-top:8px;">Mientras no subas la plantilla real se usa una ficha de prueba (marco simple) para poder acomodar.</p>
+  </div>
+</details>
+
+<details class="acc">
+  <summary><span>Poliestireno (POLI) y reglas de acomodo</span><span class="res" id="rPoli"></span></summary>
+  <div class="acc-cuerpo">
+    <div class="grid">
+      <div><label>Lámina: ancho (cm)</label><input type="number" id="cPolW" value="100" step="0.1" oninput="leerCfg()"></div>
+      <div><label>Lámina: alto (cm)</label><input type="number" id="cPolH" value="66" step="0.1" oninput="leerCfg()"></div>
+      <div><label>Separación entre rompecabezas (mm)</label><input type="number" id="cGap" value="1" step="0.5" min="0" oninput="leerCfg()"></div>
+      <div><label>Sobrante mínimo a guardar (cm)</label><input type="text" id="cSobMin" value="24x16" oninput="leerCfg()"></div>
+      <div><label>Guía 500+ fichas: lado largo mín. (cm)</label><input type="number" id="cGuiaMin" value="20" step="0.5" oninput="leerCfg()"></div>
+      <div><label>Guía 500+ fichas: lado largo máx. (cm)</label><input type="number" id="cGuiaMax" value="23" step="0.5" oninput="leerCfg()"></div>
+    </div>
+    <label class="chk" style="display:flex;gap:6px;align-items:center;margin-top:10px;font-weight:600;"><input type="checkbox" id="cUsarSob" checked onchange="leerCfg()"> Usar primero los sobrantes POLI disponibles</label>
+    <h3 style="margin:14px 0 6px;font-size:13px;color:var(--azul);">Sobrantes POLI disponibles</h3>
+    <div id="listaSob"><span class="hint">Cargando…</span></div>
+    <div class="row2"><button class="btn gris mini" onclick="agregarSobranteManual()">+ Registrar un sobrante a mano</button></div>
+  </div>
+</details>
+
+<details class="acc">
+  <summary><span>Rollo y archivo</span><span class="res" id="rRollo"></span></summary>
+  <div class="acc-cuerpo">
+    <div class="grid">
+      <div><label>Ancho del rollo (cm)</label><input type="number" id="cRolloW" value="102" step="0.1" oninput="leerCfg()"></div>
+      <div><label>Resolución (ppp)</label><input type="number" id="cPpp" value="230" oninput="leerCfg()"></div>
+      <div><label>Largo máx. por archivo JPG (cm)</label><input type="number" id="cMaxLargo" value="150" oninput="leerCfg()"></div>
+    </div>
+    <p class="hint" style="margin-top:8px;">Un JPG a 230 ppp pesa mucho en memoria. Si el montaje pasa del largo máximo, se parte en varios archivos cortando entre láminas (nunca por la mitad de una). Un archivo continuo de más largo necesita la estación de diseño.</p>
+  </div>
+</details>
+
+</section>
+
+<aside class="col-der">
+  <div class="panel">
+    <h2><span class="n">2</span>Acomodo en el rollo</h2>
+    <div id="resumen"></div>
+    <div class="row2">
+      <button class="btn rojo" onclick="generarJPG()">Generar JPG (230 ppp)</button>
+      <label class="chk" style="display:flex;gap:6px;align-items:center;font-weight:600;margin:0;"><input type="checkbox" id="cRegistrar" checked> Registrar montaje y guardar sobrantes POLI</label>
+    </div>
+    <div id="msgGen" style="font-size:12.5px;font-weight:700;margin:8px 0;"></div>
+    <div id="lienzoWrap"><canvas id="lienzo"></canvas></div>
+  </div>
+</aside>
+</main>
+
+<div id="modal"><div class="caja">
+  <div style="font-weight:800;margin-bottom:6px;color:#1e3a5f;">Encuadre de la imagen — arrastra para mover</div>
+  <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;"><canvas id="cropCv" style="border:1px solid #94a3b8;cursor:grab;display:block;"></canvas><div id="cropRef" style="display:none;max-width:260px;font-size:12px;color:#475569;">Como lo aprobó el cliente:<br><img id="cropRefImg" style="max-width:260px;max-height:300px;border:1px solid #94a3b8;margin-top:4px;"></div></div>
+  <div class="row2"><label style="margin:0">Acercar</label><input type="range" id="cropZ" min="1" max="3" step="0.02" value="1" style="width:200px" oninput="cropZoom(this.value)">
+    <button class="btn" onclick="cerrarCrop(true)">Listo</button><button class="btn gris" onclick="cerrarCrop(false)">Cancelar</button><button class="btn gris mini" onclick="cropReset()">Centrar</button></div>
+</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="tactical-supabase.js?v=20261016a"></script>
+<script src="tactical-bot.js?v=20260904a"></script>
+<script src="precios_tactical.js?v=20261016d"></script>
+<script src="rompecabezas_catalogo.js?v=20261017a"></script>
+<script>
+if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const ROLES_PERMITIDOS = ['administrador','diseno'];
+function esc(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+const fmt = n => (Math.round(n*10)/10).toString().replace('.',',');
+
+/* ======================= ESTADO ======================= */
+const CFG = { polW:100, polH:66, gap:0.1, rolloW:102, ppp:230, minA:24, minB:16, guiaMin:20, guiaMax:23, usarSob:true, maxLargo:150,
+  margen:1, sepBloques:1, sepGuias:1 };
+let ITEMS = [];      // {id,nombre,w,h,fichas,cant,img,thumb,guiaPl,guia500,enc:{cx,cy,z}}
+let PL = { url:'', img:null, w:0, h:0, zx:0, zy:0, zw:0, zh:0 };   // plantilla de guía (0 = ficha de prueba)
+let SOBRANTES = [];  // de la base de datos (disponibles)
+let PLAN = null;
+let contador = 0;
+
+/* ======================= RUMBO: ÍTEMS ======================= */
+function agregarItem(preguntar){
+  contador++;
+  const it = { id:'r'+contador, nombre:'Rompecabezas '+contador, w:50, h:33, fichas:300, cant:1, img:null, thumb:'', guiaPl:true, guia500:false, enc:{cx:.5,cy:.5,z:1}, nombreArchivo:'' };
+  if(preguntar){
+    it.guiaPl = confirm('¿Este rompecabezas lleva guía de armado de plantilla?\n\nAceptar = sí lleva. Cancelar = no.');
+    it.guia500 = confirm('¿Lleva también la guía de armado de 500 fichas (imagen original sin plantilla)?\n\nAceptar = sí lleva. Cancelar = no.');
+  }
+  ITEMS.push(it); renderItems(); planificar();
+}
+// Selector de medida con el catálogo de Montajes Rompecabezas (Láser: rectangular, portarretrato, corazón, círculo; y Troquel)
+const NOMBRE_FORMA = { rectangular:'Láser · Rectangular', portarretrato:'Láser · Portarretrato', corazon:'Láser · Corazón', circular:'Láser · Círculo', troquel:'Troquel' };
+function opcionesCatalogo(){
+  const grupos = {}; ROMPECABEZAS_CATALOGO.forEach((m,i)=>{ (grupos[m.forma] = grupos[m.forma]||[]).push([i,m]); });
+  return '<option value="">Elegir del catálogo…</option>' + Object.keys(NOMBRE_FORMA).filter(k=>grupos[k]).map(k=>`<optgroup label="${NOMBRE_FORMA[k]}">${grupos[k].map(([i,m])=>`<option value="${i}">${m.fichas} fichas · ${m.w} x ${m.h} cm</option>`).join('')}</optgroup>`).join('');
+}
+function elegirMedida(id, idx){
+  const it = ITEMS.find(x=>x.id===id); if(idx==='' || !it) return; const m = ROMPECABEZAS_CATALOGO[+idx];
+  it.w = m.w; it.h = m.h; it.fichas = m.fichas; it.guia500 = m.fichas >= 500; it.forma = NOMBRE_FORMA[m.forma];
+  if(it.nombre.startsWith('Rompecabezas ')) it.nombre = NOMBRE_FORMA[m.forma]+' '+m.fichas+'f';
+  renderItems(); planificar();
+}
+function girarItem(id){ const it = ITEMS.find(x=>x.id===id); if(!it) return; [it.w, it.h] = [it.h, it.w]; renderItems(); planificar(); }
+function quitarItem(id){ ITEMS = ITEMS.filter(x=>x.id!==id); renderItems(); renderCola(); planificar(); }
+function editarItem(id, campo, v){
+  const it = ITEMS.find(x=>x.id===id); if(!it) return;
+  if(['w','h','fichas','cant'].includes(campo)){ it[campo] = parseFloat(v)||0; if(campo==='fichas'){ it.guia500 = it.fichas >= 500; renderItems(); } }
+  else if(['guiaPl','guia500'].includes(campo)) it[campo] = !!v; else it[campo] = v;
+  planificar(); avisosItems();
+}
+async function cargarImagenItem(id, file){
+  const it = ITEMS.find(x=>x.id===id); if(!it || !file) return;
+  try{
+    let bmp;
+    if(/pdf$/i.test(file.name)){
+      const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+      const pg = await pdf.getPage(1); const v1 = pg.getViewport({scale:1});
+      const k = Math.min(6000/Math.max(v1.width,v1.height), 4); const vp = pg.getViewport({scale:k});
+      const cv = document.createElement('canvas'); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+      const cx = cv.getContext('2d'); cx.fillStyle='#fff'; cx.fillRect(0,0,cv.width,cv.height);
+      await pg.render({canvasContext:cx, viewport:vp}).promise; bmp = await createImageBitmap(cv);
+    } else bmp = await createImageBitmap(file);
+    it.img = bmp; it.nombreArchivo = file.name; it.enc = {cx:.5,cy:.5,z:1};
+    const t = document.createElement('canvas'); const k = 220/Math.max(bmp.width,bmp.height); t.width = Math.round(bmp.width*k); t.height = Math.round(bmp.height*k);
+    t.getContext('2d').drawImage(bmp,0,0,t.width,t.height); it.thumb = t.toDataURL('image/jpeg',0.8);
+    if(it.nombre.startsWith('Rompecabezas ')) it.nombre = file.name.replace(/\.[^.]+$/,'').slice(0,40);
+    renderItems(); planificar();
+  } catch(e){ console.error(e); alert('No se pudo leer "'+file.name+'". Usa JPG, PNG o PDF.'); }
+}
+function dpiItem(it){
+  if(!it.img || !it.w || !it.h) return null;
+  const cmPorPx = Math.max(it.w/it.img.width, it.h/it.img.height) / it.enc.z;  // cm de la lámina que ocupa cada píxel
+  return 2.54 / cmPorPx;
+}
+function avisosItems(){
+  ITEMS.forEach(it=>{
+    const el = document.getElementById('av_'+it.id); if(!el) return;
+    const m = [];
+    if(!it.img) m.push(['mal','Falta la imagen en alta resolución']);
+    else { const d = dpiItem(it); m.push([d<150?'mal':'ok', `Resolución efectiva: ${Math.round(d)} ppp${d<150?' (baja, se verá pixelada)':''}`]);
+      const ar = (it.img.width/it.img.height)/(it.w/it.h); if(Math.abs(ar-1)>0.04) m.push(['mal','La proporción de la imagen no es la del rompecabezas: se recorta (usa "Ajustar encuadre")']); }
+    const cabe = (it.w<=CFG.polW && it.h<=CFG.polH) || (it.h<=CFG.polW && it.w<=CFG.polH);
+    if(!cabe) m.push(['mal','No cabe en una lámina de '+CFG.polW+'x'+CFG.polH]);
+    el.innerHTML = m.map(x=>`<span class="aviso ${x[0]}">${x[0]==='ok'?'✔':'⚠'} ${esc(x[1])}</span>`).join('<br>');
+  });
+  const sin = ITEMS.filter(i=>!i.img).length;
+  const r = document.getElementById('rItems'); if(r) r.textContent = `${ITEMS.length} rompecabezas${sin?' · faltan '+sin+' imagen(es)':''}`;
+}
+function renderItems(){
+  const c = document.getElementById('items');
+  c.innerHTML = ITEMS.map(it=>`<div class="puz" id="puz_${it.id}">
+    <div class="mini ${it.img?'lleno':''}" onclick="document.getElementById('f_${it.id}').click()">${it.thumb?`<img src="${it.thumb}" alt="">`:'Arrastra aquí la imagen<br>o toca para elegirla'}</div>
+    <input type="file" id="f_${it.id}" accept="image/*,.pdf" style="display:none" onchange="cargarImagenItem('${it.id}', this.files[0]); this.value=''">
+    <div class="campos">
+      <div class="ancho2"><label>Medida del catálogo (Montajes Rompecabezas)</label><select onchange="elegirMedida('${it.id}', this.value)">${opcionesCatalogo()}</select></div>
+      <div class="ancho2"><label>Nombre / referencia</label><input type="text" value="${esc(it.nombre)}" oninput="editarItem('${it.id}','nombre',this.value)"></div>
+      <div><label>Ancho (cm)</label><input type="number" step="0.1" value="${it.w}" oninput="editarItem('${it.id}','w',this.value)"></div>
+      <div><label>Alto (cm)</label><input type="number" step="0.1" value="${it.h}" oninput="editarItem('${it.id}','h',this.value)"></div>
+      <div><label>Fichas (piezas)</label><input type="number" value="${it.fichas}" oninput="editarItem('${it.id}','fichas',this.value)"></div>
+      <div><label>Cantidad</label><input type="number" min="1" value="${it.cant}" oninput="editarItem('${it.id}','cant',this.value)"></div>
+      <label class="chk ancho2"><input type="checkbox" ${it.guiaPl?'checked':''} onchange="editarItem('${it.id}','guiaPl',this.checked)"> Guía de armado de plantilla</label>
+      <label class="chk ancho2"><input type="checkbox" ${it.guia500?'checked':''} onchange="editarItem('${it.id}','guia500',this.checked)"> Guía de 500+ fichas</label>
+      <div class="ancho2"><button class="btn gris mini" onclick="girarItem('${it.id}')">⟳ Girar medida</button> <button class="btn gris mini" onclick="abrirCrop('${it.id}')" ${it.img?'':'disabled'}>Ajustar encuadre</button> <button class="btn rojo mini" onclick="quitarItem('${it.id}')">Quitar</button></div>
+    </div>
+    ${it.refThumb ? `<div class="refthumb"><span>Aprobado por el cliente:</span><img src="${esc(it.refThumb)}" alt=""> <span>${esc(it.forma||'')}</span></div>` : ''}
+    <div class="aviso" id="av_${it.id}"></div></div>`).join('') || '<span class="hint">Aún no hay rompecabezas. Pulsa "Anexar rompecabezas".</span>';
+  ITEMS.forEach(it=>{
+    const el = document.getElementById('puz_'+it.id);
+    el.addEventListener('dragover', e=>{ e.preventDefault(); el.classList.add('sobre'); });
+    el.addEventListener('dragleave', ()=>el.classList.remove('sobre'));
+    el.addEventListener('drop', e=>{ e.preventDefault(); el.classList.remove('sobre'); if(e.dataTransfer.files[0]) cargarImagenItem(it.id, e.dataTransfer.files[0]); });
+  });
+  avisosItems();
+}
+
+/* ======================= COLA DEL KANBAN ======================= */
+let COLA = [];
+async function cargarCola(){
+  try{
+    const { data, error } = await tacticalSupabase.from('plotter_cola').select('*').eq('estado','pendiente').order('created_at');
+    if(error) throw error; COLA = data || [];
+  } catch(e){ console.warn('Cola no disponible', e); COLA = []; }
+  renderCola();
+}
+function renderCola(){
+  const enUso = new Set(ITEMS.map(i=>i.colaId).filter(Boolean));
+  const lista = COLA.filter(r=>!enUso.has(r.id));
+  const c = document.getElementById('cola'); if(!c) return;
+  c.innerHTML = lista.length ? lista.map(r=>`<div class="colafila">${r.thumb_url?`<img src="${esc(r.thumb_url)}" alt="">`:'<div style="width:64px;height:64px;background:#e2e8f0;border-radius:4px"></div>'}
+    <div class="info"><b>${esc(r.cliente||'Sin cliente')}</b>${r.ot?' · '+esc(r.ot):''}<br>${esc(r.forma||'')} · ${r.fichas||'?'} fichas · ${esc(r.medida||'')} cm · cantidad ${r.cantidad||1}</div>
+    <button class="btn mini" onclick="agregarDeCola('${r.id}')">Agregar al montaje</button></div>`).join('') : '<span class="hint">No hay rompecabezas pendientes del Kanban.</span>';
+  const rr = document.getElementById('rCola'); if(rr) rr.textContent = lista.length ? `${lista.length} pendiente(s)` : '';
+}
+function medirImagenUrl(url){ return new Promise(ok=>{ if(!url) return ok(null); const im = new Image(); im.onload = ()=>ok({ w:im.naturalWidth, h:im.naturalHeight }); im.onerror = ()=>ok(null); im.src = url; }); }
+async function agregarDeCola(id, sinRender){
+  const r = COLA.find(x=>x.id===id); if(!r || ITEMS.some(i=>i.colaId===id)) return;
+  contador++;
+  const m = String(r.medida||'').toLowerCase().replace(/[×,]/g,'x').split('x').map(parseFloat); let a = m[0]||50, b = m[1]||33;
+  const ref = await medirImagenUrl(r.thumb_url);                  // la orientación sale de la miniatura que aprobó el cliente
+  const apaisada = ref ? ref.w >= ref.h : a >= b;
+  const w = apaisada ? Math.max(a,b) : Math.min(a,b), h = apaisada ? Math.min(a,b) : Math.max(a,b);
+  const fichas = r.fichas || 0;
+  ITEMS.push({ id:'r'+contador, nombre:`${r.cliente||'Cliente'}${r.ot?' · '+r.ot:''}`, w, h, fichas, cant:Math.max(1,r.cantidad||1), img:null, thumb:'', guiaPl:true, guia500:fichas>=500, enc:{cx:.5,cy:.5,z:1},
+    nombreArchivo:'', colaId:r.id, fichaId:r.ficha_id, refThumb:r.thumb_url||'', forma:r.forma||'' });
+  if(!sinRender){ renderItems(); renderCola(); planificar(); }
+}
+async function agregarTodosCola(){
+  const enUso = new Set(ITEMS.map(i=>i.colaId).filter(Boolean));
+  for(const r of COLA.filter(x=>!enUso.has(x.id))) await agregarDeCola(r.id, true);
+  renderItems(); renderCola(); planificar();
+}
+
+/* ======================= ENCUADRE ======================= */
+function dibujarCover(cx, img, dx, dy, dw, dh, enc){
+  const base = Math.max(dw/img.width, dh/img.height) * enc.z;
+  const sw = dw/base, sh = dh/base;
+  const sx = Math.min(Math.max(enc.cx*img.width - sw/2, 0), img.width - sw), sy = Math.min(Math.max(enc.cy*img.height - sh/2, 0), img.height - sh);
+  cx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+}
+let cropItem = null, cropEnc = null, cropDrag = null;
+function abrirCrop(id){
+  cropItem = ITEMS.find(x=>x.id===id); if(!cropItem || !cropItem.img) return;
+  cropEnc = { ...cropItem.enc };
+  const cv = document.getElementById('cropCv'); const asp = cropItem.w/cropItem.h;
+  cv.width = asp>=1 ? 560 : Math.round(420*asp); cv.height = asp>=1 ? Math.round(560/asp) : 420;
+  document.getElementById('cropZ').value = cropEnc.z; document.getElementById('modal').style.display = 'flex'; pintarCrop();
+  const ref = document.getElementById('cropRef'); ref.style.display = cropItem.refThumb ? 'block' : 'none'; if(cropItem.refThumb) document.getElementById('cropRefImg').src = cropItem.refThumb;
+}
+function pintarCrop(){ const cv = document.getElementById('cropCv'); const cx = cv.getContext('2d'); cx.fillStyle='#fff'; cx.fillRect(0,0,cv.width,cv.height); dibujarCover(cx, cropItem.img, 0,0,cv.width,cv.height, cropEnc); }
+function cropZoom(v){ cropEnc.z = parseFloat(v); pintarCrop(); }
+function cropReset(){ cropEnc.cx = .5; cropEnc.cy = .5; pintarCrop(); }
+function cerrarCrop(ok){ if(ok && cropItem){ cropItem.enc = cropEnc; planificar(); avisosItems(); } document.getElementById('modal').style.display = 'none'; cropItem = null; }
+(function(){
+  const cv = document.getElementById('cropCv');
+  cv.addEventListener('pointerdown', e=>{ cropDrag = { x:e.clientX, y:e.clientY }; cv.setPointerCapture(e.pointerId); cv.style.cursor='grabbing'; });
+  cv.addEventListener('pointermove', e=>{
+    if(!cropDrag || !cropItem) return;
+    const img = cropItem.img, base = Math.max(cv.width/img.width, cv.height/img.height) * cropEnc.z;
+    cropEnc.cx = Math.min(1, Math.max(0, cropEnc.cx - ((e.clientX-cropDrag.x)*(cv.width/cv.clientWidth))/base/img.width));
+    cropEnc.cy = Math.min(1, Math.max(0, cropEnc.cy - ((e.clientY-cropDrag.y)*(cv.height/cv.clientHeight))/base/img.height));
+    cropDrag = { x:e.clientX, y:e.clientY }; pintarCrop();
+  });
+  cv.addEventListener('pointerup', ()=>{ cropDrag = null; cv.style.cursor='grab'; });
+})();
+
+/* ======================= CONFIGURACIÓN / PLANTILLA ======================= */
+function leerCfg(){
+  const n = (id,d)=>{ const v = parseFloat(document.getElementById(id).value); return isNaN(v)?d:v; };
+  CFG.polW = n('cPolW',100); CFG.polH = n('cPolH',66); CFG.gap = n('cGap',1)/10;
+  const m = (document.getElementById('cSobMin').value||'24x16').toLowerCase().split('x').map(parseFloat); CFG.minA = Math.max(m[0]||24, m[1]||16); CFG.minB = Math.min(m[0]||24, m[1]||16);
+  CFG.guiaMin = n('cGuiaMin',20); CFG.guiaMax = n('cGuiaMax',23); CFG.usarSob = document.getElementById('cUsarSob').checked;
+  CFG.rolloW = n('cRolloW',102); CFG.ppp = n('cPpp',230); CFG.maxLargo = n('cMaxLargo',150);
+  planificar(); avisosItems();
+}
+function leerPlantilla(){
+  const n = id=>parseFloat(document.getElementById(id).value)||0;
+  PL.w = n('plW'); PL.h = n('plH'); PL.zx = n('plZx'); PL.zy = n('plZy'); PL.zw = n('plZw'); PL.zh = n('plZh'); planificar(); resumenPlantilla();
+}
+function resumenPlantilla(){ const e = document.getElementById('rPlantilla'); if(e) e.textContent = PL.img ? `plantilla real ${fmt(PL.w)} x ${fmt(PL.h)} cm` : 'ficha de prueba (falta la plantilla real)'; }
+function volcarPlantilla(){ ['plW','plH','plZx','plZy','plZw','plZh'].forEach((id,i)=>{ document.getElementById(id).value = [PL.w,PL.h,PL.zx,PL.zy,PL.zw,PL.zh][i] || ''; }); resumenPlantilla(); }
+async function cargarPlantilla(file){
+  if(!file) return; PL.img = await createImageBitmap(file); PL._file = file;
+  if(!PL.w){ PL.w = 16; PL.h = Math.round(16*PL.img.height/PL.img.width*10)/10; PL.zx = 1; PL.zy = 1; PL.zw = PL.w-2; PL.zh = PL.h-2; }
+  volcarPlantilla(); planificar();
+}
+async function guardarPlantilla(){
+  const msg = document.getElementById('msgPlantilla'); msg.style.color = '#1e3a5f'; msg.textContent = 'Guardando…';
+  try{
+    let url = PL.url;
+    if(PL._file){
+      const ext = (PL._file.name.split('.').pop()||'png').toLowerCase();
+      const ruta = 'plotter/guia_plantilla.'+ext;
+      const r = await tacticalSupabase.storage.from(TACTICAL_STORAGE_BUCKET).upload(ruta, PL._file, { upsert:true, contentType: PL._file.type||'image/png' });
+      if(r.error) throw r.error;
+      url = tacticalSupabase.storage.from(TACTICAL_STORAGE_BUCKET).getPublicUrl(ruta).data.publicUrl + '?v=' + Date.now();
+    }
+    if(!url) throw new Error('Primero sube la imagen de la plantilla');
+    const { error } = await tacticalSupabase.from('plotter_config').upsert({ clave:'guia_plantilla', valor:{ url, w:PL.w, h:PL.h, zx:PL.zx, zy:PL.zy, zw:PL.zw, zh:PL.zh }, updated_at:new Date().toISOString() });
+    if(error) throw error;
+    PL.url = url; msg.style.color = '#1a7d3f'; msg.textContent = 'Plantilla guardada para todos.';
+  } catch(e){ console.error(e); msg.style.color = '#b91c1c'; msg.textContent = /plotter_config/.test(String(e.message||e)) ? 'Falta crear las tablas: correr supabase/migracion_plotter_montajes.sql' : 'No se pudo guardar: '+(e.message||e); }
+}
+async function cargarPlantillaRemota(){
+  try{
+    const { data } = await tacticalSupabase.from('plotter_config').select('valor').eq('clave','guia_plantilla').maybeSingle();
+    if(!data || !data.valor) return; const v = data.valor;
+    const blob = await (await fetch(v.url)).blob(); PL = { url:v.url, img: await createImageBitmap(blob), w:v.w, h:v.h, zx:v.zx, zy:v.zy, zw:v.zw, zh:v.zh };
+    volcarPlantilla(); planificar();
+  } catch(e){ console.warn('Plantilla remota no disponible', e); }
+}
+
+/* ======================= SOBRANTES POLI ======================= */
+async function cargarSobrantes(){
+  try{
+    const { data, error } = await tacticalSupabase.from('plotter_sobrantes').select('*').eq('estado','disponible').order('created_at');
+    if(error) throw error; SOBRANTES = data || [];
+  } catch(e){ console.warn('Sobrantes no disponibles', e); SOBRANTES = []; }
+  renderSobrantes();
+}
+function renderSobrantes(){
+  const c = document.getElementById('listaSob');
+  c.innerHTML = SOBRANTES.length ? SOBRANTES.map((s,i)=>`<div class="sob"><b>Sobrante ${i+1}:</b> ${fmt(s.ancho)} x ${fmt(s.alto)} cm <span class="hint" style="margin:0">${esc(s.origen||'')}</span><button class="btn rojo mini" style="margin-left:auto" onclick="descartarSobrante('${s.id}')">Ya no existe</button></div>`).join('') : '<span class="hint">No hay sobrantes POLI guardados.</span>';
+  const r = document.getElementById('rPoli'); if(r) r.textContent = `${CFG.polW}x${CFG.polH} · ${SOBRANTES.length} sobrante(s)`;
+}
+async function descartarSobrante(id){
+  if(!confirm('¿Marcar este sobrante como descartado (ya no existe)?')) return;
+  await tacticalSupabase.from('plotter_sobrantes').update({ estado:'descartado' }).eq('id', id); await cargarSobrantes(); planificar();
+}
+async function agregarSobranteManual(){
+  const t = prompt('Medida del sobrante en cm (ancho x alto), por ejemplo 50x33:'); if(!t) return;
+  const m = t.toLowerCase().split('x').map(parseFloat); if(!(m[0]>0 && m[1]>0)){ alert('Medida no válida.'); return; }
+  const { error } = await tacticalSupabase.from('plotter_sobrantes').insert({ ancho:m[0], alto:m[1], origen:'registrado a mano' });
+  if(error){ alert('No se pudo guardar: '+(error.message||error)); return; } await cargarSobrantes(); planificar();
+}
+
+/* ======================= ACOMODO (láminas de poliestireno, corte guillotina) ======================= */
+// El área de acomodo es 2 separaciones más grande que la lámina: así caben piezas exactas (2 de 50 en 100 cm) y después,
+// al fijar posiciones, la separación del borde se reduce hasta 0 para que nada se salga de la lámina.
+function nuevoBin(W,H,tipo,ref){ const g = CFG.gap; return { tipo, ref, W, H, libres:[{x:0,y:0,w:W+2*g,h:H+2*g}], puestos:[] }; }
+function intentarUbicar(bin, w, h, soloNecesario){            // w,h = medida real; usa la separación como relleno
+  const g = CFG.gap, pw = w+g, ph = h+g;
+  const buscar = opciones=>{ let best = null;
+    opciones.forEach(([rot,ww,hh])=>{
+      bin.libres.forEach((f,i)=>{ if(ww<=f.w+1e-6 && hh<=f.h+1e-6){ const sc = Math.min(f.w-ww, f.h-hh), sl = Math.max(f.w-ww, f.h-hh);
+        if(!best || sc<best.sc-1e-9 || (Math.abs(sc-best.sc)<1e-9 && sl<best.sl)) best = { i, rot, ww, hh, sc, sl }; } });
+    }); return best; };
+  if(soloNecesario){ return buscar([[false,pw,ph]]) || buscar([[true,ph,pw]]); }   // gira solo si no cabe de otra forma
+  return buscar([[false,pw,ph],[true,ph,pw]]);
+}
+function colocar(bin, b, item, copia){
+  const f = bin.libres[b.i]; bin.libres.splice(b.i,1);
+  bin.puestos.push({ item, copia, x:f.x, y:f.y, w:b.ww-CFG.gap, h:b.hh-CFG.gap, rot:b.rot });
+  // corte guillotina: se deja el rectángulo sobrante más grande posible
+  const A = [{x:f.x+b.ww,y:f.y,w:f.w-b.ww,h:f.h},{x:f.x,y:f.y+b.hh,w:b.ww,h:f.h-b.hh}];
+  const B = [{x:f.x,y:f.y+b.hh,w:f.w,h:f.h-b.hh},{x:f.x+b.ww,y:f.y,w:f.w-b.ww,h:b.hh}];
+  const mx = L=>Math.max(...L.map(r=>r.w*r.h)); const elegido = mx(A) >= mx(B) ? A : B;
+  elegido.forEach(r=>{ if(r.w>1e-6 && r.h>1e-6) bin.libres.push(r); });
+}
+function sobrantesDeBin(bin){
+  let L = bin.libres.map(r=>({ x:r.x, y:r.y, w:Math.min(r.x+r.w, bin.W)-r.x, h:Math.min(r.y+r.h, bin.H)-r.y })).filter(r=>r.w>0.05 && r.h>0.05);
+  let cambio = true;
+  while(cambio){ cambio = false;
+    outer: for(let i=0;i<L.length;i++) for(let j=i+1;j<L.length;j++){ const a = L[i], b = L[j];
+      if(Math.abs(a.x-b.x)<1e-3 && Math.abs(a.w-b.w)<1e-3 && (Math.abs(a.y+a.h-b.y)<=CFG.gap+1e-3 || Math.abs(b.y+b.h-a.y)<=CFG.gap+1e-3)){ const y0 = Math.min(a.y,b.y), y1 = Math.max(a.y+a.h,b.y+b.h); L.splice(j,1); L[i] = { x:a.x, y:y0, w:a.w, h:y1-y0 }; cambio = true; break outer; }
+      if(Math.abs(a.y-b.y)<1e-3 && Math.abs(a.h-b.h)<1e-3 && (Math.abs(a.x+a.w-b.x)<=CFG.gap+1e-3 || Math.abs(b.x+b.w-a.x)<=CFG.gap+1e-3)){ const x0 = Math.min(a.x,b.x), x1 = Math.max(a.x+a.w,b.x+b.w); L.splice(j,1); L[i] = { x:x0, y:a.y, w:x1-x0, h:a.h }; cambio = true; break outer; } }
+  }
+  return L.filter(r=>Math.min(r.w,r.h) >= CFG.minB-1e-6 && Math.max(r.w,r.h) >= CFG.minA-1e-6);
+}
+function empacar(piezas, est){
+  const orden = piezas.slice().sort(est.orden==='area' ? (a,b)=>b.w*b.h-a.w*a.h : (a,b)=>Math.max(b.w,b.h)-Math.max(a.w,a.h) || b.w*b.h-a.w*a.h);
+  const bins = [], noCaben = [], remPool = CFG.usarSob ? SOBRANTES.map(s=>({ id:s.id, W:+s.ancho, H:+s.alto })).sort((a,b)=>a.W*a.H-b.W*b.H) : [];
+  orden.forEach(p=>{
+    for(const bin of bins){ const b = intentarUbicar(bin, p.w, p.h, est.soloNecesario); if(b){ colocar(bin, b, p.item, p.copia); return; } }
+    for(let i=0;i<remPool.length;i++){ const r = remPool[i]; const bin = nuevoBin(r.W, r.H, 'sobrante', r.id); const b = intentarUbicar(bin, p.w, p.h, est.soloNecesario);
+      if(b){ remPool.splice(i,1); bins.push(bin); colocar(bin, b, p.item, p.copia); return; } }
+    const bin = nuevoBin(CFG.polW, CFG.polH, 'lamina', null); const b = intentarUbicar(bin, p.w, p.h, est.soloNecesario);
+    if(!b){ noCaben.push(p); return; } bins.push(bin); colocar(bin, b, p.item, p.copia);
+  });
+  return { bins, noCaben };
+}
+// Puntaje de un acomodo: menos piezas sin cabida, menos láminas nuevas, sobrante reutilizable más grande, más área recuperable
+function puntaje(res){
+  const nuevos = []; res.bins.forEach(bin=>sobrantesDeBin(bin).forEach(r=>nuevos.push(r)));
+  const lam = res.bins.filter(b=>b.tipo==='lamina').length, suma = nuevos.reduce((a,r)=>a+r.w*r.h,0), mx = Math.max(0, ...nuevos.map(r=>r.w*r.h));
+  return [res.noCaben.length, lam, -mx, -suma, res.bins.length];
+}
+function mejorQue(a, b){ for(let i=0;i<a.length;i++){ if(a[i] < b[i]-1e-9) return true; if(a[i] > b[i]+1e-9) return false; } return false; }
+function planificar(){
+  const piezas = [];
+  ITEMS.forEach(it=>{ if(it.w>0 && it.h>0) for(let c=0;c<Math.max(1,it.cant);c++) piezas.push({ item:it, copia:c, w:it.w, h:it.h }); });
+  // se prueban varias formas de acomodar (con o sin giro, por lado o por área) y se elige la mejor
+  let mejor = null, mejorP = null;
+  [{orden:'lado',soloNecesario:true},{orden:'lado',soloNecesario:false},{orden:'area',soloNecesario:true},{orden:'area',soloNecesario:false}].forEach(est=>{
+    const r = empacar(piezas, est), pt = puntaje(r); if(!mejor || mejorP && mejorQue(pt, mejorP)){ mejor = r; mejorP = pt; } });
+  const { bins, noCaben } = mejor || { bins:[], noCaben:[] };
+  bins.forEach(bin=>bin.puestos.forEach(p=>{ p.x = Math.max(0, Math.min(p.x, bin.W - p.w)); p.y = Math.max(0, Math.min(p.y, bin.H - p.h)); }));
+  // sobrantes que se guardarán (de cada lámina o sobrante usado)
+  const snap = v=>{ const r = Math.round(v); return Math.abs(v-r) <= 0.15 ? r : Math.round(v*10)/10; };   // 49,9 -> 50 (la separación de 1 mm no se descuenta del sobrante)
+  const nuevos = []; bins.forEach((bin,bi)=>sobrantesDeBin(bin).forEach(r=>nuevos.push({ ancho:snap(r.w), alto:snap(r.h), bi, x:r.x, y:r.y })));
+  // diseño en el rollo: láminas completas una debajo de otra, sobrantes en filas, y al final el área de guías
+  const rollW = CFG.rolloW, m = CFG.margen, sep = CFG.sepBloques, anchoUtil = rollW - 2*m;
+  let y = m; const bloques = [];
+  bins.filter(b=>b.tipo==='lamina').forEach(b=>{ bloques.push({ bin:b, x:(rollW-b.W)/2, y }); y += b.H + sep; });
+  let x = m, filaH = 0;
+  bins.filter(b=>b.tipo==='sobrante').forEach(b=>{ if(x + b.W > m + anchoUtil + 1e-6 && filaH>0){ y += filaH + sep; x = m; filaH = 0; } bloques.push({ bin:b, x, y }); x += b.W + sep; filaH = Math.max(filaH, b.H); });
+  if(filaH>0){ y += filaH + sep; }
+  // guías agrupadas en un solo sector (fuera del poliestireno)
+  const guias = []; const lista = [];
+  ITEMS.forEach(it=>{ for(let c=0;c<Math.max(1,it.cant);c++){ if(it.guiaPl) lista.push({ tipo:'plantilla', item:it }); if(it.guia500) lista.push({ tipo:'500', item:it }); } });
+  const plW = PL.img ? PL.w : 16, plH = PL.img ? PL.h : 11;
+  let gx = m, gy = y, gfila = 0;
+  lista.forEach(g=>{
+    let gw, gh;
+    if(g.tipo==='plantilla'){ gw = plW; gh = plH; }
+    else{ const a = g.item.w/g.item.h; let elegido = null;
+      for(let L=CFG.guiaMax; L>=CFG.guiaMin-1e-6; L-=0.5){ const w = a>=1 ? L : L*a, h = a>=1 ? L/a : L; if(gx + w <= m + anchoUtil + 1e-6){ elegido = { w, h }; break; } }
+      if(!elegido){ gy += gfila + sep; gx = m; gfila = 0; const L = CFG.guiaMax; elegido = a>=1 ? { w:L, h:L/a } : { w:L*a, h:L }; }
+      gw = elegido.w; gh = elegido.h; }
+    if(gx + gw > m + anchoUtil + 1e-6 && gfila>0){ gy += gfila + sep; gx = m; gfila = 0; }
+    guias.push({ ...g, x:gx, y:gy, w:gw, h:gh }); gx += gw + sep; gfila = Math.max(gfila, gh);
+  });
+  const finGuias = lista.length ? gy + gfila + m : y + m - sep;
+  PLAN = { bins, bloques, guias, nuevos, noCaben, largo: Math.max(finGuias, m*2), usadosSob: bins.filter(b=>b.tipo==='sobrante').map(b=>b.ref), laminas: bins.filter(b=>b.tipo==='lamina').length };
+  dibujarVistaPrevia(); resumenPlan();
+}
+function resumenPlan(){
+  const e = document.getElementById('resumen'); if(!PLAN) return;
+  if(!ITEMS.length){ e.innerHTML = '<span class="hint">Agrega rompecabezas para ver el acomodo.</span>'; return; }
+  const sob = PLAN.nuevos; const lineas = [];
+  lineas.push(`<b>Láminas de ${CFG.polW}x${CFG.polH} a usar:</b> ${PLAN.laminas}${PLAN.usadosSob.length?` · <b>sobrantes POLI usados:</b> ${PLAN.usadosSob.length}`:''}`);
+  lineas.push(`<b>Guías de armado:</b> ${PLAN.guias.length} (agrupadas al final del rollo, fuera del poliestireno)`);
+  lineas.push(`<b>Largo de rollo:</b> ${fmt(PLAN.largo)} cm (${CFG.rolloW} cm de ancho) · JPG de ${Math.round(CFG.rolloW/2.54*CFG.ppp)} x ${Math.round(PLAN.largo/2.54*CFG.ppp)} px`);
+  lineas.push(sob.length ? `<b style="color:#1a7d3f">Sobrantes POLI que quedan:</b> ${sob.map((s,i)=>`${fmt(s.ancho)}x${fmt(s.alto)}`).join(' · ')}` : '<span class="hint" style="margin:0">No queda ningún sobrante reutilizable (mínimo '+fmt(CFG.minA)+'x'+fmt(CFG.minB)+').</span>');
+  if(PLAN.noCaben.length) lineas.push(`<b style="color:#b91c1c">⚠ ${PLAN.noCaben.length} pieza(s) no caben en la lámina:</b> ${[...new Set(PLAN.noCaben.map(p=>p.item.nombre))].join(', ')}`);
+  const sinImg = ITEMS.filter(i=>!i.img).length; if(sinImg) lineas.push(`<b style="color:#b45309">⚠ Faltan ${sinImg} imagen(es): se verán como cuadro gris.</b>`);
+  e.innerHTML = lineas.join('<br>');
+  const r = document.getElementById('rRollo'); if(r) r.textContent = `${CFG.rolloW} cm · ${CFG.ppp} ppp · ${fmt(PLAN.largo)} cm de largo`;
+}
+
+/* ======================= DIBUJO ======================= */
+function dibujarPuesto(cx, p, S, ox, oy, it){        // p: puesto dentro del bloque; S px por cm
+  const x = (ox + p.x)*S, y = (oy + p.y)*S, w = p.w*S, h = p.h*S;
+  if(!p.item.img){ cx.fillStyle = '#d1d5db'; cx.fillRect(x,y,w,h); return; }
+  if(!p.rot){ dibujarCover(cx, p.item.img, x, y, w, h, p.item.enc); return; }
+  // girado 90°: se dibuja con la medida original y se rota
+  cx.save(); cx.translate(x + w, y); cx.rotate(Math.PI/2); dibujarCover(cx, p.item.img, 0, 0, h, w, p.item.enc); cx.restore();
+}
+function dibujarGuia(cx, g, S){
+  const x = g.x*S, y = g.y*S, w = g.w*S, h = g.h*S;
+  if(g.tipo==='500'){ if(g.item.img) dibujarCover(cx, g.item.img, x, y, w, h, g.item.enc); else { cx.fillStyle='#d1d5db'; cx.fillRect(x,y,w,h); } return; }
+  if(PL.img){ cx.drawImage(PL.img, x, y, w, h); } else { cx.fillStyle = '#fff'; cx.fillRect(x,y,w,h); cx.strokeStyle = '#334155'; cx.lineWidth = Math.max(1, S*0.05); cx.strokeRect(x,y,w,h); cx.fillStyle = '#334155'; cx.font = 'bold '+(S*0.9)+'px Arial'; cx.textAlign = 'center'; cx.fillText('GUÍA DE ARMADO', x+w/2, y+S*1.1); }
+  const zx = PL.img ? PL.zx : 1, zy = PL.img ? PL.zy : 1.6, zw = PL.img ? PL.zw : g.w-2, zh = PL.img ? PL.zh : g.h-2.6;
+  if(g.item.img && zw>0 && zh>0){   // misma gráfica reducida, completa y centrada en la zona
+    const a = g.item.w/g.item.h; let dw = zw, dh = zw/a; if(dh>zh){ dh = zh; dw = zh*a; }
+    dibujarCover(cx, g.item.img, x+(zx+(zw-dw)/2)*S, y+(zy+(zh-dh)/2)*S, dw*S, dh*S, g.item.enc);
+  }
+}
+function pintarRollo(cx, S, desdeCm, hastaCm, vista){
+  cx.fillStyle = '#fff'; cx.fillRect(0, 0, CFG.rolloW*S, (hastaCm-desdeCm)*S);
+  cx.save(); cx.translate(0, -desdeCm*S);
+  PLAN.bloques.forEach(b=>{
+    if(b.y + b.bin.H < desdeCm || b.y > hastaCm) return;
+    b.bin.puestos.forEach(p=>dibujarPuesto(cx, p, S, b.x, b.y, p.item));
+    if(vista){ cx.strokeStyle = b.bin.tipo==='lamina' ? '#1e3a5f' : '#b45309'; cx.setLineDash([S*1.5,S]); cx.lineWidth = Math.max(1,S*0.15); cx.strokeRect(b.x*S, b.y*S, b.bin.W*S, b.bin.H*S); cx.setLineDash([]);
+      cx.fillStyle = '#1e3a5f'; cx.font = 'bold '+Math.max(9,S*2)+'px Arial'; cx.textAlign='left'; cx.fillText((b.bin.tipo==='lamina'?'Lámina ':'Sobrante ')+fmt(b.bin.W)+'x'+fmt(b.bin.H), b.x*S+4, b.y*S+Math.max(11,S*2.2));
+      PLAN.nuevos.filter(s=>PLAN.bins[s.bi]===b.bin).forEach(s=>{ cx.fillStyle = 'rgba(26,125,63,.18)'; cx.fillRect((b.x+s.x)*S, (b.y+s.y)*S, s.ancho*S, s.alto*S); cx.strokeStyle='#1a7d3f'; cx.setLineDash([S,S*.7]); cx.strokeRect((b.x+s.x)*S, (b.y+s.y)*S, s.ancho*S, s.alto*S); cx.setLineDash([]);
+        cx.fillStyle='#1a7d3f'; cx.font='bold '+Math.max(9,S*1.8)+'px Arial'; cx.fillText('POLI '+fmt(s.ancho)+'x'+fmt(s.alto), (b.x+s.x)*S+4, (b.y+s.y)*S+Math.max(11,S*2)); });
+    }
+  });
+  PLAN.guias.forEach(g=>{ if(g.y+g.h < desdeCm || g.y > hastaCm) return; dibujarGuia(cx, g, S); });
+  cx.restore();
+}
+function dibujarVistaPrevia(){
+  if(!PLAN) return; const S = 4.5, cv = document.getElementById('lienzo');
+  cv.width = Math.round(CFG.rolloW*S); cv.height = Math.round(PLAN.largo*S); cv.style.width = cv.width+'px';
+  const cx = cv.getContext('2d'); pintarRollo(cx, S, 0, PLAN.largo, true);
+  cx.strokeStyle = '#94a3b8'; cx.lineWidth = 1; cx.strokeRect(0.5,0.5,cv.width-1,cv.height-1);
+}
+
+/* ======================= JPG 230 ppp ======================= */
+function ponerDpi(bytes, dpi){            // cabecera JFIF: unidades = ppp, densidad X/Y
+  if(bytes[2]===0xFF && bytes[3]===0xE0 && bytes[6]===0x4A){ bytes[13] = 1; bytes[14] = dpi>>8; bytes[15] = dpi&255; bytes[16] = dpi>>8; bytes[17] = dpi&255; }
+  return bytes;
+}
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+async function nombreDelDia(){
+  const hoy = new Date(); const iso = hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0')+'-'+String(hoy.getDate()).padStart(2,'0');
+  let n = 0; try{ const { count } = await tacticalSupabase.from('plotter_montajes').select('id', { count:'exact', head:true }).eq('fecha', iso); n = count||0; } catch(e){}
+  const base = hoy.getDate()+' '+MESES[hoy.getMonth()];
+  return { nombre: n===0 ? base : String.fromCharCode(65+n)+' '+base, consecutivo:n, iso };
+}
+function partesDelRollo(){            // cortes solo entre filas de láminas / sobrantes / guías
+  const S = CFG.ppp/2.54, maxCm = CFG.maxLargo; if(PLAN.largo <= maxCm) return [{ desde:0, hasta:PLAN.largo }];
+  const cortes = [0]; let ult = 0; const filas = [];
+  PLAN.bloques.forEach(b=>filas.push({ y:b.y, fin:b.y+b.bin.H })); if(PLAN.guias.length){ const gy = Math.min(...PLAN.guias.map(g=>g.y)); filas.push({ y:gy, fin:PLAN.largo }); }
+  filas.sort((a,b)=>a.y-b.y);
+  filas.forEach(f=>{ if(f.fin - ult > maxCm && f.y > ult){ const corte = f.y - CFG.sepBloques/2; if(corte > ult){ cortes.push(corte); ult = corte; } } });
+  cortes.push(PLAN.largo); const partes = []; for(let i=0;i<cortes.length-1;i++) partes.push({ desde:cortes[i], hasta:cortes[i+1] }); return partes;
+}
+function bajar(blob, nombre){ const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombre; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 2000); }
+async function generarJPG(){
+  const msg = document.getElementById('msgGen');
+  if(!PLAN || !ITEMS.length){ alert('Agrega rompecabezas primero.'); return; }
+  if(PLAN.noCaben.length){ alert('Hay piezas que no caben en la lámina. Revisa las medidas.'); return; }
+  const sinImg = ITEMS.filter(i=>!i.img); if(sinImg.length && !confirm('Faltan imágenes en: '+sinImg.map(i=>i.nombre).join(', ')+'\n\nSe imprimirán como cuadro gris. ¿Generar así?')) return;
+  const bajas = ITEMS.filter(i=>i.img && dpiItem(i)<150); if(bajas.length && !confirm('Resolución baja (<150 ppp) en: '+bajas.map(i=>i.nombre).join(', ')+'\n\n¿Generar de todas formas?')) return;
+  msg.style.color = '#1e3a5f'; msg.textContent = 'Preparando…';
+  try{
+    const { nombre, consecutivo, iso } = await nombreDelDia();
+    const S = CFG.ppp/2.54, partes = partesDelRollo();
+    for(let i=0;i<partes.length;i++){
+      const p = partes[i]; msg.textContent = `Generando parte ${i+1} de ${partes.length}…`; await new Promise(r=>setTimeout(r,30));
+      const cv = document.createElement('canvas'); cv.width = Math.round(CFG.rolloW*S); cv.height = Math.round((p.hasta-p.desde)*S);
+      pintarRollo(cv.getContext('2d'), S, p.desde, p.hasta, false);
+      const blob = await new Promise(r=>cv.toBlob(r, 'image/jpeg', 0.93)); if(!blob) throw new Error('El navegador no pudo crear el JPG de este tamaño. Reduce el largo máximo por archivo.');
+      const bytes = ponerDpi(new Uint8Array(await blob.arrayBuffer()), Math.round(CFG.ppp));
+      bajar(new Blob([bytes], { type:'image/jpeg' }), nombre + (partes.length>1 ? ` (parte ${i+1} de ${partes.length})` : '') + '.jpg');
+      cv.width = cv.height = 1; await new Promise(r=>setTimeout(r,700));
+    }
+    let extra = '';
+    if(document.getElementById('cRegistrar').checked){
+      try{
+        const detalle = { rompecabezas: ITEMS.map(i=>({ nombre:i.nombre, w:i.w, h:i.h, fichas:i.fichas, cant:i.cant, guiaPl:i.guiaPl, guia500:i.guia500 })), laminas: PLAN.laminas, sobrantes: PLAN.nuevos.map(s=>({ancho:s.ancho, alto:s.alto})) };
+        const { error } = await tacticalSupabase.from('plotter_montajes').insert({ nombre, fecha:iso, consecutivo, largo_cm:Math.round(PLAN.largo), detalle, creado_por:(window.tacticalUsuarioPerfil&&(window.tacticalUsuarioPerfil.nombre||window.tacticalUsuarioPerfil.email))||null });
+        if(error) throw error;
+        const colaIds = ITEMS.map(i=>i.colaId).filter(Boolean);
+        if(colaIds.length) await tacticalSupabase.from('plotter_cola').update({ estado:'en_montaje', montaje:nombre }).in('id', colaIds);
+        if(PLAN.usadosSob.length) await tacticalSupabase.from('plotter_sobrantes').update({ estado:'usado', usado_en:nombre }).in('id', PLAN.usadosSob);
+        if(PLAN.nuevos.length) await tacticalSupabase.from('plotter_sobrantes').insert(PLAN.nuevos.map(s=>({ ancho:Math.round(s.ancho*10)/10, alto:Math.round(s.alto*10)/10, origen:nombre })));
+        extra = ` Registrado, y se guardaron ${PLAN.nuevos.length} sobrante(s) POLI.${colaIds.length?' Las fichas del Kanban quedaron en montaje.':''}`; await cargarSobrantes(); await cargarCola(); planificar();
+      } catch(e){ console.error(e); extra = ' ⚠ No se pudo registrar el montaje (¿falta correr supabase/migracion_plotter_montajes.sql?).'; }
+    }
+    msg.style.color = '#1a7d3f'; msg.textContent = `Listo: "${nombre}" (${partes.length} archivo${partes.length>1?'s':''}, ${Math.round(CFG.ppp)} ppp).` + extra;
+  } catch(e){ console.error(e); msg.style.color = '#b91c1c'; msg.textContent = 'No se pudo generar: '+(e.message||e); }
+}
+
+/* ======================= INICIO ======================= */
+window.tacticalOnLogin = async function(){
+  const rol = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol;
+  if(!ROLES_PERMITIDOS.includes(rol)){ alert('No tienes permiso para entrar a este módulo.'); location.href = 'TACTICAL_ERP_HUB.html'; return; }
+  await Promise.all([cargarSobrantes(), cargarPlantillaRemota(), cargarCola()]); planificar();
+};
+agregarItem(false); resumenPlantilla(); renderSobrantes();
+</script>
+</body>
+</html>

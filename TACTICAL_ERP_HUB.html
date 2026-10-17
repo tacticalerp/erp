@@ -3853,6 +3853,7 @@
           db_opps = await tacticalOppsCargar();
           db_historial_cierres = await tacticalHistorialCargar();
           db_kanban = await tacticalFichasKanbanCargar();
+          try{ db_plotter_cola = await plotterColaCargar(); } catch(e){ console.warn('Cola de montaje no disponible', e); db_plotter_cola = []; }
           // Conde 2026-08-27: limpieza única de fichas urgentes que ya quedaron atrás en Entregar/
           // Postventa (de antes de que existiera el borrado automático, ver avisarSiPasaAEntregar) --
           // ya cumplieron su propósito de alertar a producción, no debían seguir marcadas.
@@ -4266,6 +4267,7 @@
         // aguanta guardar muchas fotos de diseño).
         // Kanban migrado a Supabase 2026-08-18 -- arranca vacío, se llena en window.tacticalOnLogin.
         let db_kanban = [];
+        let db_plotter_cola = [];   // rompecabezas enviados al Montaje Rompecabezas Plotter desde las fichas del Kanban
         const KANBAN_COLUMNAS = ['aprobada','diseno','preparacion','terminados','entregar','postventa'];
         const KANBAN_COLUMNA_NOMBRE = {
           aprobada:'Cotización Aprobada', diseno:'Diseño', preparacion:'En Producción',
@@ -4526,6 +4528,73 @@
         // como botón fugaz dentro del cotizador de Cuadernos recién calculado, sin quedar accesible
         // después de aprobar. Incluye el plano de corte (cuadrícula) por cada línea que tenga el
         // dato guardado (Conde 2026-08-14, letra chica y máxima densidad por página).
+        /* ===== Enviar a montaje (Montaje Rompecabezas Plotter) -- Conde 2026-10-17 =====
+           Solo fichas que nacen en Montajes Rompecabezas B2C (origen 'b2c'). El botón toma tamaño, fichas y cantidad de
+           cada rompecabezas del pedido y los deja en la cola (tabla plotter_cola); allá aparecen como miniaturas pendientes
+           para que el diseñador arrastre la imagen en alta. Cuando el montaje se genera, la ficha pasa a "Ya impresa". */
+        async function plotterColaCargar(){
+          const { data, error } = await tacticalSupabase.from('plotter_cola').select('*').order('created_at');
+          if(error){ console.warn('plotter_cola:', error.message); return []; }
+          return data || [];
+        }
+        function plotterEstadoFicha(id){
+          const filas = db_plotter_cola.filter(r=>r.ficha_id===id);
+          if(!filas.length) return null;
+          if(filas.every(r=>r.estado==='impreso')) return 'impreso';
+          if(filas.every(r=>r.estado!=='pendiente')) return 'en_montaje';
+          return 'pendiente';
+        }
+        function plotterBotonHtml(f){
+          const est = plotterEstadoFicha(f.id);
+          const filas = db_plotter_cola.filter(r=>r.ficha_id===f.id);
+          const nombreMontaje = (filas.find(r=>r.montaje)||{}).montaje || '';
+          const txt = 'display:inline; margin-left:4px;';
+          if(est==='impreso') return `<button type="button" class="kb-ico kb-ico-verde kb-tip-izq" disabled data-tip="Impresa en el montaje ${nombreMontaje}" aria-label="Impresa" style="opacity:.75; cursor:default; flex:1.6 1 0;">${ticon('check',{noMargin:true,size:15})}<span class="kb-ico-txt" style="${txt}">Impresa</span></button>`;
+          if(est==='en_montaje') return `<button type="button" class="kb-ico kb-ico-verde kb-tip-izq" data-tip="En el montaje ${nombreMontaje}: tócalo cuando ya esté impresa" aria-label="Ya impresa" style="flex:1.6 1 0; box-shadow:0 0 0 2px #9ae6b4;" onclick="marcarYaImpresa('${f.id}')">${ticon('printer',{noMargin:true,size:15})}<span class="kb-ico-txt" style="${txt}">Ya impresa</span></button>`;
+          if(est==='pendiente') return `<button type="button" class="kb-ico kb-tip-izq" style="background:#718096; flex:1.6 1 0;" data-tip="Ya está en la cola del montaje. Toca para quitarla de la cola" aria-label="En cola de montaje" onclick="quitarDeColaMontaje('${f.id}')">${ticon('clock',{noMargin:true,size:15})}<span class="kb-ico-txt" style="${txt}">En cola</span></button>`;
+          return `<button type="button" class="kb-ico kb-ico-azul kb-tip-izq" style="flex:1.6 1 0;" data-tip="Enviar a montaje (plotter)" aria-label="Enviar a montaje" onclick="enviarAMontaje('${f.id}')">${ticon('puzzle',{noMargin:true,size:15})}<span class="kb-ico-txt" style="${txt}">Enviar a montaje</span></button>`;
+        }
+        // Lee los rompecabezas de la ficha: primero del pedido B2C enlazado (datos exactos); si no aparece, de las líneas de la ficha.
+        async function plotterItemsDeFicha(f){
+          const filas = [];
+          try{
+            const { data: peds } = await tacticalSupabase.from('b2c_pedidos').select('id').eq('kanban_ficha_id', f.id);
+            for(const ped of (peds||[])){
+              const { data: its } = await tacticalSupabase.from('b2c_pedido_items').select('*').eq('pedido_id', ped.id);
+              (its||[]).forEach(it=>filas.push({ forma: it.forma || it.linea || '', fichas: it.fichas, medida: it.medida, cantidad: it.cantidad || 1, thumb_url: it.foto_thumb_url || null }));
+            }
+          } catch(e){ console.warn('No se pudo leer el pedido B2C', e); }
+          if(filas.length) return filas;
+          return (f.lineas||[]).map(l=>{
+            const m = /^(\d+)x\s*(?:Láser|Troquel)(?:\s*-\s*([^\d]+?))?\s+([\d.]+x[\d.]+)cm\s*\((\d+)f\)/.exec(l.desc||'');
+            return m ? { forma: (m[2]||'').trim(), fichas: parseInt(m[4],10), medida: m[3], cantidad: parseInt(m[1],10)||1, thumb_url: l.fotoUrl||null } : null;
+          }).filter(Boolean);
+        }
+        async function enviarAMontaje(id){
+          const f = db_kanban.find(x=>x.id===id); if(!f) return;
+          if(plotterEstadoFicha(id)){ alert('Esta ficha ya fue enviada a montaje.'); return; }
+          const items = await plotterItemsDeFicha(f);
+          if(!items.length){ alert('No encontré el rompecabezas de esta ficha (tamaño y fichas). Revisa que venga de Montajes Rompecabezas B2C.'); return; }
+          const resumen = items.map(i=>`${i.cantidad} x ${i.fichas} fichas ${i.medida} cm`).join('\n');
+          if(!confirm(`Enviar a montaje (plotter)?\n\nCliente: ${f.nombreCli||''}\n${resumen}\n\nAparecerán como miniaturas pendientes en Montajes > Montaje Rompecabezas Plotter.`)) return;
+          const filas = items.map(i=>({ ficha_id:f.id, ot:f.ot||null, cliente:f.nombreCli||'', forma:i.forma, fichas:i.fichas, medida:i.medida, cantidad:i.cantidad, thumb_url:i.thumb_url, estado:'pendiente' }));
+          const { error } = await tacticalSupabase.from('plotter_cola').insert(filas);
+          if(error){ alert('No se pudo enviar a montaje: '+(error.message||error)+'\n\n¿Ya corriste supabase/migracion_plotter_montajes.sql?'); return; }
+          db_plotter_cola = await plotterColaCargar(); renderKanban();
+        }
+        async function quitarDeColaMontaje(id){
+          if(!confirm('¿Quitar este rompecabezas de la cola de montaje? (Solo si todavía no está en un montaje.)')) return;
+          const { error } = await tacticalSupabase.from('plotter_cola').delete().eq('ficha_id', id).eq('estado','pendiente');
+          if(error){ alert('No se pudo quitar: '+(error.message||error)); return; }
+          db_plotter_cola = await plotterColaCargar(); renderKanban();
+        }
+        async function marcarYaImpresa(id){
+          if(!confirm('¿Este rompecabezas ya salió impreso del plotter?')) return;
+          const { error } = await tacticalSupabase.from('plotter_cola').update({ estado:'impreso' }).eq('ficha_id', id).eq('estado','en_montaje');
+          if(error){ alert('No se pudo marcar: '+(error.message||error)); return; }
+          db_plotter_cola = await plotterColaCargar(); renderKanban();
+        }
+
         function verOrdenProduccionFicha(id){
           const f = db_kanban.find(x=>x.id===id);
           if(!f) return;
@@ -5813,6 +5882,7 @@
             </div>
             ${checklist.length ? `<div class="kanban-checklist" style="margin-top:8px;">${checklistHtml}<div style="font-size:0.7rem; color:#a0aec0; margin-top:2px;">${hechos}/${checklist.length} completado</div></div>` : ''}
             <div class="kb-ico-fila">
+              ${f.origen==='b2c' ? plotterBotonHtml(f) : ''}
               ${f.origen!=='b2c' ? `<button type="button" class="kb-ico kb-ico-azul kb-tip-izq" data-tip="Ver Orden de Producción" aria-label="Ver Orden de Producción" onclick="verOrdenProduccionFicha('${f.id}')">${ticon('factory',{noMargin:true,size:15})}<span class="kb-ico-txt">OP</span></button>` : ''}
               ${(f.columna==='diseno' && !f.disenoAprobado) ? `<button type="button" class="kb-ico kb-ico-verde kb-tip-izq" ${f.disenoAprobado?'disabled':''} data-tip="${f.disenoAprobado?'Diseño aprobado':'Marcar diseño aprobado'}" aria-label="Diseño aprobado" onclick="marcarDisenoAprobado('${f.id}')">${f.disenoAprobado?ticon('check',{noMargin:true,size:15}):ticon('palette',{noMargin:true,size:15})}<span class="kb-ico-txt">Diseño</span></button>` : ''}
               <button type="button" class="kb-ico kb-ico-ambar kb-tip-izq" data-tip="${editando?'Cerrar edición':'Editar datos / fecha de entrega'}" aria-label="Editar datos / fecha de entrega" onclick="toggleEditarFicha('${f.id}')">${editando?ticon('x',{noMargin:true,size:15}):ticon('edit',{noMargin:true,size:15})}<span class="kb-ico-txt">${editando?'Cerrar':'Editar'}</span></button>
