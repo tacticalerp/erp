@@ -185,10 +185,6 @@ let contador = 0;
 function agregarItem(preguntar){
   contador++;
   const it = { id:'r'+contador, nombre:'Rompecabezas '+contador, w:50, h:33, fichas:300, cant:1, img:null, thumb:'', guiaPl:true, guia500:false, enc:{cx:.5,cy:.5,z:1}, nombreArchivo:'' };
-  if(preguntar){
-    it.guiaPl = confirm('¿Este rompecabezas lleva guía de armado de plantilla?\n\nAceptar = sí lleva. Cancelar = no.');
-    it.guia500 = confirm('¿Lleva también la guía de armado de 500 fichas (imagen original sin plantilla)?\n\nAceptar = sí lleva. Cancelar = no.');
-  }
   ITEMS.push(it); renderItems(); planificar();
 }
 // Selector de medida con el catálogo de Montajes Rompecabezas (Láser: rectangular, portarretrato, corazón, círculo; y Troquel)
@@ -261,8 +257,9 @@ function renderItems(){
       <div><label>Alto (cm)</label><input type="number" step="0.1" value="${it.h}" oninput="editarItem('${it.id}','h',this.value)"></div>
       <div><label>Fichas (piezas)</label><input type="number" value="${it.fichas}" oninput="editarItem('${it.id}','fichas',this.value)"></div>
       <div><label>Cantidad</label><input type="number" min="1" value="${it.cant}" oninput="editarItem('${it.id}','cant',this.value)"></div>
-      <label class="chk ancho2"><input type="checkbox" ${it.guiaPl?'checked':''} onchange="editarItem('${it.id}','guiaPl',this.checked)"> Guía de armado de plantilla</label>
-      <label class="chk ancho2"><input type="checkbox" ${it.guia500?'checked':''} onchange="editarItem('${it.id}','guia500',this.checked)"> Guía de 500+ fichas</label>
+      <div class="ancho2" style="border:1px solid #cbd5e1;border-radius:6px;padding:6px 8px;display:flex;gap:16px;flex-wrap:wrap;align-items:center"><b style="font-size:12px">Guías de armado:</b>
+        <label class="chk"><input type="checkbox" ${it.guiaPl?'checked':''} onchange="editarItem('${it.id}','guiaPl',this.checked)"> Cuadrada 12x12</label>
+        <label class="chk"><input type="checkbox" ${it.guia500?'checked':''} onchange="editarItem('${it.id}','guia500',this.checked)"> 500+ fichas</label></div>
       <label class="chk ancho2"><input type="checkbox" ${it.noGirar?'checked':''} onchange="editarItem('${it.id}','noGirar',this.checked)"> No girar este rompecabezas al acomodarlo (siempre derecho)</label>
       <div class="ancho2"><button class="btn gris mini" title="Intercambia ancho y alto de la medida" onclick="girarItem('${it.id}')">⟳ Intercambiar ancho/alto</button> <button class="btn gris mini" title="Mover y ampliar la imagen dentro del marco" onclick="abrirCrop('${it.id}')" ${it.img?'':'disabled'}>✂ Ajustar encuadre</button> <button class="btn rojo mini" title="Eliminar este rompecabezas de la lista" onclick="quitarItem('${it.id}')">✕ Quitar</button></div>
     </div>
@@ -464,11 +461,13 @@ function empacar(piezas, est){
   return { bins, noCaben };
 }
 // Puntaje de un acomodo: menos piezas sin cabida, menos láminas nuevas, sobrante reutilizable más grande, más área recuperable
+function altoVinilo(bin){ return bin.puestos.length ? Math.max(...bin.puestos.map(p=>p.y+p.h)) : 0; }   // solo se imprime hasta donde llega el último rompecabezas
 function puntaje(res){
   const nuevos = []; res.bins.forEach(bin=>sobrantesDeBin(bin).forEach(r=>nuevos.push(r)));
   const lam = res.bins.filter(b=>b.tipo==='lamina').length, suma = nuevos.reduce((a,r)=>a+r.w*r.h,0), mx = Math.max(0, ...nuevos.map(r=>r.w*r.h));
   const giradas = res.bins.reduce((a,b)=>a+b.puestos.filter(p=>p.rot).length, 0);
-  return [res.noCaben.length, lam, -mx, -suma, giradas, res.bins.length];
+  const vinilo = Math.round(res.bins.reduce((a,b)=>a+altoVinilo(b), 0));
+  return [res.noCaben.length, lam, vinilo, -mx, -suma, giradas, res.bins.length];
 }
 function mejorQue(a, b){ for(let i=0;i<a.length;i++){ if(a[i] < b[i]-1e-9) return true; if(a[i] > b[i]+1e-9) return false; } return false; }
 function planificar(){
@@ -480,41 +479,49 @@ function planificar(){
     const r = empacar(piezas, est), pt = puntaje(r); if(!mejor || mejorP && mejorQue(pt, mejorP)){ mejor = r; mejorP = pt; } });
   const { bins, noCaben } = mejor || { bins:[], noCaben:[] };
   bins.forEach(bin=>bin.puestos.forEach(p=>{ p.x = Math.max(0, Math.min(p.x, bin.W - p.w)); p.y = Math.max(0, Math.min(p.y, bin.H - p.h)); }));
-  // las piezas quedan pegadas al borde de abajo de su lámina (se voltea el acomodo): así la fila de guías queda a 1 mm de las imágenes
-  bins.forEach(bin=>{ const H = bin.H, W = bin.W;
-    bin.puestos.forEach(p=>{ p.y = H - p.y - p.h; });
-    bin.libres = bin.libres.map(r=>{ const y0 = Math.max(0, r.y), y1 = Math.min(H, r.y + r.h); return { x:r.x, w:r.w, y:H - y1, h:y1 - y0 }; }).filter(r=>r.h>1e-6);
-  });
   // sobrantes que se guardarán (de cada lámina o sobrante usado)
   const snap = v=>{ const r = Math.round(v); return Math.abs(v-r) <= 0.15 ? r : Math.round(v*10)/10; };   // 49,9 -> 50 (la separación de 1 mm no se descuenta del sobrante)
   const nuevos = []; bins.forEach((bin,bi)=>sobrantesDeBin(bin).forEach(r=>nuevos.push({ ancho:snap(r.w), alto:snap(r.h), bi, x:r.x, y:r.y })));
   // diseño en el rollo: láminas completas una debajo de otra, sobrantes en filas, y al final el área de guías
   const rollW = CFG.rolloW, m = CFG.margen, sep = CFG.sepBloques, anchoUtil = rollW - 2*m;
   let y = m; const bloques = [];
+  const ancho = b=>b.puestos.length ? Math.max(...b.puestos.map(p=>p.x+p.w)) : 0;
   let x = m, filaH = 0, filaBloques = [];
-  const cerrarFila = ()=>{ filaBloques.forEach(b=>{ b.y = y + filaH - b.bin.H; }); y += filaH + sep; filaBloques = []; x = m; filaH = 0; };
-  bins.filter(b=>b.tipo==='sobrante').forEach(b=>{ if(x + b.W > m + anchoUtil + 1e-6 && filaH>0) cerrarFila(); const bl = { bin:b, x, y }; bloques.push(bl); filaBloques.push(bl); x += b.W + sep; filaH = Math.max(filaH, b.H); });
+  const cerrarFila = ()=>{ y += filaH + sep; filaBloques = []; x = m; filaH = 0; };
+  bins.filter(b=>b.tipo==='sobrante').forEach(b=>{ const vh = altoVinilo(b); if(x + b.W > m + anchoUtil + 1e-6 && filaH>0) cerrarFila(); const bl = { bin:b, x, y, vh }; bloques.push(bl); filaBloques.push(bl); x += ancho(b) + sep; filaH = Math.max(filaH, vh); });
   if(filaH>0) cerrarFila();
-  bins.filter(b=>b.tipo==='lamina').forEach(b=>{ bloques.push({ bin:b, x:(rollW-b.W)/2, y }); y += b.H + sep; });
-  y -= sep;                                  // borde de abajo del último bloque (donde empiezan las guías)
-  // guías de armado: fuera del poliestireno, pegadas entre sí (sin espacio) y a 1 mm de las imágenes
+  bins.filter(b=>b.tipo==='lamina').forEach(b=>{ const vh = altoVinilo(b); bloques.push({ bin:b, x:(rollW-b.W)/2, y, vh }); y += vh + sep; });
+  // guías de armado: pegadas entre sí (sin espacio) y a 1 mm de las imágenes; primero llenan el vinilo libre al lado de los rompecabezas, el resto va debajo
+  const gap1mm = 0.1;
   const guias = []; const lista = [];
   const rotDe = (it, c)=>{ let r = false; bins.forEach(b=>b.puestos.forEach(p=>{ if(p.item===it && p.copia===c) r = !!p.rot; })); return r; };
   ITEMS.forEach(it=>{ for(let c=0;c<Math.max(1,it.cant);c++){ const rot = rotDe(it, c); if(it.guiaPl) lista.push({ tipo:'plantilla', item:it, rot }); if(it.guia500) lista.push({ tipo:'500', item:it, rot }); } });
   const plW = PL.img ? PL.w : 12, plH = PL.img ? PL.h : 12;
-  const gap1mm = 0.1;
-  let gx = m, gy = y + gap1mm, gfila = 0;
-  lista.forEach(g=>{
-    let gw, gh;
-    if(g.tipo==='plantilla'){ gw = plW; gh = plH; }
-    else{ const a = (g.rot ? g.item.h/g.item.w : g.item.w/g.item.h); let elegido = null;
-      for(let L=CFG.guiaMax; L>=CFG.guiaMin-1e-6; L-=0.5){ const w = a>=1 ? L : L*a, h = a>=1 ? L/a : L; if(gx + w <= m + anchoUtil + 1e-6){ elegido = { w, h }; break; } }
-      if(!elegido){ gy += gfila; gx = m; gfila = 0; const L = CFG.guiaMax; elegido = a>=1 ? { w:L, h:L/a } : { w:L*a, h:L }; }
-      gw = elegido.w; gh = elegido.h; }
-    if(gx + gw > m + anchoUtil + 1e-6 && gfila>0){ gy += gfila; gx = m; gfila = 0; }
-    guias.push({ ...g, x:gx, y:gy, w:gw, h:gh }); gx += gw; gfila = Math.max(gfila, gh);
+  const medidaGuia = (g, maxW)=>{ if(g.tipo==='plantilla') return { w:plW, h:plH };
+    const a = (g.rot ? g.item.h/g.item.w : g.item.w/g.item.h);
+    for(let L=CFG.guiaMax; L>=CFG.guiaMin-1e-6; L-=0.5){ const w = a>=1 ? L : L*a, h = a>=1 ? L/a : L; if(w <= maxW + 1e-6) return { w, h }; }
+    const L = CFG.guiaMin; return a>=1 ? { w:L, h:L/a } : { w:L*a, h:L }; };
+  // 1) huecos de vinilo a la derecha de cada bloque
+  let pend = lista.slice();
+  bloques.forEach(bl=>{
+    const x0 = bl.x + ancho(bl.bin) + gap1mm, x1 = rollW - m, yTop = bl.y, yBot = bl.y + bl.vh;
+    let cx = x0, cy = yTop, fila = 0;
+    for(let i=0;i<pend.length;){
+      const g = pend[i]; const d = medidaGuia(g, x1 - x0); let w = d.w, h = d.h;
+      if(cx + w > x1 + 1e-6){ if(fila===0) break; cy += fila; cx = x0; fila = 0; }
+      if(cy + h > yBot + 1e-6) break;
+      guias.push({ ...g, x:cx, y:cy, w, h }); cx += w; fila = Math.max(fila, h); pend.splice(i,1);
+    }
   });
-  const finGuias = lista.length ? gy + gfila + m : y + m;
+  // 2) las que sobran, debajo del último bloque
+  let gx = m, gy = y - sep + gap1mm, gfila = 0;
+  pend.forEach(g=>{
+    const d = medidaGuia(g, anchoUtil - (gx - m)); let w = d.w, h = d.h;
+    if(gx + w > m + anchoUtil + 1e-6 && gfila>0){ gy += gfila; gx = m; gfila = 0; const d2 = medidaGuia(g, anchoUtil); w = d2.w; h = d2.h; }
+    guias.push({ ...g, x:gx, y:gy, w, h }); gx += w; gfila = Math.max(gfila, h);
+  });
+  const finDebajo = pend.length ? gy + gfila + m : y - sep + m;
+  const finGuias = finDebajo;
   PLAN = { bins, bloques, guias, nuevos, noCaben, largo: Math.max(finGuias, m*2), usadosSob: bins.filter(b=>b.tipo==='sobrante').map(b=>b.ref), laminas: bins.filter(b=>b.tipo==='lamina').length };
   dibujarVistaPrevia(); resumenPlan();
 }
@@ -558,10 +565,12 @@ function pintarRollo(cx, S, desdeCm, hastaCm, vista){
   PLAN.bloques.forEach(b=>{
     if(b.y + b.bin.H < desdeCm || b.y > hastaCm) return;
     b.bin.puestos.forEach(p=>dibujarPuesto(cx, p, S, b.x, b.y, p.item));
-    if(vista){ cx.strokeStyle = b.bin.tipo==='lamina' ? '#1e3a5f' : '#b45309'; cx.setLineDash([S*1.5,S]); cx.lineWidth = Math.max(1,S*0.15); cx.strokeRect(b.x*S, b.y*S, b.bin.W*S, b.bin.H*S); cx.setLineDash([]);
+    if(vista){ cx.strokeStyle = b.bin.tipo==='lamina' ? '#1e3a5f' : '#b45309'; cx.setLineDash([S*1.5,S]); cx.lineWidth = Math.max(1,S*0.15); cx.strokeRect(b.x*S, b.y*S, b.bin.W*S, b.vh*S); cx.setLineDash([]);
       cx.fillStyle = '#1e3a5f'; cx.font = 'bold '+Math.max(9,S*2)+'px Arial'; cx.textAlign='left'; cx.fillText((b.bin.tipo==='lamina'?'Lámina ':'Sobrante ')+fmt(b.bin.W)+'x'+fmt(b.bin.H), b.x*S+4, b.y*S+Math.max(11,S*2.2));
+      cx.save(); cx.beginPath(); cx.rect(b.x*S, b.y*S, b.bin.W*S, b.vh*S); cx.clip();
       PLAN.nuevos.filter(s=>PLAN.bins[s.bi]===b.bin).forEach(s=>{ cx.fillStyle = 'rgba(26,125,63,.18)'; cx.fillRect((b.x+s.x)*S, (b.y+s.y)*S, s.ancho*S, s.alto*S); cx.strokeStyle='#1a7d3f'; cx.setLineDash([S,S*.7]); cx.strokeRect((b.x+s.x)*S, (b.y+s.y)*S, s.ancho*S, s.alto*S); cx.setLineDash([]);
         cx.fillStyle='#1a7d3f'; cx.font='bold '+Math.max(9,S*1.8)+'px Arial'; cx.fillText('POLI '+fmt(s.ancho)+'x'+fmt(s.alto), (b.x+s.x)*S+4, (b.y+s.y)*S+Math.max(11,S*2)); });
+      cx.restore();
     }
   });
   PLAN.guias.forEach(g=>{ if(g.y+g.h < desdeCm || g.y > hastaCm) return; dibujarGuia(cx, g, S); });
