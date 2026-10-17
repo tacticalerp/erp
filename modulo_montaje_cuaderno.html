@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tactical — Montaje para el cliente</title>
+<title>Tactical — Montajes y Sherpas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400&display=swap" rel="stylesheet">
 <style>
@@ -51,6 +51,9 @@
   button.btn.rojo{background:var(--accent);} button.btn.gris{background:#64748b;} button.btn.verde{background:var(--ok);}
   button.btn.mini{padding:3px 8px;font-size:12px;font-weight:600;}
   button.btn:disabled{opacity:.5;cursor:default;}
+  #genResultados{margin-top:6px;max-height:200px;overflow:auto;background:#fff;border:1px solid var(--border);border-radius:5px;display:none;}
+  #genResultados div{padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:13px;cursor:pointer;}
+  #genResultados div:hover{background:#eef4fb;}
   #cotResultados{margin-top:6px;max-height:200px;overflow:auto;background:#fff;border:1px solid var(--border);border-radius:5px;display:none;}
   #cotResultados div{padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:13px;cursor:pointer;}
   #cotResultados div:hover{background:#eef4fb;}
@@ -92,7 +95,7 @@
 <body>
 <header>
   <img src="logo_tactical.png" alt="Tactical">
-  <div><h1>Montaje para el cliente</h1><p>Cuadernos, cajas, carpetas o cualquier otro producto: sube los archivos y se arma el montaje con la plantilla de Tactical, listo para que el cliente apruebe por WhatsApp.</p></div>
+  <div><h1>Montajes y Sherpas</h1><p>Cuadernos, cajas, carpetas o cualquier otro producto: sube los archivos y se arma el montaje con la plantilla de Tactical, listo para que el cliente apruebe por WhatsApp.</p></div>
   <button class="nav-btn-hub" style="margin-left:auto;background:#475569" onclick="location.href='modulo_montajes.html'">← Montajes</button>
   <button class="nav-btn-hub" style="margin-left:0" onclick="location.href='TACTICAL_ERP_HUB.html'">Volver al Hub</button>
 </header>
@@ -115,6 +118,9 @@
   </div>
   <div class="solo-general" style="margin-top:12px;">
     <p class="hint"><b>Piezas del trabajo.</b> Una fila por cada pieza que se aprueba (caja, carpeta, sobre, sticker…), con nombre, cantidad y medida final. Si tiene reverso distinto, marca "Reverso".</p>
+    <datalist id="listaPapeles"></datalist>
+    <div style="margin-bottom:10px;"><label>Buscar cotización de otro producto (OT o cliente): trae cliente, cantidad, papel y plastificado</label>
+      <input type="text" id="buscaGen" placeholder="Ej: OT-1234 o nombre del cliente" oninput="buscarGeneral()"><div id="genResultados"></div></div>
     <div id="piezasEditor"></div>
     <div class="row2"><button class="btn gris mini" onclick="agregarPieza()">+ Agregar pieza</button></div>
   </div>
@@ -124,8 +130,8 @@
       <summary><span class="t">Medidas y anillado</span><span class="res" id="rMedidas"></span></summary>
       <div class="acc-cuerpo">
         <div class="grid">
-          <div class="solo-cuaderno"><label>Ancho cerrado (cm)</label><input type="number" id="fAncho" step="0.1" value="16" oninput="leerForm(true)"></div>
-      <div class="solo-cuaderno"><label>Alto cerrado (cm)</label><input type="number" id="fAlto" step="0.1" value="22" oninput="leerForm(true)"> <button class="btn gris mini" style="margin-top:4px;" onclick="girarMedidas()">⟳ Girar ancho/alto</button></div>
+          <div class="solo-cuaderno"><label>Ancho cerrado (cm)</label><input type="number" id="fAncho" step="0.1" value="17" oninput="leerForm(true)"></div>
+      <div class="solo-cuaderno"><label>Alto cerrado (cm)</label><input type="number" id="fAlto" step="0.1" value="24" oninput="leerForm(true)"> <button class="btn gris mini" style="margin-top:4px;" onclick="girarMedidas()">⟳ Girar ancho/alto</button></div>
       <div class="solo-cuaderno"><label>Anillado</label><select id="fAnilPos" onchange="leerForm(false)"><option value="lateral">Lateral (cuaderno)</option><option value="superior">Superior (libreta)</option><option value="ninguno">Sin anillado</option></select></div>
       <div class="solo-cuaderno"><label>Color del anillo</label><select id="fAnilColor" onchange="leerForm(false)"><option value="blanco">Blanco</option><option value="negro">Negro</option></select></div>
       <div class="solo-cuaderno"><label>Cobertura del anillo</label><select id="fAnilCob" onchange="leerForm(false)"><option value="total">Total (todo el lado)</option><option value="parcial">Parcial (2 secciones)</option></select></div>
@@ -140,6 +146,7 @@
         <div class="grid">
           <div class="solo-cuaderno"><label>Guardas (hojas de adentro de las tapas)</label><select id="fGuardas" onchange="leerForm(true)"><option value="0">No lleva</option><option value="1">Sí lleva</option></select></div>
       <div class="solo-cuaderno"><label>Cantidad de insertos</label><input type="number" id="fInsertos" min="0" max="12" value="0" oninput="leerForm(true)"></div>
+      <div class="solo-cuaderno"><label>Plastificado de la carátula</label><select id="fPlastCar" onchange="leerForm(false)"><option value="">Según la cotización</option><option value="brillante">Brillante</option><option value="mate">Mate</option><option value="sin">Sin plastificar</option></select></div>
       <div class="solo-cuaderno"><label>Nombre de la hoja interior</label><input type="text" id="fInterior" value="Hoja interior (cuadrícula)" oninput="leerForm(true)"></div>
         </div>
         <div class="row2"><button class="btn gris mini" onclick="agregarPiezaExtra()">+ Agregar otra pieza (ej. hoja de stickers)</button></div>
@@ -157,7 +164,7 @@
       <div><label>Gramaje del taco (g)</label><input type="number" id="aGramTaco" value="70" oninput="leerAnillado()"></div>
       <div><label>Hojas de insertos</label><input type="number" id="aHojasIns" value="0" oninput="leerAnillado()"></div>
       <div><label>Gramaje de insertos (g)</label><input type="number" id="aGramIns" value="150" oninput="leerAnillado()"></div>
-      <div><label>Hojas de guardas</label><input type="number" id="aHojasGuar" value="2" oninput="leerAnillado()"></div>
+      <div><label>Hojas de guardas</label><input type="number" id="aHojasGuar" value="0" oninput="leerAnillado()"></div>
       <div><label>Gramaje de guardas (g)</label><input type="number" id="aGramGuar" value="150" oninput="leerAnillado()"></div>
       <div><label>Tiras de sobrante (vacío = 2%, mín. 10)</label><input type="number" id="aSobrante" min="0" placeholder="Automático" oninput="leerAnillado()"></div>
       <div><label>Calibre del anillo</label><select id="aCalibre" onchange="leerAnillado()"><option value="0">Automático (recomendado)</option></select></div>
@@ -274,8 +281,8 @@ if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.clou
 /* ======================= ESTADO ======================= */
 const ROLES_PERMITIDOS = ['administrador','comercial','diseno','produccion'];
 const DIAS_RETENCION = 30;
-const S = { modo:'cuaderno', piezas:[], waCom:'', nomCom:'', waCli:'', ultimaUrlPdf:'', ot:'', cliente:'', cantidad:'', ancho:16, alto:22, anilPos:'lateral', anilColor:'blanco', anilEntra:1, anilPaso:0.8467, tapaTipo:'dura', cartonCal:1.5, hojasTaco:100, gramTaco:70, hojasIns:0, gramIns:150, hojasGuar:2, gramGuar:150, calibreManual:0, sobrante:null, reduccion:0.5, margenMin:0.7, margenAnillo:1.3, anilCobertura:'total', ver:false,
-  guardas:1, insertos:[], interior:'Hoja interior (cuadrícula)', slots:[], extras:[], pool:[], sel:null };
+const S = { modo:'cuaderno', mat:{}, plastCar:'', piezas:[], waCom:'', nomCom:'', waCli:'', ultimaUrlPdf:'', ot:'', cliente:'', cantidad:'', ancho:17, alto:24, anilPos:'lateral', anilColor:'blanco', anilEntra:1, anilPaso:0.8467, tapaTipo:'dura', cartonCal:1.5, hojasTaco:100, gramTaco:70, hojasIns:0, gramIns:150, hojasGuar:0, gramGuar:150, calibreManual:0, sobrante:null, reduccion:0.5, margenMin:0.7, margenAnillo:1.3, anilCobertura:'total', ver:false,
+  guardas:0, insertos:[], interior:'Hoja interior (cuadrícula)', slots:[], extras:[], pool:[], sel:null };
 let cotizaciones = [];
 let uid = 1;
 const nuevoId = () => 'x'+(uid++);
@@ -288,6 +295,7 @@ function construirSlots(){
   const lista = [];
   if(S.modo==='general'){
     S.piezas.forEach(pz=>{
+      const matPz = [pz.papel, (pz.plast && pz.plast!=='Sin plastificado') ? pz.plast.toLowerCase() : ''].filter(Boolean).join(' · ');
       const w = Math.max(1, parseFloat(pz.ancho)||10), h = Math.max(1, parseFloat(pz.alto)||10);
       const gsub = (pz.cantidad ? 'Cantidad '+pz.cantidad+' · ' : '') + 'Tamaño '+fmtCm(h)+' x '+fmtCm(w)+' cm';
       const nom = (pz.nombre||'Pieza').toUpperCase();
@@ -295,7 +303,8 @@ function construirSlots(){
         const key = 'p'+pz.id+suf, pr = previos[key];
         lista.push({ key, titulo, tituloEditado:false, sub: cara==='frente' ? (pz.reverso?'Frente, por fuera':'Vista del diseño') : 'Atrás, por dentro', cara,
           poolId: pr ? pr.poolId : null, blanco: pr ? pr.blanco : false, fit: pr ? pr.fit : 'cover', tipo:'pieza', cotas:true, regla:false,
-          w, h, gid:'p'+pz.id, gtit:(pz.nombre||'Pieza').toUpperCase(), gsub });
+          w, h, gid:'p'+pz.id, gtit:(pz.nombre||'Pieza').toUpperCase(), gsub,
+          material: (pr && pr.materialEditado) ? pr.material : matPz, materialEditado: pr ? pr.materialEditado : false });
       });
     });
     S.slots = lista; return;
@@ -304,14 +313,15 @@ function construirSlots(){
     const p = previos[key];
     lista.push({ key, titulo: p && p.tituloEditado ? p.titulo : titulo, tituloEditado: p ? p.tituloEditado : false,
       sub, cara, poolId: p ? p.poolId : null, blanco: p ? p.blanco : false, fit: p ? p.fit : 'cover',
-      tipo: p ? p.tipo : tipo, cotas, regla: p ? p.regla : !!regla });
+      tipo: p ? p.tipo : tipo, cotas, regla: p ? p.regla : !!regla, material: p ? p.material : '', materialEditado: p ? p.materialEditado : false });
   };
-  add('portada','PORTADA','Frente, por fuera','frente','tapa',true);
-  add('contra','CONTRAPORTADA','Atrás, por fuera','respaldo','tapa',true);
+  // Con guardas el montaje se lee como el cuaderno abierto: carátula | guarda de carátula, y luego guarda de contracarátula | contracarátula.
+  add('portada','CARÁTULA','Por fuera','frente','tapa',true);
   if(S.guardas){
-    add('guarda1','REVERSO DE PORTADA','Por dentro (guarda)','frente','tapa',false);
-    add('guarda2','REVERSO DE CONTRAPORTADA','Por dentro (guarda)','respaldo','tapa',false);
+    add('guarda1','GUARDA DE CARÁTULA','Por dentro (guarda)','respaldo','tapa',false);
+    add('guarda2','GUARDA DE CONTRACARÁTULA','Por dentro (guarda)','frente','tapa',false);
   }
+  add('contra','CONTRACARÁTULA','Por fuera','respaldo','tapa',true);
   S.insertos.forEach((ins,i)=>{
     const n = ins || ('Inserto '+(i+1));
     add('ins'+i+'f', n.toUpperCase()+' · FRENTE', 'Hoja que se repite en el cuaderno', 'frente', 'interior', false, false);
@@ -329,13 +339,38 @@ function construirSlots(){
   S.slots = lista;
 }
 // Medida real de cada pieza en cm: la carátula es el tamaño del cuaderno; la hoja interior es S.reduccion más pequeña en ancho y alto.
+// Texto gris que sale debajo de cada gráfica: tipo de tapa, material, plastificado y color del anillado (editable por cuadro)
+function textoPlastCar(){
+  const M = S.mat || {};
+  if(S.plastCar==='sin') return '';
+  if(S.plastCar==='brillante') return 'plastificada brillante';
+  if(S.plastCar==='mate') return 'plastificada mate';
+  return M.caratulaPlast ? 'plastificada' : '';
+}
+function materialDeSlot(sl){
+  if(sl.materialEditado) return sl.material || '';
+  if(S.modo==='general') return sl.material || '';
+  const M = S.mat || {};
+  const tapa = { dura:'Tapa dura', semidura:'Tapa semidura', blanda:'Tapa blanda' }[S.tapaTipo] || '';
+  const anillo = S.anilPos!=='ninguno' ? 'Anillado '+S.anilColor : '';
+  if(sl.key==='portada' || sl.key==='contra'){
+    const base = M.caratulaSust !== undefined ? [M.caratulaSust, textoPlastCar(), M.caratulaOtros] : [textoPlastCar()];
+    return [tapa, ...base, anillo].filter(Boolean).join(' · ');
+  }
+  if(sl.key==='guarda1' || sl.key==='guarda2') return M.guardas || '';
+  const mi = /^ins(\d+)[fr]$/.exec(sl.key);
+  if(mi) return (M.insertos && M.insertos[+mi[1]]) || '';
+  if(sl.key==='intf' || sl.key==='intr') return M.taco || ('Papel bond '+S.gramTaco+' g');
+  return sl.material || '';
+}
+function editarMaterial(key, v){ const sl = S.slots.find(x=>x.key===key); if(!sl) return; sl.material = v; sl.materialEditado = v !== ''; dibujarMontaje(); }
 function dimsSlot(sl){ if(sl.w) return { w: sl.w, h: sl.h }; const r = sl.tipo==='interior' ? S.reduccion : 0; return { w: Math.max(1, S.ancho - r), h: Math.max(1, S.alto - r) }; }
 function fmtCm(n){ return (Math.round(n*10)/10).toString().replace('.', ','); }
 function cambiarTipo(key, v){ const sl = S.slots.find(x=>x.key===key); if(sl){ sl.tipo = v; if(v==='tapa') sl.regla = false; renderTodo(); } }
 function cambiarRegla(key, v){ const sl = S.slots.find(x=>x.key===key); if(sl){ sl.regla = !!v; renderTodo(); } }
 /* ======================= MODO "OTRO PRODUCTO" ======================= */
 let piezaContador = 0;
-function nuevaPieza(){ piezaContador++; return { id:'z'+piezaContador, nombre:'Pieza '+piezaContador, cantidad:'', ancho:'', alto:'', reverso:false }; }
+function nuevaPieza(){ piezaContador++; return { id:'z'+piezaContador, nombre:'Pieza '+piezaContador, cantidad:'', ancho:'', alto:'', reverso:false, papel:'', plast:'' }; }
 function cambiarModo(){
   S.modo = document.getElementById('fModo').value;
   document.body.classList.toggle('modo-general', S.modo==='general');
@@ -351,7 +386,11 @@ function renderPiezas(){
       <div><label>Ancho final (cm)</label><input type="number" step="0.1" value="${esc(pz.ancho)}" oninput="editarPieza('${pz.id}','ancho',this.value)"></div>
       <div><label>Alto final (cm)</label><input type="number" step="0.1" value="${esc(pz.alto)}" oninput="editarPieza('${pz.id}','alto',this.value)"></div>
       <label style="display:flex;gap:4px;align-items:center;font-weight:600;margin:0 0 8px;"><input type="checkbox" ${pz.reverso?'checked':''} onchange="editarPieza('${pz.id}','reverso',this.checked)"> Reverso</label>
-      <button class="btn rojo mini" style="margin-bottom:8px;" onclick="quitarPieza('${pz.id}')">Quitar</button></div>`).join('');
+      <button class="btn rojo mini" style="margin-bottom:8px;" onclick="quitarPieza('${pz.id}')">Quitar</button>
+      <div style="grid-column:1/-1;display:grid;grid-template-columns:2fr 1fr;gap:6px;">
+        <div><label>Tipo de papel / material (sale en gris abajo)</label><input type="text" list="listaPapeles" value="${esc(pz.papel||'')}" placeholder="Ej: Propalcote 150 g" oninput="editarPieza('${pz.id}','papel',this.value)"></div>
+        <div><label>Plastificado</label><select onchange="editarPieza('${pz.id}','plast',this.value)">${['','Sin plastificado','Plastificado brillante','Plastificado mate','Plastificado'].map(o=>`<option value="${o}" ${(pz.plast||'')===o?'selected':''}>${o===''?'(sin indicar)':(o==='Plastificado'?'Plastificado (por definir tipo)':o)}</option>`).join('')}</select></div>
+      </div></div>`).join('');
 }
 function editarPieza(id, campo, valor){
   const pz = S.piezas.find(x=>x.id===id); if(!pz) return;
@@ -360,6 +399,49 @@ function editarPieza(id, campo, valor){
   if(campo==='reverso') renderSlots(); else renderSlots();
   dibujarMontaje(); if(typeof planPrueba==='function') planPrueba();
 }
+/* Cotizaciones de las otras calculadoras (cajas, carpetas, bolsas, volantes...): papel y plastificado salen de los parámetros */
+let _tBuscaGen = null;
+function buscarGeneral(){
+  clearTimeout(_tBuscaGen);
+  _tBuscaGen = setTimeout(async ()=>{
+    const q = document.getElementById('buscaGen').value.trim().replace(/[,%()]/g,' '), caja = document.getElementById('genResultados');
+    if(q.length < 2){ caja.style.display = 'none'; return; }
+    let filas = [];
+    try{
+      const { data, error } = await tacticalSupabase.from('cotizaciones_calculadoras').select('id, linea, ot, cliente_empresa, descripcion, params, created_at')
+        .or(`ot.ilike.%${q}%,cliente_empresa.ilike.%${q}%`).order('created_at', { ascending:false }).limit(15);
+      if(error) throw error; filas = data || [];
+    } catch(e){ console.warn('Búsqueda de cotizaciones', e); }
+    window._genFilas = filas;
+    caja.innerHTML = filas.length ? filas.map((r,i)=>`<div onclick="cargarGeneral(${i})"><b>${esc(r.ot||'sin OT')}</b> — ${esc(r.cliente_empresa||'(sin cliente)')} <span style="color:#64748b">· ${esc(r.linea||'')} · ${esc((r.descripcion||'').slice(0,60))}</span></div>`).join('') : '<div style="cursor:default;color:#64748b;">Sin resultados</div>';
+    caja.style.display = 'block';
+  }, 300);
+}
+function extraerMaterialParams(p){
+  p = p || {}; const it0 = (Array.isArray(p.items) && p.items[0]) || {};
+  let sus = p.sustrato || it0.sustrato || '';
+  if(sus && typeof sus === 'object') sus = (sus.nombre||'') + ' ' + (sus.gramaje||'') + ' g';
+  else if(typeof sus === 'string' && sus.includes('__')){ const [n,g] = sus.split('__'); sus = n + (g ? ' '+g+' g' : ''); }
+  const plast = p.plastificado === true || (Array.isArray(p.items) && p.items.some(i=>i.plastificado===true)) || (Array.isArray(p.acabados) && p.acabados.some(a=>a && a.tipo==='plastificado'));
+  return { papel: sus ? 'Papel '+String(sus).trim() : '', plast: plast ? 'Plastificado' : '' };
+}
+function cargarGeneral(i){
+  const r = (window._genFilas||[])[i]; if(!r) return;
+  const m = extraerMaterialParams(r.params), p = r.params || {};
+  S.cliente = r.cliente_empresa || S.cliente; S.ot = r.ot || S.ot;
+  let pz = S.piezas.length===1 && !S.piezas[0].cantidad && !S.piezas[0].ancho && !S.piezas[0].alto ? S.piezas[0] : null;
+  if(!pz){ pz = nuevaPieza(); S.piezas.push(pz); }
+  pz.nombre = (r.descripcion || r.linea || 'Pieza').slice(0,40); pz.cantidad = p.cantidad || (p.items && p.items[0] && p.items[0].cantidad) || pz.cantidad;
+  pz.papel = m.papel; pz.plast = m.plast;
+  document.getElementById('genResultados').style.display = 'none'; document.getElementById('buscaGen').value = '';
+  volcarForm(); renderPiezas(); construirSlots(); renderTodo();
+}
+(function llenarPapeles(){
+  try{
+    const dl = document.getElementById('listaPapeles'); if(!dl || typeof PRECIOS_SUSTRATOS_MAESTRO === 'undefined') return;
+    Object.keys(PRECIOS_SUSTRATOS_MAESTRO).forEach(k=>{ const [n,g] = k.split('__'); const o = document.createElement('option'); o.value = 'Papel '+n+(g?' '+g+' g':''); dl.appendChild(o); });
+  } catch(e){}
+})();
 function agregarPieza(){ S.piezas.push(nuevaPieza()); renderPiezas(); construirSlots(); renderTodo(); }
 function quitarPieza(id){
   if(S.piezas.length<=1){ alert('Debe quedar al menos una pieza.'); return; }
@@ -397,6 +479,8 @@ function leerForm(reconstruir){
   S.anilEntra = parseFloat(document.getElementById('fAnilEntra').value) || 1;
   S.anilCobertura = document.getElementById('fAnilCob').value;
   S.guardas = parseInt(document.getElementById('fGuardas').value,10) || 0;
+  S.plastCar = document.getElementById('fPlastCar').value;
+  if(S.guardas !== (S.hojasGuar > 0 ? 1 : 0)){ S.hojasGuar = S.guardas ? 2 : 0; document.getElementById('aHojasGuar').value = S.hojasGuar; }   // 'Sí lleva' = 2 hojas de guarda; 'No lleva' = 0
   const nIns = Math.max(0, Math.min(12, parseInt(document.getElementById('fInsertos').value,10) || 0));
   while(S.insertos.length < nIns) S.insertos.push('');
   S.insertos.length = nIns;
@@ -420,6 +504,7 @@ function volcarForm(){
   document.getElementById('fAnilEntra').value = S.anilEntra;
   document.getElementById('fAnilCob').value = S.anilCobertura;
   document.getElementById('fGuardas').value = S.guardas ? '1' : '0';
+  document.getElementById('fPlastCar').value = S.plastCar;
   document.getElementById('fInsertos').value = S.insertos.length;
   document.getElementById('fInterior').value = S.interior;
 }
@@ -467,6 +552,21 @@ function cargarCotizacion(id){
   S.hojasIns = insL.reduce((a,l)=>a+(l.hojasPorCuaderno||0),0);
   S.gramIns = S.hojasIns ? Math.round(insL.reduce((a,l)=>a+(l.hojasPorCuaderno||0)*((l.sustrato&&l.sustrato.gramaje)||150),0)/S.hojasIns) : 150;
   S.hojasGuar = (p.guardasCantidad != null) ? p.guardasCantidad : (S.tapaTipo==='dura' ? 2 : 0); S.gramGuar = (p.guardasSustrato && p.guardasSustrato.gramaje) || 150;
+  // Material de cada pieza, tal como está en la cotización (sale en gris debajo de cada gráfica)
+  const sust = l => (l && l.sustrato) ? `${l.sustrato.nombre} ${l.sustrato.gramaje} g` : '';
+  const ACAB = { plastificado:'plastificada', uv_parcial:'UV parcial', troquelado:'troquelada', estampado:'estampada', colaminado:'colaminada', fondo_pleno:'fondo pleno' };
+  const acab = l => ((l && l.acabados) || []).map(a=>ACAB[a.tipo] || a.tipo).join(', ');
+  const car = lineas.find(l=>l.rol==='caratula');
+  S.mat = {
+    caratula: [sust(car), acab(car)].filter(Boolean).join(' · '),
+    caratulaPlast: !!(car && (car.acabados||[]).some(a=>a.tipo==='plastificado')),
+    caratulaSust: sust(car),
+    caratulaOtros: (car && (car.acabados||[]).filter(a=>a.tipo!=='plastificado').map(a=>ACAB[a.tipo] || a.tipo).join(', ')) || '',
+    taco: taco ? 'Papel '+sust(taco) : '',
+    insertos: insL.map(l=>[ 'Papel '+sust(l), acab(l) ].filter(Boolean).join(' · ')),
+    guardas: p.guardasSustrato ? ['Papel '+p.guardasSustrato.nombre+' '+p.guardasSustrato.gramaje+' g', p.guardasPlastificado ? 'plastificadas' : ''].filter(Boolean).join(' · ') : '',
+  };
+  S.plastCar = '';
   S.calibreManual = 0; S.sobrante = null;
   S.guardas = S.hojasGuar > 0 ? 1 : 0;
   S.extras = []; S.slots = []; // otro trabajo: se parte de cero
@@ -801,6 +901,7 @@ function renderSlots(){
     return `<div class="slot ${it||s.blanco?'llena':''}" data-key="${s.key}" draggable="${it||s.blanco?'true':'false'}" onclick="clickSlot('${s.key}')">
       <input class="nom" type="text" value="${esc(s.titulo)}" onclick="event.stopPropagation()" onchange="renombrarSlot('${s.key}', this.value)">
       <div class="s">${esc(s.sub)} · ${fmtCm(dimsSlot(s).w)} x ${fmtCm(dimsSlot(s).h)} cm</div>
+      <input class="nom" type="text" style="color:#6b7280;" placeholder="Material (sale en gris abajo)" title="Material que se imprime en gris debajo de la gráfica" value="${esc(materialDeSlot(s))}" onclick="event.stopPropagation()" oninput="editarMaterial('${s.key}', this.value)">
       ${S.modo==='general' ? '' : `<select style="font-size:11.5px;padding:2px 4px;" onclick="event.stopPropagation()" onchange="cambiarTipo('${s.key}', this.value)"><option value="tapa" ${s.tipo==='tapa'?'selected':''}>Tamaño: carátula</option><option value="interior" ${s.tipo==='interior'?'selected':''}>Tamaño: hoja interior (−${fmtCm(S.reduccion)} cm)</option></select>`}
       ${s.tipo==='interior'?`<label style="font-size:11px;font-weight:600;display:flex;gap:4px;align-items:center;" onclick="event.stopPropagation()"><input type="checkbox" ${s.regla?'checked':''} onchange="cambiarRegla('${s.key}', this.checked)"> Revisar márgenes de la cuadrícula</label>`:''}
       <div class="vista">${vista}</div>
@@ -861,8 +962,11 @@ function pieza(w,h){ return { w, h }; }
 function grupoDeSlot(sl){
   if(sl.gid) return { id: sl.gid, titulo: sl.gtit, sub: sl.gsub };
   const k = sl.key;
+  if(S.guardas){   // cada tapa con su guarda en la misma fila
+    if(k==='portada'||k==='guarda1') return { id:'car1', titulo:'CARÁTULA Y SU GUARDA', sub:'La tapa de adelante: por fuera y por dentro' };
+    if(k==='guarda2'||k==='contra') return { id:'car2', titulo:'CONTRACARÁTULA Y SU GUARDA', sub:'La tapa de atrás: por dentro y por fuera' };
+  }
   if(k==='portada'||k==='contra') return { id:'car', titulo:'CARÁTULAS', sub:'Lo que se ve por fuera del cuaderno' };
-  if(k==='guarda1'||k==='guarda2') return { id:'guardas', titulo:'GUARDAS', sub:'Hojas de adentro de las tapas' };
   const m = /^ins(\d+)[fr]$/.exec(k);
   if(m){ const i = parseInt(m[1],10); return { id:'ins'+i, titulo:(S.insertos[i]||('Inserto '+(i+1))).toUpperCase(), sub:'Hojas que se intercalan dentro del cuaderno' }; }
   if(k==='intf'||k==='intr') return { id:'int', titulo:(S.interior||'Hoja interior').toUpperCase(), sub:'Se repite en todas las hojas del cuaderno' };
@@ -880,7 +984,7 @@ function agruparSlots(){
 
 function disenarLayout(){
   const margen = 100, gapIn = 200;
-  const altoCab = 90, altoTitulo = 150, bajoPieza = 100, sepGrupo = 110;
+  const altoCab = 90, altoTitulo = 150, bajoPieza = 150, sepGrupo = 110;
   const grupos = agruparSlots();
   const pw = Math.floor(Math.min(700, 1000*S.ancho/S.alto));
   const ph = Math.round(pw * S.alto / S.ancho);
@@ -919,6 +1023,8 @@ function calcularAnillado(){
     largoLomo: S.anilPos==='superior' ? S.ancho : S.alto     // la carátula completa, no la hoja interior
   });
 }
+// Tipo de tapa: recalcula el anillo. Las guardas NO se activan solas (por defecto no lleva; se eligen en "Componentes del cuaderno").
+function cambiarTapa(){ leerAnillado(); }
 function leerAnillado(){
   const n = (id,d) => { const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? d : v; };
   S.tapaTipo = document.getElementById('aTapa').value;
@@ -1122,6 +1228,12 @@ function dibujarMontaje(){
       cx.strokeStyle = '#c7ced6'; cx.lineWidth = 2; cx.strokeRect(px,py,pwP,phP);
       if(S.modo!=='general') dibujarAnillos(cx, x, y, g.cw, g.ch, sl.cara || 'frente', S.anilPos, S.anilColor, s);
       if(sl.cotas) dibujarCotas(cx, px, py, pwP, phP, dm, (S.anilPos==='lateral' && sl.cara==='respaldo') ? 'izq' : 'der');
+      const mat = materialDeSlot(sl);
+      if(mat){   // material en gris, pequeño, debajo de la gráfica (y de la cota del ancho si la tiene)
+        cx.fillStyle = '#8a8f98'; cx.font = '24px Arial, sans-serif'; cx.textAlign = 'center';
+        const lm = envolverTexto(cx, mat, Math.max(pwP, 520) + 100, 2);
+        lm.forEach((t,j)=>cx.fillText(t, px + pwP/2, py + phP + (sl.cotas ? 92 : 44) + j*28));
+      }
     });
   });
 
@@ -1196,7 +1308,7 @@ function enviarWaCliente(){
   window.open('https://wa.me/'+(num||'')+'?text='+encodeURIComponent(msg), '_blank');
 }
 // Comerciales de Tactical (número con indicativo de país). Se eligen en el módulo; el número queda editable por si cambia.
-const COMERCIALES_WA = [ { nombre:'Norely', wa:'573112228871' }, { nombre:'Helver', wa:'573208401643' } ];
+const COMERCIALES_WA = [ { nombre:'Norely Sarmiento', wa:'573112228871' }, { nombre:'Helver Conde', wa:'573208401643' } ];
 function llenarComerciales(){
   const sel = document.getElementById('fComercial'); if(!sel || sel.options.length>1) return;
   COMERCIALES_WA.forEach((c,i)=>{ const o = document.createElement('option'); o.value = i; o.textContent = c.nombre+' (+'+c.wa+')'; sel.appendChild(o); });
@@ -1209,9 +1321,10 @@ function elegirComercial(){
 function seleccionarComercialInicial(){
   // 1) el que quedó guardado en este navegador; 2) el que coincide con el usuario que inició sesión; 3) Norely
   let idx = COMERCIALES_WA.findIndex(c=>c.wa===S.waCom);
+  if(idx>=0) S.nomCom = COMERCIALES_WA[idx].nombre;
   if(idx<0 && !S.waCom){
     const nombre = ((window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.nombre) || '').toLowerCase();
-    idx = COMERCIALES_WA.findIndex(c=>nombre.includes(c.nombre.toLowerCase()));
+    idx = COMERCIALES_WA.findIndex(c=>nombre.includes(c.nombre.split(' ')[0].toLowerCase()));
     if(idx<0) idx = 0;
     S.waCom = COMERCIALES_WA[idx].wa; S.nomCom = COMERCIALES_WA[idx].nombre;
   }
@@ -1360,6 +1473,11 @@ function planPrueba(){
     <svg width="300" height="${pl.P.H*esc_}" viewBox="0 0 ${pl.P.W} ${pl.P.H}" style="background:#f8fafc;border:1px solid #cbd5e1;">
     ${h.map(p=>`<rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" fill="${p.tipo==='interior'?'#dcfce7':'#dbeafe'}" stroke="#1e3a5f" stroke-width="0.2"/><text x="${p.x+p.w/2}" y="${p.y+p.h/2}" font-size="1.6" text-anchor="middle" fill="#1e3a5f">${esc(p.s.titulo.slice(0,26))}</text>`).join('')}</svg></div>`).join('');
 }
+// Rótulo de cada pieza en la prueba de impresión (Sherpa): nombre + material, tapa, plastificado y color del anillado, igual que en el montaje
+function rotuloPrueba(sl){
+  const nombre = String(sl.titulo || '').replace(/\s+/g,' ').trim(), mat = materialDeSlot(sl);
+  return mat ? nombre+' — '+mat : nombre;
+}
 function canvasPiezaPrueba(p, P){
   const wpx = Math.round(p.bwcm/2.54*DPI_PRUEBA), hpx = Math.round(p.bhcm/2.54*DPI_PRUEBA);
   const base = document.createElement('canvas'); base.width = wpx; base.height = hpx;
@@ -1387,6 +1505,12 @@ async function descargarPrueba(){
     for(const p of pl.hojas[n]){
       const cv = canvasPiezaPrueba(p, P);
       doc.addImage(cv.toDataURL('image/jpeg',0.95), 'JPEG', p.x*10, p.y*10, p.w*10, p.h*10);
+      if(P.g >= 0.3){   // rótulo gris pequeño debajo de la pieza, dentro de la separación entre piezas
+        let t = rotuloPrueba(p.s); const maxW = Math.max(10, p.w*10 - 2*(P.b*10 + 4));
+        doc.setFontSize(5.5); doc.setTextColor(110);
+        while(doc.getTextWidth(t) > maxW && t.length > 10) t = t.slice(0, -2);
+        doc.text(t, (p.x + p.w/2)*10, (p.y + p.h)*10 + 2.6, { align:'center' });
+      }
       if(P.marcas){
         const b = P.b*10, L = 3, off = 1; // marcas del borde del sangrado hacia afuera
         const tx0 = p.x*10 + b, ty0 = p.y*10 + b, tx1 = (p.x+p.w)*10 - b, ty1 = (p.y+p.h)*10 - b;
