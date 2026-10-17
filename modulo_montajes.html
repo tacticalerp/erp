@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tactical — Montajes</title>
+<style>
+  /* Conde 2026-10-17: un solo acceso "Montajes" en el Hub, desde aquí se entra a las herramientas de montaje. */
+  :root{ --panel:#dde3ea; --border:#94a3b8; --text:#1a202c; --muted:#5a6472; --accent:#cc0000; --azul:#1e3a5f; }
+  *{box-sizing:border-box;}
+  body{margin:0;background:#12161d;color:var(--text);font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
+  header{padding:14px 22px;background:var(--azul);display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  header img{height:38px;background:#fff;border-radius:4px;padding:2px 6px;}
+  header h1{margin:0;font-size:16px;color:#fff;}
+  header p{margin:2px 0 0;font-size:12.5px;color:#cbd8e8;}
+  .nav-btn-hub{background:#cc0000;color:#fff;border:none;padding:8px 16px;border-radius:4px;font-weight:bold;cursor:pointer;font-size:0.9rem;margin-left:auto;}
+  main{max-width:1100px;margin:0 auto;padding:22px 16px;}
+  .intro{color:#cbd5e1;font-size:14px;margin:0 0 18px;}
+  .tarjetas{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
+  .tarjeta{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:10px;cursor:pointer;transition:transform .12s, box-shadow .12s;}
+  .tarjeta:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.35);}
+  .tarjeta h2{margin:0;font-size:17px;color:var(--azul);display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .tarjeta p{margin:0;font-size:13.5px;color:#334155;line-height:1.45;}
+  .tarjeta ul{margin:0;padding-left:18px;font-size:12.5px;color:#475569;line-height:1.5;}
+  .tarjeta .pie{margin-top:auto;font-weight:800;font-size:13px;color:var(--accent);}
+  .badge{font-size:11px;font-weight:800;border-radius:10px;padding:2px 8px;background:#1a7d3f;color:#fff;}
+  .badge.pronto{background:#64748b;}
+  .tarjeta.pronto{opacity:.6;cursor:default;}
+  .tarjeta.pronto:hover{transform:none;box-shadow:none;}
+  #sinAcceso{display:none;color:#fca5a5;font-weight:700;}
+</style>
+</head>
+<body>
+<header>
+  <img src="logo_tactical.png" alt="Tactical">
+  <div><h1>Montajes</h1><p>Herramientas de montaje: para el cliente, para impresión y para plotter.</p></div>
+  <button class="nav-btn-hub" onclick="location.href='TACTICAL_ERP_HUB.html'">Volver al Hub</button>
+</header>
+<main>
+  <p class="intro">Elige la herramienta de montaje que necesitas.</p>
+  <div class="tarjetas" id="tarjetas">
+
+    <div class="tarjeta" data-roles="administrador,comercial,diseno,produccion" onclick="location.href='modulo_montaje_cuaderno.html'">
+      <h2>Montaje para el cliente <span class="badge">Activo</span></h2>
+      <p>Arma el montaje que el cliente revisa y aprueba: cuadernos con anillado y cualquier otro producto (cajas, carpetas, sobres, stickers…).</p>
+      <ul>
+        <li>Se llena solo desde la cotización</li>
+        <li>Cotas, anillo y revisión de medidas, márgenes y colores RGB</li>
+        <li>Botón de aprobación por WhatsApp al comercial</li>
+        <li>Calibre y tiras del anillo para comprar</li>
+      </ul>
+      <div class="pie">Abrir ➔</div>
+    </div>
+
+    <div class="tarjeta" data-roles="administrador,diseno" onclick="location.href='modulo_montajes_impresion.html'">
+      <h2>Montajes de impresión <span class="badge">Activo</span></h2>
+      <p>Automatiza el montaje para imprimir: taco, agenda, carátula, catálogo y montaje libre, con sangrados, doble corte, guías y receta de tinta.</p>
+      <ul>
+        <li>Sangrados automáticos y doble corte</li>
+        <li>Revisión de anillado y de medida/cuadrícula</li>
+        <li>Marcas, pinza y tiro/retiro</li>
+      </ul>
+      <div class="pie">Abrir ➔</div>
+    </div>
+
+    <div class="tarjeta pronto" data-roles="administrador,diseno">
+      <h2>Rompecabezas para plotter <span class="badge pronto">Próximamente</span></h2>
+      <p>Montaje de rompecabezas para impresión en plotter. Todavía no está construido.</p>
+      <div class="pie" style="color:#64748b">En preparación</div>
+    </div>
+
+  </div>
+  <p id="sinAcceso">Tu usuario no tiene acceso a las herramientas de montaje.</p>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="tactical-supabase.js?v=20261016a"></script>
+<script src="tactical-bot.js?v=20260904a"></script>
+<script src="precios_tactical.js?v=20261016d"></script>
+<script>
+// Cada tarjeta declara en data-roles quién la ve (misma matriz de roles del Hub). Si el rol no ve ninguna, vuelve al Hub.
+window.tacticalOnLogin = async function(){
+  const rol = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol;
+  let visibles = 0;
+  document.querySelectorAll('#tarjetas .tarjeta').forEach(t=>{
+    const roles = (t.getAttribute('data-roles')||'').split(',');
+    const ok = roles.includes(rol);
+    t.style.display = ok ? '' : 'none';
+    if(ok) visibles++;
+  });
+  if(!visibles){ document.getElementById('sinAcceso').style.display = 'block'; setTimeout(()=>{ location.href = 'TACTICAL_ERP_HUB.html'; }, 2500); }
+};
+</script>
+</body>
+</html>

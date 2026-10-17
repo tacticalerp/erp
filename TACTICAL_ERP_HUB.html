@@ -825,23 +825,12 @@
                     <div class="card-footer">Abrir módulo ➔</div>
                 </div>
 
-                <!-- MONTAJE DE CUADERNO (Conde 2026-10-16) -- archivo aparte, roles: administrador/comercial/diseno/produccion -->
-                <div class="hub-card active-card" onclick="location.href='modulo_montaje_cuaderno.html'">
+                <!-- MONTAJES (Conde 2026-10-17) -- un solo acceso a las herramientas de montaje: para el cliente, de impresión y (próximamente) rompecabezas para plotter.
+                     Cada herramienta filtra por rol dentro de modulo_montajes.html. -->
+                <div class="hub-card active-card" data-roles="administrador,comercial,diseno,produccion" onclick="location.href='modulo_montajes.html'">
                     <div>
                         <div class="card-header">
-                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="5" y="3" width="14" height="18" rx="2"></rect><line x1="2" y1="7" x2="5" y2="7"></line><line x1="2" y1="12" x2="5" y2="12"></line><line x1="2" y1="17" x2="5" y2="17"></line></svg>Montaje para el cliente</h3>
-                            <span class="badge badge-active">Nuevo</span>
-                        </div>
-                    </div>
-                    <div class="card-footer">Abrir módulo ➔</div>
-                </div>
-
-                <!-- MONTAJES (Conde 2026-10-16) -- montaje de IMPRESIÓN (marcas, pinza, tiro/retiro); archivo aparte, independiente
-                     de "Montaje de Cuaderno". Solo administrador y diseño (data-roles, ver tacticalAplicarVisibilidadHub). -->
-                <div class="hub-card active-card" data-roles="administrador,diseno" onclick="location.href='modulo_montajes_impresion.html'">
-                    <div>
-                        <div class="card-header">
-                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>Montajes</h3>
+                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="3" y="3" width="8" height="8" rx="1"></rect><rect x="13" y="3" width="8" height="8" rx="1"></rect><rect x="3" y="13" width="8" height="8" rx="1"></rect><rect x="13" y="13" width="8" height="8" rx="1"></rect></svg>Montajes</h3>
                             <span class="badge badge-active">Nuevo</span>
                         </div>
                     </div>
