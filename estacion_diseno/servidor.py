@@ -33,7 +33,7 @@ SUBCARPETAS = ["originales", "montaje", "salida"]
 CONFIG_DEFECTO = {
     "puerto": 8793,
     "raiz": os.path.join(os.path.expanduser("~"), "Documents", "Trabajos Tactical"),
-    "plotter": "",   # vacío = <raiz>\_Plotter
+    "plotter": r"D:\Plotter Impresion",   # donde se guardan los JPG del plotter (si no existe el disco D:, usa <raiz>\_Plotter)
     "origenes": [
         "https://tacticalerp.github.io",
         "http://localhost:8791",
@@ -66,7 +66,10 @@ def raiz():
 
 
 def carpeta_plotter():
-    return os.path.abspath(CFG["plotter"] or os.path.join(raiz(), "_Plotter"))
+    ruta = CFG["plotter"]
+    if ruta and os.path.splitdrive(ruta)[0] and not os.path.exists(os.path.splitdrive(ruta)[0] + os.sep):
+        ruta = ""      # el disco configurado no existe en este PC: se usa la carpeta de respaldo
+    return os.path.abspath(ruta or os.path.join(raiz(), "_Plotter"))
 
 
 def limpiar_nombre(t, largo=80):

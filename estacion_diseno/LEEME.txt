@@ -28,7 +28,7 @@ Uso diario
 Carpetas
 --------
 Por defecto los trabajos van en  Documentos\Trabajos Tactical  y los JPG del plotter en
-Trabajos Tactical\_Plotter. Se pueden cambiar desde la pagina Montajes (panel "Estacion de diseno").
+D:\Plotter Impresion (si el PC no tiene disco D:, en Trabajos Tactical\_Plotter). Se pueden cambiar desde la pagina Montajes (panel "Estacion de diseno").
 La configuracion queda en config.json (esta carpeta).
 
 Si algo no funciona
