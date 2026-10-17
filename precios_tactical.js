@@ -1289,3 +1289,10 @@ function tacticalAnilloBloqueOP(p, fontSize){
     <div style="color:#64748b; font-size:calc(${fs} - 1.5px);">${fmt(hojas)} hojas dentro del anillo (≈ ${fmt(Math.round(r.eq))} de bond 75 g), tapa ${r.dura ? 'dura' : (cfg.tapaTipo==='semidura'?'semidura':'blanda')}. Valores aproximados de la tabla del proveedor.</div>
   </div>`;
 }
+
+/* Botón flotante "Volver al Hub" en TODAS las herramientas (incluidas las futuras): este archivo lo carga solo.
+   El código está en tactical-hub-btn.js (no hace nada en el Hub, ni si la página ya trae su propio botón). */
+(function(){
+  if(window.__tacticalHubBtn || document.getElementById('tactical-hub-btn-js')) return;
+  const s = document.createElement('script'); s.id = 'tactical-hub-btn-js'; s.src = 'tactical-hub-btn.js?v=20261017a'; document.head.appendChild(s);
+})();
