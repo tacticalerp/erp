@@ -114,7 +114,7 @@
     <div id="wCustom" style="display:none"><label>Hoja personalizada (largo × corto, cm)</label>
       <div style="display:flex;gap:6px"><input type="number" id="cw" value="70" step="0.1" oninput="recalcular()"><input type="number" id="ch" value="50" step="0.1" oninput="recalcular()"></div></div>
   </div>
-  <p class="hint" style="margin-top:10px">Litografía: el área real de imagen es menor que la hoja por la pinza (70×50 → 69,5×49; 50×35 → 49,5×34). Las marcas y los textos nunca salen de esa área. Para 60×45 aún no hay dato de pinza: se estima (confírmalo).</p>
+  <p class="hint" style="margin-top:10px">Litografía: el área real de imagen es menor que la hoja por la pinza (70×50 → 69,5×49; 60×45 → 59,8×44; 50×35 → 49,5×34). Las marcas y los textos nunca salen de esa área. Las hojas de otra medida usan una estimación y avisan.</p>
 </div>
 
 <div class="panel">
@@ -139,8 +139,8 @@
 </div>
 
 <div class="panel" id="pLibre" style="display:none">
-  <h2><span class="n">2c</span>Referencias del montaje <span style="font-weight:400;font-size:12px;color:var(--muted)">una por archivo o por página · cuántas por hoja</span></h2>
-  <div class="row3"><label><input type="checkbox" id="lbDorso" onchange="recalcular()"> Cada referencia trae frente y dorso (páginas consecutivas)</label></div>
+  <h2><span class="n">2c</span><span id="libreTitulo">Referencias y cantidades</span> <span style="font-weight:400;font-size:12px;color:var(--muted)">hojas necesarias para la cantidad pedida</span></h2>
+  <div class="row3" id="lbDorsoFila"><label><input type="checkbox" id="lbDorso" onchange="recalcular()"> Cada referencia trae frente y dorso (páginas consecutivas)</label></div>
   <div id="libreBody"></div>
 </div>
 
@@ -155,12 +155,20 @@
     <div id="wTintaC" style="display:none"><label>Tinta personalizada</label><input type="text" id="tintaC" placeholder="Pantone 286 C + Negro" oninput="recalcular()"></div>
   </div>
   <p class="hint" style="margin-top:8px">Texto de 8 pt como máximo y nunca a menos de 5 mm de la imagen: si no cabe, no se imprime y se avisa.</p>
+  <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <button class="btn gris" onclick="otGuardar()">Guardar parámetros de la OT</button>
+    <button class="btn gris" onclick="otCargar()">Cargar OT guardada</button>
+    <button class="btn gris" onclick="otFicha()">Ficha de la OT (imprimir)</button>
+    <span id="msgOT" style="font-size:12.5px;font-weight:600"></span>
+  </div>
+  <p class="hint" style="margin-top:6px">Se guardan en este equipo las medidas, el tipo, el corte, la tinta y las cantidades de la OT (no los archivos de diseño: súbelos de nuevo). La ficha reúne parámetros, vista previa y avisos para llevarla a producción.</p>
 </div>
 
 <div class="panel">
   <h2><span class="n">4</span>Vista previa y descarga</h2>
   <div class="hojas" id="hojasSel"></div>
   <div id="lienzoWrap"><svg id="lienzo" viewBox="0 0 680 400" role="img" aria-label="Vista previa del montaje"></svg></div>
+  <div class="hint" id="orientLinea" style="margin:6px 0"></div>
   <div class="info" id="info"></div>
   <div class="avisos" id="avisos"></div>
   <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -174,7 +182,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="tactical-supabase.js?v=20261016a"></script>
-<script src="montajes_ajuste_pdf.js?v=20261016a"></script>
+<script src="montajes_ajuste_pdf.js?v=20261017a"></script>
 <script>
 if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
@@ -187,9 +195,9 @@ const MARCA_LARGO = 4, MARCA_DIST = 4;    // mm: guías de 4 mm, mín. 3 mm de l
 const MARCA_GROSOR_MM = 0.2;              // trazo de 0,2 mm (Conde)
 const MARGEN_EXTRA = MARCA_LARGO + MARCA_DIST; // 8 mm que ocupan las marcas a cada lado de la grilla
 // Área REAL de imagen por hoja litográfica (ya sin pinza), [lado largo, lado corto] en mm. Mismos números de
-// OFFSET_FORMATOS_IMPRESION_CM de las calculadoras (49x69.5 / 34x49.5). 60x45 NO tiene dato confirmado: estimado.
-const AREA_PINZA = { '70x50':[695,490], '60x45':[595,440], '50x35':[495,340] };
-const AREA_ESTIMADA = { '60x45':true };
+// OFFSET_FORMATOS_IMPRESION_CM de las calculadoras (49x69.5 / 34x49.5). 60x45 confirmado por Conde el 2026-10-17: 59,8 x 44 cm (el lado de 45 pierde 1 cm de pinza y el de 60 pierde 2 mm).
+const AREA_PINZA = { '70x50':[695,490], '60x45':[598,440], '50x35':[495,340] };
+const AREA_ESTIMADA = {};     // todas las hojas de la lista tienen dato confirmado
 
 const S = { files:[], pool:[], nextId:1, plan:null, hojaVer:0 };
 // Guías de corte: tamaño normal (4 mm de largo a 4 mm del corte) y dos reducciones automáticas para ganar piezas.
@@ -204,7 +212,8 @@ const r5 = v => Math.abs(v - Math.round(v/5)*5) <= 3 ? Math.round(v/5)*5 : v;   
 //  - la copia en espejo se mete 0,5 mm bajo la imagen (si no, queda una línea blanca por antialias)
 //  - se recorta la franja de borde aclarada que traen algunas exportaciones antes de reflejar
 const RENDER_DPI = 150, AVISO_BORDE_MM = 5, TRASLAPE_MM = 0.5, PAPEL_EXTRA_MM = 5;
-const LIBRE = { cant:{} };   // cantidad por hoja que el usuario fija a mano para cada referencia
+const LIBRE = { cant:{}, pedida:{}, extra:0 };   // cant = piezas por hoja que el usuario fija a mano; pedida = cantidad total que pide el cliente por referencia
+const TIRADA = { ejemplares:1, extra:0 };          // catálogo: cuántos ejemplares y cuántas hojas de merma por cara
 const PREP = { aplicado:false, B:10, fringe:true, forzar:false, abierto:false, adv:false, analizando:false, analizado:false, progreso:0 };
 
 function esc(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -263,6 +272,10 @@ drop.addEventListener('drop', ev=>{ if(ev.dataTransfer && ev.dataTransfer.files)
 
 async function cargarArchivos(fileList){
   const prog = $('progreso');
+  if(S.pool.length && fileList && fileList.length){
+    const suma = confirm('Ya hay archivos cargados.\n\nAceptar = SUMAR los nuevos a los que ya están.\nCancelar = REEMPLAZAR todo por los nuevos.');
+    if(!suma){ S.files = []; S.pool = []; S.nextId = 1; MED.aplicado = false; MED.analizado = false; MED.an = {}; MED.informe = null; TIN.aplicado = false; TIN.informe = null; PREP.aplicado = false; PREP.analizado = false; PREP.abierto = false; S.hojaVer = 0; }
+  }
   for(const f of Array.from(fileList)){
     try{
       prog.textContent = 'Leyendo ' + f.name + '…';
@@ -392,11 +405,23 @@ function mejorGrilla(pw, ph, hoja, modo, g, m){
     return { cols, rows, w, h, rot, n: cols*rows };
   };
   const a = probar(pw, ph, 0), b = (Math.abs(pw-ph)>0.5) ? probar(ph, pw, 90) : null;
-  if(a && b) return b.n > a.n ? b : a;
-  return a || b;
+  const win = (a && b) ? (b.n > a.n ? b : a) : (a || b);
+  if(win) win.cmp = { a, b, g, aW:hoja.aW, aH:hoja.aH };
+  return win;
+}
+let ORIENT = '';
+// Explica qué orientación se usó y cuánto falta para ganar una columna o una fila más
+function textoOrientacion(w, m){
+  const c = w && w.cmp; if(!c) return '';
+  const f = x=> x ? x.cols+'×'+x.rows+' = '+x.n : 'no cabe';
+  const usada = w.rot===90 ? 'girada 90°' : 'derecha';
+  const g = c.g, r1 = v=>String(Math.round(v*10)/10).replace('.',',');
+  const faltaW = (w.cols+1)*(w.w+g) - g + 2*m - c.aW, faltaH = (w.rows+1)*(w.h+g) - g + 2*m - c.aH;
+  return 'Pieza derecha: '+f(c.a)+' · Pieza girada 90°: '+f(c.b)+' → se usa la '+usada+'. Para una columna más faltan '+r1(Math.max(0,faltaW))+' mm de ancho; para una fila más, '+r1(Math.max(0,faltaH))+' mm de alto.';
 }
 // Elige el mejor acomodo probando las guías normales, las reducidas y, solo si el usuario lo acepta, sin guías
 function elegirGrilla(pw, ph, hoja, modo, gap, notas){
+  ORIENT = '';
   const cand = GUIAS_NIVELES.map(cfg=>({ cfg, g: mejorGrilla(pw, ph, hoja, modo, gap, cfg.dist+cfg.len) }));
   const sin = mejorGrilla(pw, ph, hoja, modo, gap, 0);
   const medida = fmt(pw)+'×'+fmt(ph)+' mm';
@@ -412,6 +437,7 @@ function elegirGrilla(pw, ph, hoja, modo, gap, notas){
     else notas.push({ t:'err', m:'La pieza ('+medida+') no cabe en la hoja con sus marcas dentro del área de imagen.' });
     return null;
   }
+  ORIENT = textoOrientacion(best.g, best.cfg.dist+best.cfg.len);
   if(best.cfg !== GUIAS_NIVELES[0]) notas.push({ t:'warn', m:'Las guías se redujeron a '+best.cfg.len+' mm (a '+best.cfg.dist+' mm del corte) para que cupieran '+best.g.n+' piezas.' });
   if(sin && sin.n > best.g.n) notas.push({ t:'warn', m:'Con guías caben '+best.g.n+' piezas y sin guías caben '+sin.n+'. ¿Hago el montaje sin guías para ganar '+(sin.n-best.g.n)+'?', accion:{ txt:'Sí, montar sin guías', fn:'activarSinGuias(true)' } });
   return best;
@@ -444,22 +470,73 @@ function ponerTexto(hoja, hojaPlan, texto, base, etiqueta, negrita, notas, acota
 }
 
 function libreCant(id, v){ if(v===''||v==null) delete LIBRE.cant[id]; else LIBRE.cant[id] = Math.max(0, Math.round(+v)); recalcular(); }
+function libreCantPedida(id, v){ if(v===''||v==null) delete LIBRE.pedida[id]; else LIBRE.pedida[id] = Math.max(0, Math.round(+v)); recalcular(); }
+function libreExtra(v){ LIBRE.extra = Math.max(0, Math.round(+v)||0); recalcular(); }
+function tiradaSet(k, v){ TIRADA[k] = Math.max(k==='ejemplares'?1:0, Math.round(+v)||0); recalcular(); }
 function libreRepartir(){ Object.keys(LIBRE.cant).forEach(k=>delete LIBRE.cant[k]); recalcular(); }
+function libreRepartirPorCantidades(){
+  const pl = S.plan && S.plan.libre, T = S.plan && S.plan.tirada;
+  if(!pl || !T || !T.opt) return;
+  pl.refs.forEach((id,i)=>{ LIBRE.cant[id] = T.opt.cant[i]; });
+  recalcular();
+}
+// Reparto de las piezas de la hoja entre las referencias para que se necesiten las menos hojas posibles:
+// primero proporcional a lo pedido y luego se mueven espacios mientras baje el número de hojas
+function repartoOptimo(n, ped){
+  const R = ped.length, suma = ped.reduce((a,b)=>a+b,0);
+  if(!suma || n<1) return null;
+  const quiere = ped.filter(q=>q>0).length;
+  if(quiere > n) return null;                       // no caben ni una pieza por referencia
+  const hojasDe = cc => Math.max.apply(null, [0].concat(cc.map((x,i)=> ped[i]>0 ? (x>0 ? Math.ceil(ped[i]/x) : Infinity) : 0)));
+  let c = ped.map(q=> q>0 ? Math.max(1, Math.floor(n*q/suma)) : 0), usados = c.reduce((a,b)=>a+b,0);
+  while(usados<n){ let mejor = -1, hm = -1; c.forEach((x,i)=>{ if(ped[i]>0){ const h = Math.ceil(ped[i]/x); if(h>hm){ hm = h; mejor = i; } } }); c[mejor]++; usados++; }
+  while(usados>n){ let peor = -1, hm = Infinity; c.forEach((x,i)=>{ if(x>1){ const h = Math.ceil(ped[i]/x); if(h<hm){ hm = h; peor = i; } } }); if(peor<0) break; c[peor]--; usados--; }
+  let H = hojasDe(c), mejora = true, guarda = 0;
+  while(mejora && guarda++<500){
+    mejora = false;
+    for(let i=0;i<R && !mejora;i++) for(let j=0;j<R && !mejora;j++){
+      if(i===j || ped[i]<=0 || ped[j]<=0 || c[j]<=1) continue;
+      c[i]++; c[j]--;
+      const H2 = hojasDe(c);
+      if(H2<H){ H = H2; mejora = true; } else { c[i]--; c[j]++; }
+    }
+  }
+  return { cant:c, hojas:H };
+}
 function renderLibre(){
-  const caja = $('pLibre');
-  if($('tipo').value!=='libre' || !S.pool.length){ caja.style.display = 'none'; return; }
+  const caja = $('pLibre'), t = $('tipo').value;
+  if((t!=='libre' && t!=='catalogo') || !S.pool.length){ caja.style.display = 'none'; return; }
   caja.style.display = '';
+  $('libreTitulo').textContent = t==='libre' ? 'Referencias y cantidades' : 'Tirada del catálogo';
+  $('lbDorsoFila').style.display = t==='libre' ? '' : 'none';
+  const T = S.plan && S.plan.tirada;
+  if(t==='catalogo'){
+    let h = '<div class="row3"><label>Ejemplares (cantidad de catálogos) <input type="number" min="1" value="'+TIRADA.ejemplares+'" onchange="tiradaSet(\'ejemplares\',this.value)"></label>'+
+      '<label>Hojas de merma por cara <input type="number" min="0" value="'+TIRADA.extra+'" onchange="tiradaSet(\'extra\',this.value)"></label></div>';
+    if(T && T.catalogo) h += '<div class="dg">Cada ejemplar necesita '+(T.caras===1?'la <b>1 cara</b>':'las <b>'+T.caras+' caras</b>')+' del montaje una vez. Para '+T.ejemplares+' ejemplar'+(T.ejemplares===1?'':'es')+(T.merma?' y '+T.merma+' de merma por cara':'')+': '+T.caras+' × '+T.porCara+' = <b>'+T.total+' hojas</b> a imprimir.</div>';
+    else h += '<p class="hint">Sube el catálogo para calcular la tirada.</p>';
+    $('libreBody').innerHTML = h; return;
+  }
   const pl = S.plan && S.plan.libre;
   if(!pl){ $('libreBody').innerHTML = '<p class="hint">Sube los archivos para repartir la hoja.</p>'; return; }
   const dorso = $('lbDorso').checked;
-  let h = '<table style="width:100%;border-collapse:collapse;font-size:13px"><tr style="text-align:left;color:var(--muted)"><th style="padding:4px 6px">Referencia</th><th style="padding:4px 6px">Archivo</th><th style="padding:4px 6px">Por hoja</th></tr>';
+  let h = '<table style="width:100%;border-collapse:collapse;font-size:13px"><tr style="text-align:left;color:var(--muted)"><th style="padding:4px 6px">Referencia</th><th style="padding:4px 6px">Archivo</th><th style="padding:4px 6px">Por hoja</th><th style="padding:4px 6px">Cantidad pedida</th><th style="padding:4px 6px">Hojas</th><th style="padding:4px 6px">Sobran</th></tr>';
   pl.refs.forEach((id,i)=>{
     const p = S.pool.find(x=>x.id===id); if(!p) return;
     const dd = dorso ? ' + pág. '+(p.pidx+2) : '';
+    const ped = LIBRE.pedida[id] > 0;
     h += '<tr style="border-top:1px solid #c5cdd8"><td style="padding:4px 6px"><b>Ref '+(i+1)+'</b></td><td style="padding:4px 6px">'+esc(p.nombre)+' · pág. '+(p.pidx+1)+dd+'</td>'+
-      '<td style="padding:4px 6px"><input type="number" min="0" style="width:80px" value="'+(LIBRE.cant[id]!==undefined?LIBRE.cant[id]:'')+'" placeholder="'+pl.cant[i]+'" onchange="libreCant('+id+',this.value)"></td></tr>';
+      '<td style="padding:4px 6px"><input type="number" min="0" style="width:70px" value="'+(LIBRE.cant[id]!==undefined?LIBRE.cant[id]:'')+'" placeholder="'+pl.cant[i]+'" onchange="libreCant('+id+',this.value)"></td>'+
+      '<td style="padding:4px 6px"><input type="number" min="0" style="width:90px" value="'+(LIBRE.pedida[id]!==undefined?LIBRE.pedida[id]:'')+'" placeholder="opcional" onchange="libreCantPedida('+id+',this.value)"></td>'+
+      '<td style="padding:4px 6px">'+(T && ped && !T.sinPieza ? T.hojasRef[i] : '')+'</td><td style="padding:4px 6px">'+(T && ped && !T.sinPieza ? T.sobrante[i] : '')+'</td></tr>';
   });
-  h += '</table><div style="margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn gris" onclick="libreRepartir()">Repartir en partes iguales</button><span class="hint" style="margin:0">En la hoja caben '+pl.n+' piezas. Lo que dejes vacío se reparte solo.</span></div>';
+  h += '</table><div style="margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn gris" onclick="libreRepartir()">Repartir en partes iguales</button><span class="hint" style="margin:0">En la hoja caben '+pl.n+' piezas. Lo que dejes vacío en «Por hoja» se reparte solo.</span></div>';
+  if(T && !T.sinPieza){
+    h += '<div class="row3" style="margin-top:8px"><label>Hojas de merma (arranque, pruebas) <input type="number" min="0" value="'+(LIBRE.extra||0)+'" onchange="libreExtra(this.value)"></label></div>';
+    h += '<div class="dg">Para cubrir lo pedido se necesitan <b>'+T.hojas+' hoja'+(T.hojas===1?'':'s')+'</b>'+(T.extra?' + '+T.extra+' de merma = <b>'+(T.hojas+T.extra)+'</b>':'')+(dorso?' (cada una con frente y dorso)':'')+'. La referencia que más hojas pide manda; el resto se pasa de lo pedido (columna «Sobran»).</div>';
+    if(T.opt && T.opt.hojas < T.hojas) h += '<div class="dg"><span class="m">Repartiendo las piezas de otra forma ('+T.opt.cant.map((c,i)=>'Ref '+(i+1)+': '+c).join(' · ')+') bastan <b>'+T.opt.hojas+'</b> hojas en lugar de '+T.hojas+'.</span> <button class="btn verde mini" style="margin-left:8px" onclick="libreRepartirPorCantidades()">Repartir según lo pedido</button></div>';
+    else if(T.opt) h += '<div class="dg" style="color:#14532d">Este reparto ya es el que menos hojas necesita para lo pedido.</div>';
+  } else if(!T) h += '<p class="hint" style="margin-top:8px">Escribe la cantidad pedida de cada referencia para calcular las hojas necesarias.</p>';
   $('libreBody').innerHTML = h;
 }
 function notasAvisos(pgs, notas){
@@ -621,6 +698,17 @@ function planificar(){
     if(asign.length>n) notas.push({ t:'warn', m:'Asignaste '+asign.length+' piezas por hoja y solo caben '+n+': se dejan las primeras '+n+'.' });
     if(asign.length<n) notas.push({ t:'warn', m:'Quedan '+(n-asign.length)+' espacios vacíos en la hoja ('+asign.length+' de '+n+').' });
     plan.libre = { n, cant, refs: refs.map(r=>r.id) };
+    {   // tirada: hojas necesarias para cubrir la cantidad pedida de TODAS las referencias (comparten la hoja)
+      const ped = refs.map(r=>LIBRE.pedida[r.id]>0 ? LIBRE.pedida[r.id] : 0);
+      if(ped.some(q=>q>0)){
+        const hojasRef = ped.map((q,i)=>q>0 ? (cant[i]>0 ? Math.ceil(q/cant[i]) : Infinity) : 0);
+        const sinPieza = hojasRef.some(x=>x===Infinity);
+        const H = sinPieza ? 0 : Math.max.apply(null, hojasRef);
+        plan.tirada = { pedidas:ped, hojasRef, hojas:H, extra:Math.max(0, Math.round(LIBRE.extra||0)), sinPieza,
+          sobrante: ped.map((q,i)=> (q>0 && !sinPieza) ? H*cant[i]-q : 0), opt: repartoOptimo(n, ped) };
+        if(sinPieza) notas.push({ t:'warn', m:'Una referencia con cantidad pedida no tiene piezas en la hoja: dale al menos 1 por hoja.' });
+      }
+    }
     const Bd = gap/2;
     const completa = [];
     for(let r=0;r<g.rows;r++) for(let c=0;c<g.cols;c++) completa.push({ x:x0+c*(g.w+gap), y:y0+r*(g.h+gap), w:g.w, h:g.h });
@@ -646,6 +734,11 @@ function planificar(){
       ['Por hoja', n+' ('+g.cols+' × '+g.rows+')'], ['Referencias', String(refs.length)], ['Reparto', cant.map((c,i)=>'Ref '+(i+1)+': '+c).join(' · ')],
       ['Corte', gap>0 ? 'Doble corte, franja de '+fmt(gap)+' mm' : 'Único, piezas pegadas']);
     if(!litho) info.push(['Flecha de salida', '3 mm, centro izquierdo']);
+    if(plan.tirada && !plan.tirada.sinPieza){
+      const T = plan.tirada;
+      info.push(['Hojas a imprimir', (T.hojas+T.extra)+(T.extra?' ('+T.hojas+' + '+T.extra+' de merma)':'')+(dorso?', cada una con frente y dorso':'')],
+        ['Sobrantes', T.pedidas.map((q,i)=>q>0 ? 'Ref '+(i+1)+': '+T.sobrante[i] : '').filter(Boolean).join(' · ')]);
+    }
     if(gap>0){
       notasAvisos(S.pool, notas);
       if(!PREP.aplicado && S.pool.some(p=>decision(p)==='sin' && p.diag && decisionNecesita(p))) notas.push({ t:'warn', m:'Doble corte: hay referencias sin sangrado, la franja de '+fmt(gap)+' mm quedará blanca. Usa «Sangrados automáticos».' });
@@ -689,6 +782,11 @@ function planificar(){
       ['Por hoja', porHoja+' ('+g.cols+' × '+g.rows+')'], ['Hojas de salida', String(nHojas)], ['Páginas', String(pgs.length)],
       ['Corte', gap>0 ? 'Doble corte, franja de '+fmt(gap)+' mm' : 'Único, piezas pegadas']);
     if(!litho) info.push(['Flecha de salida', '3 mm, centro izquierdo']);
+    {   // tirada: cada ejemplar necesita todas las caras del montaje una vez
+      const e = Math.max(1, Math.round(TIRADA.ejemplares||1)), m = Math.max(0, Math.round(TIRADA.extra||0)), porCara = e+m;
+      plan.tirada = { catalogo:true, ejemplares:e, merma:m, caras:nHojas, porCara, total:nHojas*porCara };
+      info.push(['Ejemplares', String(e)], ['Hojas a imprimir', nHojas+' caras × '+porCara+' = '+(nHojas*porCara)+(m?' (incluye '+m+' de merma por cara)':'')]);
+    }
     if(gap>0){
       notasAvisos(pgs, notas);
       if(!PREP.aplicado && pgs.some(p=>decision(p)==='sin' && p.diag && decisionNecesita(p))) notas.push({ t:'warn', m:'Doble corte: hay páginas sin sangrado, la franja de '+fmt(gap)+' mm quedará blanca. Usa «Sangrados automáticos».' });
@@ -700,12 +798,53 @@ function planificar(){
   return plan;
 }
 
+/* ======================= FICHA POR OT ======================= */
+const OT_KEY = 'montajes_ot_v1';
+function otLeer(){ try{ return JSON.parse(localStorage.getItem(OT_KEY)||'{}'); }catch(e){ return {}; } }
+function otMsg(t, ok){ const m = $('msgOT'); m.style.color = ok===false ? '#b91c1c' : '#14532d'; m.textContent = t; }
+function otGuardar(){
+  const ot = $('ot').value.trim();
+  if(!ot){ otMsg('Escribe primero el número de OT.', false); return; }
+  const vals = {};
+  document.querySelectorAll('input[id],select[id]').forEach(e=>{ if(e.type==='file') return; vals[e.id] = e.type==='checkbox' ? e.checked : e.value; });
+  const todo = otLeer();
+  todo[ot] = { vals, libre:{ cant:LIBRE.cant, pedida:LIBRE.pedida, extra:LIBRE.extra }, tirada:Object.assign({}, TIRADA), fecha:new Date().toISOString(), archivos:S.files.filter(Boolean).map(f=>f.nombre) };
+  try{ localStorage.setItem(OT_KEY, JSON.stringify(todo)); otMsg('Parámetros de '+ot+' guardados en este equipo.'); }catch(e){ otMsg('No se pudo guardar: '+e.message, false); }
+}
+function otCargar(){
+  const todo = otLeer(), claves = Object.keys(todo);
+  if(!claves.length){ otMsg('No hay OT guardadas en este equipo.', false); return; }
+  const pedida = ($('ot').value.trim() || prompt('OT guardadas: '+claves.join(', ')+'\n\n¿Cuál cargo?') || '').trim();
+  const d = todo[pedida];
+  if(!d){ otMsg('No hay parámetros guardados para «'+pedida+'».', false); return; }
+  const v = d.vals;
+  if(v.tipo!==undefined){ $('tipo').value = v.tipo; cambioTipo(); }
+  Object.keys(v).forEach(id=>{ if(id==='tipo') return; const e = $(id); if(!e) return; if(e.type==='checkbox') e.checked = !!v[id]; else e.value = v[id]; });
+  Object.keys(LIBRE.cant).forEach(k=>delete LIBRE.cant[k]); Object.keys(LIBRE.pedida).forEach(k=>delete LIBRE.pedida[k]);
+  LIBRE.extra = (d.libre && d.libre.extra) || 0; Object.assign(TIRADA, d.tirada || {});
+  cambioHoja(); cambioCorte(); recalcular();
+  otMsg('OT '+pedida+' cargada. Sube de nuevo los archivos'+(d.archivos && d.archivos.length ? ' ('+d.archivos.join(', ')+')' : '')+'.');
+}
+function otFicha(){
+  const P = S.plan; if(!P){ return; }
+  const txt = id=>{ const e = $(id); return e ? (e.tagName==='SELECT' ? e.options[e.selectedIndex].text : e.value) : ''; };
+  const filas = [['OT',txt('ot')||'—'],['Tipo',txt('tipo')],['Hoja de impresión',txt('hoja')],['Corte',txt('corte')+($('corte').value==='doble' ? ', separación '+txt('gap')+' mm' : '')],['Tinta',txt('tinta')==='Personalizado…' ? txt('tintaC') : txt('tinta')],['Archivos',S.files.filter(Boolean).map(f=>f.nombre).join(', ')||'—']].concat(P.info);
+  const ficha = '<!doctype html><meta charset="utf-8"><title>Ficha de montaje '+esc(txt('ot'))+'</title><style>body{font:13px Arial,sans-serif;margin:24px;color:#111}h1{font-size:18px;margin:0 0 4px}table{border-collapse:collapse;width:100%;margin:10px 0}td{border:1px solid #bbb;padding:4px 8px}td:first-child{width:32%;color:#555}.av{border:1px solid #d97706;background:#fffbeb;padding:5px 8px;margin:4px 0}.err{border-color:#b91c1c;background:#fef2f2}svg{width:100%;max-height:380px;border:1px solid #ccc}</style>'+
+    '<h1>Ficha de montaje — Tactical Marketing</h1><div>'+new Date().toLocaleDateString('es-CO')+'</div><table>'+filas.map(r=>'<tr><td>'+esc(r[0])+'</td><td><b>'+esc(r[1])+'</b></td></tr>').join('')+'</table>'+
+    (ORIENT ? '<p>'+esc(ORIENT)+'</p>' : '')+$('lienzoWrap').innerHTML+
+    (P.notas.length ? '<h3>Avisos</h3>'+P.notas.map(n=>'<div class="av '+(n.t==='err'?'err':'')+'">'+esc(n.m)+'</div>').join('') : '')+'<script>setTimeout(function(){window.print()},400)<\/script>';
+  const w = window.open('', '_blank');
+  if(!w){ otMsg('El navegador bloqueó la ventana: permite ventanas emergentes.', false); return; }
+  w.document.write(ficha); w.document.close();
+}
+
 /* ======================= VISTA PREVIA ======================= */
 function recalcular(){
   renderPrep();
   $('wTintaC').style.display = $('tinta').value==='custom' ? '' : 'none';
   $('wPinza').style.display = ($('tipo').value==='taco' && $('giro').value==='tr') ? '' : 'none';
   if(S.pool.length){ renderPool(); }
+  ORIENT = '';
   S.plan = planificar();
   anilloNotas(S.plan.notas);
   renderLibre();
@@ -717,6 +856,7 @@ function dibujar(){
   const plan = S.plan, svg = $('lienzo');
   const hoja = plan.hoja;
   $('btnPdf').disabled = !plan.listo;
+  $('orientLinea').textContent = ORIENT;
   $('info').innerHTML = plan.info.map(([a,b])=>'<div><span>'+esc(a)+'</span><b>'+esc(b)+'</b></div>').join('');
   $('avisos').innerHTML = plan.notas.map(n=>'<div class="av '+(n.t==='err'?'err':'')+'">'+esc(n.m)+(n.accion ? ' <button class="btn verde mini" style="margin-left:8px" onclick="'+n.accion.fn+'">'+esc(n.accion.txt)+'</button>' : '')+'</div>').join('');
   $('hojasSel').innerHTML = plan.hojas.length>1 ? plan.hojas.map((h,i)=>'<button class="'+(i===S.hojaVer?'on':'')+'" onclick="S.hojaVer='+i+';dibujar()">'+esc(h.titulo)+'</button>').join('') : '';
@@ -1235,7 +1375,7 @@ function renderMedida(){
     });
     h += '<div class="row3"><label>Formato final <select onchange="medSet(\'preset\',this.value)"><option value="165x235" '+(MED.preset==='165x235'?'selected':'')+'>16,5 × 23,5 cm (cuaderno 24 × 17)</option><option value="140x200" '+(MED.preset==='140x200'?'selected':'')+'>14 × 20 cm</option><option value="custom" '+(MED.preset==='custom'?'selected':'')+'>Otro (mm)…</option></select></label>'+
       (MED.preset==='custom'?'<label>Ancho × alto (mm) <input type="number" value="'+MED.cw+'" onchange="MED.cw=+this.value;renderPrep()"> <input type="number" value="'+MED.ch+'" onchange="MED.ch=+this.value;renderPrep()"></label>':'')+
-      '<label>Anillado <select onchange="medSet(\'anillo\',this.value)"><option value="izq" '+(MED.anillo==='izq'?'selected':'')+'>Izquierda</option><option value="der" '+(MED.anillo==='der'?'selected':'')+'>Derecha</option></select></label></div>'+
+      '<label>Anillado <select onchange="medSet(\'anillo\',this.value)"><option value="izq" '+(MED.anillo==='izq'?'selected':'')+'>Izquierda</option><option value="der" '+(MED.anillo==='der'?'selected':'')+'>Derecha</option><option value="arriba" '+(MED.anillo==='arriba'?'selected':'')+'>Arriba</option></select></label></div>'+
       '<div class="row3"><label>Margen del anillado <select onchange="medSet(\'mmAnillo\',+this.value)">'+[13,14,15].map(v=>'<option '+(MED.mmAnillo===v?'selected':'')+'>'+v+'</option>').join('')+'</select> mm</label>'+
       '<label>Margen contrario <select onchange="medSet(\'mmOtros\',+this.value)">'+[7,8,9].map(v=>'<option '+(MED.mmOtros===v?'selected':'')+'>'+v+'</option>').join('')+'</select> mm</label></div>'+
       '<p class="hint" style="margin:4px 0 8px">Mínimos: 13 mm del lado del anillado y 7 mm en los demás; se pueden sumar 1 o 2 mm.</p>';

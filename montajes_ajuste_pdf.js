@@ -172,12 +172,13 @@
   /* ---------------- plan del ajuste ---------------- */
   function planear(est, p) {
     var minA = p.minAnillo || 13, minO = p.minOtros || 7;
-    var ring = (p.anillo === 'der') ? 'der' : 'izq';
+    var ring = (p.anillo === 'der') ? 'der' : (p.anillo === 'arriba' ? 'arriba' : 'izq');
     var L = ring === 'izq' ? Math.max(p.mmAnillo, minA) : Math.max(p.mmOtros, minO);
-    var R = ring === 'izq' ? Math.max(p.mmOtros, minO) : Math.max(p.mmAnillo, minA);
+    var R = ring === 'der' ? Math.max(p.mmAnillo, minA) : Math.max(p.mmOtros, minO);
     var ncols = Math.max(1, Math.round((p.W - L - R) / est.px));
     var px = (p.W - L - R) / ncols;
     var T0 = est.margenes.arriba, B0 = est.margenes.abajo;
+    if (ring === 'arriba') { T0 = Math.max(T0, minA, p.mmAnillo); B0 = Math.max(B0, minO); }   // anillado arriba: el margen superior no baja de 13 mm y el inferior no de 7
     var nrows = Math.max(1, Math.round((p.H - T0 - B0) / est.py));
     var cambio = (px / est.px - 1) * 100;
     return { L: L, R: R, ncols: ncols, nrows: nrows, px: px, py: est.py, gw: ncols * px, gh: nrows * est.py, T0: T0, cambioPaso: cambio,
@@ -478,6 +479,6 @@
     return { bytes: await doc.save(), informe: informe };
   }
 
-  root.MontajesAjuste = { analizar: analizar, aplicar: aplicar, simular: simular, receta: recetaTinta, RECETAS: RECETAS, _t: { tokenizar: tokenizar, aOperaciones: aOperaciones, serializar: serializar, estructura: estructura, leerContenido: leerContenido } };
+  root.MontajesAjuste = { analizar: analizar, aplicar: aplicar, simular: simular, receta: recetaTinta, RECETAS: RECETAS, _t: { planear: planear, tokenizar: tokenizar, aOperaciones: aOperaciones, serializar: serializar, estructura: estructura, leerContenido: leerContenido } };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.MontajesAjuste;
 })(typeof window !== 'undefined' ? window : globalThis);
