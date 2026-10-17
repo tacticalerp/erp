@@ -1,0 +1,39 @@
+ESTACION DE DISENO - Tactical Marketing ERP
+==========================================
+
+Para que sirve
+--------------
+Es un programa pequeno que se deja abierto en el PC de diseno. Las herramientas del ERP siguen
+en internet (tacticalerp.github.io/erp), pero cuando la estacion esta abierta pueden:
+  * crear la carpeta de cada trabajo (OT - Cliente) con "originales", "montaje" y "salida";
+  * leer archivos pesados (PDF de 500 MB o mas) directamente del disco, por partes, sin subirlos;
+  * guardar en el disco los montajes y los JPG del plotter, con el nombre del dia
+    ("17 octubre", "B 17 octubre"...).
+Nada de esto sale del computador: el programa solo escucha en este mismo PC.
+
+Instalacion (una sola vez, en el PC de diseno)
+----------------------------------------------
+1. Copia la carpeta "estacion_diseno" al PC de diseno (o baja el proyecto con git).
+2. Haz doble clic en  instalar.bat  (instala las librerias y deja un acceso directo en el escritorio).
+   Si dice que no encuentra Python, instalalo desde https://www.python.org/downloads/
+   marcando "Add python.exe to PATH", y repite.
+
+Uso diario
+----------
+1. Abre "Estacion de diseno" (el acceso directo del escritorio, o iniciar.bat). Se abre una ventana negra:
+   dejala abierta mientras trabajas.
+2. Entra al ERP normalmente. En Montajes veras "Estacion de diseno conectada" en verde.
+3. Para cerrar la estacion, cierra la ventana negra.
+
+Carpetas
+--------
+Por defecto los trabajos van en  Documentos\Trabajos Tactical  y los JPG del plotter en
+Trabajos Tactical\_Plotter. Se pueden cambiar desde la pagina Montajes (panel "Estacion de diseno").
+La configuracion queda en config.json (esta carpeta).
+
+Si algo no funciona
+-------------------
+* "Estacion no conectada": la ventana negra no esta abierta, o el navegador bloqueo la conexion local.
+  Abre iniciar.bat y recarga la pagina del ERP.
+* "El puerto 8793 ya esta en uso": ya hay una estacion abierta; usa esa.
+* Para actualizar el programa: abre iniciar.bat (si la carpeta es una copia de git se actualiza sola).

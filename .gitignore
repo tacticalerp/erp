@@ -43,3 +43,7 @@ tactical-erp-backup-*.json
 # ---- Código legado, ya portado/reemplazado -----------------------------------
 motor_cotizacion/
 borrador_rompecabezas_preview.html
+
+# Estacion de diseno: configuracion local de cada PC
+estacion_diseno/config.json
+estacion_diseno/__pycache__/

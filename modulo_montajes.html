@@ -79,11 +79,33 @@
 
 </div>
 <p id="sinAcceso">Tu usuario no tiene acceso a las herramientas de montaje.</p>
+
+<div id="panelEstacion" style="display:none; margin:0 25px 25px; background:white; border:2px solid #e2e8f0; border-top:4px solid #4a5568; border-radius:8px; padding:18px 22px;">
+  <div class="card-header"><h3 class="card-title" style="font-size:1.1rem;">Estación de diseño <span id="estacionChip" style="margin-left:8px"></span></h3></div>
+  <p style="font-size:0.88rem;color:#4a5568;margin:0 0 12px;">Programa que se deja abierto en el <b>PC de diseño</b>. Con él, las herramientas leen y guardan archivos pesados (500 MB o más) directamente en el disco, sin subirlos a internet, y crean la carpeta de cada trabajo.</p>
+  <div id="estacionAyuda" style="font-size:0.85rem;color:#7a5b00;background:#fff3cd;border:1px solid #f0d98c;border-radius:6px;padding:8px 12px;margin-bottom:12px;">
+    La estación no está conectada. En el PC de diseño abre el acceso directo <b>"Estación de diseño"</b> (o el archivo <code>estacion_diseno\iniciar.bat</code>) y recarga esta página. La primera vez, sigue el <code>LEEME.txt</code> de esa carpeta.
+  </div>
+  <div id="estacionConf" style="display:none;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;">
+      <div><label style="font-weight:bold;font-size:0.8rem;color:#4a5568;">Carpeta de los trabajos</label><input id="cfgRaiz" type="text" style="width:100%;padding:7px 9px;border:1px solid #cbd5e0;border-radius:5px;"></div>
+      <div><label style="font-weight:bold;font-size:0.8rem;color:#4a5568;">Carpeta de los JPG del plotter</label><input id="cfgPlotter" type="text" style="width:100%;padding:7px 9px;border:1px solid #cbd5e0;border-radius:5px;"></div>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <button class="nav-btn-hub" style="background:#1e3a5f" onclick="guardarCarpetas()">Guardar carpetas</button>
+      <button class="nav-btn-hub" style="background:#475569" onclick="abrirCarpeta('raiz')">Abrir carpeta de trabajos</button>
+      <button class="nav-btn-hub" style="background:#475569" onclick="abrirCarpeta('plotter')">Abrir carpeta del plotter</button>
+      <span id="cfgMsg" style="font-size:0.85rem;font-weight:bold;"></span>
+    </div>
+    <div id="estacionInfo" style="font-size:0.8rem;color:#718096;margin-top:8px;"></div>
+  </div>
+</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="tactical-supabase.js?v=20261016a"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
+<script src="tactical-estacion.js?v=20261017a"></script>
 <script src="precios_tactical.js?v=20261017a"></script>
 <script>
 // Cada tarjeta declara en data-roles quién la ve (misma matriz de roles del Hub). Si el rol no ve ninguna, vuelve al Hub.
@@ -96,8 +118,35 @@ window.tacticalOnLogin = async function(){
     t.style.display = ok ? '' : 'none';
     if(ok) visibles++;
   });
+  // panel de la estación de diseño: solo administrador y diseño
+  if(['administrador','diseno'].includes(rol)){ document.getElementById('panelEstacion').style.display = 'block'; iniciarEstacion(); }
   if(!visibles){ document.getElementById('sinAcceso').style.display = 'block'; setTimeout(()=>{ location.href = 'TACTICAL_ERP_HUB.html'; }, 2500); }
 };
+
+let _estacionIniciada = false;
+function iniciarEstacion(){
+  if(_estacionIniciada) return; _estacionIniciada = true;
+  const E = tacticalEstacion;
+  const pintar = async ()=>{
+    document.getElementById('estacionAyuda').style.display = E.conectada ? 'none' : 'block';
+    document.getElementById('estacionConf').style.display = E.conectada ? 'block' : 'none';
+    if(E.conectada){
+      const c = await E.config();
+      if(c.ok){ document.getElementById('cfgRaiz').value = c.raiz; document.getElementById('cfgPlotter').value = c.plotter; }
+      const i = E.info || {}; document.getElementById('estacionInfo').textContent = 'Versión '+(i.version||'')+' · espacio libre en el disco: '+(i.espacioLibreGb!=null ? i.espacioLibreGb+' GB' : 'desconocido')+' · PyMuPDF: '+(i.librerias&&i.librerias.pymupdf?'sí':'no')+' · Pillow: '+(i.librerias&&i.librerias.pillow?'sí':'no');
+    }
+  };
+  E.alCambiar(pintar); E.vigilar('estacionChip'); E.estado().then(pintar);
+}
+async function guardarCarpetas(){
+  const m = document.getElementById('cfgMsg'); m.style.color = '#1e3a5f'; m.textContent = 'Guardando…';
+  const d = await tacticalEstacion.cambiarConfig(document.getElementById('cfgRaiz').value, document.getElementById('cfgPlotter').value);
+  m.style.color = d.ok ? '#1a7d3f' : '#b91c1c'; m.textContent = d.ok ? 'Carpetas guardadas.' : 'No se pudo: '+(d.error||'');
+}
+async function abrirCarpeta(cual){
+  const c = await tacticalEstacion.config(); if(!c.ok) return;
+  await tacticalEstacion.abrir(cual==='plotter' ? c.plotter : c.raiz, false);
+}
 </script>
 </body>
 </html>

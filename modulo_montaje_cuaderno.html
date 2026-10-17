@@ -95,7 +95,7 @@
 <body>
 <header>
   <img src="logo_tactical.png" alt="Tactical">
-  <div><h1>Montajes y Sherpas</h1><p>Cuadernos, cajas, carpetas o cualquier otro producto: sube los archivos y se arma el montaje con la plantilla de Tactical, listo para que el cliente apruebe por WhatsApp.</p></div>
+  <div><h1>Montajes y Sherpas</h1><p>Cuadernos, cajas, carpetas o cualquier otro producto: sube los archivos y se arma el montaje con la plantilla de Tactical, listo para que el cliente apruebe por WhatsApp.</p><span id="estacionChip" style="margin-top:6px;display:inline-block"></span></div>
   <button class="nav-btn-hub" style="margin-left:auto;background:#475569" onclick="location.href='modulo_montajes.html'">← Montajes</button>
   <button class="nav-btn-hub" style="margin-left:0" onclick="location.href='TACTICAL_ERP_HUB.html'">Volver al Hub</button>
 </header>
@@ -206,6 +206,11 @@
   <div id="drop" onclick="document.getElementById('archivos').click()">Arrastra los archivos aquí o haz clic para elegirlos</div>
   <input type="file" id="archivos" multiple accept=".pdf,.ai,.jpg,.jpeg,.png,.webp" style="display:none" onchange="ingerirArchivos(this.files); this.value='';">
   <div id="progreso"></div>
+  <div id="estacionArchivos" style="display:none;margin-top:10px;background:#eef2f6;border:1px solid var(--border);border-radius:7px;padding:10px 12px;">
+    <label>Archivos en la carpeta del trabajo (estación de diseño) — se leen del disco, sin subirlos</label>
+    <div id="estacionLista"></div>
+    <div class="row2" style="margin-top:6px"><button class="btn gris mini" onclick="estacionListar()">Actualizar lista</button></div>
+  </div>
   <div id="pool"></div>
   <div class="row2">
     <button class="btn" onclick="autoAsignar()">Asignar automáticamente en orden</button>
@@ -233,6 +238,18 @@
     <button class="btn" style="background:#128c7e" onclick="enviarWaCliente()">Enviar al cliente por WhatsApp</button>
   </div>
   <div id="msgGuardar" style="font-size:12.5px;font-weight:700;margin-bottom:8px;"></div>
+  <details class="acc" id="estacionBox" style="margin-bottom:10px;">
+    <summary><span class="t">Estación de diseño (archivos pesados)</span><span class="res" id="rEstacion"></span></summary>
+    <div class="acc-cuerpo">
+      <p class="hint">Con la estación abierta en el PC de diseño: crea la carpeta del trabajo, guarda el montaje en el disco y lee archivos de 500 MB o más sin subirlos a internet.</p>
+      <div class="row2" style="margin-top:0">
+        <button class="btn" onclick="estacionCrearCarpeta()">Crear carpeta del trabajo</button>
+        <button class="btn verde" onclick="estacionGuardarMontaje()">Guardar montaje en la carpeta</button>
+        <button class="btn gris" onclick="estacionAbrir()">Abrir carpeta</button>
+      </div>
+      <div id="estacionMsg" class="hint" style="margin-top:8px;"></div>
+    </div>
+  </details>
   <div id="lienzoWrap"><canvas id="lienzo"></canvas></div>
 </div>
 </aside>
@@ -274,6 +291,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="tactical-supabase.js?v=20261016a"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
+<script src="tactical-estacion.js?v=20261017a"></script>
 <script src="precios_tactical.js?v=20261017a"></script>
 <script>
 if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -686,6 +704,26 @@ function cargarImagen(src){
 }
 const LADO_MAX_PX = 1700; // suficiente para la vista del cliente sin llenar la memoria con PDFs de 40 páginas
 
+// Convierte cada página de un PDF ya abierto en una miniatura del montaje (sirve para PDF en memoria y para PDF leídos por partes del disco)
+async function leerPaginasPdf(pdf, nombre, colores, prog){
+  let nuevos = 0;
+  for(let n=1; n<=pdf.numPages; n++){
+    prog.textContent = `Leyendo ${nombre}: página ${n} de ${pdf.numPages}…`;
+    const pag = await pdf.getPage(n);
+    const v1 = pag.getViewport({ scale:1 });
+    const k = LADO_MAX_PX / Math.max(v1.width, v1.height);
+    const vp = pag.getViewport({ scale:k });
+    const cv = document.createElement('canvas'); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+    const cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0,0,cv.width,cv.height);
+    await pag.render({ canvasContext:cx, viewport:vp }).promise;
+    const dataUrl = cv.toDataURL('image/jpeg', 0.88);
+    agregarAlPool({ nombre: pdf.numPages>1 ? `${nombre} · pág ${n}` : nombre, archivo:nombre, dataUrl, w:cv.width, h:cv.height,
+      cmW: v1.width/72*2.54, cmH: v1.height/72*2.54, esPdf:true, color: colores ? colores[n-1] : null, img: await cargarImagen(dataUrl) });
+    nuevos++;
+    pag.cleanup();
+  }
+  return nuevos;
+}
 async function ingerirArchivos(files){
   const prog = document.getElementById('progreso');
   const lista = Array.from(files).sort((a,b)=>a.name.localeCompare(b.name, undefined, {numeric:true}));
@@ -699,20 +737,7 @@ async function ingerirArchivos(files){
         prog.textContent = 'Revisando colores de '+f.name+'…';
         const colores = await analizarColorPdf(buf);
         const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buf.slice(0)) }).promise;
-        for(let n=1; n<=pdf.numPages; n++){
-          prog.textContent = `Leyendo ${f.name}: página ${n} de ${pdf.numPages}…`;
-          const pag = await pdf.getPage(n);
-          const v1 = pag.getViewport({ scale:1 });
-          const k = LADO_MAX_PX / Math.max(v1.width, v1.height);
-          const vp = pag.getViewport({ scale:k });
-          const cv = document.createElement('canvas'); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
-          const cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0,0,cv.width,cv.height);
-          await pag.render({ canvasContext:cx, viewport:vp }).promise;
-          const dataUrl = cv.toDataURL('image/jpeg', 0.88);
-          agregarAlPool({ nombre: pdf.numPages>1 ? `${f.name} · pág ${n}` : f.name, archivo:f.name, dataUrl, w:cv.width, h:cv.height,
-            cmW: v1.width/72*2.54, cmH: v1.height/72*2.54, esPdf:true, color: colores ? colores[n-1] : null, img: await cargarImagen(dataUrl) });
-          nuevos++;
-        }
+        nuevos += await leerPaginasPdf(pdf, f.name, colores, prog);
       } else if(['jpg','jpeg','png','webp'].includes(ext)){
         prog.textContent = 'Leyendo '+f.name+'…';
         const colorImg = modoColorImagen(new Uint8Array(await f.arrayBuffer()), ext);
@@ -1289,6 +1314,73 @@ function dibujarMontaje(){
 /* ======================= EXPORTAR ======================= */
 function fechaHoyLarga(){ return new Date().toLocaleDateString('es-CO', { day:'numeric', month:'long', year:'numeric' }); }
 function fechaHoyIso(){ const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+/* ======================= ESTACIÓN DE DISEÑO (archivos pesados en el PC de diseño) ======================= */
+function estacionUI(){
+  const E = tacticalEstacion, r = document.getElementById('rEstacion'), lista = document.getElementById('estacionArchivos');
+  if(r) r.textContent = E.conectada ? 'conectada' : 'no conectada';
+  if(lista) lista.style.display = E.conectada ? 'block' : 'none';
+  if(E.conectada && lista && !lista.dataset.cargada){ lista.dataset.cargada = '1'; estacionListar(); }
+}
+async function estacionAsegurarCarpeta(){
+  const E = tacticalEstacion, msg = document.getElementById('estacionMsg');
+  if(!(await E.estado())){ msg.textContent = 'La estación de diseño no está conectada: abre el programa en el PC de diseño y recarga.'; return null; }
+  if(!S.ot && !S.cliente){ alert('Escribe la OT o el cliente primero, para nombrar la carpeta.'); return null; }
+  const datos = { tipoMontaje:S.modo, cantidad:S.cantidad, ancho:S.ancho, alto:S.alto, anillado:S.anilPos, colorAnillo:S.anilColor, tapa:S.tapaTipo, fecha:fechaHoyIso() };
+  const d = await E.crearTrabajo(S.ot, S.cliente, datos);
+  if(!d.ok){ msg.textContent = 'No se pudo crear la carpeta: '+(d.error||''); return null; }
+  return d;
+}
+async function estacionCrearCarpeta(){
+  const msg = document.getElementById('estacionMsg'); msg.textContent = 'Creando carpeta…';
+  const d = await estacionAsegurarCarpeta(); if(!d) return;
+  msg.innerHTML = (d.creada ? 'Carpeta creada: ' : 'La carpeta ya existía: ') + '<b>'+esc(d.ruta)+'</b><br>Pon los archivos pesados del cliente en la subcarpeta <b>originales</b> y pulsa "Actualizar lista" en el paso 2.';
+  estacionListar();
+}
+async function estacionAbrir(){
+  const d = await estacionAsegurarCarpeta(); if(!d) return;
+  await tacticalEstacion.abrir(d.relativa, true);
+}
+async function estacionGuardarMontaje(){
+  const E = tacticalEstacion, msg = document.getElementById('estacionMsg');
+  if(!confirmarFaltantes()) return;
+  msg.textContent = 'Guardando el montaje en la carpeta…';
+  const d = await estacionAsegurarCarpeta(); if(!d) return;
+  dibujarMontaje();
+  const nombre = nombreArchivo();
+  const pdf = await pdfBlob(), jpg = await canvasABlob('image/jpeg', 0.93);
+  const r1 = await E.guardar(d.relativa+'/montaje/'+nombre+'.pdf', pdf), r2 = await E.guardar(d.relativa+'/montaje/'+nombre+'.jpg', jpg);
+  msg.innerHTML = (r1.ok && r2.ok) ? 'Guardado en <b>'+esc(d.ruta)+'\\montaje</b> (PDF y JPG).' : 'No se pudo guardar: '+esc((r1.error||r2.error||''));
+}
+async function estacionListar(){
+  const E = tacticalEstacion, c = document.getElementById('estacionLista'); if(!c) return;
+  if(!E.conectada){ c.innerHTML = ''; return; }
+  if(!S.ot && !S.cliente){ c.innerHTML = '<span class="hint">Escribe la OT o el cliente para ver su carpeta.</span>'; return; }
+  const d = await E.listarOriginales(S.ot, S.cliente);
+  if(!d.ok){ c.innerHTML = '<span class="hint">'+esc(d.error||'')+'</span>'; return; }
+  const MB = b => b>=1048576 ? (b/1048576).toFixed(1)+' MB' : Math.max(1,Math.round(b/1024))+' KB';
+  window._estacionArchivos = d.archivos;
+  c.innerHTML = d.archivos.length ? d.archivos.map((a,i)=>`<div style="display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid #d5dbe3;font-size:13px;"><span style="flex:1;word-break:break-all">${esc(a.nombre)}</span><span class="hint" style="margin:0">${MB(a.bytes)}</span><button class="btn mini" onclick="ingerirDesdeEstacion(${i})">Cargar</button></div>`).join('')
+    : '<span class="hint">No hay archivos en <b>'+esc(d.carpeta)+'</b>'+(d.existe?'':' (la carpeta aún no existe: pulsa "Crear carpeta del trabajo")')+'.</span>';
+}
+async function ingerirDesdeEstacion(i){
+  const a = (window._estacionArchivos||[])[i]; if(!a) return;
+  const prog = document.getElementById('progreso'), ext = (a.nombre.split('.').pop()||'').toLowerCase(), E = tacticalEstacion;
+  try{
+    if(ext==='pdf' || ext==='ai'){
+      prog.textContent = 'Abriendo '+a.nombre+' desde el disco (por partes)…';
+      // el PDF se lee por partes directamente del disco: no se carga entero en la memoria del navegador
+      const pdf = await pdfjsLib.getDocument({ url:E.urlArchivo(a.ruta), rangeChunkSize:2*1024*1024, disableAutoFetch:true, disableStream:true }).promise;
+      const n = await leerPaginasPdf(pdf, a.nombre, null, prog);
+      prog.textContent = `Listo: ${n} página(s) de ${a.nombre}. (En archivos leídos desde la estación todavía no se revisa RGB/CMYK.)`;
+      renderPool(); renderSlots(); dibujarMontaje();
+    } else {
+      prog.textContent = 'Leyendo '+a.nombre+'…';
+      const blob = await (await fetch(E.urlArchivo(a.ruta))).blob();
+      await ingerirArchivos([new File([blob], a.nombre, { type: blob.type })]);
+    }
+  } catch(e){ console.error(e); prog.textContent = ''; alert('No se pudo leer "'+a.nombre+'" desde la estación: '+(e.message||e)); }
+}
+
 /* ======================= WHATSAPP ======================= */
 let WA_RECT = null;
 function waNumero(n){
@@ -1542,6 +1634,8 @@ window.tacticalOnLogin = async function(){
 (async function iniciar(){
   try{ logoImg = await cargarImagen('logo_tactical.png'); } catch(e){}
   try{ await document.fonts.load('300 50px Oswald'); } catch(e){}
+  tacticalEstacion.alCambiar(()=>{ const l = document.getElementById('estacionArchivos'); if(l) delete l.dataset.cargada; estacionUI(); });
+  tacticalEstacion.vigilar('estacionChip'); tacticalEstacion.estado().then(estacionUI);
   cargarContactos(); llenarComerciales(); construirSlots(); volcarForm(); seleccionarComercialInicial(); leerForm(false); volcarAnillado(); renderAnillado(); renderTodo();
 })();
 </script>
