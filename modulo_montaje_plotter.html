@@ -172,7 +172,7 @@ const fmt = n => (Math.round(n*10)/10).toString().replace('.',',');
 
 /* ======================= ESTADO ======================= */
 const CFG = { polW:100, polH:66, gap:0.1, rolloW:102, ppp:230, minA:24, minB:16, guiaMin:20, guiaMax:23, usarSob:true, maxLargo:150,
-  margen:1, sepBloques:0.1, sepGuias:0 };
+  margen:1, anchoImp:101, sepBloques:0.1, sepGuias:0 };
 let ITEMS = [];      // {id,nombre,w,h,fichas,cant,img,thumb,guiaPl,guia500,enc:{cx,cy,z}}
 let PL = { url:'guia_armado_12x12.png', img:null, w:12, h:12, zx:0.6, zy:0.6, zw:10.8, zh:10.0 };   // plantilla de guía por defecto: 12 x 12 cm (zona de la imagen reducida arriba del pie con logo)
 const PL_DEFECTO = { ...PL };
@@ -477,14 +477,14 @@ function puntaje(res, lay){
 }
 function mejorQue(a, b){ for(let i=0;i<a.length;i++){ if(a[i] < b[i]-1e-9) return true; if(a[i] > b[i]+1e-9) return false; } return false; }
 function disponer(bins){          // diseño en el rollo: láminas una debajo de otra (1 mm), sobrantes en filas, guías en el vinilo libre
-  const rollW = CFG.rolloW, m = CFG.margen, sep = CFG.sepBloques, anchoUtil = rollW - 2*m;
+  const rollW = CFG.rolloW, m = CFG.margen, sep = CFG.sepBloques, anchoUtil = CFG.anchoImp, xi = (rollW - CFG.anchoImp)/2, xf = rollW - xi;   // el plotter imprime 101 cm: lo que pasa de 100 cm solo lo usan las guías
   let y = m; const bloques = [];
   const ancho = b=>b.puestos.length ? Math.max(...b.puestos.map(p=>p.x+p.w)) : 0;
-  let x = m, filaH = 0;
-  const cerrarFila = ()=>{ y += filaH + sep; x = m; filaH = 0; };
-  bins.filter(b=>b.tipo==='sobrante').forEach(b=>{ const vh = altoVinilo(b); if(x + b.W > m + anchoUtil + 1e-6 && filaH>0) cerrarFila(); bloques.push({ bin:b, x, y, vh }); x += ancho(b) + sep; filaH = Math.max(filaH, vh); });
+  let x = xi, filaH = 0;
+  const cerrarFila = ()=>{ y += filaH + sep; x = xi; filaH = 0; };
+  bins.filter(b=>b.tipo==='sobrante').forEach(b=>{ const vh = altoVinilo(b); if(x + b.W > xi + CFG.polW + 1e-6 && filaH>0) cerrarFila(); bloques.push({ bin:b, x, y, vh }); x += ancho(b) + sep; filaH = Math.max(filaH, vh); });
   if(filaH>0) cerrarFila();
-  bins.filter(b=>b.tipo==='lamina').forEach(b=>{ const vh = altoVinilo(b); bloques.push({ bin:b, x:m, y, vh }); y += vh + sep; });
+  bins.filter(b=>b.tipo==='lamina').forEach(b=>{ const vh = altoVinilo(b); bloques.push({ bin:b, x:xi, y, vh }); y += vh + sep; });
   const gap1mm = 0.1;
   const guias = []; const lista = [];
   ITEMS.forEach(it=>{ for(let c=0;c<Math.max(1,it.cant);c++){ if(it.guiaPl) lista.push({ tipo:'plantilla', item:it }); if(it.guia500) lista.push({ tipo:'500', item:it }); } });
@@ -496,7 +496,7 @@ function disponer(bins){          // diseño en el rollo: láminas una debajo de
   let pend = lista.slice();
   // 1) vinilo libre a la derecha de cada bloque, a 1 mm de los rompecabezas y sin espacio entre guías
   bloques.forEach(bl=>{
-    const x0 = bl.x + ancho(bl.bin) + gap1mm, x1 = rollW - m, yTop = bl.y, yBot = bl.y + bl.vh;
+    const x0 = bl.x + ancho(bl.bin) + gap1mm, x1 = xf, yTop = bl.y, yBot = bl.y + bl.vh;
     let cx = x0, cy = yTop, fila = 0;
     for(let i=0;i<pend.length;){
       const g = pend[i]; const d = medidaGuia(g, x1 - x0); const w = d.w, h = d.h;
@@ -506,10 +506,10 @@ function disponer(bins){          // diseño en el rollo: láminas una debajo de
     }
   });
   // 2) las que sobran, debajo del último bloque
-  let gx = m, gy = y - sep + gap1mm, gfila = 0;
+  let gx = xi, gy = y - sep + gap1mm, gfila = 0;
   pend.forEach(g=>{
-    const d = medidaGuia(g, anchoUtil - (gx - m)); let w = d.w, h = d.h;
-    if(gx + w > m + anchoUtil + 1e-6 && gfila>0){ gy += gfila; gx = m; gfila = 0; const d2 = medidaGuia(g, anchoUtil); w = d2.w; h = d2.h; }
+    const d = medidaGuia(g, anchoUtil - (gx - xi)); let w = d.w, h = d.h;
+    if(gx + w > xf + 1e-6 && gfila>0){ gy += gfila; gx = xi; gfila = 0; const d2 = medidaGuia(g, anchoUtil); w = d2.w; h = d2.h; }
     guias.push({ ...g, x:gx, y:gy, w, h }); gx += w; gfila = Math.max(gfila, h);
   });
   const fin = pend.length ? gy + gfila + m : y - sep + m;
