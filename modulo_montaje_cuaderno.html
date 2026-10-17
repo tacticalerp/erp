@@ -267,6 +267,7 @@
     <div class="acc-cuerpo">
       <p class="hint">Genera el PDF de prueba que se imprime a <b>tamaño real</b> para que el cliente revise: una hoja por sección (carátula y su guarda, contracarátula, insertos, hoja interior), con el logo, el material, las cotas de las carátulas y un marco gris fino que marca el límite del papel. No lleva marcas de corte ni sangrado; sí muestra el anillo en su lugar, para que el cliente vea dónde queda.</p>
   <div class="grid">
+    <div><label>Papel de la prueba</label><select id="pPapel" onchange="planPrueba()"><option value="auto" selected>Automático: el más pequeño donde quepa a tamaño real</option><option value="manual">Medida fija (la de abajo)</option></select></div>
     <div><label>Ancho de la hoja de impresión (cm)</label><input type="number" id="pHojaW" step="0.1" value="50" oninput="planPrueba()"></div>
     <div><label>Alto de la hoja de impresión (cm)</label><input type="number" id="pHojaH" step="0.1" value="33" oninput="planPrueba()"></div>
     <div><label>Margen de la hoja (cm)</label><input type="number" id="pMargen" step="0.1" value="1" oninput="planPrueba()"></div>
@@ -275,6 +276,7 @@
   <div id="pResumen" style="margin-top:10px;font-weight:700;font-size:13.5px;color:#1e3a5f;"></div>
   <div id="pVista" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;"></div>
   <div class="row2"><button class="btn rojo" onclick="descargarPrueba()">Descargar PDF de prueba (tamaño real)</button><span id="msgPrueba" style="font-size:12.5px;font-weight:700;"></span></div>
+  <p class="hint" style="margin-top:6px">En automático se prueba, de menor a mayor, 22×28, 25×35, 45×30 y 50×33 cm (horizontal o vertical) y cada sección usa el más pequeño donde cabe sin reducirse, para no gastar papel de 50×33 en piezas chicas. Siempre quedan libres 4 mm como mínimo por todos los lados del papel (el margen que escribas abajo nunca baja de 0,4 cm). Se respeta la pinza de la impresora digital (5 mm del lado largo del papel, en rojo claro en la vista previa): ahí no se coloca nada. Siempre que se pueda sale a tamaño real y se juntan 2 páginas por hoja; solo si una pieza excede el máximo de impresión (50×33, por ejemplo una caja de 60×45) se reduce, y entonces el resumen y el PDF lo avisan en rojo con el porcentaje. Las medidas de arriba (ancho y alto) solo se usan con «Medida fija».</p>
 
     </div>
   </details>
@@ -1015,7 +1017,7 @@ function actualizarResumenes(){
   set('rArch', S.pool.length ? `${S.pool.length} página(s) cargadas` : '');
   set('rCuadros', `${asign} de ${S.slots.length} con archivo`, asign < S.slots.length);
   const pl = (typeof planificarHojas==='function') ? planificarHojas() : null;
-  set('rPrueba', pl && pl.total ? `${pl.hojas.length} hoja(s) de ${pl.P.W} x ${pl.P.H} cm` : '');
+  set('rPrueba', pl && pl.total ? `${pl.hojas.length} hoja(s): ${resumenPapeles(pl)}` : '');
 }
 function renderTodo(){ actualizarResumenes(); infoAnillos(); renderPool(); renderSlots(); dibujarMontaje(); if(typeof planPrueba==='function') planPrueba(); }
 
@@ -1567,23 +1569,68 @@ function renderGuardados(){
    Tamaño real, una hoja por sección con la misma distribución del montaje: logo, título, piezas con su nombre, cotas (solo
    carátulas), material debajo y un marco gris fino (30%) que indica el límite del papel. Sin marcas de corte, sin sangrado, sin anillo. */
 const DPI_PRUEBA = 150;
+const PAPELES_PRUEBA = [[28,22],[35,25],[45,30],[50,33]];   // de menor a mayor área (cm); cada uno se prueba horizontal y vertical
 const PR_EXTRA_V = 6.8, PR_EXTRA_H = 1.8;   // cm que ocupan arriba/abajo (logo, títulos, cota, material) y al lado (cota del alto)
 function paramsPrueba(){
   const n = (id,d)=>{ const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? d : v; };
-  return { W:n('pHojaW',50)||50, H:n('pHojaH',33)||33, m:n('pMargen',1), g:n('pGap',2.5) };
+  const sel = document.getElementById('pPapel');
+  return { W:n('pHojaW',50)||50, H:n('pHojaH',33)||33, m:Math.max(0.4, n('pMargen',1)), g:n('pGap',2.5), auto: !sel || sel.value==='auto' };
 }
+// Elige el papel: nunca se reduce si se puede evitar.
+// Nivel 1: cabe a tamaño real con encabezado, cotas y margen. Nivel 2: la pieza cabe a tamaño real aunque el encabezado quede justo.
+// Solo si ninguno sirve (cajas de 60x45, piezas que pasan del máximo de impresión) se reduce, y se avisa.
+const PINZA_DIGITAL_CM = 0.5;   // la pinza de la impresora digital se come 5 mm del lado largo del papel: ahí no se imprime
+function areaUtil(w, h2){ return w >= h2 ? [w - PINZA_DIGITAL_CM, h2] : [w, h2 - PINZA_DIGITAL_CM]; }
+function elegirPapel(P, rowW, rowH){
+  const cand = P.auto ? PAPELES_PRUEBA.flatMap(([a,b])=>[[a,b],[b,a]]) : [[P.W,P.H]];
+  for(const nivel of [1,2,3]){
+    let mejor = null;
+    cand.forEach(([w,h2])=>{
+      const [wu, hu] = areaUtil(w, h2);
+      const e = nivel===1 ? Math.min(1, (wu - 2*P.m - 2*PR_EXTRA_H)/rowW, (hu - 2*P.m - PR_EXTRA_V)/rowH) : (nivel===2 ? Math.min(1, (wu - 2.4)/rowW, (hu - 1.6)/rowH) : Math.min(1, (wu - 0.8)/rowW, (hu - 0.8)/rowH));
+      if(e>=0.999 && (!mejor || w*h2 < mejor.ar)) mejor = { w, h:h2, e:1, ar:w*h2 };
+    });
+    if(mejor) return mejor;
+  }
+  let mejor = null;
+  cand.forEach(([w,h2])=>{
+    const [wu, hu] = areaUtil(w, h2);
+    const e = Math.min(1, (wu - 0.8)/rowW, (hu - 0.8)/rowH), ar = w*h2;
+    if(!mejor || e > mejor.e + 1e-9 || (Math.abs(e-mejor.e) < 1e-9 && ar > mejor.ar)) mejor = { w, h:h2, e, ar };
+  });
+  return mejor;
+}
+const PIEZAS_POR_HOJA = 2;   // lo ideal en cuadernos: 2 páginas en cada impresión
 function planificarHojas(){
   const P = paramsPrueba(), hojas = []; let total = 0;
+  const unidades = [];
   agruparSlots().forEach((g,gi)=>{
     const slots = g.slots.filter(sl=>sl.poolId || sl.blanco);
     if(!slots.length) return;
     total += slots.length;
-    const dms = slots.map(dimsSlot);
-    const rowW = dms.reduce((a,d)=>a+d.w,0) + (slots.length-1)*P.g, rowH = Math.max(...dms.map(d=>d.h));
-    const escala = Math.min(1, (P.W - 2*P.m - 2*PR_EXTRA_H)/rowW, (P.H - 2*P.m - PR_EXTRA_V)/rowH);
-    hojas.push({ g, gi, slots, dms, rowW, rowH, escala });
+    unidades.push({ g, nums:[gi+1], slots });
   });
+  const medir = slots=>{
+    const dms = slots.map(dimsSlot);
+    return { dms, rowW: dms.reduce((a,d)=>a+d.w,0) + (slots.length-1)*P.g, rowH: Math.max(...dms.map(d=>d.h)) };
+  };
+  // junta secciones de a 2 piezas por hoja cuando caben a tamaño real
+  for(let i=0;i<unidades.length;i++){
+    let u = unidades[i];
+    while(i+1 < unidades.length && u.slots.length + unidades[i+1].slots.length <= PIEZAS_POR_HOJA){
+      const v = unidades[i+1], slots = u.slots.concat(v.slots), m = medir(slots);
+      if(elegirPapel(P, m.rowW, m.rowH).e < 0.999) break;
+      u = { g:{ ...u.g, titulo:u.g.titulo+' + '+v.g.titulo }, nums:u.nums.concat(v.nums), slots };
+      i++;
+    }
+    const m = medir(u.slots), pap = elegirPapel(P, m.rowW, m.rowH);
+    hojas.push({ g:u.g, gi:u.nums[0]-1, num:u.nums.join(' y '), slots:u.slots, dms:m.dms, rowW:m.rowW, rowH:m.rowH, escala:pap.e, W:pap.w, H:pap.h });
+  }
   return { P, hojas, total };
+}
+function resumenPapeles(pl){
+  const c = {}; pl.hojas.forEach(h=>{ const k = fmtCm(h.W)+' x '+fmtCm(h.H)+' cm'; c[k] = (c[k]||0)+1; });
+  return Object.keys(c).map(k=>c[k]+' de '+k).join(' · ');
 }
 function planPrueba(){
   const pl = planificarHojas(), res = document.getElementById('pResumen'), vis = document.getElementById('pVista');
@@ -1591,13 +1638,15 @@ function planPrueba(){
   if(!pl.total){ res.style.color = '#1e3a5f'; res.textContent = 'Asigna archivos a los cuadros para ver las hojas de la prueba.'; vis.innerHTML = ''; return; }
   const red = pl.hojas.filter(h=>h.escala < 0.999);
   res.style.color = red.length ? '#b45309' : '#1e3a5f';
-  res.textContent = `${pl.hojas.length} hoja(s) de ${pl.P.W} x ${pl.P.H} cm, una por sección, a tamaño real` + (red.length ? ` · ⚠ ${red.length} no cabe(n) a tamaño real y se reduce(n): ${red.map(h=>h.g.titulo+' al '+Math.round(h.escala*100)+'%').join(', ')}` : '');
-  const esc_ = 300 / pl.P.W;
+  res.textContent = `${pl.hojas.length} hoja(s), una por sección, a tamaño real: ${resumenPapeles(pl)}` + (red.length ? ` · ⚠ TAMAÑO REDUCIDO, no sale a tamaño real (avisar al cliente): ${red.map(h=>h.g.titulo+' al '+Math.round(h.escala*100)+'%').join(', ')}` : '');
   vis.innerHTML = pl.hojas.map((h,n)=>{
+    const esc_ = 300 / h.W;
     const anchos = h.dms.map(d=>d.w*h.escala), rowW = anchos.reduce((a,b)=>a+b,0) + (h.slots.length-1)*pl.P.g;
-    let x = (pl.P.W - rowW)/2; const yTop = pl.P.m + 4.2;
-    const rects = h.slots.map((sl,i)=>{ const r = `<rect x="${x}" y="${yTop}" width="${anchos[i]}" height="${h.dms[i].h*h.escala}" fill="#dbeafe" stroke="#9aa5b1" stroke-width="0.15"/><text x="${x+anchos[i]/2}" y="${yTop+h.dms[i].h*h.escala/2}" font-size="1.5" text-anchor="middle" fill="#1e3a5f">${esc(sl.titulo.slice(0,24))}</text>`; x += anchos[i] + pl.P.g; return r; }).join('');
-    return `<div style="background:#fff;border:1px solid #94a3b8;border-radius:4px;padding:4px;"><div style="font-size:11px;font-weight:700;margin-bottom:2px;">Hoja ${n+1} de ${pl.hojas.length} · ${esc(h.g.titulo)}</div><svg width="300" height="${pl.P.H*esc_}" viewBox="0 0 ${pl.P.W} ${pl.P.H}" style="background:#f8fafc;border:1px solid #cbd5e1;">${rects}</svg></div>`;
+    const [wu0, hu0] = areaUtil(h.W, h.H), xo0 = h.W >= h.H ? PINZA_DIGITAL_CM : 0, yo0 = h.W >= h.H ? 0 : PINZA_DIGITAL_CM;
+    let x = xo0 + (wu0 - rowW)/2; const yTop = yo0 + pl.P.m + 4.2;
+    const bandaPinza = h.W >= h.H ? `<rect x="0" y="0" width="${PINZA_DIGITAL_CM}" height="${h.H}" fill="#fecaca"/>` : `<rect x="0" y="0" width="${h.W}" height="${PINZA_DIGITAL_CM}" fill="#fecaca"/>`;
+    const rects = bandaPinza + h.slots.map((sl,i)=>{ const r = `<rect x="${x}" y="${yTop}" width="${anchos[i]}" height="${h.dms[i].h*h.escala}" fill="#dbeafe" stroke="#9aa5b1" stroke-width="0.15"/><text x="${x+anchos[i]/2}" y="${yTop+h.dms[i].h*h.escala/2}" font-size="1.5" text-anchor="middle" fill="#1e3a5f">${esc(sl.titulo.slice(0,24))}</text>`; x += anchos[i] + pl.P.g; return r; }).join('');
+    return `<div style="background:#fff;border:1px solid #94a3b8;border-radius:4px;padding:4px;"><div style="font-size:11px;font-weight:700;margin-bottom:2px;">Hoja ${n+1} de ${pl.hojas.length} · ${esc(h.g.titulo)} <span style="font-weight:400;color:#475569">· papel ${fmtCm(h.W)} x ${fmtCm(h.H)} cm</span></div><svg width="300" height="${h.H*esc_}" viewBox="0 0 ${h.W} ${h.H}" style="background:#f8fafc;border:1px solid #cbd5e1;">${rects}</svg></div>`;
   }).join('');
 }
 // Cota en el PDF (mm): línea con flechas, y el texto sobre un fondo blanco
@@ -1618,25 +1667,29 @@ async function descargarPrueba(){
   if(!pl.total){ alert('Asigna archivos a los cuadros primero.'); return; }
   const f = faltantes();
   if(f.length && !confirm('Estos cuadros no tienen archivo y saldrán sin imagen:\n\n- '+f.join('\n- ')+'\n\n¿Continuar?')) return;
-  const { jsPDF } = window.jspdf, P = pl.P, mm = 10, W = P.W*mm, H = P.H*mm, m = P.m*mm;
-  const orient = P.W >= P.H ? 'l' : 'p';
-  const doc = new jsPDF({ unit:'mm', format:[W, H], orientation: orient });
+  const { jsPDF } = window.jspdf, P = pl.P, mm = 10, m = P.m*mm;
+  const h0 = pl.hojas[0];
+  const doc = new jsPDF({ unit:'mm', format:[h0.W*mm, h0.H*mm], orientation: h0.W >= h0.H ? 'l' : 'p' });
+  let W = h0.W*mm, H = h0.H*mm;
   let logoUrl = null;
   if(logoImg){ const c = document.createElement('canvas'); c.width = logoImg.naturalWidth; c.height = logoImg.naturalHeight; c.getContext('2d').drawImage(logoImg,0,0); logoUrl = c.toDataURL('image/png'); }
   const recorta = (t, maxW)=>{ while(doc.getTextWidth(t) > maxW && t.length > 6) t = t.slice(0,-2); return t; };
   for(let n=0; n<pl.hojas.length; n++){
     const h = pl.hojas[n]; msg.style.color = '#1e3a5f'; msg.textContent = `Armando hoja ${n+1} de ${pl.hojas.length}…`;
     await new Promise(r=>setTimeout(r,20));
-    if(n>0) doc.addPage([W, H], orient);
+    W = h.W*mm; H = h.H*mm;
+    const pin = PINZA_DIGITAL_CM*mm, xo = W >= H ? pin : 0, yo = W >= H ? 0 : pin, Wu = W - xo, Hu = H - yo;   // zona que la pinza no muerde
+    if(n>0) doc.addPage([W, H], W >= H ? 'l' : 'p');
     // encabezado: logo, sección y datos del trabajo
-    if(logoUrl){ const lw = 38, lh = lw*logoImg.naturalHeight/logoImg.naturalWidth; doc.addImage(logoUrl, 'PNG', m, m, lw, lh); }
-    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(30,30,30); doc.text((h.gi+1)+'. '+h.g.titulo, m+44, m+8);
+    if(logoUrl){ const lw = 38, lh = lw*logoImg.naturalHeight/logoImg.naturalWidth; doc.addImage(logoUrl, 'PNG', xo+m, yo+m, lw, lh); }
+    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(30,30,30); doc.text(recorta((h.num||(h.gi+1))+'. '+h.g.titulo, Wu-2*m-44-52), xo+m+44, yo+m+8);
     doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(110,110,110);
-    doc.text(`${S.cliente||''}${S.ot?' · '+(/^ot/i.test(S.ot)?S.ot:'OT '+S.ot):''} · ${fechaHoyLarga()}`, W-m, m+5, { align:'right' });
-    doc.text('Prueba de impresión a tamaño real' + (h.escala<0.999 ? ' (reducida al '+Math.round(h.escala*100)+'%)' : ''), W-m, m+9.5, { align:'right' });
+    doc.text(`${S.cliente||''}${S.ot?' · '+(/^ot/i.test(S.ot)?S.ot:'OT '+S.ot):''} · ${fechaHoyLarga()}`, W-m, yo+m+5, { align:'right' });
+    doc.text('Prueba de impresión a tamaño real · papel ' + fmtCm(h.W) + ' x ' + fmtCm(h.H) + ' cm' + (h.escala<0.999 ? ' (reducida al '+Math.round(h.escala*100)+'%)' : ''), W-m, yo+m+9.5, { align:'right' });
+    if(h.escala<0.999){ doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(185,28,28); doc.text('TAMANO REDUCIDO AL '+Math.round(h.escala*100)+'% - NO ES A TAMANO REAL', W-m, yo+m+14.5, { align:'right' }); doc.setFont('helvetica','normal'); }
     // piezas, centradas en la hoja
     const esc = h.escala, anchos = h.dms.map(d=>d.w*esc*mm), rowW = anchos.reduce((a,b)=>a+b,0) + (h.slots.length-1)*P.g*mm;
-    let x = (W - rowW)/2; const yTop = m + 27;
+    let x = xo + (Wu - rowW)/2; const yTop = yo + m + Math.max(10, Math.min(27, Hu - 2*m - h.rowH*esc*mm - 14));
     for(let i=0; i<h.slots.length; i++){
       const sl = h.slots[i], dm = h.dms[i], w = anchos[i], hh = dm.h*esc*mm, it = S.pool.find(q=>q.id===sl.poolId);
       if(it){
@@ -1676,7 +1729,7 @@ async function descargarPrueba(){
     doc.text(`Hoja ${n+1} de ${pl.hojas.length}`, W-m, H-m+3, { align:'right' });
   }
   bajar(doc.output('blob'), nombreArchivo().replace('montaje_','prueba_impresion_')+'.pdf');
-  msg.style.color = '#1a7d3f'; msg.textContent = `Listo: PDF de prueba de ${pl.hojas.length} hoja(s) a tamaño real.`;
+  msg.style.color = '#1a7d3f'; msg.textContent = `Listo: PDF de prueba de ${pl.hojas.length} hoja(s) a tamaño real (${resumenPapeles(pl)}).`;
 }
 
 /* ======================= INICIO ======================= */
