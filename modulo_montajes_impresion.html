@@ -252,7 +252,7 @@ let _tmFormato = null;
 function cambioFormato(){
   recalcular();
   clearTimeout(_tmFormato);
-  _tmFormato = setTimeout(()=>{ PREP.analizado = false; analizarTodo(); }, 800);   // el análisis depende del formato final
+  _tmFormato = setTimeout(()=>{ PREP.analizado = false; analizarTodo(); S.pool.forEach(p=>{ p.libres = null; }); ANI.listo = false; if(ANI.lado!=='ninguno') anilloAnalizar(); }, 800);   // el análisis depende del formato final
 }
 
 /* ======================= ARCHIVOS ======================= */
@@ -275,8 +275,10 @@ async function cargarArchivos(fileList){
   autoAsignar();
   renderPool();
   PREP.analizado = false;
+  ANI.listo = false;
   recalcular();
   analizarTodo();
+  if(ANI.lado!=='ninguno') anilloAnalizar();
 }
 
 async function agregarArchivo(nombre, bytes){
@@ -328,7 +330,7 @@ function limpiarArchivos(){
   trasQuitar();
 }
 function trasQuitar(){
-  MED.aplicado = false; MED.analizado = false; MED.an = {}; MED.informe = null; TIN.aplicado = false; TIN.informe = null;
+  MED.aplicado = false; MED.analizado = false; MED.an = {}; MED.informe = null; TIN.aplicado = false; TIN.informe = null; ANI.listo = false;
   PREP.aplicado = false; PREP.analizado = false; PREP.abierto = false; S.hojaVer = 0;
   $('archivos').value = '';
   autoAsignar(); renderPool(); recalcular();
@@ -705,6 +707,7 @@ function recalcular(){
   $('wPinza').style.display = ($('tipo').value==='taco' && $('giro').value==='tr') ? '' : 'none';
   if(S.pool.length){ renderPool(); }
   S.plan = planificar();
+  anilloNotas(S.plan.notas);
   renderLibre();
   if(S.hojaVer >= S.plan.hojas.length) S.hojaVer = 0;
   dibujar();
@@ -1085,7 +1088,7 @@ function renderPrep(){
   const tagMed = MED.aplicado ? '<span class="tag ok">Aplicado</span>' : '';
   let h = '<div class="tiles">'+tileSang+
     '<button class="tl '+(MED.abierto?'sel':'')+'" onclick="medToggle()"><b>Medida y cuadrícula '+tagMed+'</b><small>Lleva el interior al formato final</small></button>'+
-    '<button class="tl '+(TIN.abierto?'sel':'')+'" onclick="tinToggle()"><b>Receta de tinta '+(TIN.aplicado?'<span class="tag ok">Aplicado</span>':'')+'</b><small>Negro o Cool Gray: grosores y tonos</small></button></div>';
+    '<button class="tl '+(TIN.abierto?'sel':'')+'" onclick="tinToggle()"><b>Receta de tinta '+(TIN.aplicado?'<span class="tag ok">Aplicado</span>':'')+'</b><small>Negro o Cool Gray: grosores y tonos</small></button>'+tileAnillo()+'</div>';
   if(PREP.analizando) h += '<div class="hint" style="margin-top:8px">Analizando páginas… '+PREP.progreso+' de '+Math.min(S.pool.length,40)+'</div>';
   if(PREP.aplicando) h += '<div class="hint" style="margin-top:8px">'+esc(PREP.msg||'Preparando…')+'</div>';
   if(PREP.abierto && prepActivo()){
@@ -1118,6 +1121,7 @@ function renderPrep(){
   }
   h += renderMedida();
   h += renderTinta();
+  h += renderAnillo();
   $('prepBody').innerHTML = h;
 }
 
@@ -1167,7 +1171,7 @@ async function refrescarArchivo(fid){
     const pg = pages[p.pidx], mb = pg.getMediaBox(), tb = pg.getTrimBox();
     p.mb = { x:mb.x, y:mb.y, w:mb.width, h:mb.height }; p.tb = { x:tb.x, y:tb.y, w:tb.width, h:tb.height };
     p.conTrim = Math.abs(tb.width-mb.width)>0.5 || Math.abs(tb.height-mb.height)>0.5;
-    p.thumb = thumbs[p.pidx] || ''; p.diag = null;
+    p.thumb = thumbs[p.pidx] || ''; p.diag = null; p.libres = null;
   });
 }
 async function medAplicar(){
@@ -1192,6 +1196,7 @@ async function medAplicar(){
   recalcular();
   if(prepActivo()) analizarTodo();
   MED.analizado = false; if(MED.abierto) await medAnalizar();
+  anilloRefrescar();
 }
 async function medQuitar(){
   for(let fid=0; fid<S.files.length; fid++){
@@ -1201,6 +1206,7 @@ async function medQuitar(){
   MED.aplicado = false; MED.informe = null; TIN.aplicado = false; TIN.informe = null; PREP.analizado = false;
   recalcular(); if(prepActivo()) analizarTodo();
   MED.analizado = false; if(MED.abierto) await medAnalizar();
+  anilloRefrescar();
 }
 function medDescargar(){
   S.files.forEach(f=>{
@@ -1284,6 +1290,7 @@ async function tinAplicar(){
   recalcular();
   if(prepActivo()) analizarTodo();
   MED.analizado = false; if(MED.abierto || TIN.abierto) await medAnalizar();
+  anilloRefrescar();
 }
 function renderTinta(){
   let h = '';
@@ -1315,6 +1322,150 @@ function renderTinta(){
     h += '</ul></div>';
   }
   return h;
+}
+
+/* ======================= REVISIÓN DE ANILLADO ======================= */
+// Avisa, con medidas, si hay textos o gráficas muy cerca del borde donde va el anillado (el perforado las puede morder) o de los demás bordes.
+// Mínimos de Conde: 13 mm del lado del anillado y 7 mm en los demás. No bloquea nada: tú decides si continúas.
+const ANI = { lado:'ninguno', minAnillo:13, minOtros:7, abierto:false, analizando:false, listo:false, progreso:0 };
+const LADO_ANI = { izq:'l', der:'r', arr:'t' };
+const NOMBRE_LADO_ANI = { l:'izquierdo', r:'derecho', t:'superior', b:'inferior' };
+// Lado del anillado de cada página. En los modos alternos (catálogos, libros) cambia con la página: la impar es la de la mano derecha
+// y lleva el anillado a la izquierda; la par lleva el anillado a la derecha (o al revés en 'alt2'). La página se cuenta dentro de su archivo.
+function ladoAnilloDe(p){
+  if(ANI.lado==='alt1') return ((p.pidx+1)%2===1) ? 'l' : 'r';
+  if(ANI.lado==='alt2') return ((p.pidx+1)%2===1) ? 'r' : 'l';
+  return LADO_ANI[ANI.lado] || null;
+}
+function desviacion(a){ if(!a.length) return 0; const m = a.reduce((x,y)=>x+y,0)/a.length; return Math.sqrt(a.reduce((x,y)=>x+(y-m)*(y-m),0)/a.length); }
+
+// Distancia (mm) desde cada borde del corte hasta el primer elemento: por píxeles (sobre fondo liso) y por texto vectorial
+async function libresPagina(p){
+  const f = S.files[p.fid]; if(!f || !f.pj) return null;
+  const pg = await f.pj.getPage(p.pidx+1);
+  const dpi = 200, sc = dpi/72, mmpx = 25.4/dpi, vp = pg.getViewport({ scale:sc });      // 0,13 mm por píxel
+  const W = Math.floor(vp.width), H = Math.floor(vp.height);
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d', { willReadFrequently:true }); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,W,H);
+  await pg.render({ canvasContext:ctx, viewport:vp }).promise;
+  const d = ctx.getImageData(0,0,W,H).data, L = new Float32Array(W*H);
+  for(let i=0,j=0;i<L.length;i++,j+=4) L[i] = 0.299*d[j]+0.587*d[j+1]+0.114*d[j+2];
+  const v = pg.view, T = cajaTrim(p);
+  const tx0 = Math.round((T.x-v[0])*sc), tx1 = Math.round(tx0+T.w*sc), ty1 = Math.round((v[3]-T.y)*sc), ty0 = Math.round(ty1-T.h*sc);
+  const dmax = Math.round(20/mmpx), arranque = Math.round(0.5/mmpx);   // se ignora la guía de página pegada al corte (0,5 mm)
+  const px = { l:null, r:null, t:null, b:null }, fondo = {};
+  ['l','r','t','b'].forEach(lado=>{
+    const horiz = (lado==='l' || lado==='r'), len = horiz ? (ty1-ty0) : (tx1-tx0);
+    const at = (k,a)=>{
+      let x, y;
+      if(lado==='l'){ x = tx0+k; y = ty0+a; } else if(lado==='r'){ x = tx1-1-k; y = ty0+a; } else if(lado==='t'){ y = ty0+k; x = tx0+a; } else { y = ty1-1-k; x = tx0+a; }
+      if(x<0 || y<0 || x>=W || y>=H) return null; return L[y*W+x];
+    };
+    const vals = [];
+    for(let a=0;a<len;a+=3) for(let k=arranque;k<arranque+3;k++){ const q = at(k,a); if(q!==null) vals.push(q); }
+    if(!vals.length || desviacion(vals) > 12){ fondo[lado] = true; return; }     // foto o textura en el borde: no se puede separar el contenido
+    const bg = mediana(vals);
+    for(let k=arranque+3;k<dmax;k++){
+      let cnt = 0, a0 = 1e9, a1 = -1;
+      for(let a=0;a<len;a++){ const q = at(k,a); if(q!==null && Math.abs(q-bg) > 10){ cnt++; if(a<a0) a0 = a; if(a>a1) a1 = a; } }
+      if(cnt >= 3){
+        // si el contenido empieza pegado al borde es una gráfica a sangre (fondo, banda, foto): no es un elemento suelto cerca del corte
+        if((k-arranque)*mmpx < 1.0) fondo[lado] = 'sangre'; else px[lado] = { d:k*mmpx, de:a0*mmpx, a:a1*mmpx };
+        break;
+      }
+    }
+  });
+  const txt = {};
+  try{
+    const tc = await pg.getTextContent();
+    tc.items.forEach(it=>{
+      if(!it.str || !it.str.trim()) return;
+      const x0 = it.transform[4], y0 = it.transform[5], w = it.width, h = it.height || Math.abs(it.transform[3]);
+      const ds = { l:(x0-T.x)/PT, r:((T.x+T.w)-(x0+w))/PT, b:(y0-T.y)/PT, t:((T.y+T.h)-(y0+h))/PT };
+      Object.keys(ds).forEach(k=>{ if(txt[k]===undefined || ds[k]<txt[k]) txt[k] = ds[k]; });
+    });
+  }catch(e){ console.warn('sin análisis de texto', e); }
+  return { px, fondo, txt };
+}
+async function anilloAnalizar(){
+  if(ANI.analizando || !S.pool.length) return;
+  ANI.analizando = true; ANI.progreso = 0; renderPrep();
+  const n = Math.min(S.pool.length, 40);
+  for(let i=0;i<n && i<S.pool.length;i++){
+    const p = S.pool[i];
+    if(!p.libres){ try{ p.libres = await libresPagina(p); }catch(e){ console.warn('revisión de anillado falló', e); p.libres = null; } }
+    ANI.progreso = i+1; renderPrep();
+  }
+  ANI.analizando = false; ANI.listo = true;
+  recalcular();
+}
+// después de cambiar el archivo (medida, receta, quitar ajustes) hay que volver a medir
+function anilloRefrescar(){ S.pool.forEach(p=>{ p.libres = null; }); ANI.listo = false; if(ANI.lado!=='ninguno') anilloAnalizar(); }
+function anilloAvisosPagina(p){
+  const lb = p.libres, out = [];
+  if(!lb || ANI.lado==='ninguno') return out;
+  ['l','r','t','b'].forEach(lado=>{
+    const esAnillo = ladoAnilloDe(p) === lado, min = esAnillo ? ANI.minAnillo : ANI.minOtros;
+    const c = [];
+    if(lb.px[lado]) c.push({ d:lb.px[lado].d, fuente:'elemento gráfico', tramo: fmt(lb.px[lado].de)+'–'+fmt(lb.px[lado].a)+' mm' });
+    if(lb.txt[lado]!==undefined) c.push({ d:lb.txt[lado], fuente:'texto', tramo:'' });
+    if(!c.length) return;
+    c.sort((a,b)=>a.d-b.d);
+    // tolerancia: el texto se mide exacto; la gráfica se mide por píxeles y una línea tiene ancho (0,3 mm cubre medio grosor del trazo y un píxel)
+    const tol = c[0].fuente==='texto' ? 0.05 : 0.3;
+    if(c[0].d < min-tol) out.push({ lado, d:c[0].d, min, fuente:c[0].fuente, tramo:c[0].tramo, anillo:esAnillo });
+  });
+  return out;
+}
+function textoAvisoAnillo(p, av){
+  return etiquetaPag(p)+' · '+(av.anillo ? 'lado del anillado ('+NOMBRE_LADO_ANI[av.lado]+')' : 'lado '+NOMBRE_LADO_ANI[av.lado])+': '+av.fuente+' a '+fmt(av.d)+' mm del borde; el mínimo es '+fmt(av.min)+' mm'+(av.tramo?' (tramo '+av.tramo+')':'')+'. Revisar.';
+}
+function anilloNotas(notas){
+  if(ANI.lado==='ninguno' || !S.pool.length) return;
+  if(!ANI.listo){ notas.push({ t:'warn', m:'Revisando el anillado…' }); return; }
+  S.pool.slice(0,40).forEach(p=>{
+    anilloAvisosPagina(p).forEach(av=>notas.push({ t:'warn', m:textoAvisoAnillo(p, av) }));
+  });
+}
+function tileAnillo(){
+  let tag = '';
+  if(ANI.lado!=='ninguno'){
+    if(ANI.analizando || !ANI.listo) tag = '<span class="tag no">Revisando…</span>';
+    else { const n = S.pool.slice(0,40).reduce((s0,p)=>s0+anilloAvisosPagina(p).length,0); tag = n ? '<span class="tag">'+n+' aviso'+(n===1?'':'s')+'</span>' : '<span class="tag ok">Sin avisos</span>'; }
+  }
+  return '<button class="tl '+(ANI.abierto?'sel':'')+'" onclick="anilloToggle()"><b>Revisión de anillado '+tag+'</b><small>Textos y gráficas cerca del borde</small></button>';
+}
+function anilloToggle(){ ANI.abierto = !ANI.abierto; renderPrep(); }
+function anilloSet(k, v){
+  ANI[k] = v;
+  if(k==='lado' && v!=='ninguno' && !ANI.listo) anilloAnalizar(); else { recalcular(); }
+}
+function renderAnillo(){
+  if(!ANI.abierto) return '';
+  let h = '<div class="prepPanel"><p class="hint" style="margin-top:0">Avisa si hay textos o gráficas muy cerca del borde donde va el anillado (el perforado las puede morder) y de los demás bordes (el corte). Solo avisa, con la medida: tú decides si continúas. Donde el borde lleva una foto o una textura solo se revisa el texto. En catálogos y libros usa «Alterno»: la página impar lleva el anillado a un lado y la par al otro.</p>';
+  h += '<div class="row3"><label>Anillado <select onchange="anilloSet(\'lado\',this.value)"><option value="ninguno" '+(ANI.lado==='ninguno'?'selected':'')+'>Sin anillado (no revisar)</option><option value="izq" '+(ANI.lado==='izq'?'selected':'')+'>Izquierda</option><option value="der" '+(ANI.lado==='der'?'selected':'')+'>Derecha</option><option value="arr" '+(ANI.lado==='arr'?'selected':'')+'>Arriba</option><option value="alt1" '+(ANI.lado==='alt1'?'selected':'')+'>Alterno: impares a la izquierda, pares a la derecha</option><option value="alt2" '+(ANI.lado==='alt2'?'selected':'')+'>Alterno: impares a la derecha, pares a la izquierda</option></select></label>'+
+    '<label>Mínimo del lado del anillado <input type="number" min="0" step="1" value="'+ANI.minAnillo+'" onchange="anilloSet(\'minAnillo\',+this.value||0)"> mm</label>'+
+    '<label>Mínimo de los demás lados <input type="number" min="0" step="1" value="'+ANI.minOtros+'" onchange="anilloSet(\'minOtros\',+this.value||0)"> mm</label></div>';
+  if(ANI.lado==='ninguno') h += '<div class="hint">Elige el lado del anillado para revisar las páginas.</div>';
+  else if(ANI.analizando) h += '<div class="hint">Revisando páginas… '+ANI.progreso+' de '+Math.min(S.pool.length,40)+'</div>';
+  else if(ANI.listo){
+    const pgs = S.pool.slice(0,40);
+    pgs.slice(0,10).forEach(p=>{
+      const av = anilloAvisosPagina(p), lb = p.libres;
+      h += '<div class="dg"><b>'+esc(etiquetaPag(p))+'</b>'+((ANI.lado==='alt1'||ANI.lado==='alt2') ? ' <span style="color:#475569">(anillado a la '+(ladoAnilloDe(p)==='l'?'izquierda':'derecha')+')</span>' : '')+' · ';
+      if(!lb) h += 'no se pudo revisar';
+      else if(!av.length) h += '<span style="color:#14532d">sin avisos</span>';
+      else av.forEach((a,i)=>{ h += (i?'<br>':'')+'<span class="m">'+esc(textoAvisoAnillo(p,a).replace(etiquetaPag(p)+' · ',''))+'</span>'; });
+      if(lb){
+        const fi = Object.keys(lb.fondo).filter(k=>lb.fondo[k]===true).map(k=>NOMBRE_LADO_ANI[k]), fs = Object.keys(lb.fondo).filter(k=>lb.fondo[k]==='sangre').map(k=>NOMBRE_LADO_ANI[k]);
+        if(fi.length) h += '<br><span style="color:#475569">Foto o textura en el borde '+fi.join(', ')+': ahí solo se revisó el texto.</span>';
+        if(fs.length) h += '<br><span style="color:#475569">Gráfica que llega hasta el borde '+fs.join(', ')+' (a sangre): no se revisa.</span>';
+      }
+      h += '</div>';
+    });
+    if(pgs.length>10) h += '<p class="hint">y '+(S.pool.length-10)+' páginas más'+(S.pool.length>40?' (se revisan las primeras 40)':'')+'. Los avisos de todas aparecen debajo de la vista previa.</p>';
+  }
+  return h+'</div>';
 }
 
 /* ======================= INICIO ======================= */
