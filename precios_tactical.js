@@ -1234,6 +1234,12 @@ function tacticalAnilloLoopsPorLargo(largoCm, perforado){
   const a = tabla[i-5], b = i<52 ? tabla[i-4] : a;
   return Math.round(a + (b-a)*f);
 }
+// Agujeros (loops) que lleva la carátula: el anillo deja libre una zona arriba y abajo (12 mm por defecto) y en el resto va a paso real.
+// Las hojas interiores llevan los MISMOS agujeros (quedan 5 mm más cortas pero el anillo no se sale).
+function tacticalAnilloAgujeros(largoCm, perforado, margenLibreCm){
+  const paso = TACTICAL_ANILLO_PASO_CM[perforado], zona = largoCm - 2*margenLibreCm;
+  return Math.max(1, Math.floor(zona/paso + 1e-6));
+}
 // cfg: { tapaTipo:'dura'|'semidura'|'blanda', cartonCal, hojasTaco, gramTaco, hojasIns, gramIns, hojasGuar, gramGuar, largoLomo, cantidad, calibreManual }
 function tacticalAnilloCalcular(cfg){
   const dura = cfg.tapaTipo==='dura';
@@ -1246,10 +1252,12 @@ function tacticalAnilloCalcular(cfg){
   const recomendado = D.find(mm=>cap(mm) >= necesarias*1.1) || null;
   const elegido = cfg.calibreManual ? cfg.calibreManual : (recomendado || minimo);
   const perforado = elegido ? tacticalAnilloPerforado(elegido) : '3x1';
-  const loops = tacticalAnilloLoopsPorLargo(cfg.largoLomo, perforado);
+  const margenLibre = (cfg.margenLibreCm != null) ? cfg.margenLibreCm : 1.2;
+  const loops = tacticalAnilloAgujeros(cfg.largoLomo, perforado, margenLibre);
+  const loopsTabla = tacticalAnilloLoopsPorLargo(cfg.largoLomo, perforado);   // referencia: tabla del proveedor sin zona libre
   const cant = parseInt(String(cfg.cantidad==null?'':cfg.cantidad).replace(/\D/g,''),10) || 0;
   return { dura, eq, extraCarton, necesarias, minimo, recomendado, elegido, perforado, paso: TACTICAL_ANILLO_PASO_CM[perforado], largoLomo: cfg.largoLomo,
-    loops, cant, capElegido: elegido ? cap(elegido) : null,
+    loops, loopsTabla, margenLibre, cant, capElegido: elegido ? cap(elegido) : null,
     // Se pide en TIRAS: una tira por cuaderno (con los loops de ese lomo) + sobrante. Sobrante por defecto: 2% de la cantidad con mínimo de 10 tiras (100 cuadernos -> 10; 1.000 -> 20).
     tiras: cant, sobrante: (cfg.sobrante != null && cfg.sobrante !== '') ? Math.max(0, parseInt(cfg.sobrante,10)||0) : (cant ? Math.max(TACTICAL_ANILLO_SOBRANTE_MIN, Math.ceil(cant*TACTICAL_ANILLO_SOBRANTE_PCT)) : 0),
     get tirasTotal(){ return this.tiras + this.sobrante; }, get loopsTotal(){ return (this.tiras + this.sobrante) * this.loops; } };
@@ -1278,7 +1286,7 @@ function tacticalAnilloBloqueOP(p, fontSize){
   const partes = [
     `Calibre <strong>${r.elegido} mm</strong>${r.recomendado && r.recomendado!==r.minimo ? ` (mínimo ${r.minimo} mm)` : ''}`,
     `perforado <strong>${r.perforado}</strong> (paso ${(r.paso*10).toFixed(1)} mm)`,
-    `lomo ${Math.round(r.largoLomo*10)/10} cm → 1 tira de <strong>${r.loops} loops</strong> por cuaderno`,
+    `lomo ${Math.round(r.largoLomo*10)/10} cm con ${Math.round(r.margenLibre*10)} mm libres arriba y abajo → 1 tira de <strong>${r.loops} loops</strong> por cuaderno`,
   ];
   const compra = r.cant ? `Solicitar: <strong>${fmt(r.tirasTotal)} tiras de ${r.loops} loops</strong> de ${r.elegido} mm (${fmt(r.tiras)} + ${fmt(r.sobrante)} de sobrante) = ${fmt(r.loopsTotal)} loops` : '';
   const hojas = cfg.hojasTaco + cfg.hojasIns + cfg.hojasGuar;
@@ -1286,7 +1294,7 @@ function tacticalAnilloBloqueOP(p, fontSize){
   return `<div style="border:1px solid #bfdbfe; background:#eff6ff; border-radius:4px; padding:4px 9px; margin:4px 0; font-size:${fs}; color:#1e3a5f; line-height:1.3;">
     <div><strong>Anillo doble O:</strong> ${partes.join(' — ')}${dos}</div>
     ${compra ? `<div>${compra}</div>` : ''}
-    <div style="color:#64748b; font-size:calc(${fs} - 1.5px);">${fmt(hojas)} hojas dentro del anillo (≈ ${fmt(Math.round(r.eq))} de bond 75 g), tapa ${r.dura ? 'dura' : (cfg.tapaTipo==='semidura'?'semidura':'blanda')}. Valores aproximados de la tabla del proveedor.</div>
+    <div style="color:#64748b; font-size:calc(${fs} - 1.5px);">${fmt(hojas)} hojas dentro del anillo (≈ ${fmt(Math.round(r.eq))} de bond 75 g), tapa ${r.dura ? 'dura' : (cfg.tapaTipo==='semidura'?'semidura':'blanda')}. Valores aproximados de la tabla del proveedor (la tabla, sin zona libre, daría ${r.loopsTabla} loops).</div>
   </div>`;
 }
 

@@ -54,6 +54,10 @@
   #genResultados{margin-top:6px;max-height:200px;overflow:auto;background:#fff;border:1px solid var(--border);border-radius:5px;display:none;}
   #genResultados div{padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:13px;cursor:pointer;}
   #genResultados div:hover{background:#eef4fb;}
+  #cliSug{display:none;position:absolute;left:0;right:0;top:100%;z-index:50;max-height:260px;overflow:auto;background:#fff;border:1px solid var(--border);border-radius:5px;box-shadow:0 6px 18px rgba(0,0,0,.18);}
+  #cliSug div{padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:13px;cursor:pointer;}
+  #cliSug div:hover,#cliSug div.act{background:#eef4fb;}
+  #cliSug small{color:#64748b;}
   #cotResultados{margin-top:6px;max-height:200px;overflow:auto;background:#fff;border:1px solid var(--border);border-radius:5px;display:none;}
   #cotResultados div{padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:13px;cursor:pointer;}
   #cotResultados div:hover{background:#eef4fb;}
@@ -107,7 +111,7 @@
   <h2><span class="n">1</span>Datos del trabajo</h2>
   <div class="grid">
     <div><label>Tipo de montaje</label><select id="fModo" onchange="cambiarModo()"><option value="cuaderno">Cuaderno (anillado)</option><option value="general">Otro producto (caja, carpeta, sobre, bolsa, sticker…)</option></select></div>
-    <div><label>Cliente</label><input type="text" id="fCliente" oninput="leerForm(false)"></div>
+    <div><label>Cliente</label><div style="position:relative;"><input type="text" id="fCliente" autocomplete="off" placeholder="Escribe para buscar un cliente" oninput="leerForm(false); sugerirClientes()" onfocus="sugerirClientes()" onblur="setTimeout(ocultarSugerencias,180)"><div id="cliSug"></div></div></div>
     <div><label>OT</label><input type="text" id="fOt" oninput="leerForm(false)"></div>
     <div class="solo-cuaderno"><label>Cantidad de cuadernos</label><input type="number" id="fCantidad" min="1" oninput="leerForm(false)"></div>
   </div>
@@ -181,6 +185,7 @@
           <div class="solo-cuaderno"><label>Hojas interiores más pequeñas que la carátula (cm)</label><input type="number" id="fReduccion" step="0.1" min="0" value="0.5" oninput="leerForm(false)"></div>
       <div class="solo-cuaderno"><label>Margen mínimo de la cuadrícula al borde (cm)</label><input type="number" id="fMargenMin" step="0.1" min="0" value="0.7" oninput="leerForm(false)"></div>
       <div class="solo-cuaderno"><label>Margen mínimo de la cuadrícula en el lado del anillado (cm)</label><input type="number" id="fMargenAnillo" step="0.1" min="0" value="1.3" oninput="leerForm(false)"></div>
+      <div class="solo-cuaderno"><label>Zona libre sin anillo, arriba y abajo (mm)</label><input type="number" id="fMargenLibre" step="1" min="0" value="12" oninput="leerForm(false)"></div>
       <div class="solo-cuaderno"><label>El anillo entra en el diseño (cm)</label><input type="number" id="fAnilEntra" step="0.1" min="0.3" value="1" oninput="leerForm(false)"></div>
         </div>
       </div>
@@ -235,7 +240,7 @@
     <button class="btn rojo" onclick="descargar('pdf')">Descargar PDF</button>
     <button class="btn rojo" onclick="descargar('jpg')">Descargar JPG</button>
     <button class="btn verde" onclick="guardarNube()">Guardar en la nube</button>
-    <button class="btn" style="background:#128c7e" onclick="enviarWaCliente()">Enviar al cliente por WhatsApp</button>
+    <button class="btn" style="background:#25d366;border-bottom:3px solid #128c7e;display:inline-flex;align-items:center;gap:6px;" onclick="enviarWaCliente()"><svg viewBox="0 0 24 24" width="18" height="18" fill="#fff"><path id="waIcoUi"></path></svg>Enviar al cliente por WhatsApp</button>
   </div>
   <div id="msgGuardar" style="font-size:12.5px;font-weight:700;margin-bottom:8px;"></div>
   <details class="acc" id="estacionBox" style="margin-bottom:10px;">
@@ -258,14 +263,12 @@
   <details class="acc panel">
     <summary><span class="t">5 · Prueba de impresión (tamaño real, lista para la impresora)</span><span class="res" id="rPrueba"></span></summary>
     <div class="acc-cuerpo">
-      <p class="hint">Acomoda todas las piezas a tamaño real dentro de hojas del tamaño máximo de la impresora, con marcas de corte y sangrado, para imprimir sin volver a editar los archivos. Las piezas en blanco no se imprimen.</p>
+      <p class="hint">Genera el PDF de prueba que se imprime a <b>tamaño real</b> para que el cliente revise: una hoja por sección (carátula y su guarda, contracarátula, insertos, hoja interior), con el logo, el material, las cotas de las carátulas y un marco gris fino que marca el límite del papel. No lleva marcas de corte ni sangrado; sí muestra el anillo en su lugar, para que el cliente vea dónde queda.</p>
   <div class="grid">
-    <div><label>Ancho de hoja (cm)</label><input type="number" id="pHojaW" step="0.1" value="50" oninput="planPrueba()"></div>
-    <div><label>Alto de hoja (cm)</label><input type="number" id="pHojaH" step="0.1" value="33" oninput="planPrueba()"></div>
-    <div><label>Margen de la hoja (cm)</label><input type="number" id="pMargen" step="0.1" value="0.5" oninput="planPrueba()"></div>
-    <div><label>Separación entre piezas (cm)</label><input type="number" id="pGap" step="0.1" value="0.4" oninput="planPrueba()"></div>
-    <div><label>Sangrado (cm)</label><input type="number" id="pSangrado" step="0.1" value="0.3" oninput="planPrueba()"></div>
-    <div><label>Marcas de corte</label><select id="pMarcas" onchange="planPrueba()"><option value="1">Sí</option><option value="0">No</option></select></div>
+    <div><label>Ancho de la hoja de impresión (cm)</label><input type="number" id="pHojaW" step="0.1" value="50" oninput="planPrueba()"></div>
+    <div><label>Alto de la hoja de impresión (cm)</label><input type="number" id="pHojaH" step="0.1" value="33" oninput="planPrueba()"></div>
+    <div><label>Margen de la hoja (cm)</label><input type="number" id="pMargen" step="0.1" value="1" oninput="planPrueba()"></div>
+    <div><label>Separación entre piezas (cm)</label><input type="number" id="pGap" step="0.1" value="2.5" oninput="planPrueba()"></div>
   </div>
   <div id="pResumen" style="margin-top:10px;font-weight:700;font-size:13.5px;color:#1e3a5f;"></div>
   <div id="pVista" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;"></div>
@@ -291,15 +294,15 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="tactical-supabase.js?v=20261016a"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
-<script src="tactical-estacion.js?v=20261017a"></script>
-<script src="precios_tactical.js?v=20261017a"></script>
+<script src="tactical-estacion.js?v=20261017b"></script>
+<script src="precios_tactical.js?v=20261017b"></script>
 <script>
 if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 /* ======================= ESTADO ======================= */
 const ROLES_PERMITIDOS = ['administrador','comercial','diseno','produccion'];
 const DIAS_RETENCION = 30;
-const S = { modo:'cuaderno', mat:{}, plastCar:'', piezas:[], waCom:'', nomCom:'', waCli:'', ultimaUrlPdf:'', ot:'', cliente:'', cantidad:'', ancho:17, alto:24, anilPos:'lateral', anilColor:'blanco', anilEntra:1, anilPaso:0.8467, tapaTipo:'dura', cartonCal:1.5, hojasTaco:100, gramTaco:70, hojasIns:0, gramIns:150, hojasGuar:0, gramGuar:150, calibreManual:0, sobrante:null, reduccion:0.5, margenMin:0.7, margenAnillo:1.3, anilCobertura:'total', ver:false,
+const S = { modo:'cuaderno', mat:{}, plastCar:'', piezas:[], waCom:'', nomCom:'', waCli:'', ultimaUrlPdf:'', ot:'', cliente:'', cantidad:'', ancho:17, alto:24, anilPos:'lateral', anilColor:'blanco', anilEntra:1, anilPaso:0.8467, tapaTipo:'dura', cartonCal:1.5, hojasTaco:100, gramTaco:70, hojasIns:0, gramIns:150, hojasGuar:0, gramGuar:150, calibreManual:0, sobrante:null, reduccion:0.5, margenMin:0.7, margenAnillo:1.3, margenLibre:1.2, anilCobertura:'total', ver:false,
   guardas:0, insertos:[], interior:'Hoja interior (cuadrícula)', slots:[], extras:[], pool:[], sel:null };
 let cotizaciones = [];
 let uid = 1;
@@ -494,6 +497,7 @@ function leerForm(reconstruir){
   S.reduccion = isNaN(parseFloat(document.getElementById('fReduccion').value)) ? 0.5 : parseFloat(document.getElementById('fReduccion').value);
   S.margenMin = parseFloat(document.getElementById('fMargenMin').value) || 0.7;
   S.margenAnillo = parseFloat(document.getElementById('fMargenAnillo').value) || 1.3;
+  { const v = parseFloat(document.getElementById('fMargenLibre').value); S.margenLibre = isNaN(v) ? 1.2 : Math.max(0, v/10); }
   S.anilEntra = parseFloat(document.getElementById('fAnilEntra').value) || 1;
   S.anilCobertura = document.getElementById('fAnilCob').value;
   S.guardas = parseInt(document.getElementById('fGuardas').value,10) || 0;
@@ -519,12 +523,39 @@ function volcarForm(){
   document.getElementById('fReduccion').value = S.reduccion;
   document.getElementById('fMargenMin').value = S.margenMin;
   document.getElementById('fMargenAnillo').value = S.margenAnillo;
+  document.getElementById('fMargenLibre').value = Math.round(S.margenLibre*10);
   document.getElementById('fAnilEntra').value = S.anilEntra;
   document.getElementById('fAnilCob').value = S.anilCobertura;
   document.getElementById('fGuardas').value = S.guardas ? '1' : '0';
   document.getElementById('fPlastCar').value = S.plastCar;
   document.getElementById('fInsertos').value = S.insertos.length;
   document.getElementById('fInterior').value = S.interior;
+}
+
+/* ======================= CLIENTES: sugerencias mientras se escribe ======================= */
+let CLIENTES = [];
+const sinTildes = t => String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+function sugerirClientes(){
+  const q = sinTildes(document.getElementById('fCliente').value.trim()), caja = document.getElementById('cliSug');
+  if(q.length < 2 || !CLIENTES.length){ caja.style.display = 'none'; return; }
+  const palabras = q.split(/\s+/);
+  const res = CLIENTES.filter(c=>palabras.every(w=>c._k.includes(w))).slice(0,8);
+  window._cliRes = res;
+  caja.innerHTML = res.length ? res.map((c,i)=>`<div onmousedown="elegirCliente(${i})"><b>${esc(c._n)}</b>${c.nombre && c.nombre!==c._n ? ` <small>· ${esc(c.nombre)}</small>` : ''}${c.wp ? ` <small>· ${esc(c.wp)}</small>` : ''}</div>`).join('') : '<div style="cursor:default;color:#64748b;">No hay clientes parecidos: se usará el nombre que escribes</div>';
+  caja.style.display = 'block';
+}
+function ocultarSugerencias(){ const c = document.getElementById('cliSug'); if(c) c.style.display = 'none'; }
+function elegirCliente(i){
+  const c = (window._cliRes||[])[i]; if(!c) return;
+  document.getElementById('fCliente').value = c._n;
+  if(c.wp){ const d = String(c.wp).replace(/\D/g,''); if(d) document.getElementById('fWaCli').value = d.length===10 ? '57'+d : d; }
+  ocultarSugerencias(); leerForm(false);
+}
+async function cargarClientesCRM(){
+  try{
+    const lista = await tacticalClientesCargar();
+    CLIENTES = (lista||[]).map(c=>{ const n = (typeof tacticalNombreCliente==='function' ? tacticalNombreCliente(c) : (c.empresa||c.nombre||'')) || ''; return { ...c, _n:n, _k: sinTildes([n, c.empresa, c.nombre].join(' ')) }; }).filter(c=>c._n);
+  } catch(e){ console.warn('Clientes no disponibles', e); CLIENTES = []; }
 }
 
 /* ======================= COTIZACIONES DE CUADERNOS ======================= */
@@ -955,7 +986,7 @@ function infoAnillos(){
   const da = datosAnillado(S.anilPos);
   if(!da){ el.textContent=''; return; }
   const usados = (S.anilCobertura==='parcial' && da.n > ANILLOS_POR_SECCION_PARCIAL*2) ? ANILLOS_POR_SECCION_PARCIAL*2 : da.n;
-  el.textContent = `Anillado ${S.anilPos==='lateral'?'lateral':'superior'} sobre ${da.largo} cm: lleva ${da.n} loops (paso ${(S.anilPaso*10).toFixed(1)} mm)${usados<da.n?', se dibujan '+usados+' en 2 secciones':''}. El anillo entra ${S.anilEntra} cm en el diseño.`;
+  el.textContent = `Anillado ${S.anilPos==='lateral'?'lateral':'superior'} sobre ${da.largo} cm: lleva ${da.n} loops (paso ${(S.anilPaso*10).toFixed(1)} mm, ${Math.round(S.margenLibre*10)} mm libres arriba y abajo; las hojas interiores usan los mismos)${usados<da.n?', se dibujan '+usados+' en 2 secciones':''}. El anillo entra ${S.anilEntra} cm en el diseño.`;
 }
 function actualizarResumenes(){
   const set = (id, txt, mal)=>{ const el = document.getElementById(id); if(el){ el.textContent = txt; el.classList.toggle('mal', !!mal); } };
@@ -1044,7 +1075,7 @@ const CAP_BOND75 = TACTICAL_ANILLO_CAP75, DIAMETROS_MM = TACTICAL_ANILLO_DIAMETR
 function calcularAnillado(){
   return tacticalAnilloCalcular({
     tapaTipo:S.tapaTipo, cartonCal:S.cartonCal, hojasTaco:S.hojasTaco, gramTaco:S.gramTaco, hojasIns:S.hojasIns, gramIns:S.gramIns,
-    hojasGuar:S.hojasGuar, gramGuar:S.gramGuar, calibreManual:S.calibreManual, cantidad:S.cantidad, sobrante:S.sobrante,
+    hojasGuar:S.hojasGuar, gramGuar:S.gramGuar, calibreManual:S.calibreManual, cantidad:S.cantidad, sobrante:S.sobrante, margenLibreCm:S.margenLibre,
     largoLomo: S.anilPos==='superior' ? S.ancho : S.alto     // la carátula completa, no la hoja interior
   });
 }
@@ -1084,7 +1115,7 @@ function renderAnillado(){
     lin.push(`<b>Calibre mínimo:</b> ${r.minimo} mm (capacidad ${CAP_BOND75[r.minimo][r.dura?1:0]} hojas) · <b>recomendado con 10% de holgura:</b> ${r.recomendado ? r.recomendado+' mm (capacidad '+CAP_BOND75[r.recomendado][r.dura?1:0]+')' : 'no hay holgura suficiente, usar '+r.minimo+' mm'}.`);
     lin.push(`<b>Calibre a usar:</b> <span style="color:#1e3a5f;font-weight:800;">${r.elegido} mm${S.calibreManual?' (elegido a mano)':''}</span> · perforado <b>${r.perforado}</b> (paso ${(r.paso*10).toFixed(1)} mm, ${r.perforado==='3x1'?'3':'2'} huecos por pulgada).`);
     if(S.calibreManual && r.capElegido < r.necesarias) lin.push(`<b style="color:#b91c1c">⚠ El calibre elegido (${r.elegido} mm) solo admite ${r.capElegido} hojas y se necesitan ${Math.ceil(r.necesarias)}.</b>`);
-    lin.push(`<b>Cada cuaderno lleva 1 tira de</b> <span style="color:#1e3a5f;font-weight:800;">${r.loops} loops</span> (lomo de ${fmtCm(r.largoLomo)} cm, ${S.anilPos==='lateral'?'anillado lateral':'anillado superior'}).`);
+    lin.push(`<b>Cada cuaderno lleva 1 tira de</b> <span style="color:#1e3a5f;font-weight:800;">${r.loops} loops</span> (lomo de ${fmtCm(r.largoLomo)} cm, ${Math.round(r.margenLibre*10)} mm libres arriba y abajo; la tabla del proveedor sin zona libre daría ${r.loopsTabla}, ${S.anilPos==='lateral'?'anillado lateral':'anillado superior'}).`);
     if(r.cant) lin.push(`<b>Solicitud de compra:</b> <span style="color:#1e3a5f;font-weight:800;">${fmt(r.tirasTotal)} tiras de ${r.loops} loops</span> de ${r.elegido} mm${S.anilColor?', color '+S.anilColor:''} (${fmt(r.tiras)} cuadernos + ${fmt(r.sobrante)} de sobrante) = ${fmt(r.loopsTotal)} loops.`);
   }
   lin.push('<span class="hint" style="margin:0">Valores aproximados de la tabla del proveedor. El papel distinto de bond 75 g se convierte a hojas equivalentes por gramaje (estimado). Antes de comprar, confirma con el proveedor si el cuaderno queda justo.</span>');
@@ -1097,7 +1128,9 @@ function datosAnillado(pos){
   const largo = pos==='lateral' ? S.alto : S.ancho;
   const r = calcularAnillado();
   const n = Math.max(1, r.loops);
-  return { largo, n, inicio: (largo - n*S.anilPaso)/2 };
+  // los agujeros se calculan sobre la CARÁTULA (largo completo, con la zona libre arriba y abajo) y las hojas interiores usan los mismos
+  const zona = largo - 2*S.margenLibre;
+  return { largo, n, inicio: S.margenLibre + (zona - n*S.anilPaso)/2 };
 }
 // Posición de los puntos negros dentro del PNG del anillo (fracción del ancho / alto del dibujo)
 const ANILLO_PUNTO_X = 0.86, ANILLO_PUNTO_Y = 0.48;
@@ -1264,7 +1297,7 @@ function dibujarMontaje(){
 
   // --- pie: cliente, cantidad y tamaño grandes; el resto en un recuadro más pequeño al lado ---
   const fy = L.alto - 400;
-  const bx = LW - 1010, bw = 900, bh = 245;
+  const bx = LW - 960, bw = 850, bh = 245;     // recuadro de datos a la derecha; los textos grandes ocupan el centro; el botón de WhatsApp, la izquierda
   cx.textAlign = 'left'; cx.fillStyle = '#111827'; cx.font = 'bold 46px Arial, sans-serif';
   const recorta = (t, maxW)=>{ while(cx.measureText(t).width > maxW && t.length > 8) t = t.slice(0,-2); return t; };
   const general = S.modo==='general';
@@ -1272,7 +1305,7 @@ function dibujarMontaje(){
   const grandes = general
     ? ['Cliente: '+(S.cliente||''), unica ? 'Cantidad: '+(unica.cantidad||'') : 'Piezas: '+S.piezas.length, unica ? 'Tamaño: '+fmtCm(parseFloat(unica.alto)||0)+' x '+fmtCm(parseFloat(unica.ancho)||0)+' cm' : '']
     : ['Cliente: '+(S.cliente||''), 'Cantidad: '+(S.cantidad ? S.cantidad+' cuadernos' : ''), 'Tamaño: '+fmtCm(S.alto)+' x '+fmtCm(S.ancho)+' cm'];
-  grandes.forEach((t,i)=>{ if(t) cx.fillText(recorta(t, 860), bx-900, fy+70+i*68); });
+  grandes.forEach((t,i)=>{ if(t) cx.fillText(recorta(t, 800), 680, fy+70+i*68); });
   // recuadro de datos del trabajo
   cx.fillStyle = '#f8fafc'; cx.strokeStyle = '#cbd5e1'; cx.lineWidth = 2;
   cx.beginPath(); cx.roundRect ? cx.roundRect(bx, fy, bw, bh, 14) : cx.rect(bx, fy, bw, bh); cx.fill(); cx.stroke();
@@ -1292,19 +1325,23 @@ function dibujarMontaje(){
       (S.anilPos!=='ninguno' && ra.elegido) ? 'Calibre del anillo: '+ra.elegido+' mm' : ''];
   }
   cx.fillStyle = '#374151'; cx.font = '27px Arial, sans-serif';
-  izq.forEach((t,i)=>cx.fillText(recorta(t, 400), bx+24, fy+88+i*38));
-  der.forEach((t,i)=>{ if(t) cx.fillText(recorta(t, 430), bx+440, fy+88+i*38); });
+  izq.forEach((t,i)=>cx.fillText(recorta(t, 380), bx+24, fy+88+i*38));
+  der.forEach((t,i)=>{ if(t) cx.fillText(recorta(t, 410), bx+420, fy+88+i*38); });
   // botón de aprobación por WhatsApp (en el PDF es un enlace que abre el chat con el comercial)
   WA_RECT = null;
   const wa = waLinkAprobar();
   if(wa){
-    const rx = L.margen, ry = fy+20, rw = 360, rh = 130;
-    cx.fillStyle = '#128c7e'; cx.beginPath(); cx.roundRect ? cx.roundRect(rx, ry, rw, rh, 22) : cx.rect(rx, ry, rw, rh); cx.fill();
-    cx.fillStyle = '#fff'; cx.textAlign = 'center'; cx.font = 'bold 30px Arial, sans-serif';
-    cx.fillText('✔ APROBAR MONTAJE', rx+rw/2, ry+52); cx.font = '26px Arial, sans-serif'; cx.fillText('por WhatsApp', rx+rw/2, ry+90);
-    cx.fillStyle = '#475569'; cx.font = '22px Arial, sans-serif'; cx.textAlign = 'left';
-    cx.fillText('Toca el botón y escríbele a '+(S.nomCom||'tu asesor'), rx, ry+rh+34);
-    cx.fillText('+'+waNumero(S.waCom), rx, ry+rh+64);
+    const rx = L.margen, ry = fy+20, rw = 510, rh = 140;
+    // botón con los colores de WhatsApp: verde #25D366, base #128C7E y el icono oficial en blanco
+    cx.fillStyle = '#128c7e'; cx.beginPath(); cx.roundRect ? cx.roundRect(rx, ry+7, rw, rh, 24) : cx.rect(rx, ry+7, rw, rh); cx.fill();
+    cx.fillStyle = '#25d366'; cx.beginPath(); cx.roundRect ? cx.roundRect(rx, ry, rw, rh, 24) : cx.rect(rx, ry, rw, rh); cx.fill();
+    try{ cx.save(); cx.translate(rx+26, ry+(rh-86)/2); cx.scale(86/24, 86/24); cx.fillStyle = '#fff'; cx.fill(new Path2D(WA_ICONO_PATH)); cx.restore(); } catch(e){}
+    cx.fillStyle = '#fff'; cx.textAlign = 'left'; cx.font = 'bold 32px Arial, sans-serif';
+    cx.fillText('APROBAR MONTAJE', rx+134, ry+66); cx.font = '30px Arial, sans-serif'; cx.fillText('por WhatsApp', rx+134, ry+106);
+    cx.fillStyle = '#475569'; cx.font = '23px Arial, sans-serif';
+    const lineasWa = envolverTexto(cx, 'Toca el botón y escríbele a '+(S.nomCom||'tu asesor'), rw, 3);
+    lineasWa.forEach((t,j)=>cx.fillText(t, rx, ry+rh+42+j*30));
+    cx.font = 'bold 25px Arial, sans-serif'; cx.fillStyle = '#128c7e'; cx.fillText(waNumeroVisible(S.waCom), rx, ry+rh+42+lineasWa.length*30+6);
     WA_RECT = { x:rx, y:ry, w:rw, h:rh, url: wa };
   }
   // esquina roja
@@ -1383,6 +1420,9 @@ async function ingerirDesdeEstacion(i){
 
 /* ======================= WHATSAPP ======================= */
 let WA_RECT = null;
+// Icono oficial de WhatsApp (burbuja con teléfono), viewBox 24x24
+const WA_ICONO_PATH = 'M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.3-.15-1.263-.465-2.403-1.485-.888-.795-1.484-1.77-1.66-2.07-.174-.3-.019-.465.13-.615.136-.135.301-.345.451-.52.146-.181.194-.301.297-.496.1-.21.049-.375-.025-.524-.075-.15-.672-1.62-.922-2.206-.24-.584-.487-.51-.672-.51-.172-.015-.371-.015-.571-.015-.2 0-.523.074-.797.359-.273.3-1.045 1.02-1.045 2.475s1.07 2.865 1.219 3.075c.149.18 2.095 3.195 5.076 4.483.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z';
+function waNumeroVisible(n){ const d = waNumero(n); return d.length===12 && d.startsWith('57') ? '+57 '+d.slice(2,5)+' '+d.slice(5,8)+' '+d.slice(8) : (d ? '+'+d : ''); }
 function waNumero(n){
   const d = String(n||'').replace(/\D/g,'');
   if(!d) return '';
@@ -1513,109 +1553,120 @@ function renderGuardados(){
   }).join('');
 }
 
-/* ======================= PRUEBA DE IMPRESIÓN (hojas de la impresora) ======================= */
+/* ======================= PRUEBA DE IMPRESIÓN (Sherpa) PARA EL CLIENTE =======================
+   Tamaño real, una hoja por sección con la misma distribución del montaje: logo, título, piezas con su nombre, cotas (solo
+   carátulas), material debajo y un marco gris fino (30%) que indica el límite del papel. Sin marcas de corte, sin sangrado, sin anillo. */
 const DPI_PRUEBA = 150;
+const PR_EXTRA_V = 6.8, PR_EXTRA_H = 1.8;   // cm que ocupan arriba/abajo (logo, títulos, cota, material) y al lado (cota del alto)
 function paramsPrueba(){
-  const n = id => parseFloat(document.getElementById(id).value) || 0;
-  return { W:n('pHojaW')||50, H:n('pHojaH')||33, m:n('pMargen'), g:n('pGap'), b:n('pSangrado'), marcas:document.getElementById('pMarcas').value==='1' };
+  const n = (id,d)=>{ const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? d : v; };
+  return { W:n('pHojaW',50)||50, H:n('pHojaH',33)||33, m:n('pMargen',1), g:n('pGap',2.5) };
 }
-// Prueba las dos orientaciones de la pieza y se queda con la que deja más piezas por hoja.
 function planificarHojas(){
-  const P = paramsPrueba();
-  const todas = S.slots.map((sl,i)=>({ s:sl, i })).filter(o=>!o.s.blanco && o.s.poolId);
-  const uW = P.W - 2*P.m, uH = P.H - 2*P.m;
-  const hojas = [], clases = [];
-  const claveDe = sl=>{ const d = dimsSlot(sl); return d.w+'x'+d.h; };
-  const claves = []; todas.forEach(o=>{ const k = claveDe(o.s); if(!claves.includes(k)) claves.push(k); });
-  claves.forEach(clave=>{
-    const piezas = todas.filter(o=>claveDe(o.s)===clave);
-    const dm = dimsSlot(piezas[0].s);
-    const tipo = S.modo==='general' ? 'pieza' : piezas[0].s.tipo;
-    const etiqueta = S.modo==='general' ? `piezas de ${fmtCm(dm.w)} x ${fmtCm(dm.h)}` : (tipo==='tapa' ? 'carátulas' : 'hojas interiores');
-    const bw = dm.w + 2*P.b, bh = dm.h + 2*P.b;
-    const cap = (w,h)=>({ c: Math.floor((uW+P.g)/(w+P.g)), r: Math.floor((uH+P.g)/(h+P.g)) });
-    const a1 = cap(bw,bh), b1 = cap(bh,bw);
-    const rot = (b1.c*b1.r) > (a1.c*a1.r);
-    const g = rot ? b1 : a1, pw = rot ? bh : bw, ph = rot ? bw : bh;
-    const porHoja = Math.max(0, g.c*g.r);
-    clases.push({ tipo, etiqueta, bw, bh, rot, porHoja, n:piezas.length, dm });
-    if(porHoja>0){
-      const anchoBloque = g.c*pw + (g.c-1)*P.g, altoBloque = g.r*ph + (g.r-1)*P.g;
-      const x0 = (P.W - anchoBloque)/2, y0 = (P.H - altoBloque)/2;
-      for(let k=0;k<piezas.length;k+=porHoja){
-        hojas.push(piezas.slice(k,k+porHoja).map((o,j)=>({ ...o, tipo, etiqueta, rot, bwcm:bw, bhcm:bh, x: x0 + (j%g.c)*(pw+P.g), y: y0 + Math.floor(j/g.c)*(ph+P.g), w:pw, h:ph })));
-      }
-    }
+  const P = paramsPrueba(), hojas = []; let total = 0;
+  agruparSlots().forEach((g,gi)=>{
+    const slots = g.slots.filter(sl=>sl.poolId || sl.blanco);
+    if(!slots.length) return;
+    total += slots.length;
+    const dms = slots.map(dimsSlot);
+    const rowW = dms.reduce((a,d)=>a+d.w,0) + (slots.length-1)*P.g, rowH = Math.max(...dms.map(d=>d.h));
+    const escala = Math.min(1, (P.W - 2*P.m - 2*PR_EXTRA_H)/rowW, (P.H - 2*P.m - PR_EXTRA_V)/rowH);
+    hojas.push({ g, gi, slots, dms, rowW, rowH, escala });
   });
-  return { P, hojas, clases, total:todas.length };
+  return { P, hojas, total };
 }
 function planPrueba(){
-  const pl = planificarHojas();
-  const res = document.getElementById('pResumen'), vis = document.getElementById('pVista');
-  if(!pl.total){ res.style.color='#1e3a5f'; res.textContent = 'Asigna archivos a los cuadros para ver cómo quedan en la hoja.'; vis.innerHTML=''; return; }
-  const malas = pl.clases.filter(c=>!c.porHoja);
-  if(malas.length){ res.style.color='#b91c1c'; res.textContent = `La pieza (${malas[0].bw.toFixed(1)} x ${malas[0].bh.toFixed(1)} cm con sangrado) no cabe en una hoja de ${pl.P.W} x ${pl.P.H} cm.`; vis.innerHTML=''; return; }
-  res.style.color='#1e3a5f';
-  const areaUsada = pl.clases.reduce((a,c)=>a+c.n*c.bw*c.bh,0), areaHojas = pl.hojas.length * pl.P.W * pl.P.H;
-  res.textContent = `${pl.total} pieza(s) → ${pl.hojas.length} hoja(s) de ${pl.P.W} x ${pl.P.H} cm · ` +
-    pl.clases.map(c=>`${c.etiqueta}${S.modo==='general'?'':' '+fmtCm(c.dm.w)+' x '+fmtCm(c.dm.h)}: ${c.porHoja} por hoja${c.rot?' (giradas)':''}`).join(' · ') +
-    ` · aprovechamiento ${Math.round(areaUsada/areaHojas*100)}%`;
+  const pl = planificarHojas(), res = document.getElementById('pResumen'), vis = document.getElementById('pVista');
+  if(!res) return;
+  if(!pl.total){ res.style.color = '#1e3a5f'; res.textContent = 'Asigna archivos a los cuadros para ver las hojas de la prueba.'; vis.innerHTML = ''; return; }
+  const red = pl.hojas.filter(h=>h.escala < 0.999);
+  res.style.color = red.length ? '#b45309' : '#1e3a5f';
+  res.textContent = `${pl.hojas.length} hoja(s) de ${pl.P.W} x ${pl.P.H} cm, una por sección, a tamaño real` + (red.length ? ` · ⚠ ${red.length} no cabe(n) a tamaño real y se reduce(n): ${red.map(h=>h.g.titulo+' al '+Math.round(h.escala*100)+'%').join(', ')}` : '');
   const esc_ = 300 / pl.P.W;
-  vis.innerHTML = pl.hojas.map((h,n)=>`<div style="background:#fff;border:1px solid #94a3b8;border-radius:4px;padding:4px;"><div style="font-size:11px;font-weight:700;margin-bottom:2px;">Hoja ${n+1} de ${pl.hojas.length} · ${h[0].etiqueta}</div>
-    <svg width="300" height="${pl.P.H*esc_}" viewBox="0 0 ${pl.P.W} ${pl.P.H}" style="background:#f8fafc;border:1px solid #cbd5e1;">
-    ${h.map(p=>`<rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" fill="${p.tipo==='interior'?'#dcfce7':'#dbeafe'}" stroke="#1e3a5f" stroke-width="0.2"/><text x="${p.x+p.w/2}" y="${p.y+p.h/2}" font-size="1.6" text-anchor="middle" fill="#1e3a5f">${esc(p.s.titulo.slice(0,26))}</text>`).join('')}</svg></div>`).join('');
+  vis.innerHTML = pl.hojas.map((h,n)=>{
+    const anchos = h.dms.map(d=>d.w*h.escala), rowW = anchos.reduce((a,b)=>a+b,0) + (h.slots.length-1)*pl.P.g;
+    let x = (pl.P.W - rowW)/2; const yTop = pl.P.m + 4.2;
+    const rects = h.slots.map((sl,i)=>{ const r = `<rect x="${x}" y="${yTop}" width="${anchos[i]}" height="${h.dms[i].h*h.escala}" fill="#dbeafe" stroke="#9aa5b1" stroke-width="0.15"/><text x="${x+anchos[i]/2}" y="${yTop+h.dms[i].h*h.escala/2}" font-size="1.5" text-anchor="middle" fill="#1e3a5f">${esc(sl.titulo.slice(0,24))}</text>`; x += anchos[i] + pl.P.g; return r; }).join('');
+    return `<div style="background:#fff;border:1px solid #94a3b8;border-radius:4px;padding:4px;"><div style="font-size:11px;font-weight:700;margin-bottom:2px;">Hoja ${n+1} de ${pl.hojas.length} · ${esc(h.g.titulo)}</div><svg width="300" height="${pl.P.H*esc_}" viewBox="0 0 ${pl.P.W} ${pl.P.H}" style="background:#f8fafc;border:1px solid #cbd5e1;">${rects}</svg></div>`;
+  }).join('');
 }
-// Rótulo de cada pieza en la prueba de impresión (Sherpa): nombre + material, tapa, plastificado y color del anillado, igual que en el montaje
-function rotuloPrueba(sl){
-  const nombre = String(sl.titulo || '').replace(/\s+/g,' ').trim(), mat = materialDeSlot(sl);
-  return mat ? nombre+' — '+mat : nombre;
-}
-function canvasPiezaPrueba(p, P){
-  const wpx = Math.round(p.bwcm/2.54*DPI_PRUEBA), hpx = Math.round(p.bhcm/2.54*DPI_PRUEBA);
-  const base = document.createElement('canvas'); base.width = wpx; base.height = hpx;
-  const it = S.pool.find(q=>q.id===p.s.poolId);
-  dibujarImagenEnCaja(base.getContext('2d'), it.img, 0, 0, wpx, hpx, p.s.fit);
-  if(!p.rot) return base;
-  const r = document.createElement('canvas'); r.width = hpx; r.height = wpx;
-  const cx = r.getContext('2d'); cx.translate(hpx,0); cx.rotate(Math.PI/2); cx.drawImage(base,0,0);
-  return r;
+// Cota en el PDF (mm): línea con flechas, y el texto sobre un fondo blanco
+function cotaPdf(doc, x1, y1, x2, y2, texto){
+  const vertical = Math.abs(x2-x1) < 0.01;
+  doc.setDrawColor(71,85,105); doc.setFillColor(71,85,105); doc.setLineWidth(0.2);
+  doc.line(x1,y1,x2,y2);
+  const f = 2.2, a = 0.8;
+  if(vertical){ doc.line(x1-1.5,y1,x1+1.5,y1); doc.line(x1-1.5,y2,x1+1.5,y2); doc.triangle(x1,y1,x1-a,y1+f,x1+a,y1+f,'F'); doc.triangle(x2,y2,x2-a,y2-f,x2+a,y2-f,'F'); }
+  else { doc.line(x1,y1-1.5,x1,y1+1.5); doc.line(x2,y2-1.5,x2,y2+1.5); doc.triangle(x1,y1,x1+f,y1-a,x1+f,y1+a,'F'); doc.triangle(x2,y2,x2-f,y2-a,x2-f,y2+a,'F'); }
+  doc.setFont('helvetica','bold'); doc.setFontSize(8); const wt = doc.getTextWidth(texto);
+  doc.setFillColor(255,255,255);
+  if(vertical){ const cy = (y1+y2)/2; doc.rect(x1-2.6, cy-wt/2-1, 5.2, wt+2, 'F'); doc.setTextColor(51,65,85); doc.text(texto, x1+1.3, cy+wt/2, { angle:90 }); }
+  else { const cx_ = (x1+x2)/2; doc.rect(cx_-wt/2-1, y1-2.6, wt+2, 5.2, 'F'); doc.setTextColor(51,65,85); doc.text(texto, cx_, y1+1.3, { align:'center' }); }
 }
 async function descargarPrueba(){
-  const msg = document.getElementById('msgPrueba');
-  const pl = planificarHojas();
-  if(!pl.total || pl.clases.some(c=>!c.porHoja)){ alert('No hay piezas para imprimir o no caben en la hoja.'); return; }
+  const msg = document.getElementById('msgPrueba'), pl = planificarHojas();
+  if(!pl.total){ alert('Asigna archivos a los cuadros primero.'); return; }
   const f = faltantes();
-  if(f.length && !confirm('Estos cuadros no tienen archivo y no saldrán en la prueba:\n\n- '+f.join('\n- ')+'\n\n¿Continuar?')) return;
-  const { jsPDF } = window.jspdf, P = pl.P;
-  const doc = new jsPDF({ unit:'mm', format:[P.W*10, P.H*10], orientation: P.W>=P.H?'l':'p' });
-  for(let n=0;n<pl.hojas.length;n++){
-    msg.style.color='#1e3a5f'; msg.textContent = `Armando hoja ${n+1} de ${pl.hojas.length}…`;
+  if(f.length && !confirm('Estos cuadros no tienen archivo y saldrán sin imagen:\n\n- '+f.join('\n- ')+'\n\n¿Continuar?')) return;
+  const { jsPDF } = window.jspdf, P = pl.P, mm = 10, W = P.W*mm, H = P.H*mm, m = P.m*mm;
+  const orient = P.W >= P.H ? 'l' : 'p';
+  const doc = new jsPDF({ unit:'mm', format:[W, H], orientation: orient });
+  let logoUrl = null;
+  if(logoImg){ const c = document.createElement('canvas'); c.width = logoImg.naturalWidth; c.height = logoImg.naturalHeight; c.getContext('2d').drawImage(logoImg,0,0); logoUrl = c.toDataURL('image/png'); }
+  const recorta = (t, maxW)=>{ while(doc.getTextWidth(t) > maxW && t.length > 6) t = t.slice(0,-2); return t; };
+  for(let n=0; n<pl.hojas.length; n++){
+    const h = pl.hojas[n]; msg.style.color = '#1e3a5f'; msg.textContent = `Armando hoja ${n+1} de ${pl.hojas.length}…`;
     await new Promise(r=>setTimeout(r,20));
-    if(n>0) doc.addPage([P.W*10, P.H*10], P.W>=P.H?'l':'p');
-    doc.setFontSize(6); doc.setTextColor(90);
-    doc.text(`${S.cliente||''} · OT ${S.ot||'-'} · hoja ${n+1}/${pl.hojas.length} · ${pl.hojas[n][0].etiqueta} ${fmtCm(pl.hojas[n][0].bwcm-2*P.b)} x ${fmtCm(pl.hojas[n][0].bhcm-2*P.b)} cm · sangrado ${P.b} cm`, P.m*10, Math.max(2.5, P.m*10-1.5));
-    for(const p of pl.hojas[n]){
-      const cv = canvasPiezaPrueba(p, P);
-      doc.addImage(cv.toDataURL('image/jpeg',0.95), 'JPEG', p.x*10, p.y*10, p.w*10, p.h*10);
-      if(P.g >= 0.3){   // rótulo gris pequeño debajo de la pieza, dentro de la separación entre piezas
-        let t = rotuloPrueba(p.s); const maxW = Math.max(10, p.w*10 - 2*(P.b*10 + 4));
-        doc.setFontSize(5.5); doc.setTextColor(110);
-        while(doc.getTextWidth(t) > maxW && t.length > 10) t = t.slice(0, -2);
-        doc.text(t, (p.x + p.w/2)*10, (p.y + p.h)*10 + 2.6, { align:'center' });
+    if(n>0) doc.addPage([W, H], orient);
+    // encabezado: logo, sección y datos del trabajo
+    if(logoUrl){ const lw = 38, lh = lw*logoImg.naturalHeight/logoImg.naturalWidth; doc.addImage(logoUrl, 'PNG', m, m, lw, lh); }
+    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(30,30,30); doc.text((h.gi+1)+'. '+h.g.titulo, m+44, m+8);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(110,110,110);
+    doc.text(`${S.cliente||''}${S.ot?' · '+(/^ot/i.test(S.ot)?S.ot:'OT '+S.ot):''} · ${fechaHoyLarga()}`, W-m, m+5, { align:'right' });
+    doc.text('Prueba de impresión a tamaño real' + (h.escala<0.999 ? ' (reducida al '+Math.round(h.escala*100)+'%)' : ''), W-m, m+9.5, { align:'right' });
+    // piezas, centradas en la hoja
+    const esc = h.escala, anchos = h.dms.map(d=>d.w*esc*mm), rowW = anchos.reduce((a,b)=>a+b,0) + (h.slots.length-1)*P.g*mm;
+    let x = (W - rowW)/2; const yTop = m + 27;
+    for(let i=0; i<h.slots.length; i++){
+      const sl = h.slots[i], dm = h.dms[i], w = anchos[i], hh = dm.h*esc*mm, it = S.pool.find(q=>q.id===sl.poolId);
+      if(it){
+        const wpx = Math.max(2, Math.round(dm.w*esc/2.54*DPI_PRUEBA)), hpx = Math.max(2, Math.round(dm.h*esc/2.54*DPI_PRUEBA));
+        const cv = document.createElement('canvas'); cv.width = wpx; cv.height = hpx;
+        dibujarImagenEnCaja(cv.getContext('2d'), it.img, 0, 0, wpx, hpx, sl.fit);
+        doc.addImage(cv.toDataURL('image/jpeg', 0.93), 'JPEG', x, yTop, w, hh);
       }
-      if(P.marcas){
-        const b = P.b*10, L = 3, off = 1; // marcas del borde del sangrado hacia afuera
-        const tx0 = p.x*10 + b, ty0 = p.y*10 + b, tx1 = (p.x+p.w)*10 - b, ty1 = (p.y+p.h)*10 - b;
-        doc.setDrawColor(0); doc.setLineWidth(0.1);
-        [[tx0,ty0,-1,-1],[tx1,ty0,1,-1],[tx0,ty1,-1,1],[tx1,ty1,1,1]].forEach(([cx_,cy_,dx,dy])=>{
-          doc.line(cx_, cy_+dy*(b+off), cx_, cy_+dy*(b+off+L));
-          doc.line(cx_+dx*(b+off), cy_, cx_+dx*(b+off+L), cy_);
-        });
+      // marco gris fino (30%) para ver el límite del papel
+      doc.setDrawColor(179,179,179); doc.setLineWidth(0.15); doc.rect(x-0.3, yTop-0.3, w+0.6, hh+0.6);
+      // anillo: se dibuja en su lugar real (zona libre arriba y abajo, agujeros sobre el diseño) para que el cliente vea dónde queda
+      if(S.modo!=='general' && S.anilPos!=='ninguno'){
+        const ppc = DPI_PRUEBA/2.54, padPx = Math.round(1.0*ppc);
+        const celdaW = S.ancho*esc, celdaH = S.alto*esc;                       // la carátula completa (las hojas interiores quedan dentro de esa celda)
+        const cwPx = Math.round(celdaW*ppc), chPx = Math.round(celdaH*ppc);
+        const ac = document.createElement('canvas'); ac.width = cwPx + 2*padPx; ac.height = chPx + 2*padPx;
+        dibujarAnillos(ac.getContext('2d'), padPx, padPx, cwPx, chPx, sl.cara || 'frente', S.anilPos, S.anilColor, ppc*esc);
+        const cwMm = celdaW*mm, chMm = celdaH*mm;
+        const ox = S.anilPos==='lateral' ? ((sl.cara==='respaldo') ? cwMm - w : 0) : (cwMm - w)/2;     // misma ubicación de la hoja dentro de la celda que en el montaje
+        const oy = S.anilPos==='lateral' ? (chMm - hh)/2 : 0;
+        doc.addImage(ac.toDataURL('image/png'), 'PNG', x - ox - padPx/ppc*mm, yTop - oy - padPx/ppc*mm, ac.width/ppc*mm, ac.height/ppc*mm);
       }
+      // título de la pieza
+      doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(40,40,40);
+      doc.text(recorta(String(sl.titulo||''), w+P.g*mm-4), x+w/2, yTop-4, { align:'center' });
+      const yb = yTop + hh;
+      if(sl.cotas){   // cotas solo en carátulas (la hoja interior es más pequeña y el cliente no tiene por qué preguntarse por qué)
+        cotaPdf(doc, x, yb+5.5, x+w, yb+5.5, fmtCm(dm.w)+' cm');
+        const lado = (S.anilPos==='lateral' && sl.cara==='respaldo') ? x-6 : x+w+6;
+        cotaPdf(doc, lado, yTop, lado, yb, fmtCm(dm.h)+' cm');
+      }
+      const mat = materialDeSlot(sl);
+      if(mat){ doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(130,130,130); doc.text(recorta(mat, w+P.g*mm-4), x+w/2, yb + (sl.cotas ? 13.5 : 6), { align:'center' }); }
+      x += w + P.g*mm;
     }
+    doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(150,150,150);
+    doc.text(`Hoja ${n+1} de ${pl.hojas.length}`, W-m, H-m+3, { align:'right' });
   }
   bajar(doc.output('blob'), nombreArchivo().replace('montaje_','prueba_impresion_')+'.pdf');
-  msg.style.color='#1a7d3f'; msg.textContent = 'Listo: PDF a tamaño real descargado.';
+  msg.style.color = '#1a7d3f'; msg.textContent = `Listo: PDF de prueba de ${pl.hojas.length} hoja(s) a tamaño real.`;
 }
 
 /* ======================= INICIO ======================= */
@@ -1627,6 +1678,7 @@ window.tacticalOnLogin = async function(){
     return;
   }
   try{ cotizaciones = await tacticalCotizacionesCargar(); } catch(e){ console.error(e); }
+  cargarClientesCRM();
   if(!localStorage.getItem('tactical_montaje_wa')){ S.waCom = ''; S.nomCom = ''; seleccionarComercialInicial(); leerForm(false); }
   await limpiarVencidos();
   cargarGuardados();
@@ -1634,6 +1686,7 @@ window.tacticalOnLogin = async function(){
 (async function iniciar(){
   try{ logoImg = await cargarImagen('logo_tactical.png'); } catch(e){}
   try{ await document.fonts.load('300 50px Oswald'); } catch(e){}
+  { const ico = document.getElementById('waIcoUi'); if(ico) ico.setAttribute('d', WA_ICONO_PATH); }
   tacticalEstacion.alCambiar(()=>{ const l = document.getElementById('estacionArchivos'); if(l) delete l.dataset.cargada; estacionUI(); });
   tacticalEstacion.vigilar('estacionChip'); tacticalEstacion.estado().then(estacionUI);
   cargarContactos(); llenarComerciales(); construirSlots(); volcarForm(); seleccionarComercialInicial(); leerForm(false); volcarAnillado(); renderAnillado(); renderTodo();
