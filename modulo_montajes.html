@@ -5,73 +5,81 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tactical — Montajes</title>
 <style>
-  /* Conde 2026-10-17: un solo acceso "Montajes" en el Hub, desde aquí se entra a las herramientas de montaje. */
-  :root{ --panel:#dde3ea; --border:#94a3b8; --text:#1a202c; --muted:#5a6472; --accent:#cc0000; --azul:#1e3a5f; }
-  *{box-sizing:border-box;}
-  body{margin:0;background:#12161d;color:var(--text);font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
-  header{padding:14px 22px;background:var(--azul);display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
-  header img{height:38px;background:#fff;border-radius:4px;padding:2px 6px;}
-  header h1{margin:0;font-size:16px;color:#fff;}
-  header p{margin:2px 0 0;font-size:12.5px;color:#cbd8e8;}
-  .nav-btn-hub{background:#cc0000;color:#fff;border:none;padding:8px 16px;border-radius:4px;font-weight:bold;cursor:pointer;font-size:0.9rem;margin-left:auto;}
-  main{max-width:1100px;margin:0 auto;padding:22px 16px;}
-  .intro{color:#cbd5e1;font-size:14px;margin:0 0 18px;}
-  .tarjetas{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
-  .tarjeta{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:10px;cursor:pointer;transition:transform .12s, box-shadow .12s;}
-  .tarjeta:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.35);}
-  .tarjeta h2{margin:0;font-size:17px;color:var(--azul);display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-  .tarjeta p{margin:0;font-size:13.5px;color:#334155;line-height:1.45;}
-  .tarjeta ul{margin:0;padding-left:18px;font-size:12.5px;color:#475569;line-height:1.5;}
-  .tarjeta .pie{margin-top:auto;font-weight:800;font-size:13px;color:var(--accent);}
-  .badge{font-size:11px;font-weight:800;border-radius:10px;padding:2px 8px;background:#1a7d3f;color:#fff;}
-  .badge.pronto{background:#64748b;}
-  .tarjeta.pronto{opacity:.6;cursor:default;}
-  .tarjeta.pronto:hover{transform:none;box-shadow:none;}
-  #sinAcceso{display:none;color:#fca5a5;font-weight:700;}
+  /* Conde 2026-10-17: un solo acceso "Montajes" en el Hub; mismo diseño de tarjetas que el Centro de Operaciones del Hub. */
+  :root { --primary:#cc0000; --secondary:#4a5568; --dark:#1a202c; }
+  * { box-sizing:border-box; }
+  body { font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color:#0d1015; margin:0; padding:10px; color:var(--dark); }
+  .container { max-width:1280px; margin:0 auto; background:#12161d; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.35); overflow:hidden; border-top:5px solid var(--primary); }
+  header { background:var(--dark); color:white; padding:18px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid var(--primary); flex-wrap:wrap; gap:10px; }
+  header h2 { margin:0; font-size:1.5rem; letter-spacing:1px; color:white; }
+  header span { font-size:0.88rem; color:#cbd5e0; font-style:italic; }
+  .nav-btn-hub { background:var(--primary); color:white; border:none; padding:8px 16px; border-radius:4px; font-weight:bold; cursor:pointer; transition:0.2s; font-size:0.9rem; }
+  .nav-btn-hub:hover { background:#b30000; }
+  .hub-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:20px; padding:25px; }
+  .hub-card { background:white; border:2px solid #e2e8f0; border-radius:8px; padding:22px; cursor:pointer; transition:all 0.25s ease; position:relative; border-top:4px solid var(--secondary); display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 2px 4px rgba(0,0,0,0.03); }
+  .hub-card:hover { transform:translateY(-4px); border-color:var(--primary); box-shadow:0 8px 16px rgba(204,0,0,0.12); }
+  .hub-card.active-card { border-top-color:var(--primary); }
+  .hub-card.disabled-card { opacity:0.6; cursor:not-allowed; background:#f8fafc; border-top-color:#cbd5e0; }
+  .hub-card.disabled-card:hover { transform:none; border-color:#cbd5e0; box-shadow:none; }
+  .hub-card .card-title svg { width:22px; height:22px; color:var(--primary); margin-right:8px; }
+  .hub-card.disabled-card .card-title svg { color:#a0aec0; }
+  .card-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; gap:8px; }
+  .card-title { font-size:1.25rem; font-weight:bold; color:var(--dark); margin:0; }
+  .badge { padding:4px 8px; border-radius:4px; font-size:0.75rem; font-weight:bold; color:white; text-transform:uppercase; white-space:nowrap; }
+  .badge-active { background:var(--primary); }
+  .badge-dev { background:var(--secondary); }
+  .card-footer { font-size:0.88rem; font-weight:bold; color:var(--primary); display:flex; align-items:center; gap:5px; }
+  .disabled-card .card-footer { color:#718096; }
+  #sinAcceso { display:none; color:#fca5a5; font-weight:700; padding:0 25px 25px; }
 </style>
 </head>
 <body>
+<div class="container">
 <header>
-  <img src="logo_tactical.png" alt="Tactical">
-  <div><h1>Montajes</h1><p>Herramientas de montaje: para el cliente, para impresión y para plotter.</p></div>
-  <button class="nav-btn-hub" onclick="location.href='TACTICAL_ERP_HUB.html'">Volver al Hub</button>
-</header>
-<main>
-  <p class="intro">Elige la herramienta de montaje que necesitas.</p>
-  <div class="tarjetas" id="tarjetas">
-
-    <div class="tarjeta" data-roles="administrador,comercial,diseno,produccion" onclick="location.href='modulo_montaje_cuaderno.html'">
-      <h2>Montaje para el cliente <span class="badge">Activo</span></h2>
-      <p>Arma el montaje que el cliente revisa y aprueba: cuadernos con anillado y cualquier otro producto (cajas, carpetas, sobres, stickers…).</p>
-      <ul>
-        <li>Se llena solo desde la cotización</li>
-        <li>Cotas, anillo y revisión de medidas, márgenes y colores RGB</li>
-        <li>Botón de aprobación por WhatsApp al comercial</li>
-        <li>Calibre y tiras del anillo para comprar</li>
-      </ul>
-      <div class="pie">Abrir ➔</div>
-    </div>
-
-    <div class="tarjeta" data-roles="administrador,diseno" onclick="location.href='modulo_montajes_impresion.html'">
-      <h2>Montajes de impresión <span class="badge">Activo</span></h2>
-      <p>Automatiza el montaje para imprimir: taco, agenda, carátula, catálogo y montaje libre, con sangrados, doble corte, guías y receta de tinta.</p>
-      <ul>
-        <li>Sangrados automáticos y doble corte</li>
-        <li>Revisión de anillado y de medida/cuadrícula</li>
-        <li>Marcas, pinza y tiro/retiro</li>
-      </ul>
-      <div class="pie">Abrir ➔</div>
-    </div>
-
-    <div class="tarjeta pronto" data-roles="administrador,diseno">
-      <h2>Rompecabezas para plotter <span class="badge pronto">Próximamente</span></h2>
-      <p>Montaje de rompecabezas para impresión en plotter. Todavía no está construido.</p>
-      <div class="pie" style="color:#64748b">En preparación</div>
-    </div>
-
+  <div>
+    <h2>MONTAJES</h2>
+    <span>Herramientas de montaje de Tactical Marketing</span>
   </div>
-  <p id="sinAcceso">Tu usuario no tiene acceso a las herramientas de montaje.</p>
-</main>
+  <div>
+    <button class="nav-btn-hub" onclick="location.href='TACTICAL_ERP_HUB.html'">Volver al Hub</button>
+  </div>
+</header>
+
+<div class="hub-grid" id="tarjetas">
+
+  <div class="hub-card active-card" data-roles="administrador,comercial,diseno,produccion" onclick="location.href='modulo_montaje_cuaderno.html'">
+    <div>
+      <div class="card-header">
+        <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0;"><rect x="3" y="3" width="8" height="8" rx="1"></rect><rect x="13" y="3" width="8" height="8" rx="1"></rect><rect x="3" y="13" width="8" height="8" rx="1"></rect><rect x="13" y="13" width="8" height="8" rx="1"></rect></svg>Montajes y Sherpas</h3>
+        <span class="badge badge-active">Activo</span>
+      </div>
+    </div>
+    <div class="card-footer">Ingresar al Módulo ➔</div>
+  </div>
+
+  <div class="hub-card active-card" data-roles="administrador,diseno" onclick="location.href='modulo_montajes_impresion.html'">
+    <div>
+      <div class="card-header">
+        <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>Montajes Impresión</h3>
+        <span class="badge badge-active">Activo</span>
+      </div>
+    </div>
+    <div class="card-footer">Ingresar al Módulo ➔</div>
+  </div>
+
+  <div class="hub-card disabled-card" data-roles="administrador,diseno">
+    <div>
+      <div class="card-header">
+        <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0;"><path d="M19.4 10.2h-1.9V7.5a2 2 0 0 0-2-2h-2.7V3.6a2.1 2.1 0 0 0-4.2 0v1.9H5.9a2 2 0 0 0-2 2v2.4h1.9a2.1 2.1 0 0 1 0 4.2H3.9v2.4a2 2 0 0 0 2 2h2.4v-1.9a2.1 2.1 0 0 1 4.2 0v1.9h2.7a2 2 0 0 0 2-2v-2.7h1.9a2.1 2.1 0 0 0 0-4.2z"></path></svg>Montaje Rompecabezas Plotter</h3>
+        <span class="badge badge-dev">Próximamente</span>
+      </div>
+    </div>
+    <div class="card-footer">En preparación</div>
+  </div>
+
+</div>
+<p id="sinAcceso">Tu usuario no tiene acceso a las herramientas de montaje.</p>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="tactical-supabase.js?v=20261016a"></script>
@@ -82,7 +90,7 @@
 window.tacticalOnLogin = async function(){
   const rol = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol;
   let visibles = 0;
-  document.querySelectorAll('#tarjetas .tarjeta').forEach(t=>{
+  document.querySelectorAll('#tarjetas .hub-card').forEach(t=>{
     const roles = (t.getAttribute('data-roles')||'').split(',');
     const ok = roles.includes(rol);
     t.style.display = ok ? '' : 'none';
