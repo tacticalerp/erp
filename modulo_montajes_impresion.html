@@ -114,7 +114,7 @@
       </select></div>
     <div id="wCorte"><label>Corte</label>
       <select id="corte" onchange="cambioCorte()"><option value="unico">Único (piezas pegadas)</option><option value="doble">Doble corte</option></select></div>
-    <div id="wGap" style="display:none"><label>Separación entre piezas (mm)</label><input type="number" id="gap" value="4" min="1" max="10" step="0.5" oninput="cambioCorte()"></div>
+    <div id="wGap" style="display:none"><label>Separación entre piezas (mm)</label><input type="number" id="gap" value="3" min="1" max="10" step="0.5" oninput="cambioCorte()"></div>
     <div id="wCustom" style="display:none"><label>Hoja personalizada (largo × corto, cm)</label>
       <div style="display:flex;gap:6px"><input type="number" id="cw" value="70" step="0.1" oninput="recalcular()"><input type="number" id="ch" value="50" step="0.1" oninput="recalcular()"></div></div>
   </div>
@@ -259,7 +259,7 @@ function cambioTipo(){
   if(prepActivo() && S.pool.length && !PREP.analizado && !PREP.analizando) analizarTodo();
 }
 // Doble corte: franja entre piezas que se corta por los dos lados; cada pieza necesita la mitad de la franja como sangrado
-function corteGap(){ return $('corte').value==='doble' ? Math.max(1, Math.min(10, +$('gap').value || 4)) : 0; }
+function corteGap(){ return $('corte').value==='doble' ? Math.max(1, Math.min(10, +$('gap').value || 3)) : 0; }
 function bleedNecesario(){ const t = $('tipo').value; if(t==='caratula') return PREP.B; return corteGap()/2; }
 function prepActivo(){ const t = $('tipo').value; return t==='caratula' || ((t==='taco' || t==='catalogo' || t==='libre') && corteGap()>0); }
 function cambioCorte(){
