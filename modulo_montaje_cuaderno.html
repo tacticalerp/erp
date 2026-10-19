@@ -70,7 +70,8 @@
   .thumb img{width:100%;height:calc(var(--tw,104px)*1.08);object-fit:contain;background:#f1f5f9;display:block;}
   .thumb.sel{border-color:var(--accent);box-shadow:0 0 0 2px rgba(204,0,0,.3);}
   .thumb.usada{opacity:.45;}
-  .thumb .nom{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;color:#334155;}
+  .thumb .nom{overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-all;line-height:1.15;margin-top:2px;color:#334155;font-size:9.5px;}
+  .thumb .arch{height:4px;border-radius:2px;margin-top:3px;}
   .thumb .tag{position:absolute;top:2px;left:2px;background:var(--ok);color:#fff;border-radius:3px;padding:0 4px;font-size:10px;font-weight:700;}
   .thumb .tag.rgb{background:#b91c1c;left:auto;right:2px;top:auto;bottom:22px;}
   .thumb .abierta{position:absolute;top:2px;right:2px;background:var(--warn);color:#fff;border:none;border-radius:3px;font-size:10px;padding:1px 4px;cursor:pointer;}
@@ -836,6 +837,8 @@ function autoAsignar(){
   const libres = () => S.pool.filter(p=>!S.slots.some(s=>s.poolId===p.id));
   const claveNombre = (p)=>{
     const n = norm(p.nombre);
+    if(/contra\s*guarda|contraguarda/.test(n)) return 'guarda2';
+    if(/guarda/.test(n)) return 'guarda1';
     if(/contra\s*portada|contraportada|contratapa|back/.test(n)) return 'contra';
     if(/portada|caratula|cover|frente_tapa|tapa/.test(n)) return 'portada';
     return null;
@@ -845,6 +848,10 @@ function autoAsignar(){
     const s = S.slots.find(x=>x.key===k && !x.poolId && !x.blanco);
     if(s) s.poolId = p.id;
   });
+  // archivos/páginas de interior (nombre con «interior», «hojas», «inserto»): primero a los cuadros de interior, en orden
+  const esInt = p=>/interior|hojas|inserto/.test(norm(p.nombre));
+  const intLibres = libres().filter(esInt);
+  S.slots.filter(s=>s.tipo==='interior' && !s.poolId && !s.blanco).forEach((s,i)=>{ if(intLibres[i]) s.poolId = intLibres[i].id; });
   const huecos = S.slots.filter(s=>!s.poolId && !s.blanco);
   const sobran = libres();
   huecos.forEach((s,i)=>{ if(sobran[i]) s.poolId = sobran[i].id; });
@@ -934,6 +941,8 @@ function revisarPieza(slot){
 }
 
 /* ======================= PANELES DE LA INTERFAZ ======================= */
+// Un color por archivo de origen: así se distinguen las páginas cuando llegan en archivos separados
+function colorArchivo(n){ let h = 0; String(n||'').split('').forEach(c=>{ h = (h*31 + c.charCodeAt(0)) % 360; }); return 'hsl('+h+',65%,48%)'; }
 let _tmManual = false;
 function tamMini(v, manual){
   if(manual) _tmManual = true;
@@ -951,7 +960,7 @@ function renderPool(){
       ${usado?'<span class="tag">✓</span>':''}
       ${p.color && p.color.rgb ? '<span class="tag rgb">RGB</span>':''}
       ${pareceAbierta(p)?`<button class="abierta" title="Parece una página abierta (dos caras). Clic para cortarla por la mitad" onclick="event.stopPropagation(); dividirPagina('${p.id}')">✂ 2 caras</button>`:''}
-      <span class="num">${S.pool.indexOf(p)+1}</span><img src="${p.dataUrl}" alt=""><div class="nom">${esc(p.nombre)}</div></div>`;
+      <span class="num">${S.pool.indexOf(p)+1}</span><img src="${p.dataUrl}" alt=""><div class="nom">${esc(p.nombre)}</div><div class="arch" style="background:${colorArchivo(p.archivo||p.nombre)}"></div></div>`;
   }).join('');
   cont.querySelectorAll('.thumb').forEach(el=>{
     el.addEventListener('dragstart', e=>{ e.dataTransfer.setData('text/plain','pool:'+el.dataset.id); });
