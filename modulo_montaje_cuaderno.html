@@ -276,7 +276,7 @@
   </div>
   <div id="pResumen" style="margin-top:10px;font-weight:700;font-size:13.5px;color:#1e3a5f;"></div>
   <div id="pVista" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;"></div>
-  <div class="row2"><button class="btn rojo" onclick="descargarPrueba()">Descargar PDF de prueba (tamaño real)</button> <button class="btn rojo" title="Una imagen JPG por hoja, a 250 ppp: pesa mucho menos que el PDF y no se atasca en la impresora" onclick="descargarPrueba('jpg')">Descargar JPG de prueba (250 ppp)</button><span id="msgPrueba" style="font-size:12.5px;font-weight:700;"></span></div>
+  <div class="row2"><button class="btn rojo" onclick="descargarPrueba()">Descargar PDF de prueba (tamaño real)</button> <button class="btn rojo" title="Una imagen JPG en CMYK por hoja, a 250 ppp: pesa mucho menos que el PDF y no se atasca en la impresora. La conversión de color es aproximada (sin perfil ICC)." onclick="descargarPrueba('jpg')">Descargar JPG CMYK de prueba (250 ppp)</button><span id="msgPrueba" style="font-size:12.5px;font-weight:700;"></span></div>
   <p class="hint" style="margin-top:6px">En automático se prueba, de menor a mayor, 22×28, 25×35, 45×30 y 50×33 cm (horizontal o vertical) y cada sección usa el más pequeño donde cabe sin reducirse, para no gastar papel de 50×33 en piezas chicas. Siempre quedan libres 4 mm como mínimo por todos los lados del papel (el margen que escribas abajo nunca baja de 0,4 cm). Se respeta la pinza de la impresora digital (5 mm del lado largo del papel, en rojo claro en la vista previa): ahí no se coloca nada. Siempre que se pueda sale a tamaño real y se juntan 2 páginas por hoja; solo si una pieza excede el máximo de impresión (50×33, por ejemplo una caja de 60×45) se reduce, y entonces el resumen y el PDF lo avisan en rojo con el porcentaje. Las medidas de arriba (ancho y alto) solo se usan con «Medida fija».</p>
 
     </div>
@@ -300,6 +300,7 @@
 <script src="tactical-supabase.js?v=20261016a"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
 <script src="tactical-estacion.js?v=20261017b"></script>
+<script src="jpeg_cmyk.js?v=20261019a"></script>
 <script src="precios_tactical.js?v=20261017b"></script>
 <script>
 if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -1739,7 +1740,7 @@ async function descargarPrueba(formato){
   }
   const base = nombreArchivo().replace('montaje_','prueba_impresion_');
   if(formato==='jpg'){
-    try{ const n = await pdfAJpgs(doc, base, 250, msg); msg.style.color = '#1a7d3f'; msg.textContent = `Listo: ${n} JPG a 250 ppp, tamaño real (${resumenPapeles(pl)}).${n>1?' Si el navegador pide permiso para varias descargas, acéptalo.':''}`; }
+    try{ const n = await pdfAJpgs(doc, base, 250, msg); msg.style.color = '#1a7d3f'; msg.textContent = `Listo: ${n} JPG CMYK a 250 ppp, tamaño real (${resumenPapeles(pl)}).${n>1?' Si el navegador pide permiso para varias descargas, acéptalo.':''}`; }
     catch(e){ console.error(e); msg.style.color = '#b91c1c'; msg.textContent = 'No se pudo generar el JPG: '+(e.message||e); }
     return;
   }
@@ -1751,15 +1752,14 @@ async function pdfAJpgs(doc, base, ppp, msg){
   if(!window.pdfjsLib) throw new Error('pdf.js no está cargado');
   const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(doc.output('arraybuffer')) }).promise;
   for(let i=1; i<=pdf.numPages; i++){
-    msg.style.color = '#1e3a5f'; msg.textContent = `Convirtiendo hoja ${i} de ${pdf.numPages} a JPG…`;
+    msg.style.color = '#1e3a5f'; msg.textContent = `Convirtiendo hoja ${i} de ${pdf.numPages} a JPG CMYK…`;
     await new Promise(r=>setTimeout(r,20));
     const pg = await pdf.getPage(i), vp = pg.getViewport({ scale: ppp/72 });
     const cv = document.createElement('canvas'); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
     const cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0,0,cv.width,cv.height);
     await pg.render({ canvasContext:cx, viewport:vp }).promise;
-    const blob = await new Promise(r=>cv.toBlob(r, 'image/jpeg', 0.92));
-    const bytes = new Uint8Array(await blob.arrayBuffer());
-    if(bytes[2]===0xFF && bytes[3]===0xE0 && bytes[6]===0x4A){ bytes[13] = 1; bytes[14] = ppp>>8; bytes[15] = ppp&255; bytes[16] = ppp>>8; bytes[17] = ppp&255; }   // JFIF: unidades = ppp
+    const rgba = cx.getImageData(0, 0, cv.width, cv.height).data;
+    const bytes = await tacticalJpegCmyk(rgba, cv.width, cv.height, { ppp, calidad:92, progreso:f=>{ msg.textContent = `Convirtiendo hoja ${i} de ${pdf.numPages} a JPG CMYK… ${Math.round(f*100)}%`; } });
     bajar(new Blob([bytes], { type:'image/jpeg' }), base + (pdf.numPages>1 ? ' (hoja '+i+')' : '') + '.jpg');
     await new Promise(r=>setTimeout(r,500));
   }
