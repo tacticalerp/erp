@@ -370,6 +370,31 @@
            como su propio fondo (ver .kanban-col arriba); si el badge usara el mismo tono se perdería
            contra la columna, igual que le pasaba antes contra el fondo de página. */
         .kanban-col-count { background:var(--dark); color:white; border-radius:12px; padding:2px 10px; font-size:0.82rem; font-weight:700; }
+        /* Conde 2026-10-19: carrusel de fotos por producto en las fichas del Kanban (cada foto con su medida / fichas / cantidad). */
+        .kb-carr { margin: 0 0 8px; }
+        .kb-carr-marco { position: relative; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+        .kb-carr-img { width: 100%; height: 190px; object-fit: contain; display: block; cursor: zoom-in; }
+        .kb-carr-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 34px; height: 44px; border: none; background: rgba(26,32,44,0.55); color: #fff; font-size: 26px; line-height: 1; cursor: pointer; padding: 0; }
+        .kb-carr-izq { left: 0; border-radius: 0 8px 8px 0; } .kb-carr-der { right: 0; border-radius: 8px 0 0 8px; }
+        .kb-carr-cont { position: absolute; left: 6px; bottom: 6px; background: rgba(26,32,44,0.7); color: #fff; font-size: 0.7rem; font-weight: 700; padding: 1px 7px; border-radius: 10px; }
+        .kb-carr-quitar { position: absolute; top: 5px; right: 5px; background: var(--peligro); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 13px; line-height: 1; cursor: pointer; padding: 0; }
+        .kb-carr-info { margin-top: 5px; text-align: center; }
+        .kb-carr-t { font-size: 0.95rem; font-weight: 800; color: var(--dark); }
+        .kb-carr-d { font-size: 0.78rem; color: #4a5568; }
+        .kb-carr-dots { display: flex; justify-content: center; gap: 6px; margin-top: 5px; }
+        .kb-carr-dot { width: 9px; height: 9px; border-radius: 50%; border: none; background: #cbd5e0; padding: 0; cursor: pointer; }
+        .kb-carr-dot.on { background: var(--primary); }
+        .kb-carr-badge { position: absolute; right: 2px; bottom: 2px; background: rgba(26,32,44,0.8); color: #fff; font-size: 0.62rem; font-weight: 700; padding: 0 5px; border-radius: 8px; line-height: 1.5; }
+        .kb-lightbox { position: fixed; inset: 0; background: rgba(15,20,28,0.93); z-index: 100000; display: flex; align-items: center; justify-content: center; padding: 16px; cursor: zoom-out; }
+        .kb-lb-caja { max-width: 94vw; max-height: 94vh; display: flex; flex-direction: column; align-items: center; cursor: default; }
+        .kb-lb-caja img { max-width: 94vw; max-height: 72vh; object-fit: contain; border-radius: 6px; box-shadow: 0 12px 40px rgba(0,0,0,0.5); display: block; }
+        .kb-lb-info { text-align: center; color: #fff; margin-top: 12px; }
+        .kb-lb-t { font-size: 1.35rem; font-weight: 800; }
+        .kb-lb-d { font-size: 0.95rem; color: #e2e8f0; margin-top: 2px; }
+        .kb-lb-c { font-size: 0.78rem; color: #94a3b8; margin-top: 6px; }
+        .kb-lb-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.16); border: none; color: #fff; width: 46px; height: 64px; font-size: 38px; line-height: 1; border-radius: 8px; cursor: pointer; padding: 0; }
+        .kb-lb-izq { left: 10px; } .kb-lb-der { right: 10px; }
+        .kb-lb-cerrar { position: absolute; top: 14px; right: 18px; background: rgba(255,255,255,0.16); border: none; color: #fff; width: 38px; height: 38px; border-radius: 50%; font-size: 24px; line-height: 1; cursor: pointer; padding: 0; }
         .kanban-fotos-grid { display:flex; flex-wrap:wrap; gap:10px; margin-top:6px; }
         .kanban-foto-item { position:relative; width:74px; }
         .kanban-foto-item img { width:74px; height:74px; object-fit:cover; border-radius:6px; border:1px solid #e2e8f0; display:block; }
@@ -5824,6 +5849,94 @@
           const etiquetaCol = colorCol ? ` <span class="kb-col-tag" style="background:${colorCol.ac};" title="Columna: ${KANBAN_COLUMNA_NOMBRE[f.columna]||''}">${KANBAN_COLUMNA_CORTO[f.columna]||''}</span>` : '';
           return nombreHtml + comercialHtml + etiquetaCol;
         }
+        // ============ CARRUSEL DE FOTOS POR PRODUCTO (Conde 2026-10-19) ============
+        // "cuando el mismo cliente aprobó varios rompecabezas... un carrusel donde se puedan ver las diferentes fotos y cada foto
+        // tenga el dato de tamaño y cantidad de fichas para evitar cruzar los datos". Cada línea de la ficha (cada producto
+        // aprobado) trae su propia foto (l.fotoUrl) y su descripción; con 2 o más fotos la ficha muestra un carrusel y cada foto
+        // lleva su rótulo (medida + fichas, y cantidad de unidades). Sin cambios en la base de datos: todo sale de lineas[].
+        const kanbanCarruselIdx = {}; // fichaId -> foto que se está viendo (se recuerda aunque el tablero se redibuje)
+        function kbEsc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+        // Rotula una línea. Rompecabezas: "2x Láser Rectangular 32x24cm (30f)" -> "32x24 cm · 30 fichas" / "2 unidades — Láser Rectangular".
+        function kanbanRotuloLinea(l){
+          const d = String(l.desc || '');
+          const m = d.match(/^(\d+)x\s+(.*?)\s+(\d+(?:[.,]\d+)?x\d+(?:[.,]\d+)?)\s*cm\s*\((\d+)f\)/i);
+          if(m) return { titulo: m[3] + ' cm · ' + m[4] + ' fichas', detalle: m[1] + (m[1] === '1' ? ' unidad' : ' unidades') + ' — ' + m[2] };
+          return { titulo: d || (NOMBRES_LINEA_PRODUCTO[l.linea] || l.linea || 'Producto'), detalle: l.cantidad ? 'Cantidad: ' + l.cantidad : '' };
+        }
+        function kanbanFotosLineas(f){
+          return (f.lineas || []).map((l, idxLinea) => ({ l, idxLinea })).filter(x => x.l.fotoUrl)
+            .map(x => ({ url: x.l.fotoUrl, idxLinea: x.idxLinea, ...kanbanRotuloLinea(x.l) }));
+        }
+        function kanbanCarruselInlineHtml(f, fotos){
+          const n = fotos.length, i = Math.min(kanbanCarruselIdx[f.id] || 0, n - 1), it = fotos[i];
+          return `<div class="kb-carr" data-carr="${f.id}" onclick="event.stopPropagation();">
+            <div class="kb-carr-marco">
+              <img class="kb-carr-img" src="${it.url}" alt="" title="Toca para ver grande" onclick="kanbanAbrirCarrusel('${f.id}')">
+              <button type="button" class="kb-carr-nav kb-carr-izq" onclick="kanbanCarruselIr('${f.id}',-1)" title="Foto anterior">‹</button>
+              <button type="button" class="kb-carr-nav kb-carr-der" onclick="kanbanCarruselIr('${f.id}',1)" title="Foto siguiente">›</button>
+              <span class="kb-carr-cont">${i + 1} / ${n}</span>
+              <button type="button" class="kb-carr-quitar" onclick="kanbanCarruselQuitar('${f.id}')" title="Quitar esta foto">×</button>
+            </div>
+            <div class="kb-carr-info"><div class="kb-carr-t">${kbEsc(it.titulo)}</div><div class="kb-carr-d">${kbEsc(it.detalle)}</div></div>
+            <div class="kb-carr-dots">${fotos.map((_, k) => `<button type="button" class="kb-carr-dot${k === i ? ' on' : ''}" onclick="kanbanCarruselIr('${f.id}',null,${k})" title="Foto ${k + 1}"></button>`).join('')}</div>
+          </div>`;
+        }
+        // Cambia de foto sin redibujar el tablero (delta = ±1, o idx = foto puntual).
+        function kanbanCarruselIr(fichaId, delta, idx){
+          const f = db_kanban.find(x => x.id === fichaId); if(!f) return;
+          const fotos = kanbanFotosLineas(f), n = fotos.length; if(!n) return;
+          let i = (idx != null) ? idx : (((kanbanCarruselIdx[fichaId] || 0) + (delta || 0)) % n + n) % n;
+          kanbanCarruselIdx[fichaId] = i;
+          const it = fotos[i];
+          document.querySelectorAll('[data-carr="' + fichaId + '"]').forEach(c => {
+            c.querySelector('.kb-carr-img').src = it.url;
+            c.querySelector('.kb-carr-t').textContent = it.titulo;
+            c.querySelector('.kb-carr-d').textContent = it.detalle;
+            c.querySelector('.kb-carr-cont').textContent = (i + 1) + ' / ' + n;
+            c.querySelectorAll('.kb-carr-dot').forEach((d, k) => d.classList.toggle('on', k === i));
+          });
+        }
+        function kanbanCarruselQuitar(fichaId){
+          const f = db_kanban.find(x => x.id === fichaId); if(!f) return;
+          const fotos = kanbanFotosLineas(f), i = Math.min(kanbanCarruselIdx[fichaId] || 0, fotos.length - 1), it = fotos[i];
+          if(!it || !confirm('¿Quitar esta foto (' + it.titulo + ') de la ficha?')) return;
+          f.lineas[it.idxLinea].fotoUrl = null;
+          kanbanCarruselIdx[fichaId] = 0;
+          tacticalSyncFichaKanban(f);
+          renderKanban();
+        }
+        // Visor grande a pantalla completa: flechas, deslizar con el dedo, flechas del teclado y rótulo de cada foto.
+        function kanbanAbrirCarrusel(fichaId, inicio){
+          const f = db_kanban.find(x => x.id === fichaId); if(!f) return;
+          const fotos = kanbanFotosLineas(f); if(!fotos.length) return;
+          let i = Math.min(inicio != null ? inicio : (kanbanCarruselIdx[fichaId] || 0), fotos.length - 1);
+          const ov = document.createElement('div');
+          ov.className = 'kb-lightbox';
+          const pintar = () => {
+            const it = fotos[i];
+            ov.innerHTML = `<div class="kb-lb-caja" onclick="event.stopPropagation();">
+              <img src="${it.url}" alt="">
+              <div class="kb-lb-info"><div class="kb-lb-t">${kbEsc(it.titulo)}</div><div class="kb-lb-d">${kbEsc(it.detalle)}</div><div class="kb-lb-c">${kbEsc(f.nombreCli || '')} · foto ${i + 1} de ${fotos.length}</div></div>
+            </div>
+            ${fotos.length > 1 ? '<button type="button" class="kb-lb-nav kb-lb-izq" title="Anterior">‹</button><button type="button" class="kb-lb-nav kb-lb-der" title="Siguiente">›</button>' : ''}
+            <button type="button" class="kb-lb-cerrar" title="Cerrar">×</button>`;
+            const izq = ov.querySelector('.kb-lb-izq'), der = ov.querySelector('.kb-lb-der');
+            if(izq) izq.onclick = (e) => { e.stopPropagation(); ir(-1); };
+            if(der) der.onclick = (e) => { e.stopPropagation(); ir(1); };
+            ov.querySelector('.kb-lb-cerrar').onclick = (e) => { e.stopPropagation(); cerrar(); };
+          };
+          const ir = (d) => { i = (i + d + fotos.length) % fotos.length; pintar(); };
+          const tecla = (e) => { if(e.key === 'ArrowLeft') ir(-1); else if(e.key === 'ArrowRight') ir(1); else if(e.key === 'Escape') cerrar(); };
+          const cerrar = () => { document.removeEventListener('keydown', tecla); ov.remove(); kanbanCarruselIdx[fichaId] = i; kanbanCarruselIr(fichaId, 0, i); };
+          let x0 = null;
+          ov.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+          ov.addEventListener('touchend', (e) => { if(x0 == null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null; if(Math.abs(dx) > 50 && fotos.length > 1) ir(dx < 0 ? 1 : -1); });
+          ov.onclick = cerrar;
+          document.addEventListener('keydown', tecla);
+          document.body.appendChild(ov);
+          pintar();
+        }
+
         function renderFichaKanbanHtml(f){
           const checklist = KANBAN_MOSTRAR_CHECKLIST ? (f.checklist || []) : [];
           const idx = KANBAN_COLUMNAS.indexOf(f.columna);
@@ -5842,6 +5955,8 @@
           // Miniatura de foto (hoy solo la usa Rompecabezas B2C) -- guía visual rápida en producción,
           // se ve cuál es la foto del pedido sin tener que abrir nada más (Conde 2026-08-12).
           const primeraFoto = (f.lineas||[]).map(l=>l.fotoUrl).find(Boolean) || ((f.fotos||[])[0] ? f.fotos[0].url : null);
+          // Conde 2026-10-19: con 2 o más productos con foto, la ficha muestra un carrusel (cada foto con su medida/fichas/cantidad).
+          const fotosLin = kanbanFotosLineas(f);
           // Conde 2026-09-08: "si hay una foto de portada tambien la pueda eliminar" -- antes no
           // había forma de quitarla si venía de la línea de la cotización (fotoUrl), solo las de la
           // galería de "Imágenes de referencia" tenían botón de borrar.
@@ -5859,7 +5974,7 @@
             ? `<span class="t-corto">${cotTextoConNegrilla(tituloCorto)}</span><span class="t-largo">${kanbanTituloParrafosHtml(tituloTexto, 'kb-par')}</span> <span class="kanban-ver-mas">(ver más)</span>`
             : cotTextoConNegrilla(tituloTexto);
           const cabeceraHtml = `
-            ${fotoHtml}
+            ${fotosLin.length>=2 ? kanbanCarruselInlineHtml(f, fotosLin) : fotoHtml}
             ${f.urgente?'<div style="font-size:0.85rem; font-weight:900; color:#fff; background:var(--peligro); padding:4px 8px; border-radius:4px; margin-bottom:5px; display:inline-block;">🚨 URGENTE</div>':''}
             <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.03em; color:#a0aec0; font-weight:bold;">${dotsHtml}${ticon('fileText')}Descripción</div>
             <div class="kanban-card-title" ${tituloEsLargo?'onclick="event.stopPropagation(); this.classList.toggle(\'expandido\')"':''}>${tituloHtml}</div>
@@ -5876,7 +5991,7 @@
           // título más corto (igual se puede tocar la tarjeta entera para ver el resto), sin la
           // etiqueta "Descripción", sin notas/entrega/aprobación -- y la fecha de entrega en una
           // pastilla corta ("📅 4d" en vez de la fecha completa) para que no se vaya a 2 líneas.
-          const fotoCompactaHtml = primeraFoto ? `<img src="${primeraFoto}" alt="${f.nombreCli}" title="Toca para ver completa" style="width:56px; height:56px; object-fit:cover; border-radius:6px; float:left; margin:0 8px 4px 0; border:1px solid #e2e8f0; cursor:zoom-in;" onclick="event.stopPropagation(); tacticalAmpliarImagen('${primeraFoto}','${f.nombreCli}')">` : '';
+          const fotoCompactaHtml = fotosLin.length>=2 ? `<div style="position:relative; float:left; width:56px; height:56px; margin:0 8px 4px 0; cursor:zoom-in;" title="Toca para ver las ${fotosLin.length} fotos, cada una con su medida y fichas" onclick="event.stopPropagation(); kanbanAbrirCarrusel('${f.id}')"><img src="${fotosLin[Math.min(kanbanCarruselIdx[f.id]||0, fotosLin.length-1)].url}" alt="${f.nombreCli}" style="width:56px; height:56px; object-fit:cover; border-radius:6px; border:1px solid #e2e8f0; display:block;"><span class="kb-carr-badge">${fotosLin.length} fotos</span></div>` : primeraFoto ? `<img src="${primeraFoto}" alt="${f.nombreCli}" title="Toca para ver completa" style="width:56px; height:56px; object-fit:cover; border-radius:6px; float:left; margin:0 8px 4px 0; border:1px solid #e2e8f0; cursor:zoom-in;" onclick="event.stopPropagation(); tacticalAmpliarImagen('${primeraFoto}','${f.nombreCli}')">` : '';
           // Conde 2026-09-18: "que el texto tenga unos 15 o 20 caracteres mas" -- subido de 26 a 45.
           const tituloCortoCompacto = cotTextoConNegrilla(tituloTexto.length > 45 ? tituloTexto.slice(0,45).trim() + '…' : tituloTexto);
           let dueCompactoHtml;
