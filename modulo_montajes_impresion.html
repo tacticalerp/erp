@@ -171,6 +171,7 @@
 <div class="panel">
   <h2><span class="n">4</span>Vista previa y descarga</h2>
   <div class="hojas" id="hojasSel"></div>
+  <div style="margin-bottom:6px"><button class="btn gris mini" onclick="abrirLupa()" title="Ver el montaje en grande para revisar detalles, sin descargar el PDF">Ampliar vista (lupa)</button></div>
   <div id="lienzoWrap"><svg id="lienzo" viewBox="0 0 680 400" role="img" aria-label="Vista previa del montaje"></svg></div>
   <div class="hint" id="orientLinea" style="margin:6px 0"></div>
   <div class="info" id="info"></div>
@@ -331,7 +332,7 @@ async function miniaturas(bytes, n){
   for(let i=1;i<=max;i++){
     const pg = await pdf.getPage(i);
     const vp0 = pg.getViewport({scale:1});
-    const sc = 260/Math.max(vp0.width, vp0.height);
+    const sc = 520/Math.max(vp0.width, vp0.height);
     const vp = pg.getViewport({scale:sc});
     const c = document.createElement('canvas'); c.width = Math.ceil(vp.width); c.height = Math.ceil(vp.height);
     const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,c.width,c.height);
@@ -923,6 +924,20 @@ function dibujar(){
   const hp = plan.hojas[S.hojaVer];
   const s = Math.min(660/hoja.W, 360/hoja.H), ox = (680-hoja.W*s)/2, oy = 10;
   svg.setAttribute('viewBox','0 0 680 '+(hoja.H*s+20));
+  svg.innerHTML = svgHoja(plan, hp, s, ox, oy, false);
+}
+// Imagen de una celda: la miniatura es la PÁGINA completa; se recorta al formato final (más el sangrado que trae) para que se vea lo que se imprime
+let CLIP_N = 0;
+function imagenCelda(c, pre, hi){
+  const p = c.src, t = (hi && p.thumbHi) || p.thumb, T = cajaTrim(p), mb = p.mb, k = pre[0]/T.w;
+  const ix = -pre[0]/2 - (T.x-mb.x)*k, iy = -pre[1]/2 - ((mb.y+mb.h)-(T.y+T.h))*k, iw = mb.w*k, ih = mb.h*k;
+  let B = 0;
+  if(c.sangrar && c.dec==='yatrae'){ const disp = Math.min(T.x-mb.x, T.y-mb.y, mb.x+mb.w-(T.x+T.w), mb.y+mb.h-(T.y+T.h)); B = Math.max(0, Math.min((c.bmm||0)*PT, disp))*k; }
+  const id = 'cl'+(++CLIP_N);
+  return '<clipPath id="'+id+'"><rect x="'+(-pre[0]/2-B)+'" y="'+(-pre[1]/2-B)+'" width="'+(pre[0]+2*B)+'" height="'+(pre[1]+2*B)+'"/></clipPath><image clip-path="url(#'+id+')" href="'+t+'" x="'+ix+'" y="'+iy+'" width="'+iw+'" height="'+ih+'" preserveAspectRatio="none"/>';
+}
+function svgHoja(plan, hp, s, ox, oy, hi){
+  const hoja = plan.hoja;
   let g = '<rect x="'+ox+'" y="'+oy+'" width="'+hoja.W*s+'" height="'+hoja.H*s+'" fill="#fff" stroke="#64748b" stroke-width="1"/>';
   // área real de imagen (pinza)
   const ax = ox+(hoja.W-hoja.aW)/2*s, ay = oy+(hoja.H-hoja.aH)/2*s;
@@ -933,10 +948,10 @@ function dibujar(){
     hp.celdas.forEach(c=>{
       const X = ox+c.x*s, Y = oy+c.y*s, w = c.w*s, h = c.h*s, cx = X+w/2, cy = Y+h/2;
       const col = c.label==='R' ? '#d97706' : '#2563eb';
-      const t = c.src && c.src.thumb;
+      const t = c.src && ((hi && c.src.thumbHi) || c.src.thumb);
       if(t){
         const pre = (c.rot%180) ? [h,w] : [w,h];
-        g += '<g transform="translate('+cx+' '+cy+') rotate('+(-c.rot)+')"><image href="'+t+'" x="'+(-pre[0]/2)+'" y="'+(-pre[1]/2)+'" width="'+pre[0]+'" height="'+pre[1]+'" preserveAspectRatio="none"/></g>';
+        g += '<g transform="translate('+cx+' '+cy+') rotate('+(-c.rot)+')">'+imagenCelda(c, pre, hi)+'</g>';
       }
       g += '<rect x="'+X+'" y="'+Y+'" width="'+w+'" height="'+h+'" fill="'+(t?'none':col)+'" fill-opacity="0.15" stroke="'+col+'" stroke-width="0.8"/>';
       if(c.label==='T'||c.label==='R'){
@@ -948,7 +963,54 @@ function dibujar(){
     hp.marcas.forEach(m=>{ g += '<line x1="'+(ox+m[0]*s)+'" y1="'+(oy+m[1]*s)+'" x2="'+(ox+m[2]*s)+'" y2="'+(oy+m[3]*s)+'" stroke="#000" stroke-width="'+(m[4] ? 1.1*m[4]/MARCA_GROSOR_MM : 1.1)+'"/>'; });
     hp.textos.forEach(t=>{ g += '<text x="'+(ox+t.x*s)+'" y="'+(oy+t.y*s)+'" text-anchor="middle" style="font-size:'+Math.max(TXT*s,4.5)+'px;font-weight:'+(t.negrita?700:400)+';fill:#000">'+esc(t.texto)+'</text>'; });
   }
-  svg.innerHTML = g;
+  return g;
+}
+
+/* ======================= LUPA: vista ampliada del montaje ======================= */
+const LUPA = { z:1, s:7 };
+async function miniHi(p){
+  if(p.thumbHi) return p.thumbHi;
+  const f = S.files[p.fid]; if(!f || !f.pj) return '';
+  const pg = await f.pj.getPage(p.pidx+1), v0 = pg.getViewport({scale:1}), sc = Math.min(2400/Math.max(v0.width, v0.height), 6), vp = pg.getViewport({scale:sc});
+  const c = document.createElement('canvas'); c.width = Math.ceil(vp.width); c.height = Math.ceil(vp.height);
+  const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,c.width,c.height);
+  await pg.render({ canvasContext:ctx, viewport:vp }).promise;
+  return p.thumbHi = c.toDataURL('image/jpeg', 0.9);
+}
+async function abrirLupa(){
+  let box = $('lupaBox');
+  if(!box){
+    box = document.createElement('div'); box.id = 'lupaBox';
+    box.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.92);display:flex;flex-direction:column';
+    box.innerHTML = '<div style="display:flex;gap:8px;align-items:center;padding:8px 12px;background:#0f172a;color:#fff;flex-wrap:wrap"><b>Vista ampliada</b>'+
+      '<button class="btn gris mini" onclick="lupaZoom(0.7)">−</button><span id="lupaPct" style="min-width:48px;text-align:center"></span><button class="btn gris mini" onclick="lupaZoom(1.4)">+</button>'+
+      '<button class="btn gris mini" onclick="lupaZoom(0)">Ajustar</button><button class="btn gris mini" onclick="lupaZoom(-1)">100% (tamaño real de pantalla)</button>'+
+      '<span style="opacity:.7;font-size:12px">Arrastra para moverte · Ctrl + rueda = zoom · Esc cierra</span><button class="btn rojo mini" style="margin-left:auto" onclick="cerrarLupa()">Cerrar</button></div>'+
+      '<div id="lupaScroll" style="flex:1;overflow:auto;cursor:grab"><div id="lupaSvg"></div></div>';
+    document.body.appendChild(box);
+    const sc = $('lupaScroll'); let drag = null;
+    sc.addEventListener('mousedown', e=>{ drag = { x:e.clientX, y:e.clientY, l:sc.scrollLeft, t:sc.scrollTop }; sc.style.cursor = 'grabbing'; });
+    window.addEventListener('mouseup', ()=>{ drag = null; sc.style.cursor = 'grab'; });
+    window.addEventListener('mousemove', e=>{ if(drag){ sc.scrollLeft = drag.l - (e.clientX-drag.x); sc.scrollTop = drag.t - (e.clientY-drag.y); } });
+    sc.addEventListener('wheel', e=>{ if(e.ctrlKey){ e.preventDefault(); lupaZoom(e.deltaY<0 ? 1.15 : 1/1.15, e); } }, { passive:false });
+    window.addEventListener('keydown', e=>{ if(e.key==='Escape') cerrarLupa(); });
+  }
+  box.style.display = 'flex';
+  $('lupaSvg').innerHTML = '<div style="color:#fff;padding:20px">Cargando imágenes en alta…</div>';
+  const plan = S.plan, hp = plan.hojas[S.hojaVer]; if(!hp) return;
+  for(const p of new Set(hp.celdas.map(c=>c.src).filter(Boolean))){ try{ await miniHi(p); }catch(e){ console.warn(e); } }
+  const hoja = plan.hoja, s = LUPA.s, ox = 10, oy = 10;
+  LUPA.W = hoja.W*s+20; LUPA.H = hoja.H*s+20;
+  $('lupaSvg').innerHTML = '<svg id="lupaSv" viewBox="0 0 '+LUPA.W+' '+LUPA.H+'" style="display:block;background:#fff">'+svgHoja(plan, hp, s, ox, oy, true)+'</svg>';
+  lupaZoom(0);
+}
+function cerrarLupa(){ const b = $('lupaBox'); if(b) b.style.display = 'none'; }
+function lupaZoom(f, ev){
+  const sc = $('lupaScroll'), sv = $('lupaSv'); if(!sv) return;
+  const ancho = sc.clientWidth - 4, ajuste = ancho/LUPA.W;
+  if(f===0) LUPA.z = ajuste; else if(f===-1) LUPA.z = 1; else LUPA.z = Math.max(ajuste*0.5, Math.min(LUPA.z*f, 6));
+  sv.style.width = (LUPA.W*LUPA.z)+'px'; sv.style.height = (LUPA.H*LUPA.z)+'px';
+  $('lupaPct').textContent = Math.round(LUPA.z*100/ajuste)+'%';
 }
 
 /* ======================= PDF DE SALIDA ======================= */
