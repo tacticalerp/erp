@@ -217,7 +217,8 @@ function girarItem(id){ const it = ITEMS.find(x=>x.id===id); if(!it) return; [it
 function quitarItem(id){ ITEMS = ITEMS.filter(x=>x.id!==id); renderItems(); renderCola(); planificar(); }
 function editarItem(id, campo, v){
   const it = ITEMS.find(x=>x.id===id); if(!it) return;
-  if(['w','h','fichas','cant'].includes(campo)){ it[campo] = parseFloat(v)||0; if(campo==='fichas'){ it.guia500 = it.fichas >= 500; renderItems(); } }
+  if(['w','h','fichas','cant'].includes(campo)){ it[campo] = parseFloat(v)||0; if(campo==='fichas'){ it.guia500 = it.fichas >= 500;
+    const chk = document.querySelector('#puz_'+id+' input[onchange*="guia500"]'); if(chk) chk.checked = it.guia500; } }   // sin redibujar la tarjeta: así no se pierde el cursor al escribir 1000
   else if(['guiaPl','guia500'].includes(campo)) it[campo] = !!v; else it[campo] = v;
   planificar(); avisosItems();
 }
