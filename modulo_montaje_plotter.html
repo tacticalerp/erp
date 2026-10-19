@@ -144,6 +144,7 @@
       <button class="btn rojo" onclick="generarJPG()">Generar JPG (230 ppp)</button>
       <label class="chk" style="display:flex;gap:6px;align-items:center;font-weight:600;margin:0;"><input type="checkbox" id="cRegistrar" checked> Registrar montaje y guardar sobrantes POLI</label>
     </div>
+    <div id="rutaEstacion" style="font-size:12.5px;margin:6px 0"></div>
     <div id="msgGen" style="font-size:12.5px;font-weight:700;margin:8px 0;"></div>
     <div id="lienzoWrap"><canvas id="lienzo"></canvas></div>
   </div>
@@ -691,7 +692,16 @@ window.tacticalOnLogin = async function(){
   if(!ROLES_PERMITIDOS.includes(rol)){ alert('No tienes permiso para entrar a este módulo.'); location.href = 'TACTICAL_ERP_HUB.html'; return; }
   await Promise.all([cargarSobrantes(), cargarPlantillaRemota(), cargarCola()]); planificar();
 };
-tacticalEstacion.vigilar('estacionChip');
+async function mostrarRutaEstacion(){
+  const e = document.getElementById('rutaEstacion'); if(!e) return;
+  if(!(await tacticalEstacion.estado())){ e.innerHTML = ''; return; }
+  const c = await tacticalEstacion.config();
+  if(!c || !c.ok){ e.innerHTML = ''; return; }
+  const enD = /^d:/i.test(c.plotter||'');
+  e.innerHTML = '<b>El JPG se guardará en:</b> <code>'+esc(c.plotter)+'</code>' + (enD ? '' : ' <span style="color:#b91c1c;font-weight:700">· no es la carpeta D:\Plotter Impresion. Cámbiala en Montajes → "Estación de diseño" → "Carpeta de los JPG del plotter" (o actualiza y reinicia la estación).</span>');
+}
+tacticalEstacion.alCambiar(()=>{ mostrarRutaEstacion(); });
+tacticalEstacion.vigilar('estacionChip'); mostrarRutaEstacion();
 agregarItem(false); resumenPlantilla(); renderSobrantes();
 </script>
 </body>
