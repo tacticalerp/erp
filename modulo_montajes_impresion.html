@@ -60,6 +60,9 @@
   .tl b{display:flex;gap:8px;align-items:center;color:var(--azul);}
   .tl small{display:block;color:var(--muted);font-size:12px;margin-top:3px;}
   .tag{font-size:11px;padding:1px 8px;border-radius:4px;margin-left:auto;background:#fef3c7;color:#78350f;font-weight:700;}
+  .sem{position:absolute;top:3px;left:3px;width:12px;height:12px;border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 2px rgba(0,0,0,.5);}
+  .sem.rojo{background:#dc2626;} .sem.amarillo{background:#f59e0b;} .sem.verde{background:#16a34a;}
+  .pfI{font-size:12.5px;margin:6px 0;padding:6px 10px;background:#fff;border:1px solid #c5cdd8;border-left-width:5px;border-radius:6px;} .pfI.rojo{border-left-color:#dc2626;} .pfI.amarillo{border-left-color:#f59e0b;} .pfI.info{border-left-color:#94a3b8;}
   .tag.ok{background:#dcfce7;color:#14532d;} .tag.no{background:#e2e8f0;color:#475569;}
   .prepPanel{margin-top:10px;border-top:1px solid var(--border);padding-top:10px;}
   .dg{font-size:12.5px;margin:6px 0;padding:6px 10px;background:#fff;border:1px solid #c5cdd8;border-radius:6px;}
@@ -172,6 +175,7 @@
   <div class="hint" id="orientLinea" style="margin:6px 0"></div>
   <div class="info" id="info"></div>
   <div class="avisos" id="avisos"></div>
+  <div id="revSalida" style="margin-top:8px"></div>
   <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
     <button class="btn verde" id="btnPdf" onclick="descargarPdf()">Descargar PDF montado</button>
     <span id="msgPdf" style="font-size:12.5px;font-weight:600"></span>
@@ -185,6 +189,7 @@
 <script src="tactical-supabase.js?v=20261016a"></script>
 <script src="tactical-hub-btn.js?v=20261017a"></script>
 <script src="montajes_ajuste_pdf.js?v=20261017a"></script>
+<script src="montajes_preflight.js?v=20261019a"></script>
 <script>
 if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
@@ -294,6 +299,7 @@ async function cargarArchivos(fileList){
   recalcular();
   analizarTodo();
   if(ANI.lado!=='ninguno') anilloAnalizar();
+  preflightCorrer();
 }
 
 async function agregarArchivo(nombre, bytes){
@@ -358,6 +364,7 @@ function trasQuitar(){
   $('archivos').value = '';
   autoAsignar(); renderPool(); recalcular();
   if(S.pool.length) analizarTodo();
+  preflightCorrer();
 }
 function poolPorId(id){ return S.pool.find(p=>p.id===+id) || null; }
 function etiquetaPool(p){
@@ -387,7 +394,7 @@ function renderPool(){
   $('pool').innerHTML = S.pool.map(p=>{
     const cls = taco ? (p.id===tid ? 't' : (p.id===rid ? 'r' : '')) : '';
     const tag = taco ? (p.id===tid ? ' · TIRO' : (p.id===rid ? ' · RETIRO' : '')) : '';
-    return '<div class="thumb '+cls+'"><button class="x" title="Quitar solo esta página" onclick="quitarPagina('+p.id+')">✕</button>'+(p.thumb?'<img src="'+p.thumb+'">':'<div style="height:100px"></div>')+'<div class="nom">'+esc(p.nombre)+'</div><div>pág. '+(p.pidx+1)+tag+'</div></div>';
+    return '<div class="thumb '+cls+'" style="position:relative">'+(p.pf ? '<span class="sem '+p.pf+'" title="Revisión del archivo: '+({rojo:'hay errores',amarillo:'hay avisos',verde:'sin observaciones'}[p.pf])+'"></span>' : '')+'<button class="x" title="Quitar solo esta página" onclick="quitarPagina('+p.id+')">✕</button>'+(p.thumb?'<img src="'+p.thumb+'">':'<div style="height:100px"></div>')+'<div class="nom">'+esc(p.nombre)+'</div><div>pág. '+(p.pidx+1)+tag+'</div></div>';
   }).join('');
 }
 
@@ -842,10 +849,44 @@ function otFicha(){
   const ficha = '<!doctype html><meta charset="utf-8"><title>Ficha de montaje '+esc(txt('ot'))+'</title><style>body{font:13px Arial,sans-serif;margin:24px;color:#111}h1{font-size:18px;margin:0 0 4px}table{border-collapse:collapse;width:100%;margin:10px 0}td{border:1px solid #bbb;padding:4px 8px}td:first-child{width:32%;color:#555}.av{border:1px solid #d97706;background:#fffbeb;padding:5px 8px;margin:4px 0}.err{border-color:#b91c1c;background:#fef2f2}svg{width:100%;max-height:380px;border:1px solid #ccc}</style>'+
     '<h1>Ficha de montaje — Tactical Marketing</h1><div>'+new Date().toLocaleDateString('es-CO')+'</div><table>'+filas.map(r=>'<tr><td>'+esc(r[0])+'</td><td><b>'+esc(r[1])+'</b></td></tr>').join('')+'</table>'+
     (ORIENT ? '<p>'+esc(ORIENT)+'</p>' : '')+$('lienzoWrap').innerHTML+
-    (P.notas.length ? '<h3>Avisos</h3>'+P.notas.map(n=>'<div class="av '+(n.t==='err'?'err':'')+'">'+esc(n.m)+'</div>').join('') : '')+'<script>setTimeout(function(){window.print()},400)<\/script>';
+    (PRE.listo ? preflightHtml() : '')+(P.notas.length ? '<h3>Avisos</h3>'+P.notas.map(n=>'<div class="av '+(n.t==='err'?'err':'')+'">'+esc(n.m)+'</div>').join('') : '')+'<script>setTimeout(function(){window.print()},400)<\/script>';
   const w = window.open('', '_blank');
   if(!w){ otMsg('El navegador bloqueó la ventana: permite ventanas emergentes.', false); return; }
   w.document.write(ficha); w.document.close();
+}
+
+/* ======================= COMPROBACIÓN DE LA SALIDA ======================= */
+// Revisa el montaje ya armado (no el archivo del cliente): tamaño real, todo dentro del área útil (pinza) y registro tiro/retiro.
+function revisionSalida(plan){
+  const out = [], hoja = plan.hoja; if(!plan.listo || !hoja) return out;
+  out.push({ sev:'info', t:'Sale a tamaño real (100 %): nada se reduce ni se amplía. Hoja de '+fmt(hoja.W/10)+' × '+fmt(hoja.H/10)+' cm, área de imagen '+fmt(hoja.aW/10)+' × '+fmt(hoja.aH/10)+' cm.' });
+  const ax0 = (hoja.W-hoja.aW)/2, ay0 = (hoja.H-hoja.aH)/2, ax1 = ax0+hoja.aW, ay1 = ay0+hoja.aH;
+  let fuera = 0, peor = 0;
+  plan.hojas.forEach(hp=>{
+    const xs = [], ys = [];
+    hp.celdas.forEach(c=>{ xs.push(c.x, c.x+c.w); ys.push(c.y, c.y+c.h); });
+    (hp.marcas||[]).forEach(m=>{ xs.push(m[0], m[2]); ys.push(m[1], m[3]); });
+    (hp.textos||[]).forEach(t=>{ const w = t.texto.length*TXT*0.55; xs.push(t.x-w/2, t.x+w/2); ys.push(t.y-TXT, t.y); });
+    if(!xs.length) return;
+    const ex = Math.max(ax0-Math.min(...xs), Math.max(...xs)-ax1, ay0-Math.min(...ys), Math.max(...ys)-ay1);
+    if(ex > 0.05){ fuera++; peor = Math.max(peor, ex); }
+  });
+  if(fuera) out.push({ sev:'rojo', t:fuera+' hoja'+(fuera===1?'':'s')+' con piezas, guías o textos fuera del área útil (la pinza los puede morder): se pasa hasta '+fmt(peor)+' mm.' });
+  else out.push({ sev:'ok', t:'Todo queda dentro del área útil: la pinza no muerde piezas, guías ni textos.' });
+  // registro tiro/retiro
+  const T = [], R = [];
+  plan.hojas.forEach(hp=>hp.celdas.forEach(c=>{ if(c.label==='T') T.push(c); else if(c.label==='R') R.push(c); }));
+  if(T.length || R.length){
+    const dim = c=>{ const a = Math.round(c.w*10), b = Math.round(c.h*10); return a<b ? a+'x'+b : b+'x'+a; };
+    const mismas = T.length===R.length && T.map(dim).sort().join('|')===R.map(dim).sort().join('|');
+    out.push(mismas ? { sev:'ok', t:'Tiro y retiro: '+T.length+' piezas de cada lado, con las mismas medidas.' } : { sev:'rojo', t:'Tiro y retiro no coinciden: '+T.length+' de tiro y '+R.length+' de retiro, o con medidas distintas.' });
+  }
+  return out;
+}
+function revisionSalidaHtml(plan){
+  const r = revisionSalida(plan); if(!r.length) return '';
+  const col = { info:'#94a3b8', ok:'#16a34a', rojo:'#dc2626' };
+  return '<div style="font-size:12.5px;font-weight:700;margin-bottom:3px">Comprobación de la salida</div>'+r.map(x=>'<div class="pfI '+(x.sev==='rojo'?'rojo':'info')+'" style="border-left-color:'+col[x.sev]+'">'+esc(x.t)+'</div>').join('');
 }
 
 /* ======================= VISTA PREVIA ======================= */
@@ -867,6 +908,7 @@ function dibujar(){
   const hoja = plan.hoja;
   $('btnPdf').disabled = !plan.listo;
   $('orientLinea').textContent = ORIENT;
+  $('revSalida').innerHTML = revisionSalidaHtml(plan);
   $('info').innerHTML = plan.info.map(([a,b])=>'<div><span>'+esc(a)+'</span><b>'+esc(b)+'</b></div>').join('');
   $('avisos').innerHTML = plan.notas.map(n=>'<div class="av '+(n.t==='err'?'err':'')+'">'+esc(n.m)+(n.accion ? ' <button class="btn verde mini" style="margin-left:8px" onclick="'+n.accion.fn+'">'+esc(n.accion.txt)+'</button>' : '')+'</div>').join('');
   $('hojasSel').innerHTML = plan.hojas.length>1 ? plan.hojas.map((h,i)=>'<button class="'+(i===S.hojaVer?'on':'')+'" onclick="S.hojaVer='+i+';dibujar()">'+esc(h.titulo)+'</button>').join('') : '';
@@ -1238,7 +1280,7 @@ function renderPrep(){
   const tagMed = MED.aplicado ? '<span class="tag ok">Aplicado</span>' : '';
   let h = '<div class="tiles">'+tileSang+
     '<button class="tl '+(MED.abierto?'sel':'')+'" onclick="medToggle()"><b>Medida y cuadrícula '+tagMed+'</b><small>Lleva el interior al formato final</small></button>'+
-    '<button class="tl '+(TIN.abierto?'sel':'')+'" onclick="tinToggle()"><b>Receta de tinta '+(TIN.aplicado?'<span class="tag ok">Aplicado</span>':'')+'</b><small>Negro o Cool Gray: grosores y tonos</small></button>'+tileAnillo()+'</div>';
+    '<button class="tl '+(TIN.abierto?'sel':'')+'" onclick="tinToggle()"><b>Receta de tinta '+(TIN.aplicado?'<span class="tag ok">Aplicado</span>':'')+'</b><small>Negro o Cool Gray: grosores y tonos</small></button>'+tileAnillo()+tilePreflight()+'</div>';
   if(PREP.analizando) h += '<div class="hint" style="margin-top:8px">Analizando páginas… '+PREP.progreso+' de '+Math.min(S.pool.length,40)+'</div>';
   if(PREP.aplicando) h += '<div class="hint" style="margin-top:8px">'+esc(PREP.msg||'Preparando…')+'</div>';
   if(PREP.abierto && prepActivo()){
@@ -1272,7 +1314,66 @@ function renderPrep(){
   h += renderMedida();
   h += renderTinta();
   h += renderAnillo();
+  h += renderPreflight();
   $('prepBody').innerHTML = h;
+}
+
+/* ======================= REVISIÓN DEL ARCHIVO (preflight reducido) ======================= */
+// Solo avisa y nunca bloquea (es una prueba de impresión). Umbrales de Conde: 150 ppp, texto en varias tintas siempre, trazos 0,15 mm, texto claro 6 pt.
+const PRE = { abierto:false, analizando:false, listo:false, hall:[], seq:0 };
+async function preflightCorrer(){
+  if(!window.MontajesPreflight || !S.pool.length){ PRE.listo = false; PRE.hall = []; S.pool.forEach(p=>{ p.pf = null; }); renderPrep(); renderPool(); return; }
+  const mi = ++PRE.seq; PRE.analizando = true; PRE.listo = false; renderPrep();
+  try{
+    const porFid = {};
+    for(const f of S.files){ if(!f) continue; const idx = S.files.indexOf(f); porFid[idx] = await MontajesPreflight.revisar(f.bytes, { maxPaginas:60 }); if(mi!==PRE.seq) return; }
+    const pgs = [];
+    S.pool.slice(0,60).forEach(p=>{ const r = porFid[p.fid] && porFid[p.fid][p.pidx]; if(r){ r.etiqueta = etiquetaPag(p); r.poolId = p.id; pgs.push(r); } });
+    PRE.hall = MontajesPreflight.hallazgos(pgs);
+    S.pool.forEach(p=>{ p.pf = null; });
+    pgs.forEach(r=>{ const p = S.pool.find(x=>x.id===r.poolId); if(!p) return; const own = MontajesPreflight.hallazgos([r]).filter(g=>g.sev!=='info'); p.pf = own.some(g=>g.sev==='rojo') ? 'rojo' : (own.length ? 'amarillo' : 'verde'); });
+    PRE.listo = true;
+  }catch(e){ console.warn('revisión del archivo falló', e); PRE.listo = false; PRE.hall = []; }
+  PRE.analizando = false; renderPrep(); renderPool();
+}
+function preflightToggle(){ PRE.abierto = !PRE.abierto; renderPrep(); }
+function tilePreflight(){
+  let tag = '';
+  if(PRE.analizando) tag = '<span class="tag no">Revisando…</span>';
+  else if(PRE.listo){
+    const nr = PRE.hall.filter(g=>g.sev==='rojo').length, na = PRE.hall.filter(g=>g.sev==='amarillo').length;
+    tag = nr ? '<span class="tag" style="background:#fee2e2;color:#991b1b">'+nr+' error'+(nr===1?'':'es')+'</span>' : (na ? '<span class="tag" style="background:#fef3c7;color:#92400e">'+na+' aviso'+(na===1?'':'s')+'</span>' : '<span class="tag ok">Todo en orden</span>');
+  }
+  return '<button class="tl '+(PRE.abierto?'sel':'')+'" onclick="preflightToggle()"><b>Revisión del archivo '+tag+'</b><small>Color, resolución, fuentes, trazos y tamaños</small></button>';
+}
+function pfFilas(){
+  return PRE.hall.map(g=>{
+    const pag = g.paginas.length ? (g.paginas.length>6 ? g.paginas.slice(0,6).join(', ')+' y '+(g.paginas.length-6)+' más' : g.paginas.join(', ')) : '';
+    const det = g.detalles.slice(0,4).join(' · ');
+    return { sev:g.sev, titulo:g.titulo, pag, det };
+  });
+}
+function renderPreflight(){
+  if(!PRE.abierto) return '';
+  let h = '<div class="prepPanel"><p class="hint" style="margin-top:0">Revisa el archivo del cliente antes de montar. <b>Solo avisa: no bloquea ni cambia nada</b> (es una prueba de impresión, no el archivo final). Rojo = conviene corregir; amarillo = revisar; gris = información.</p>';
+  if(PRE.analizando) h += '<div class="hint">Revisando el archivo…</div>';
+  else if(!PRE.listo) h += '<div class="hint">No se pudo revisar el archivo.</div>';
+  else {
+    pfFilas().forEach(f=>{
+      h += '<div class="pfI '+f.sev+'"><b>'+esc(f.titulo)+'</b>'+(f.pag?'<br><span style="color:#475569">'+esc(f.pag)+'</span>':'')+(f.det?'<br><span '+(f.sev==='info'?'':'class="m"')+'>'+esc(f.det)+'</span>':'')+'</div>';
+    });
+    h += '<p class="hint">Umbrales: imágenes menos de 150 ppp en rojo (ideal 300); texto en varias tintas siempre se avisa; trazos mínimo 0,15 mm; texto claro mínimo 6 pt.</p>';
+    h += '<button class="btn gris" onclick="preflightImprimir()">Imprimir / guardar informe</button>';
+  }
+  return h + '</div>';
+}
+function preflightHtml(){
+  const f = pfFilas(), col = { rojo:'#dc2626', amarillo:'#f59e0b', info:'#94a3b8' };
+  return '<h3>Revisión del archivo</h3>'+f.map(x=>'<div style="border-left:5px solid '+col[x.sev]+';padding:4px 8px;margin:4px 0"><b>'+esc(x.titulo)+'</b>'+(x.pag?'<br>Páginas: '+esc(x.pag):'')+(x.det?'<br>'+esc(x.det):'')+'</div>').join('');
+}
+function preflightImprimir(){
+  const w = window.open('', '_blank'); if(!w){ alert('El navegador bloqueó la ventana: permite ventanas emergentes.'); return; }
+  w.document.write('<!doctype html><meta charset="utf-8"><title>Revisión del archivo</title><body style="font:13px Arial,sans-serif;margin:24px">'+preflightHtml()+'<script>setTimeout(function(){window.print()},300)<\/script>'); w.document.close();
 }
 
 /* ======================= PREPARAR ARCHIVO: MEDIDA Y CUADRÍCULA ======================= */
@@ -1550,7 +1651,7 @@ async function anilloAnalizar(){
   recalcular();
 }
 // después de cambiar el archivo (medida, receta, quitar ajustes) hay que volver a medir
-function anilloRefrescar(){ S.pool.forEach(p=>{ p.libres = null; }); ANI.listo = false; if(ANI.lado!=='ninguno') anilloAnalizar(); }
+function anilloRefrescar(){ S.pool.forEach(p=>{ p.libres = null; }); ANI.listo = false; if(ANI.lado!=='ninguno') anilloAnalizar(); preflightCorrer(); }
 function anilloAvisosPagina(p){
   const lb = p.libres, out = [];
   if(!lb || ANI.lado==='ninguno') return out;
