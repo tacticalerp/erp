@@ -47,3 +47,7 @@ borrador_rompecabezas_preview.html
 # Estacion de diseno: configuracion local de cada PC
 estacion_diseno/config.json
 estacion_diseno/__pycache__/
+
+# Plantillas de referencia bajadas de templatemaker.nl (2026-10-17): su licencia permite usarlas para empaque/impresion
+# pero NO compartirlas ni incluirlas en publicaciones digitales -- el repo es publico, asi que no se suben.
+cajas_laser/referencia_templatemaker/

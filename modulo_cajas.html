@@ -70,14 +70,14 @@
 
   <section class="panel">
     <h2><span class="n">2</span>Medidas</h2>
-    <div class="seg">
+    <div class="seg" id="segModo">
       <label><input type="radio" name="modo" value="exterior" checked> Exteriores (caja cerrada)</label>
       <label><input type="radio" name="modo" value="interior"> Interiores (lo que cabe adentro)</label>
     </div>
     <div class="grid">
-      <div><label for="largo">Largo / ancho (cm)</label><input type="text" id="largo" inputmode="decimal" value="20"></div>
-      <div><label for="fondo">Fondo / profundo (cm)</label><input type="text" id="fondo" inputmode="decimal" value="10"></div>
-      <div><label for="alto">Alto (cm)</label><input type="text" id="alto" inputmode="decimal" value="6"></div>
+      <div><label for="largo" id="lblLargo">Largo / ancho (cm)</label><input type="text" id="largo" inputmode="decimal" value="20"></div>
+      <div><label for="fondo" id="lblFondo">Fondo / profundo (cm)</label><input type="text" id="fondo" inputmode="decimal" value="10"></div>
+      <div><label for="alto" id="lblAlto">Alto (cm)</label><input type="text" id="alto" inputmode="decimal" value="6"></div>
     </div>
     <div id="opcionesFam" style="margin-top:10px"></div>
   </section>
@@ -140,7 +140,7 @@
 <script src="tactical-supabase.js?v=20261016a"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
 <script src="precios_tactical.js?v=20261017b"></script>
-<script src="cajas_motor.js?v=20261017d"></script>
+<script src="cajas_motor.js?v=20261017e"></script>
 <script>
 const M = window.CAJAS_MOTOR;
 const $ = id => document.getElementById(id);
@@ -152,10 +152,23 @@ let familia = 'bandeja';
 const AYUDA = {
   bandeja:   { texto:'Plano deducido de tus cajas de cartón (PDF "Caja bandeja para corte laser"), con los descuentos reducidos a cartulina. Falta validar con una muestra armada.', ok:false },
   tuck:      { texto:'BORRADOR sin validar: reglas de Packmage (tapa = fondo - 1,5 mm; guardapolvo = (tapa + lengüeta + 0,5)/2; pegue 10 a 15 mm). Hacer muestra antes de producir.', ok:false },
-  tapafondo: { texto:'BORRADOR sin validar: bandeja de esquinas pegadas; la tapa mide la base + 2 grosores + holgura. Hacer muestra antes de producir.', ok:false }
+  tapafondo: { texto:'BORRADOR sin validar: bandeja de esquinas pegadas (pestañas de 10 mm a 45°); la tapa mide la base + 2 grosores + holgura. Hacer muestra antes de producir.', ok:false },
+  nido:      { texto:'BORRADOR sin validar: placa con paredes hacia abajo y un hueco hundido del tamaño del objeto, con ventanas para el dedo. Las medidas del objeto de ejemplo no son reales: ponlas tú. Hacer muestra con el objeto real antes de producir.', ok:false }
 };
 
-function guardar(){ try{ localStorage.setItem('cajas_estado', JSON.stringify({familia, largo:$('largo').value, fondo:$('fondo').value, alto:$('alto').value, calibre:$('calibre').value, cantidad:$('cantidad').value})); }catch(e){} }
+// Medidas (cm) que recuerda cada familia al cambiar de una a otra.
+const VALS = { bandeja:['20','10','6'], tuck:['20','10','6'], tapafondo:['20','10','6'], nido:['19','9.5','2'] };
+function guardarVals(){ VALS[familia] = [$('largo').value, $('fondo').value, $('alto').value]; }
+function cargarVals(){ const v = VALS[familia] || VALS.bandeja; $('largo').value = v[0]; $('fondo').value = v[1]; $('alto').value = v[2]; }
+function etiquetas(){
+  const n = familia === 'nido';
+  $('lblLargo').textContent = n ? 'Largo de la placa (cm)' : 'Largo / ancho (cm)';
+  $('lblFondo').textContent = n ? 'Ancho de la placa (cm)' : 'Fondo / profundo (cm)';
+  $('lblAlto').textContent = n ? 'Alto de las paredes (cm)' : 'Alto (cm)';
+  $('segModo').style.display = n ? 'none' : '';
+}
+
+function guardar(){ try{ guardarVals(); localStorage.setItem('cajas_estado', JSON.stringify({familia, vals:VALS, calibre:$('calibre').value, cantidad:$('cantidad').value})); }catch(e){} }
 function recordar(){ try{ return JSON.parse(localStorage.getItem('cajas_estado')||'null'); }catch(e){ return null; } }
 
 function pintarFamilias(){
@@ -164,12 +177,15 @@ function pintarFamilias(){
     return '<label class="op'+(sel?' sel':'')+(off?' off':'')+'"><input type="radio" name="fam" value="'+f.id+'"'+(sel?' checked':'')+(off?' disabled':'')+' style="display:none">'
       + '<span class="num">'+f.num+'</span><span>'+f.nombre+'</span><span class="est '+(f.listo?(f.id==='bandeja'?'ok':'warn'):'')+'">'+f.estado+'</span></label>';
   }).join('');
-  document.querySelectorAll('input[name=fam]').forEach(r => r.addEventListener('change', () => { familia = r.value; pintarFamilias(); pintarOpciones(); calcular(); }));
+  document.querySelectorAll('input[name=fam]').forEach(r => r.addEventListener('change', () => { guardarVals(); familia = r.value; cargarVals(); etiquetas(); pintarFamilias(); pintarOpciones(); calcular(); }));
 }
 function pintarOpciones(){
   const h = $('opcionesFam');
-  if(familia === 'tuck') h.innerHTML = '<label for="cierre">Cierre</label><select id="cierre"><option value="recto">Recto (las dos lengüetas del mismo lado)</option><option value="inverso">Inverso (lengüetas en caras opuestas)</option></select>';
-  else if(familia === 'tapafondo') h.innerHTML = '<div class="grid"><div><label for="altoTapa">Alto de pared de la tapa (cm, vacío = automático)</label><input type="text" id="altoTapa" inputmode="decimal"></div><div><label for="hol">Holgura de la tapa por lado (mm)</label><input type="text" id="hol" inputmode="decimal" value="0.4"></div></div>';
+  const campo = (id, txt, val) => '<div><label for="'+id+'">'+txt+'</label><input type="text" id="'+id+'" inputmode="decimal"'+(val != null ? ' value="'+val+'"' : '')+'></div>';
+  const pegue = campo('pegue', 'Pestaña de pegue (mm, vacío = automático)');
+  if(familia === 'tuck') h.innerHTML = '<div class="grid"><div style="grid-column:1/-1"><label for="cierre">Cierre</label><select id="cierre"><option value="recto">Recto (las dos lengüetas del mismo lado)</option><option value="inverso">Inverso (lengüetas en caras opuestas)</option></select></div>'+pegue+'</div>';
+  else if(familia === 'tapafondo') h.innerHTML = '<div class="grid">'+campo('altoTapa','Alto de pared de la tapa (cm, vacío = automático)')+campo('hol','Holgura de la tapa por lado (mm)','0.4')+pegue+'</div>';
+  else if(familia === 'nido') h.innerHTML = '<div class="grid">'+campo('itemL','Objeto: largo (cm)','15')+campo('itemW','Objeto: ancho (cm)','3.2')+campo('itemH','Objeto: alto (cm)','1.2')+campo('holn','Holgura del hueco (mm)','1')+campo('dedoA','Ventana del dedo: ancho (cm)','1.5')+campo('dedoL','Ventana del dedo: largo (cm)','4')+'</div>';
   else h.innerHTML = '';
   h.querySelectorAll('input,select').forEach(e => e.addEventListener('input', calcular));
 }
@@ -195,6 +211,8 @@ function calcular(){
   const par = { L, P, A, t, modo: document.querySelector('input[name=modo]:checked').value, calibre: M.CALIBRES.find(c => c.id === $('calibre').value) };
   if(familia === 'tuck'){ const c = $('cierre'); par.cierre = c ? c.value : 'recto'; }
   if(familia === 'tapafondo'){ const a = $('altoTapa'), h = $('hol'); if(a && num(a.value)>0) par.altoTapa = num(a.value)*10; if(h && isFinite(num(h.value))) par.hol = num(h.value); }
+  const pg = $('pegue'); if(pg && num(pg.value) > 0) par.pegue = num(pg.value);
+  if(familia === 'nido'){ par.itemL = num($('itemL').value)*10; par.itemW = num($('itemW').value)*10; par.itemH = num($('itemH').value)*10; const hn = num($('holn').value); if(isFinite(hn)) par.hol = hn; const da = num($('dedoA').value), dl = num($('dedoL').value); if(isFinite(da)) par.dedoA = da*10; if(isFinite(dl)) par.dedoL = dl*10; }
   let res;
   try{ res = M.generar(familia, par); }catch(e){ $('error').textContent = 'No se pudo generar el plano: '+e.message; return; }
   ultimo = res;
@@ -245,7 +263,7 @@ function iniciar(){
   $('calibre').value = 'C16';
   const ant = recordar();
   if(ant){ familia = M.FAMILIAS.some(f => f.id === ant.familia && f.listo) ? ant.familia : 'bandeja';
-    ['largo','fondo','alto','cantidad'].forEach(k => { if(ant[k]) $(k).value = ant[k]; }); if(ant.calibre && M.CALIBRES.some(c => c.id === ant.calibre)) $('calibre').value = ant.calibre; }
+    if(ant.vals) Object.assign(VALS, ant.vals); else if(ant.largo) VALS[familia] = [ant.largo, ant.fondo, ant.alto]; if(ant.cantidad) $('cantidad').value = ant.cantidad; if(ant.calibre && M.CALIBRES.some(c => c.id === ant.calibre)) $('calibre').value = ant.calibre; }
   const poner = () => { const c = M.CALIBRES.find(x => x.id === $('calibre').value); $('grosor').value = String(c.mm).replace('.',',');
     $('notaGrosor').textContent = 'Espesor de la tabla de puntos (1 pt = 0,0254 mm, tolerancia ±5%). Puedes escribir el grosor real que te dé el proveedor.'; };
   poner();
@@ -253,7 +271,7 @@ function iniciar(){
   $('hoja').addEventListener('change', () => { $('hojaOtra').style.display = $('hoja').value === 'otra' ? 'grid' : 'none'; calcular(); });
   document.querySelectorAll('.col-izq input[type=text], input[name=modo], #raya, #hueco, #cotas').forEach(e => e.addEventListener('input', calcular));
   $('hendido').addEventListener('change', () => { const p = $('hendido').value === 'punteado'; $('puntos').style.display = $('puntos2').style.display = p ? '' : 'none'; calcular(); });
-  pintarFamilias(); pintarOpciones(); calcular();
+  cargarVals(); etiquetas(); pintarFamilias(); pintarOpciones(); calcular();
 }
 document.addEventListener('DOMContentLoaded', iniciar);
 

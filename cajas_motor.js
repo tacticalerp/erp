@@ -4,7 +4,8 @@
    Coordenadas en mm, y hacia abajo. Cada generador devuelve {cut:[polilineas], fold:[polilineas], info:{...}, avisos:[...]}.
    - 'bandeja'  : bandeja con tapa FEFCO 0427, deducida de las cajas de cartón de Conde (PDF "Caja bandeja para corte laser").
    - 'tuck'     : estuche con lengüetas (tuck end recto/inverso), reglas de Packmage (E=P-1.5, dust=(E+F+EX)/2, pegue 10-15).
-   - 'tapafondo': tapa y fondo telescópica, bandeja de esquinas pegadas.
+   - 'tapafondo': tapa y fondo telescópica, bandeja de esquinas pegadas (pestañas de pegue de 10 mm a 45°).
+   - 'nido'     : inserto con hueco rebajado para el objeto y ventanas para el dedo (pieza aparte, va dentro de una caja).
    Todo es BORRADOR hasta validar con muestra armada (ver avisos de cada familia). */
 (function(root){
 'use strict';
@@ -33,7 +34,8 @@ const FAMILIAS = [
   { id:'tapafondo',num:3, nombre:'Tapa y fondo (telescópica)', estado:'borrador sin validar', listo:true },
   { id:'autofondo',num:4, nombre:'Fondo automático (crash lock)', estado:'próximamente', listo:false },
   { id:'dura',     num:5, nombre:'Caja dura (rígida)', estado:'próximamente', listo:false },
-  { id:'manga',    num:6, nombre:'Manga (sleeve)', estado:'próximamente', listo:false }
+  { id:'manga',    num:6, nombre:'Manga (sleeve)', estado:'próximamente', listo:false },
+  { id:'nido',     num:7, nombre:'Nido (inserto)', estado:'borrador sin validar', listo:true }
 ];
 
 const r2 = x => Math.round(x*100)/100;
@@ -134,7 +136,7 @@ function tuck(par){
   const EX = Math.max(0.5, t);
   const G = (E+F+EX)/2;                            // aleta guardapolvo
   const r = Math.min(3, 0.08*pP);
-  const Cg = clamp(0.3*Math.min(L,P), 10, 15), bev = Math.min(4, 0.4*Cg);
+  const Cg = par.pegue > 0 ? par.pegue : clamp(0.3*Math.min(L,P), 10, 15), bev = Math.min(4, 0.4*Cg);
   if(P < 25) avisos.push('Fondo menor de 25 mm: la lengüeta y las aletas quedan muy pequeñas; revisa con muestra.');
   if(A < 20) avisos.push('Alto menor de 20 mm: los dobleces quedan muy juntos.');
   const x2=pL, x3=pL+pP, x4=2*pL+pP, xg=2*pL+2*pP;
@@ -178,13 +180,13 @@ function tuck(par){
 
 // ------------------------------------------------------------------ 3. TAPA Y FONDO (telescópica)
 // Bandeja de una pieza: base + 4 paredes; las paredes cortas llevan pestañas de pegue que se doblan por dentro de las largas.
-function bandejaSimple(W,D,H){
-  const F = Math.min(0.8*H, 20), ch = Math.min(0.5*F, 8);
+function bandejaSimple(W,D,H,Fpar){
+  const F = clamp(Fpar != null ? Fpar : 10, 3, Math.max(3, H/2-2));   // pestaña de pegue, a 45°
   const cut = [], fold = [];
-  cut.push(dedupe([[0,-F],[0,-H],[W,-H],[W,-F]]));
-  cut.push(dedupe([[0,D+F],[0,D+H],[W,D+H],[W,D+F]]));
-  const left = [[0,0],[0,-F],[-H+ch,-F],[-H,-F+ch],[-H,D+F-ch],[-H+ch,D+F],[0,D+F],[0,D]];
-  cut.push(dedupe(left)); cut.push(dedupe(mirrorX(left,W)));
+  cut.push([[0,0],[0,-H],[W,-H],[W,0]]);
+  cut.push([[0,D],[0,D+H],[W,D+H],[W,D]]);
+  const left = [[0,0],[-F,-F],[-H+F,-F],[-H,0],[-H,D],[-H+F,D+F],[-F,D+F],[0,D]];
+  cut.push(left); cut.push(mirrorX(left,W));
   fold.push([[0,0],[W,0],[W,D],[0,D],[0,0]]);
   fold.push([[-H,0],[0,0]],[[-H,D],[0,D]],[[W,0],[W+H,0]],[[W,D],[W+H,D]]);
   return { cut, fold, F };
@@ -198,14 +200,16 @@ function tapafondo(par){
   if(Hl > Hb-2){ Hl = Math.max(6, Hb-2); avisos.push('La tapa no puede ser tan alta como la base: se limitó a '+r2(Hl)+' mm.'); }
   if(Lb<30 || Pb<20 || Hb<12) avisos.push('Caja muy pequeña: las pestañas de pegue quedan muy chicas.');
   const Ll = Lb+2*t+2*h, Pl = Pb+2*t+2*h;
-  const A = bandejaSimple(Lb,Pb,Hb), B = bandejaSimple(Ll,Pl,Hl);
+  const pg = par.pegue > 0 ? par.pegue : 10;
+  const A = bandejaSimple(Lb,Pb,Hb,pg), B = bandejaSimple(Ll,Pl,Hl,pg);
+  if(par.pegue > 0 && B.F < par.pegue - 0.01) avisos.push('La pestaña de pegue de la tapa se ajustó a '+r2(B.F)+' mm porque la pared de la tapa es baja.');
   const gap = 10;
   const dx = Lb+Hb + gap + Hl, dy = Pb/2 - Pl/2;
   const cut = A.cut.concat(B.cut.map(P => shift(P,dx,dy))), fold = A.fold.concat(B.fold.map(P => shift(P,dx,dy)));
   const info = {
     armado: { L: r2(Ll+2*t), P: r2(Pl+2*t), A: r2(Hb+t) },
     notas: ['Base: '+r2(Lb)+' x '+r2(Pb)+' x '+r2(Hb)+' mm (por dentro). Tapa por dentro: '+r2(Ll)+' x '+r2(Pl)+' mm, pared de '+r2(Hl)+' mm.',
-      'Holgura de la tapa: '+r2(h)+' mm por lado. Pestañas de pegue de '+r2(A.F)+' mm (base) y '+r2(B.F)+' mm (tapa).'],
+      'Holgura de la tapa: '+r2(h)+' mm por lado. Pestañas de pegue a 45°: '+r2(A.F)+' mm (base) y '+r2(B.F)+' mm (tapa).'],
     pasos: ['Base: levantar las cuatro paredes por los hendidos rojos.','Doblar las pestañas de las paredes cortas hacia adentro y pegarlas a la cara interior de las paredes largas.','Tapa: repetir los dos pasos anteriores con la pieza más grande.','Poner la tapa sobre la base: la tapa cubre la base por fuera.']
   };
   const cotas = [
@@ -217,12 +221,62 @@ function tapafondo(par){
   return { cut, fold, info, avisos, cotas };
 }
 
+// ------------------------------------------------------------------ 7. NIDO (inserto)
+// Placa con cuatro paredes hacia abajo y un hueco rebajado para el objeto (pliegue en Z en los extremos, cortes a los lados),
+// con una ventana a cada lado del hueco para meter el dedo y sacarlo. Va dentro de una caja; no lleva pegante.
+// Medidas: L x P = placa; A = alto de las paredes; itemL x itemW x itemH = objeto.
+function nido(par){
+  const t = par.t, avisos = [];
+  const Lp = par.L, Wp = par.P, H = par.A;
+  const IL = par.itemL, IW = par.itemW, IH = par.itemH;
+  if(!(IL > 0 && IW > 0 && IH > 0)) throw new Error('Escribe largo, ancho y alto del objeto.');
+  const hol = par.hol != null ? par.hol : 1.0;
+  const lenX = IL + hol, lenY = IW + hol, hi = IH;       // hueco: objeto + holgura; profundidad = alto del objeto
+  if(lenX + 12 > Lp) throw new Error('El objeto no cabe a lo largo de la placa (necesita al menos '+r2(lenX+12)+' mm de largo).');
+  if(lenY + 12 > Wp) throw new Error('El objeto no cabe a lo ancho de la placa (necesita al menos '+r2(lenY+12)+' mm de ancho).');
+  if(lenX - 2*hi < 6) throw new Error('El hueco es muy corto para su profundidad: el objeto es muy alto frente a su largo.');
+  if(hi + 2*t > H) avisos.push('El hueco es más profundo que las paredes: el piso tocaría el fondo de la caja. Sube el alto de las paredes a más de '+r2(hi+2*t)+' mm.');
+  const cx = Lp/2, cy = Wp/2, xa = cx-lenX/2, xb = cx+lenX/2, ya = cy-lenY/2, yb = cy+lenY/2;
+  let Tw = par.dedoA != null ? par.dedoA : 15, Tl = par.dedoL != null ? par.dedoL : 40;
+  const maxTw = ya - 4, maxTl = lenX - 2*hi - 6;
+  if(Tw > maxTw){ if(par.dedoA != null || maxTw < 5) avisos.push(maxTw >= 5 ? 'Las ventanas para el dedo se redujeron a '+r2(maxTw)+' mm de ancho para caber en la placa.' : 'No hay espacio para las ventanas del dedo: la placa es muy angosta alrededor del hueco.'); Tw = maxTw; }
+  if(Tl > maxTl){ avisos.push('Las ventanas para el dedo se acortaron a '+r2(Math.max(0,maxTl))+' mm de largo para caber sobre el piso del hueco.'); Tl = maxTl; }
+  const conVentana = Tw >= 5 && Tl >= 10;
+  const cut = [], fold = [];
+  cut.push([[0,-H],[Lp,-H],[Lp,0],[Lp+H,0],[Lp+H,Wp],[Lp,Wp],[Lp,Wp+H],[0,Wp+H],[0,Wp],[-H,Wp],[-H,0],[0,0],[0,-H]]);
+  const lado = (yy, dir) => {
+    if(!conVentana) return [[xa,yy],[xb,yy]];
+    const nx0 = cx-Tl/2, nx1 = cx+Tl/2, r = Math.min(4, Tl/4, Tw/2);
+    const q = [[nx0,yy],[nx0,yy+dir*Tw],[nx1,yy+dir*Tw],[nx1,yy]];
+    return [[xa,yy]].concat([q[0]], fillet(q,1,r,r), fillet(q,2,r,r), [q[3]], [[xb,yy]]);
+  };
+  cut.push(lado(ya,-1)); cut.push(lado(yb,1));
+  fold.push([[0,0],[Lp,0],[Lp,Wp],[0,Wp],[0,0]]);
+  for(const x of [xa, xa+hi, xb-hi, xb]) fold.push([[x,ya],[x,yb]]);
+  const info = {
+    armado: { L: r2(Lp), P: r2(Wp), A: r2(H) },
+    notas: ['Placa '+r2(Lp)+' x '+r2(Wp)+' mm con paredes de '+r2(H)+' mm hacia abajo (sin pegante).',
+      'Hueco '+r2(lenX)+' x '+r2(lenY)+' mm, '+r2(hi)+' mm de profundo (objeto '+r2(IL)+' x '+r2(IW)+' x '+r2(IH)+' mm + '+r2(hol)+' mm de holgura).'
+      + (conVentana ? ' Ventanas para el dedo: '+r2(Tl)+' x '+r2(Tw)+' mm a cada lado.' : ' Sin ventanas para el dedo.')],
+    pasos: ['Doblar las cuatro paredes hacia abajo por los hendidos del borde de la placa; no llevan pegante.',
+      'Hundir el hueco: doblar hacia abajo los dos hendidos de los extremos del hueco y hacia arriba los dos siguientes, hasta que el piso quede '+r2(hi)+' mm por debajo de la placa.',
+      'Poner el nido dentro de la caja con las paredes hacia abajo.','Colocar el objeto en el hueco: las ventanas laterales dejan meter el dedo para sacarlo.']
+  };
+  const cotas = [
+    { x1:0, y1:Wp*0.1, x2:Lp, y2:Wp*0.1, texto:'Placa '+fmt(Lp)+' mm' },
+    { x1:Lp*0.06, y1:0, x2:Lp*0.06, y2:Wp, texto:'Ancho '+fmt(Wp)+' mm' },
+    { x1:Lp, y1:Wp*0.5, x2:Lp+H, y2:Wp*0.5, texto:'Pared '+fmt(H)+' mm' },
+    { x1:xa, y1:cy, x2:xb, y2:cy, texto:'Hueco '+fmt(lenX)+' x '+fmt(lenY)+' x '+fmt(hi) }];
+  return { cut, fold, info, avisos, cotas };
+}
+
 // ------------------------------------------------------------------ API
 function generar(familia, par){
   let r;
   if(familia === 'bandeja') r = bandeja(par);
   else if(familia === 'tuck') r = tuck(par);
   else if(familia === 'tapafondo') r = tapafondo(par);
+  else if(familia === 'nido') r = nido(par);
   else throw new Error('Familia no disponible: '+familia);
   const b = bbox(r.cut, r.fold);
   r.bbox = b; r.w = r2(b.x1-b.x0); r.h = r2(b.y1-b.y0);
