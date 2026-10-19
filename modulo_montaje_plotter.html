@@ -127,7 +127,7 @@
     <div class="grid">
       <div><label>Ancho del rollo (cm)</label><input type="number" id="cRolloW" value="102" step="0.1" oninput="leerCfg()"></div>
       <div><label>Resolución (ppp)</label><input type="number" id="cPpp" value="230" oninput="leerCfg()"></div>
-      <div><label>Largo máx. por archivo JPG (cm)</label><input type="number" id="cMaxLargo" value="150" oninput="leerCfg()"></div>
+      <input type="hidden" id="cMaxLargo" value="150">
     </div>
     <label style="display:flex;gap:6px;align-items:center;margin-top:10px;font-weight:600;"><input type="checkbox" id="cEstacion" checked> Guardar el JPG en la carpeta del plotter de la estación de diseño (si está conectada) y tomar de ahí el nombre del día</label>
     <p class="hint" style="margin-top:8px;">Un JPG a 230 ppp pesa mucho en memoria. Si el montaje pasa del largo máximo, se parte en varios archivos cortando entre láminas (nunca por la mitad de una). Un archivo continuo de más largo necesita la estación de diseño.</p>
@@ -162,6 +162,7 @@
 <script src="tactical-supabase.js?v=20261016a"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
 <script src="tactical-estacion.js?v=20261017b"></script>
+<script src="jpeg_cmyk.js?v=20261019b"></script>
 <script src="precios_tactical.js?v=20261017b"></script>
 <script src="rompecabezas_catalogo.js?v=20261017a"></script>
 <script>
@@ -650,20 +651,23 @@ async function generarJPG(){
     // Con la estación conectada, el consecutivo también se mira en la carpeta del plotter (lo que realmente se ha guardado)
     const usarEstacion = document.getElementById('cEstacion').checked && await tacticalEstacion.estado();
     if(usarEstacion){ const sg = await tacticalEstacion.plotterSiguiente(); if(sg.ok && sg.consecutivo > consecutivo){ nombre = sg.nombre; consecutivo = sg.consecutivo; } }
-    let guardadoEn = '', descargado = 0;
-    const S = CFG.ppp/2.54, partes = partesDelRollo();
-    for(let i=0;i<partes.length;i++){
-      const p = partes[i]; msg.textContent = `Generando parte ${i+1} de ${partes.length}…`; await new Promise(r=>setTimeout(r,30));
-      const cv = document.createElement('canvas'); cv.width = Math.round(CFG.rolloW*S); cv.height = Math.round((p.hasta-p.desde)*S);
-      pintarRollo(cv.getContext('2d'), S, p.desde, p.hasta, false);
-      const blob = await new Promise(r=>cv.toBlob(r, 'image/jpeg', 0.93)); if(!blob) throw new Error('El navegador no pudo crear el JPG de este tamaño. Reduce el largo máximo por archivo.');
-      const bytes = ponerDpi(new Uint8Array(await blob.arrayBuffer()), Math.round(CFG.ppp));
-      const fblob = new Blob([bytes], { type:'image/jpeg' }), nombreParte = nombre + (partes.length>1 ? ` (parte ${i+1} de ${partes.length})` : '');
-      let ok = false;
-      if(usarEstacion){ const r = await tacticalEstacion.plotterGuardar(nombreParte, 'jpg', fblob); if(r.ok){ ok = true; guardadoEn = r.ruta.replace(/[\\/][^\\/]*$/, ''); } else console.warn('Estación:', r.error); }
-      if(!ok){ bajar(fblob, nombreParte + '.jpg'); descargado++; }
-      cv.width = cv.height = 1; await new Promise(r=>setTimeout(r,700));
+    // UN solo archivo por montaje, mida lo que mida (se corta después de impreso): se codifica por tandas de filas con el codificador propio
+    const S = CFG.ppp/2.54, Wpx = Math.round(CFG.rolloW*S), Hpx = Math.round(PLAN.largo*S), FILAS = 1808;
+    const cod = tacticalJpegStream(Wpx, Hpx, { modo:'rgb', ppp:Math.round(CFG.ppp), calidad:92 });
+    const cv = document.createElement('canvas'); cv.width = Wpx; cv.height = FILAS; const cx = cv.getContext('2d', { willReadFrequently:true });
+    for(let y0=0; y0<Hpx; y0+=FILAS){
+      const filas = Math.min(FILAS, Hpx - y0);
+      msg.textContent = `Generando el JPG… ${Math.round(y0/Hpx*100)}% (${fmt(PLAN.largo)} cm de rollo)`; await new Promise(r=>setTimeout(r,10));
+      if(cv.height !== filas) cv.height = filas;
+      pintarRollo(cx, S, y0/S, (y0+filas)/S, false);
+      await cod.agregar(cx.getImageData(0, 0, Wpx, filas).data, filas);
     }
+    cv.width = cv.height = 1;
+    const fblob = cod.terminar(); let guardadoEn = '', descargado = 0, ok = false;
+    msg.textContent = 'Guardando el archivo…';
+    if(usarEstacion){ const r = await tacticalEstacion.plotterGuardar(nombre, 'jpg', fblob); if(r.ok){ ok = true; guardadoEn = r.ruta.replace(/[\/][^\/]*$/, ''); } else console.warn('Estación:', r.error); }
+    if(!ok){ bajar(fblob, nombre + '.jpg'); descargado++; }
+    const partes = [1];
     let extra = '';
     if(document.getElementById('cRegistrar').checked){
       try{
@@ -677,7 +681,7 @@ async function generarJPG(){
         extra = ` Registrado, y se guardaron ${PLAN.nuevos.length} sobrante(s) POLI.${colaIds.length?' Las fichas del Kanban quedaron en montaje.':''}`; await cargarSobrantes(); await cargarCola(); planificar();
       } catch(e){ console.error(e); extra = ' ⚠ No se pudo registrar el montaje (¿falta correr supabase/migracion_plotter_montajes.sql?).'; }
     }
-    msg.style.color = '#1a7d3f'; msg.textContent = `Listo: "${nombre}" (${partes.length} archivo${partes.length>1?'s':''}, ${Math.round(CFG.ppp)} ppp).` + (guardadoEn ? ` Guardado en ${guardadoEn}.` : '') + (usarEstacion && descargado ? ' ⚠ Algunos no se pudieron guardar en la estación y se descargaron.' : '') + extra;
+    msg.style.color = '#1a7d3f'; msg.textContent = `Listo: "${nombre}" (1 archivo, ${Math.round(CFG.ppp)} ppp, ${fmt(PLAN.largo)} cm de largo, ${(fblob.size/1048576).toFixed(0)} MB).` + (guardadoEn ? ` Guardado en ${guardadoEn}.` : '') + (usarEstacion && descargado ? ' ⚠ Algunos no se pudieron guardar en la estación y se descargaron.' : '') + extra;
   } catch(e){ console.error(e); msg.style.color = '#b91c1c'; msg.textContent = 'No se pudo generar: '+(e.message||e); }
 }
 
