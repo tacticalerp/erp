@@ -4623,7 +4623,7 @@
           const txt = 'display:inline; margin-left:4px;';
           if(est==='impreso') return `<button type="button" class="kb-ico kb-ico-verde kb-tip-izq" disabled data-tip="Impresa en el montaje ${nombreMontaje}" aria-label="Impresa" style="opacity:.75; cursor:default; flex:1.6 1 0;">${ticon('check',{noMargin:true,size:15})}<span class="kb-ico-txt" style="${txt}">Impresa</span></button>`;
           if(est==='en_montaje') return `<button type="button" class="kb-ico kb-ico-verde kb-tip-izq" data-tip="En el montaje ${nombreMontaje}: tócalo cuando ya esté impresa" aria-label="Ya impresa" style="flex:1.6 1 0; box-shadow:0 0 0 2px #9ae6b4;" onclick="marcarYaImpresa('${f.id}')">${ticon('printer',{noMargin:true,size:15})}<span class="kb-ico-txt" style="${txt}">Ya impresa</span></button>`;
-          if(est==='pendiente') return `<button type="button" class="kb-ico kb-tip-izq" style="background:#718096; flex:1.6 1 0;" data-tip="Ya está en la cola del montaje. Toca para quitarla de la cola" aria-label="En cola de montaje" onclick="quitarDeColaMontaje('${f.id}')">${ticon('clock',{noMargin:true,size:15})}<span class="kb-ico-txt" style="${txt}">En cola</span></button>`;
+          if(est==='pendiente') return `<button type="button" class="kb-ico kb-tip-izq" style="background:#718096; flex:1.6 1 0;" data-tip="Ya está en la cola del montaje. Toca para revisar si faltan rompecabezas o para quitarla de la cola" aria-label="En cola de montaje" onclick="accionColaMontaje('${f.id}')">${ticon('clock',{noMargin:true,size:15})}<span class="kb-ico-txt" style="${txt}">En cola</span></button>`;
           return `<button type="button" class="kb-ico kb-ico-azul kb-tip-izq" style="flex:1.6 1 0;" data-tip="Enviar a montaje (plotter)" aria-label="Enviar a montaje" onclick="enviarAMontaje('${f.id}')">${ticon('puzzle',{noMargin:true,size:15})}<span class="kb-ico-txt" style="${txt}">Enviar a montaje</span></button>`;
         }
         // Lee los rompecabezas de la ficha: primero del pedido B2C enlazado (datos exactos); si no aparece, de las líneas de la ficha.
@@ -4636,11 +4636,27 @@
               (its||[]).forEach(it=>filas.push({ forma: it.forma || it.linea || '', fichas: it.fichas, medida: it.medida, cantidad: it.cantidad || 1, thumb_url: it.foto_thumb_url || null }));
             }
           } catch(e){ console.warn('No se pudo leer el pedido B2C', e); }
-          if(filas.length) return filas;
-          return (f.lineas||[]).map(l=>{
+          const deLineas = (f.lineas||[]).map(l=>{
             const m = /^(\d+)x\s*(?:Láser|Troquel)(?:\s*-\s*([^\d]+?))?\s+([\d.]+x[\d.]+)cm\s*\((\d+)f\)/.exec(l.desc||'');
             return m ? { forma: (m[2]||'').trim(), fichas: parseInt(m[4],10), medida: m[3], cantidad: parseInt(m[1],10)||1, thumb_url: l.fotoUrl||null } : null;
           }).filter(Boolean);
+          // si la ficha recibió más rompecabezas después del pedido enlazado, las líneas de la ficha traen más: se usan esas
+          return deLineas.length > filas.length ? deLineas : filas;
+        }
+        // Pulsar el botón gris "En cola": si a la ficha le faltan rompecabezas en la cola, ofrece agregarlos; si no, ofrece quitarla de la cola.
+        async function accionColaMontaje(id){
+          const f = db_kanban.find(x=>x.id===id); if(!f) return;
+          const norm = v=>String(v==null?'':v).toLowerCase().replace(',','.').replace(/\s/g,'');
+          const items = await plotterItemsDeFicha(f), filas = db_plotter_cola.filter(r=>r.ficha_id===id);
+          const libres = filas.map(r=>({ k:norm(r.medida)+'|'+norm(r.fichas)+'|'+norm(r.cantidad||1), usada:false }));
+          const faltan = items.filter(i=>{ const k = norm(i.medida)+'|'+norm(i.fichas)+'|'+norm(i.cantidad||1); const u = libres.find(x=>!x.usada && x.k===k); if(u){ u.usada = true; return false; } return true; });
+          if(!faltan.length) return quitarDeColaMontaje(id);
+          const txtFalt = faltan.map(i=>`${i.cantidad} x ${i.fichas} fichas ${i.medida} cm`).join(String.fromCharCode(10));
+          if(!confirm('Esta ficha tiene '+items.length+' rompecabezas y en la cola de montaje solo hay '+filas.length+'.'+String.fromCharCode(10,10)+'Faltan:'+String.fromCharCode(10)+txtFalt+String.fromCharCode(10,10)+'¿Agregar los que faltan a la cola?'+String.fromCharCode(10)+'(Cancelar = no hacer nada)')) return;
+          const nuevas = faltan.map(i=>({ ficha_id:f.id, ot:f.ot||null, cliente:f.nombreCli||'', forma:i.forma, fichas:i.fichas, medida:i.medida, cantidad:i.cantidad, thumb_url:i.thumb_url, estado:'pendiente' }));
+          const { error } = await tacticalSupabase.from('plotter_cola').insert(nuevas);
+          if(error){ alert('No se pudo agregar: '+(error.message||error)); return; }
+          db_plotter_cola = await plotterColaCargar(); renderKanban();
         }
         async function enviarAMontaje(id){
           const f = db_kanban.find(x=>x.id===id); if(!f) return;
