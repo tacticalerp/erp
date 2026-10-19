@@ -141,6 +141,7 @@
     <h2><span class="n">2</span>Acomodo en el rollo</h2>
     <div id="resumen"></div>
     <div class="row2">
+      <button class="btn gris" title="Vuelve a acomodar todo desde cero con una búsqueda más a fondo (unos 4 segundos) para cerrar espacios y gastar menos vinilo" onclick="reagrupar()">Reagrupar / actualizar distribución</button>
       <button class="btn rojo" onclick="generarJPG()">Generar JPG (230 ppp)</button>
       <label class="chk" style="display:flex;gap:6px;align-items:center;font-weight:600;margin:0;"><input type="checkbox" id="cRegistrar" checked> Registrar montaje y guardar sobrantes POLI</label>
     </div>
@@ -464,7 +465,8 @@ function sobrantesDeBin(bin){
 function empacar(piezas, est){
   if(est.mask) piezas = piezas.map((p,i)=>(est.mask[i] && !p.item.noGirar && p.w!==p.h) ? { ...p, w:p.h, h:p.w, pre:true } : p);
   else piezas = piezas.map(p=>{ if(!est.orient || p.item.noGirar || p.w === p.h) return p; const quiereH = est.orient==='h'; return ((p.w>=p.h) === quiereH) ? p : { ...p, w:p.h, h:p.w, pre:true }; });
-  const orden = piezas.slice().sort(est.orden==='area' ? (a,b)=>b.w*b.h-a.w*a.h : (a,b)=>Math.max(b.w,b.h)-Math.max(a.w,a.h) || b.w*b.h-a.w*a.h);
+  if(est.rnd) piezas = piezas.map((p,i)=>({ ...p, r:est.rnd[i] }));
+  const orden = piezas.slice().sort(est.rnd ? (a,b)=>b.w*b.h*b.r-a.w*a.h*a.r : est.orden==='area' ? (a,b)=>b.w*b.h-a.w*a.h : (a,b)=>Math.max(b.w,b.h)-Math.max(a.w,a.h) || b.w*b.h-a.w*a.h);
   const bins = [], noCaben = [], remPool = CFG.usarSob ? SOBRANTES.map(s=>({ id:s.id, W:+s.ancho, H:+s.alto })).sort((a,b)=>a.W*a.H-b.W*b.H) : [];
   orden.forEach(p=>{
     for(const bin of bins){ const b = intentarUbicar(bin, p.w, p.h, est.soloNecesario, p.item.noGirar || !!est.mask); if(b){ colocar(bin, b, p.item, p.copia, p.pre); return; } }
@@ -535,7 +537,8 @@ function disponer(bins){          // diseño en el rollo: láminas una debajo de
   const fin = pend.length ? gy + gfila + m : y - sep + m;
   return { bloques, guias, largo: Math.max(fin, m*2) };
 }
-function planificar(){
+function azar(sem){ let a = sem>>>0; return ()=>{ a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a>>>15, 1 | a); t = t + Math.imul(t ^ t>>>7, 61 | t) ^ t; return ((t ^ t>>>14) >>> 0) / 4294967296; }; }
+function planificar(profundo){
   const piezas = [];
   ITEMS.forEach(it=>{ if(it.w>0 && it.h>0) for(let c=0;c<Math.max(1,it.cant);c++) piezas.push({ item:it, copia:c, w:it.w, h:it.h }); });
   // se prueban muchas formas (horizontal/vertical/libre, con o sin giro, por lado o por área) y se elige la que menos láminas y menos vinilo gasta
@@ -548,11 +551,20 @@ function planificar(){
   // búsqueda fina: orientación de cada pieza por separado (todas las combinaciones si son pocas, si no una muestra)
   const n = piezas.length;
   if(n>1 && n<=60){
-    const masks = []; if(n<=10){ for(let k=0;k<(1<<n);k++) masks.push(Array.from({length:n},(_,i)=>!!(k>>i&1))); } else { for(let k=0;k<600;k++) masks.push(Array.from({length:n},()=>Math.random()<0.5)); }
+    const masks = []; if(n<=10){ for(let k=0;k<(1<<n);k++) masks.push(Array.from({length:n},(_,i)=>!!(k>>i&1))); } else { const az = azar(12345); for(let k=0;k<600;k++) masks.push(Array.from({length:n},()=>az()<0.5)); }   // semilla fija: el mismo pedido da siempre el mismo acomodo
     [false, true].forEach(lamRot=>masks.forEach(mask=>['lado','area'].forEach(orden=>{
       const r = empacar(piezas, { orden, soloNecesario:false, mask, lamRot }); clampBins(r);
       const lay = disponer(r.bins); const pt = puntaje(r, lay);
       if(!mejor || mejorQue(pt, mejorP)){ mejor = { ...r, lay }; mejorP = pt; } })));
+  }
+  if(profundo){      // "Reagrupar": búsqueda a fondo con orden y giro al azar durante unos segundos
+    const az = azar(Date.now()), t0 = Date.now();
+    while(Date.now() - t0 < 4000 && n>1){
+      const mask = Array.from({length:n},()=>az()<0.5), rnd = Array.from({length:n},()=>0.6 + az()*0.8), lamRot = az()<0.5;
+      const r = empacar(piezas, { orden:'area', soloNecesario:false, mask, rnd, lamRot }); clampBins(r);
+      const lay = disponer(r.bins); const pt = puntaje(r, lay);
+      if(!mejor || mejorQue(pt, mejorP)){ mejor = { ...r, lay }; mejorP = pt; }
+    }
   }
   const { bins, noCaben, lay } = mejor || { bins:[], noCaben:[], lay:{ bloques:[], guias:[], largo:2 } };
   // sobrantes que se guardarán (de cada lámina o sobrante usado)
@@ -560,6 +572,15 @@ function planificar(){
   const nuevos = []; bins.forEach((bin,bi)=>sobrantesDeBin(bin).forEach(r=>nuevos.push({ ancho:snap(r.w), alto:snap(r.h), bi, x:r.x, y:r.y })));
   PLAN = { bins, bloques:lay.bloques, guias:lay.guias, nuevos, noCaben, largo:lay.largo, usadosSob: bins.filter(b=>b.tipo==='sobrante').map(b=>b.ref), laminas: bins.filter(b=>b.tipo==='lamina').length };
   dibujarVistaPrevia(); resumenPlan();
+}
+async function reagrupar(){
+  const e = document.getElementById('msgGen'); if(!ITEMS.length){ e.textContent = 'Agrega rompecabezas primero.'; return; }
+  const antes = PLAN ? PLAN.largo : 0, lamAntes = PLAN ? PLAN.laminas : 0;
+  e.style.color = '#1e3a5f'; e.textContent = 'Reagrupando… (unos 4 segundos)'; await new Promise(r=>setTimeout(r,40));
+  planificar(true);
+  const d = antes - PLAN.largo;
+  e.style.color = '#1a7d3f';
+  e.textContent = d > 0.05 ? `Listo: el rollo bajó de ${fmt(antes)} a ${fmt(PLAN.largo)} cm (${fmt(d)} cm menos).` : (PLAN.laminas < lamAntes ? 'Listo: se ahorró una lámina.' : `Listo: ya estaba en el mejor acomodo que encontré (${fmt(PLAN.largo)} cm).`);
 }
 function resumenPlan(){
   const e = document.getElementById('resumen'); if(!PLAN) return;
