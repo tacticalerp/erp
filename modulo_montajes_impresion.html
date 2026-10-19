@@ -118,7 +118,7 @@
     <div id="wCustom" style="display:none"><label>Hoja personalizada (largo × corto, cm)</label>
       <div style="display:flex;gap:6px"><input type="number" id="cw" value="70" step="0.1" oninput="recalcular()"><input type="number" id="ch" value="50" step="0.1" oninput="recalcular()"></div></div>
   </div>
-  <p class="hint" style="margin-top:10px">Litografía: el área real de imagen es menor que la hoja por la pinza (70×50 → 69,5×49; 60×45 → 59,8×44; 50×35 → 49,5×34). Las marcas y los textos nunca salen de esa área. Las hojas de otra medida usan una estimación y avisan.</p>
+  <p class="hint" style="margin-top:10px">Litografía: el área real de imagen es menor que la hoja por la pinza (70×50 → 69,8×49; 60×45 → 59,8×44; 50×35 → 49,5×34). Las marcas y los textos nunca salen de esa área. Las hojas de otra medida usan una estimación y avisan.</p>
 </div>
 
 <div class="panel">
@@ -203,13 +203,17 @@ const MARCA_GROSOR_MM = 0.2;              // trazo de 0,2 mm (Conde)
 const MARGEN_EXTRA = MARCA_LARGO + MARCA_DIST; // 8 mm que ocupan las marcas a cada lado de la grilla
 // Área REAL de imagen por hoja litográfica (ya sin pinza), [lado largo, lado corto] en mm. Mismos números de
 // OFFSET_FORMATOS_IMPRESION_CM de las calculadoras (49x69.5 / 34x49.5). 60x45 confirmado por Conde el 2026-10-17: 59,8 x 44 cm (el lado de 45 pierde 1 cm de pinza y el de 60 pierde 2 mm).
-const AREA_PINZA = { '70x50':[695,490], '60x45':[598,440], '50x35':[495,340] };
+const AREA_PINZA = { '70x50':[698,490], '60x45':[598,440], '50x35':[495,340] };
 const AREA_ESTIMADA = {};     // todas las hojas de la lista tienen dato confirmado
 
 const S = { files:[], pool:[], nextId:1, plan:null, hojaVer:0 };
 // Guías de corte: tamaño normal (4 mm de largo a 4 mm del corte) y dos reducciones automáticas para ganar piezas.
 // Nunca a menos de 3 mm de la línea de corte. Si ni reducidas caben pero la gráfica sí, se le pregunta al usuario si monta sin guías.
 const GUIAS_NIVELES = [ { dist:4, len:4 }, { dist:3, len:3 }, { dist:3, len:2 } ];
+// Guía mini (autorizada por Conde 2026-10-19): a 2,5 mm del corte, de 1 mm, con trazo más grueso para que se vea en la impresión. Solo si el usuario acepta.
+const GUIA_MINI = { dist:2.5, len:1, gr:0.4 };
+let MINI_GUIAS = false;
+function activarMiniGuias(v){ MINI_GUIAS = (v !== false); if(MINI_GUIAS) SIN_GUIAS = false; recalcular(); }
 let SIN_GUIAS = false;
 function activarSinGuias(v){ SIN_GUIAS = (v !== false); recalcular(); }
 const DIGITALES = ['42x28','35x25','50x33'];   // hojas de impresión digital (sin pinza)
@@ -407,8 +411,9 @@ function marcasExteriores(celdas, out, cfg){
   const ys = [...new Set(celdas.flatMap(c=>[r2(c.y), r2(c.y+c.h)]))];
   const L = Math.min(...xs), R = Math.max(...xs), T = Math.min(...ys), B = Math.max(...ys);
   const a = cfg.dist, b = cfg.dist+cfg.len;
-  xs.forEach(x=>{ out.push([x,T-b,x,T-a],[x,B+a,x,B+b]); });
-  ys.forEach(y=>{ out.push([L-b,y,L-a,y],[R+a,y,R+b,y]); });
+  const gr = cfg.gr || 0;      // trazo propio (guía mini); 0 = el normal
+  xs.forEach(x=>{ out.push(gr ? [x,T-b,x,T-a,gr] : [x,T-b,x,T-a], gr ? [x,B+a,x,B+b,gr] : [x,B+a,x,B+b]); });
+  ys.forEach(y=>{ out.push(gr ? [L-b,y,L-a,y,gr] : [L-b,y,L-a,y], gr ? [R+a,y,R+b,y,gr] : [R+a,y,R+b,y]); });
 }
 // Mejor acomodo de la grilla: prueba la pieza derecha y girada 90° y se queda con la que da más piezas
 function mejorGrilla(pw, ph, hoja, modo, g, m){
@@ -441,6 +446,8 @@ function elegirGrilla(pw, ph, hoja, modo, gap, notas){
   ORIENT = '';
   const cand = GUIAS_NIVELES.map(cfg=>({ cfg, g: mejorGrilla(pw, ph, hoja, modo, gap, cfg.dist+cfg.len) }));
   const sin = mejorGrilla(pw, ph, hoja, modo, gap, 0);
+  const mini = mejorGrilla(pw, ph, hoja, modo, gap, GUIA_MINI.dist+GUIA_MINI.len);
+  if(MINI_GUIAS && mini) cand.push({ cfg:GUIA_MINI, g:mini });
   const medida = fmt(pw)+'×'+fmt(ph)+' mm';
   if(SIN_GUIAS){
     if(!sin){ notas.push({ t:'err', m:'La pieza ('+medida+') no cabe en la hoja ni siquiera sin guías.' }); return null; }
@@ -449,6 +456,7 @@ function elegirGrilla(pw, ph, hoja, modo, gap, notas){
   }
   let best = null;
   cand.forEach(c=>{ if(c.g && (!best || c.g.n > best.g.n)) best = c; });      // si empatan, gana la guía más grande
+  if(!MINI_GUIAS && mini && (!best || mini.n > best.g.n)) notas.push({ t:'warn', m:'Con guías de corte caben '+(best?best.g.n:0)+' piezas. Con guías mini (1 mm, a '+fmt(GUIA_MINI.dist)+' mm del corte, trazo más grueso) caben '+mini.n+'. ¿Uso las guías mini?', accion:{ txt:'Sí, usar guías mini', fn:'activarMiniGuias(true)' } });
   if(!best){
     if(sin) notas.push({ t:'err', m:'La pieza ('+medida+') cabe en la hoja, pero no con guías de corte, ni reducidas. Sin guías caben '+sin.n+'. ¿Hago el montaje sin guías?', accion:{ txt:'Sí, montar sin guías', fn:'activarSinGuias(true)' } });
     else notas.push({ t:'err', m:'La pieza ('+medida+') no cabe en la hoja con sus marcas dentro del área de imagen.' });
@@ -671,7 +679,7 @@ function planificar(){
     });
     const cajasImg = celdas.map(c=>({ x:c.x-B, y:c.y-B, w:c.w+2*B, h:c.h+2*B }));
     const hp = { celdas, marcas, textos:[], cajasImg, eje:null, titulo:'Frente', sangrados: PREP.aplicado ? cajasImg : [] };
-    const hr = { celdas:[], marcas: marcas.map(m=>[hoja.W-m[0], m[1], hoja.W-m[2], m[3]]), textos:[], cajasImg:[], eje:null, titulo:'Plancha del reverso', reverso:true,
+    const hr = { celdas:[], marcas: marcas.map(m=>m.length>4 ? [hoja.W-m[0], m[1], hoja.W-m[2], m[3], m[4]] : [hoja.W-m[0], m[1], hoja.W-m[2], m[3]]), textos:[], cajasImg:[], eje:null, titulo:'Plancha del reverso', reverso:true,
                  marcos: celdas.map(c=>({ x:hoja.W-(c.x+c.w), y:c.y, w:c.w, h:c.h })) };
     const hm = Math.max(hn0, Math.round(+$('hm').value||hn0));
     const slug = [ot, 'Hoja '+hn0+'/'+hm].filter(Boolean).join('  ·  ');
@@ -937,7 +945,7 @@ function dibujar(){
     });
     if(hp.flecha){ const ay2 = oy+hoja.H/2*s, ax1 = ox+4*s, ax2 = ox+7*s; g += '<path d="M'+ax2+' '+ay2+'H'+ax1+'M'+(ax1+3)+' '+(ay2-3)+'L'+ax1+' '+ay2+'L'+(ax1+3)+' '+(ay2+3)+'" fill="none" stroke="#000" stroke-width="1.2" stroke-linecap="round"/>'; }
     if(hp.eje!=null){ const ex = ox+hp.eje*s; g += '<line x1="'+ex+'" y1="'+oy+'" x2="'+ex+'" y2="'+(oy+hoja.H*s)+'" stroke="#dc2626" stroke-width="1" stroke-dasharray="5 3"/>'; }
-    hp.marcas.forEach(m=>{ g += '<line x1="'+(ox+m[0]*s)+'" y1="'+(oy+m[1]*s)+'" x2="'+(ox+m[2]*s)+'" y2="'+(oy+m[3]*s)+'" stroke="#000" stroke-width="1.1"/>'; });
+    hp.marcas.forEach(m=>{ g += '<line x1="'+(ox+m[0]*s)+'" y1="'+(oy+m[1]*s)+'" x2="'+(ox+m[2]*s)+'" y2="'+(oy+m[3]*s)+'" stroke="#000" stroke-width="'+(m[4] ? 1.1*m[4]/MARCA_GROSOR_MM : 1.1)+'"/>'; });
     hp.textos.forEach(t=>{ g += '<text x="'+(ox+t.x*s)+'" y="'+(oy+t.y*s)+'" text-anchor="middle" style="font-size:'+Math.max(TXT*s,4.5)+'px;font-weight:'+(t.negrita?700:400)+';fill:#000">'+esc(t.texto)+'</text>'; });
   }
   svg.innerHTML = g;
@@ -1067,7 +1075,7 @@ async function construirPdf(plan){
       page.drawPage(emb, { x, y, width:(c.rot%180? bh: bw), height:(c.rot%180? bw: bh), rotate: degrees(c.rot) });
     }
     hp.marcas.forEach(m=>{
-      page.drawLine({ start:{x:m[0]*PT, y:HP-m[1]*PT}, end:{x:m[2]*PT, y:HP-m[3]*PT}, thickness: MARCA_GROSOR_MM*PT, color: K });
+      page.drawLine({ start:{x:m[0]*PT, y:HP-m[1]*PT}, end:{x:m[2]*PT, y:HP-m[3]*PT}, thickness: (m[4]||MARCA_GROSOR_MM)*PT, color: K });
     });
     if(hp.flecha){
       const yy = HP-(hoja.H/2)*PT, x1 = 4*PT, x2 = 7*PT, hd = 1.2*PT, th = MARCA_GROSOR_MM*PT;
