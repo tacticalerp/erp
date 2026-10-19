@@ -339,6 +339,14 @@ function quitarArchivo(fid){
   S.pool = S.pool.filter(p=>p.fid!==fid);
   trasQuitar();
 }
+// Quitar solo la página elegida (el archivo se descarta únicamente si ya no queda ninguna de sus páginas)
+function quitarPagina(id){
+  const p = S.pool.find(x=>x.id===id); if(!p) return;
+  if(!confirm('¿Quitar solo la página '+(p.pidx+1)+' de «'+p.nombre+'»?')) return;
+  S.pool = S.pool.filter(x=>x.id!==id);
+  if(!S.pool.some(x=>x.fid===p.fid)) S.files[p.fid] = null;
+  trasQuitar();
+}
 function limpiarArchivos(){
   if(S.pool.length && !confirm('¿Quitar todos los archivos cargados?')) return;
   S.files = []; S.pool = []; S.nextId = 1;
@@ -379,7 +387,7 @@ function renderPool(){
   $('pool').innerHTML = S.pool.map(p=>{
     const cls = taco ? (p.id===tid ? 't' : (p.id===rid ? 'r' : '')) : '';
     const tag = taco ? (p.id===tid ? ' · TIRO' : (p.id===rid ? ' · RETIRO' : '')) : '';
-    return '<div class="thumb '+cls+'"><button class="x" title="Quitar este archivo" onclick="quitarArchivo('+p.fid+')">✕</button>'+(p.thumb?'<img src="'+p.thumb+'">':'<div style="height:100px"></div>')+'<div class="nom">'+esc(p.nombre)+'</div><div>pág. '+(p.pidx+1)+tag+'</div></div>';
+    return '<div class="thumb '+cls+'"><button class="x" title="Quitar solo esta página" onclick="quitarPagina('+p.id+')">✕</button>'+(p.thumb?'<img src="'+p.thumb+'">':'<div style="height:100px"></div>')+'<div class="nom">'+esc(p.nombre)+'</div><div>pág. '+(p.pidx+1)+tag+'</div></div>';
   }).join('');
 }
 
