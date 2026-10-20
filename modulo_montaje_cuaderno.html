@@ -392,7 +392,9 @@ function materialDeSlot(sl){
   return sl.material || '';
 }
 function editarMaterial(key, v){ const sl = S.slots.find(x=>x.key===key); if(!sl) return; sl.material = v; sl.materialEditado = v !== ''; dibujarMontaje(); }
-function dimsSlot(sl){ if(sl.w) return { w: sl.w, h: sl.h }; const r = sl.tipo==='interior' ? S.reduccion : 0; return { w: Math.max(1, S.ancho - r), h: Math.max(1, S.alto - r) }; }
+// Cuaderno anillado: la hoja interior es S.reduccion más pequeña. Cosido, con gancho o pegado: mismo tamaño que la carátula (no se perfora).
+function reduccionEf(){ return esAnillo() ? S.reduccion : 0; }
+function dimsSlot(sl){ if(sl.w) return { w: sl.w, h: sl.h }; const r = sl.tipo==='interior' ? reduccionEf() : 0; return { w: Math.max(1, S.ancho - r), h: Math.max(1, S.alto - r) }; }
 function fmtCm(n){ return (Math.round(n*10)/10).toString().replace('.', ','); }
 function cambiarTipo(key, v){ const sl = S.slots.find(x=>x.key===key); if(sl){ sl.tipo = v; if(v==='tapa') sl.regla = false; renderTodo(); } }
 function cambiarRegla(key, v){ const sl = S.slots.find(x=>x.key===key); if(sl){ sl.regla = !!v; renderTodo(); } }
@@ -1002,7 +1004,7 @@ function revisarPieza(slot){
         const req = (l===ladoAnillo) ? S.margenAnillo : S.margenMin;
         if(m[l] + 0.02 < req){ falla = true; msgs.push({ok:false, t:`Cuadrícula a ${Math.round(m[l]*10)} mm del borde ${nombres[l]}${l===ladoAnillo?' (lado del anillado)':''}: mínimo ${Math.round(req*10)} mm`}); }
       });
-      if(!falla) msgs.push({ok:true, t:`Márgenes de cuadrícula correctos (mín. ${Math.round(S.margenMin*10)} mm, ${Math.round(S.margenAnillo*10)} mm en el anillado)`});
+      if(!falla) msgs.push({ok:true, t: esAnillo() ? `Márgenes de cuadrícula correctos (mín. ${Math.round(S.margenMin*10)} mm, ${Math.round(S.margenAnillo*10)} mm en el anillado)` : `Márgenes de cuadrícula correctos (mín. ${Math.round(S.margenMin*10)} mm por los 4 lados)`});
     }
   }
   return msgs;
@@ -1082,7 +1084,7 @@ function actualizarResumenes(){
   const pos = { lateral:'lateral', superior:'superior', ninguno:'sin anillado' }[S.anilPos] || '';
   set('rMedidas', `${fmtCm(S.ancho)} x ${fmtCm(S.alto)} cm · ${esAnillo() ? pos : ENC_NOM[S.enc].toLowerCase()+' '+pos}${(S.anilPos!=='ninguno' && esAnillo()) ? ' '+S.anilColor+(S.anilCobertura==='parcial'?' (parcial)':'') : ''}`);
   set('rComp', `${S.guardas ? 'con guardas' : 'sin guardas'} · ${S.insertos.length} inserto(s)`);
-  set('rReglas', `hoja interior −${fmtCm(S.reduccion*10)} mm · márgenes ${Math.round(S.margenMin*10)}/${Math.round(S.margenAnillo*10)} mm`);
+  set('rReglas', esAnillo() ? `hoja interior −${fmtCm(S.reduccion*10)} mm · márgenes ${Math.round(S.margenMin*10)}/${Math.round(S.margenAnillo*10)} mm` : `hoja interior igual a la carátula · márgenes mín. ${Math.round(S.margenMin*10)} mm por los 4 lados`);
   set('rWa', S.waCom ? `${S.nomCom||'Comercial'} · +${waNumero(S.waCom)}` : 'falta el número', !S.waCom);
   if(S.anilPos==='ninguno' || !esAnillo()){ set('rAnillo', esAnillo() ? 'sin anillado' : ENC_NOM[S.enc].toLowerCase()+' (sin anillo)'); }
   else {
