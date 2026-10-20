@@ -1255,18 +1255,17 @@ const ENC_NOM = { anillado:'Anillado', costura:'Cosido en hilo', gancho:'Con gan
 function esAnillo(){ return !S.enc || S.enc==='anillado'; }
 // Cuaderno cosido, con gancho o pegado: en lugar del anillo va la palabra (COSTURA / GANCHO / PEGUE) en la franja del lomo
 function dibujarLomoTexto(cx, x, y, w, h, cara, pos, s){
-  // (x,y,w,h) = la hoja misma. La palabra va DENTRO del diseño, a ~1,3 cm del borde del lomo (ese borde queda en el centro al abrir
-  // el cuaderno), sin ninguna línea: el lomo no se ve por fuera. Trazo blanco alrededor para que se lea sobre cualquier fondo.
+  // (x,y,w,h) = la hoja misma. COSTURA / GANCHO / PEGUE va FUERA del diseño, junto al borde del lomo (como las cotas), para no
+  // estorbar la gráfica y sin ninguna línea: el lomo no se ve por fuera, el borde queda en el centro al abrir el cuaderno.
   const t = ENC_TXT[S.enc]; if(!t) return;
-  const d = 1.3 * s, txt = t.split('').join(' ');
+  const fz = Math.max(24, Math.min(40, 0.45*s)), off = fz*0.85, txt = t.split('').join(' ');
   cx.save();
-  cx.font = 'bold '+Math.round(0.45*s)+'px Arial, sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
-  cx.lineJoin = 'round'; cx.lineWidth = Math.max(2, 0.12*s); cx.strokeStyle = 'rgba(255,255,255,0.95)'; cx.fillStyle = '#1e3a5f';
+  cx.font = 'bold '+Math.round(fz)+'px Arial, sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillStyle = '#475569';
   if(pos==='lateral'){
-    const xc = cara==='respaldo' ? x+w-d : x+d;
+    const xc = cara==='respaldo' ? x+w+off : x-off;      // el lomo del frente está a la izquierda; el del reverso, a la derecha
     cx.translate(xc, y+h/2); cx.rotate(-Math.PI/2);
-  } else { cx.translate(x+w/2, y+d); }
-  cx.strokeText(txt, 0, 0); cx.fillText(txt, 0, 0);
+  } else { cx.translate(x+w/2, y-off); }
+  cx.fillText(txt, 0, 0);
   cx.restore();
 }
 function dibujarAnillos(cx, x, y, w, h, cara, pos, color, s){
