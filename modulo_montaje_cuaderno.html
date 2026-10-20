@@ -74,6 +74,8 @@
   .thumb .arch{height:4px;border-radius:2px;margin-top:3px;}
   .thumb .tag{position:absolute;top:2px;left:2px;background:var(--ok);color:#fff;border-radius:3px;padding:0 4px;font-size:10px;font-weight:700;}
   .thumb .tag.rgb{background:#b91c1c;left:auto;right:2px;top:auto;bottom:22px;}
+  .thumb .lupa-mini{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;border:0;background:rgba(15,23,42,.75);color:#fff;cursor:zoom-in;display:flex;align-items:center;justify-content:center;padding:0;z-index:2;}
+  .thumb .lupa-mini:hover{background:#1e3a5f;}
   .thumb .abierta{position:absolute;top:2px;right:2px;background:var(--warn);color:#fff;border:none;border-radius:3px;font-size:10px;padding:1px 4px;cursor:pointer;}
   #slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;}
   .slot{background:#fff;border:2px dashed var(--border);border-radius:8px;padding:8px;min-height:230px;display:flex;flex-direction:column;gap:5px;}
@@ -1067,12 +1069,30 @@ function renderPool(){
       ${usado?'<span class="tag">✓</span>':''}
       ${p.color && p.color.rgb ? '<span class="tag rgb">RGB</span>':''}
       ${pareceAbierta(p)?`<button class="abierta" title="Parece una página abierta (dos caras). Clic para cortarla por la mitad" onclick="event.stopPropagation(); dividirPagina('${p.id}')">✂ 2 caras</button>`:''}
+      <button type="button" class="lupa-mini" title="Ampliar esta página al doble para identificarla" onclick="event.stopPropagation(); ampliarMiniatura('${p.id}', this)"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="10" cy="10" r="6"/><path d="M15 15l6 6"/></svg></button>
       <span class="num">${S.pool.indexOf(p)+1}</span><img src="${p.dataUrl}" alt=""><div class="nom">${esc(p.nombre)}</div><div class="arch" style="background:${colorArchivo(p.archivo||p.nombre)}"></div></div>`;
   }).join('');
   cont.querySelectorAll('.thumb').forEach(el=>{
     el.addEventListener('dragstart', e=>{ e.dataTransfer.setData('text/plain','pool:'+el.dataset.id); });
   });
 }
+// Ampliar una miniatura al doble de su tamaño (ventana flotante) para reconocer qué página es; clic en cualquier parte la cierra
+function ampliarMiniatura(id, btn){
+  const p = S.pool.find(x=>x.id===id); if(!p) return;
+  cerrarMiniaturaAmpliada();
+  const th = btn.closest('.thumb'), im = th.querySelector('img'), r = im.getBoundingClientRect();
+  let w = Math.max(160, r.width*2), h = w * p.h / p.w;
+  const maxH = window.innerHeight - 70; if(h > maxH){ h = maxH; w = h * p.w / p.h; }
+  const box = document.createElement('div'); box.id = 'miniAmp';
+  let left = r.left, top = r.top;
+  left = Math.max(8, Math.min(left, window.innerWidth - w - 16)); top = Math.max(8, Math.min(top, window.innerHeight - h - 50));
+  box.style.cssText = 'position:fixed;z-index:9998;left:'+left+'px;top:'+top+'px;background:#fff;border:2px solid #1e3a5f;border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:6px;cursor:zoom-out;';
+  box.innerHTML = '<div style="font:bold 12px Arial;color:#1e3a5f;margin-bottom:4px;max-width:'+w+'px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(S.pool.indexOf(p)+1)+' · '+esc(p.nombre)+'</div><img src="'+p.dataUrl+'" style="display:block;width:'+w+'px;height:'+h+'px;">';
+  box.onclick = cerrarMiniaturaAmpliada;
+  document.body.appendChild(box);
+}
+function cerrarMiniaturaAmpliada(){ const b = document.getElementById('miniAmp'); if(b) b.remove(); }
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') cerrarMiniaturaAmpliada(); });
 function renderSlots(){
   const cont = document.getElementById('slots');
   cont.innerHTML = S.slots.map(s=>{
