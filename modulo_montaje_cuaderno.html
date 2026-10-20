@@ -112,7 +112,7 @@
 <div class="panel" id="pnlDatos">
   <h2><span class="n">1</span>Datos del trabajo</h2>
   <div class="grid">
-    <div><label>Tipo de montaje</label><select id="fModo" onchange="cambiarModo()"><option value="cuaderno">Cuaderno (anillado)</option><option value="general">Otro producto (caja, carpeta, sobre, bolsa, sticker…)</option></select></div>
+    <div><label>Tipo de montaje</label><select id="fModo" onchange="cambiarModo()"><option value="cuaderno">Cuaderno (anillado, cosido, gancho o pegado)</option><option value="general">Otro producto (caja, carpeta, sobre, bolsa, sticker…)</option></select></div>
     <div><label>Cliente</label><div style="position:relative;"><input type="text" id="fCliente" autocomplete="off" placeholder="Escribe para buscar un cliente" oninput="leerForm(false); sugerirClientes()" onfocus="sugerirClientes()" onblur="setTimeout(ocultarSugerencias,180)"><div id="cliSug"></div></div></div>
     <div><label>OT</label><input type="text" id="fOt" oninput="leerForm(false)"></div>
     <div class="solo-cuaderno"><label>Cantidad de cuadernos</label><input type="number" id="fCantidad" min="1" oninput="leerForm(false)"></div>
@@ -138,7 +138,8 @@
         <div class="grid">
           <div class="solo-cuaderno"><label>Ancho cerrado (cm)</label><input type="number" id="fAncho" step="0.1" value="17" oninput="leerForm(true)"></div>
       <div class="solo-cuaderno"><label>Alto cerrado (cm)</label><input type="number" id="fAlto" step="0.1" value="24" oninput="leerForm(true)"> <button class="btn gris mini" style="margin-top:4px;" onclick="girarMedidas()">⟳ Girar ancho/alto</button></div>
-      <div class="solo-cuaderno"><label>Anillado</label><select id="fAnilPos" onchange="leerForm(false)"><option value="lateral">Lateral (cuaderno)</option><option value="superior">Superior (libreta)</option><option value="ninguno">Sin anillado</option></select></div>
+      <div class="solo-cuaderno"><label>Encuadernación</label><select id="fEnc" onchange="leerForm(false)"><option value="anillado">Anillado (doble O)</option><option value="costura">Cosido en hilo (costura)</option><option value="gancho">Con gancho (grapa)</option><option value="pegue">Pegado (pegue)</option></select></div>
+      <div class="solo-cuaderno"><label>Lado del lomo / anillado</label><select id="fAnilPos" onchange="leerForm(false)"><option value="lateral">Lateral (cuaderno)</option><option value="superior">Superior (libreta)</option><option value="ninguno">Sin anillado</option></select></div>
       <div class="solo-cuaderno"><label>Color del anillo</label><select id="fAnilColor" onchange="leerForm(false)"><option value="blanco">Blanco</option><option value="negro">Negro</option></select></div>
       <div class="solo-cuaderno"><label>Cobertura del anillo</label><select id="fAnilCob" onchange="leerForm(false)"><option value="total">Total (todo el lado)</option><option value="parcial">Parcial (2 secciones)</option></select></div>
         </div>
@@ -308,7 +309,7 @@ if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.clou
 /* ======================= ESTADO ======================= */
 const ROLES_PERMITIDOS = ['administrador','comercial','diseno','produccion'];
 const DIAS_RETENCION = 30;
-const S = { modo:'cuaderno', mat:{}, plastCar:'', piezas:[], waCom:'', nomCom:'', waCli:'', ultimaUrlPdf:'', ot:'', cliente:'', cantidad:'', ancho:17, alto:24, anilPos:'lateral', anilColor:'blanco', anilEntra:1, anilPaso:0.8467, tapaTipo:'dura', cartonCal:1.5, hojasTaco:100, gramTaco:70, hojasIns:0, gramIns:150, hojasGuar:0, gramGuar:150, calibreManual:0, sobrante:null, reduccion:0.5, margenMin:0.7, margenAnillo:1.3, margenLibre:1.2, anilCobertura:'total', ver:false,
+const S = { enc:'anillado', modo:'cuaderno', mat:{}, plastCar:'', piezas:[], waCom:'', nomCom:'', waCli:'', ultimaUrlPdf:'', ot:'', cliente:'', cantidad:'', ancho:17, alto:24, anilPos:'lateral', anilColor:'blanco', anilEntra:1, anilPaso:0.8467, tapaTipo:'dura', cartonCal:1.5, hojasTaco:100, gramTaco:70, hojasIns:0, gramIns:150, hojasGuar:0, gramGuar:150, calibreManual:0, sobrante:null, reduccion:0.5, margenMin:0.7, margenAnillo:1.3, margenLibre:1.2, anilCobertura:'total', ver:false,
   guardas:0, insertos:[], interior:'Hoja interior (cuadrícula)', slots:[], extras:[], pool:[], sel:null };
 let cotizaciones = [];
 let uid = 1;
@@ -379,7 +380,7 @@ function materialDeSlot(sl){
   if(S.modo==='general') return sl.material || '';
   const M = S.mat || {};
   const tapa = { dura:'Tapa dura', semidura:'Tapa semidura', blanda:'Tapa blanda' }[S.tapaTipo] || '';
-  const anillo = S.anilPos!=='ninguno' ? 'Anillado '+S.anilColor : '';
+  const anillo = S.anilPos!=='ninguno' ? (esAnillo() ? 'Anillado '+S.anilColor : ENC_NOM[S.enc]) : '';
   if(sl.key==='portada' || sl.key==='contra'){
     const base = M.caratulaSust !== undefined ? [M.caratulaSust, textoPlastCar(), M.caratulaOtros] : [textoPlastCar()];
     return [tapa, ...base, anillo].filter(Boolean).join(' · ');
@@ -498,6 +499,7 @@ function leerForm(reconstruir){
   S.ancho = parseFloat(document.getElementById('fAncho').value) || 16;
   S.alto = parseFloat(document.getElementById('fAlto').value) || 22;
   S.anilPos = S.modo==='general' ? 'ninguno' : document.getElementById('fAnilPos').value;
+  S.enc = (document.getElementById('fEnc')||{}).value || 'anillado';
   S.waCom = document.getElementById('fWaCom').value; S.nomCom = document.getElementById('fNomCom').value; S.waCli = document.getElementById('fWaCli').value; guardarContactos();
   S.anilColor = document.getElementById('fAnilColor').value;
   S.reduccion = isNaN(parseFloat(document.getElementById('fReduccion').value)) ? 0.5 : parseFloat(document.getElementById('fReduccion').value);
@@ -526,6 +528,7 @@ function volcarForm(){
   document.getElementById('fAnilPos').value = S.anilPos==='ninguno' && S.modo==='general' ? 'lateral' : S.anilPos;
   document.getElementById('fWaCom').value = S.waCom; document.getElementById('fNomCom').value = S.nomCom; document.getElementById('fWaCli').value = S.waCli;
   document.getElementById('fAnilColor').value = S.anilColor;
+  { const fe = document.getElementById('fEnc'); if(fe) fe.value = S.enc || 'anillado'; }
   document.getElementById('fReduccion').value = S.reduccion;
   document.getElementById('fMargenMin').value = S.margenMin;
   document.getElementById('fMargenAnillo').value = S.margenAnillo;
@@ -985,14 +988,14 @@ function revisarPieza(slot){
       msgs.push({ok:false, t:`Colores en RGB en ${donde}: hay que pasarlo a CMYK antes de imprimir (en pantalla se ve más vivo que en papel)`});
     } else if(c.cmyk) msgs.push({ok:true, t:'Colores en CMYK'});
   }
-  if(S.anilPos!=='ninguno'){
+  if(S.anilPos!=='ninguno' && esAnillo()){
     if(perforadoMuerdeGrafica(slot, it)) msgs.push({ok:false, t:`Hay gráfica en la franja de ${S.anilEntra} cm del anillado: el perforado la puede morder`});
     else msgs.push({ok:true, t:'Zona de perforado libre de gráficas'});
   }
   if(slot.regla && slot.tipo==='interior'){
     const m = medirMargenesCuadricula(slot, it);
     if(m){
-      const ladoAnillo = S.anilPos==='lateral' ? (slot.cara==='respaldo' ? 'der' : 'izq') : (S.anilPos==='superior' ? 'arr' : null);
+      const ladoAnillo = !esAnillo() ? null : S.anilPos==='lateral' ? (slot.cara==='respaldo' ? 'der' : 'izq') : (S.anilPos==='superior' ? 'arr' : null);
       const nombres = { izq:'izquierdo', der:'derecho', arr:'superior', aba:'inferior' };
       let falla = false;
       ['izq','der','arr','aba'].forEach(l=>{
@@ -1070,18 +1073,18 @@ function renderSlots(){
 function infoAnillos(){
   const el = document.getElementById('infoAnillos'); if(!el) return;
   const da = datosAnillado(S.anilPos);
-  if(!da){ el.textContent=''; return; }
+  if(!da || !esAnillo()){ el.textContent=''; return; }
   const usados = (S.anilCobertura==='parcial' && da.n > ANILLOS_POR_SECCION_PARCIAL*2) ? ANILLOS_POR_SECCION_PARCIAL*2 : da.n;
   el.textContent = `Anillado ${S.anilPos==='lateral'?'lateral':'superior'} sobre ${da.largo} cm: lleva ${da.n} loops (paso ${(S.anilPaso*10).toFixed(1)} mm, ${Math.round(S.margenLibre*10)} mm libres arriba y abajo; las hojas interiores usan los mismos)${usados<da.n?', se dibujan '+usados+' en 2 secciones':''}. El anillo entra ${S.anilEntra} cm en el diseño.`;
 }
 function actualizarResumenes(){
   const set = (id, txt, mal)=>{ const el = document.getElementById(id); if(el){ el.textContent = txt; el.classList.toggle('mal', !!mal); } };
   const pos = { lateral:'lateral', superior:'superior', ninguno:'sin anillado' }[S.anilPos] || '';
-  set('rMedidas', `${fmtCm(S.ancho)} x ${fmtCm(S.alto)} cm · ${pos}${S.anilPos!=='ninguno' ? ' '+S.anilColor+(S.anilCobertura==='parcial'?' (parcial)':'') : ''}`);
+  set('rMedidas', `${fmtCm(S.ancho)} x ${fmtCm(S.alto)} cm · ${esAnillo() ? pos : ENC_NOM[S.enc].toLowerCase()+' '+pos}${(S.anilPos!=='ninguno' && esAnillo()) ? ' '+S.anilColor+(S.anilCobertura==='parcial'?' (parcial)':'') : ''}`);
   set('rComp', `${S.guardas ? 'con guardas' : 'sin guardas'} · ${S.insertos.length} inserto(s)`);
   set('rReglas', `hoja interior −${fmtCm(S.reduccion*10)} mm · márgenes ${Math.round(S.margenMin*10)}/${Math.round(S.margenAnillo*10)} mm`);
   set('rWa', S.waCom ? `${S.nomCom||'Comercial'} · +${waNumero(S.waCom)}` : 'falta el número', !S.waCom);
-  if(S.anilPos==='ninguno'){ set('rAnillo', 'sin anillado'); }
+  if(S.anilPos==='ninguno' || !esAnillo()){ set('rAnillo', esAnillo() ? 'sin anillado' : ENC_NOM[S.enc].toLowerCase()+' (sin anillo)'); }
   else {
     const r = calcularAnillado();
     if(!r.minimo) set('rAnillo', 'las hojas no caben en el anillo más grande', true);
@@ -1192,6 +1195,7 @@ function volcarAnillado(){
 function renderAnillado(){
   const el = document.getElementById('aResumen'); if(!el) return;
   const r = calcularAnillado(); S.anilPaso = r.paso;
+  if(!esAnillo()){ el.innerHTML = '<span class="hint">Este cuaderno es <b>'+ENC_NOM[S.enc].toLowerCase()+'</b>: no lleva anillo, ni calibre, ni loops. En el montaje, en la franja del lomo, sale la palabra <b>'+ENC_TXT[S.enc]+'</b>.</span>'; return; }
   if(S.anilPos==='ninguno'){ el.innerHTML = '<span class="hint">Este trabajo no lleva anillado.</span>'; return; }
   const fmt = n => n.toLocaleString('es-CO');
   const lin = [];
@@ -1220,7 +1224,29 @@ function datosAnillado(pos){
 }
 // Posición de los puntos negros dentro del PNG del anillo (fracción del ancho / alto del dibujo)
 const ANILLO_PUNTO_X = 0.86, ANILLO_PUNTO_Y = 0.48;
+const ENC_NOM = { anillado:'Anillado', costura:'Cosido en hilo', gancho:'Con gancho', pegue:'Pegado' }, ENC_TXT = { costura:'COSTURA', gancho:'GANCHO', pegue:'PEGUE' };
+function esAnillo(){ return !S.enc || S.enc==='anillado'; }
+// Cuaderno cosido, con gancho o pegado: en lugar del anillo va la palabra (COSTURA / GANCHO / PEGUE) en la franja del lomo
+function dibujarLomoTexto(cx, x, y, w, h, cara, pos, s){
+  const t = ENC_TXT[S.enc]; if(!t) return;
+  const fr = Math.max(0.8, S.anilEntra || 1) * s;
+  cx.save();
+  cx.strokeStyle = '#94a3b8'; cx.lineWidth = Math.max(1, 0.03*s); cx.setLineDash([0.3*s, 0.2*s]);
+  cx.font = 'bold '+Math.round(0.5*s)+'px Arial, sans-serif'; cx.fillStyle = '#1e3a5f'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+  const txt = t.split('').join(' ');
+  if(pos==='lateral'){
+    const xl = cara==='respaldo' ? x+w-fr : x+fr, xc = cara==='respaldo' ? x+w-fr/2 : x+fr/2;
+    cx.beginPath(); cx.moveTo(xl, y); cx.lineTo(xl, y+h); cx.stroke();
+    cx.setLineDash([]); cx.translate(xc, y+h/2); cx.rotate(-Math.PI/2); cx.fillText(txt, 0, 0);
+  } else {
+    cx.beginPath(); cx.moveTo(x, y+fr); cx.lineTo(x+w, y+fr); cx.stroke();
+    cx.setLineDash([]); cx.fillText(txt, x+w/2, y+fr/2);
+  }
+  cx.restore();
+}
 function dibujarAnillos(cx, x, y, w, h, cara, pos, color, s){
+  if(pos==='ninguno') return;
+  if(!esAnillo()){ dibujarLomoTexto(cx, x, y, w, h, cara, pos, s); return; }
   const da = datosAnillado(pos); if(!da) return;
   const im = ANILLOS_IMG[color+'_espiral'];
   if(!im || !im.complete || !im.naturalWidth) return;
@@ -1407,8 +1433,8 @@ function dibujarMontaje(){
     izq = ['OT: '+(S.ot||'-'), 'Fecha: '+fechaHoyLarga(), 'Hojas del taco: '+(S.hojasTaco||'-'),
       S.insertos.length ? 'Insertos: '+S.insertos.length+(S.hojasIns?' ('+S.hojasIns+' hojas)':'') : 'Insertos: no lleva'];
     der = ['Carátula: '+tapaNom, S.guardas ? 'Guardas: sí lleva' : 'Guardas: no lleva',
-      S.anilPos==='ninguno' ? 'Anillado: no lleva' : 'Anillado: doble O '+(S.anilPos==='lateral'?'lateral':'superior')+', '+S.anilColor+(S.anilCobertura==='parcial'?' (parcial)':''),
-      (S.anilPos!=='ninguno' && ra.elegido) ? 'Calibre del anillo: '+ra.elegido+' mm' : ''];
+      !esAnillo() ? 'Encuadernación: '+ENC_NOM[S.enc].toLowerCase() : S.anilPos==='ninguno' ? 'Anillado: no lleva' : 'Anillado: doble O '+(S.anilPos==='lateral'?'lateral':'superior')+', '+S.anilColor+(S.anilCobertura==='parcial'?' (parcial)':''),
+      (S.anilPos!=='ninguno' && esAnillo() && ra.elegido) ? 'Calibre del anillo: '+ra.elegido+' mm' : ''];
   }
   cx.fillStyle = '#374151'; cx.font = '27px Arial, sans-serif';
   izq.forEach((t,i)=>cx.fillText(recorta(t, 380), bx+24, fy+88+i*38));
@@ -1448,7 +1474,7 @@ async function estacionAsegurarCarpeta(){
   const E = tacticalEstacion, msg = document.getElementById('estacionMsg');
   if(!(await E.estado())){ msg.textContent = 'La estación de diseño no está conectada: abre el programa en el PC de diseño y recarga.'; return null; }
   if(!S.ot && !S.cliente){ alert('Escribe la OT o el cliente primero, para nombrar la carpeta.'); return null; }
-  const datos = { tipoMontaje:S.modo, cantidad:S.cantidad, ancho:S.ancho, alto:S.alto, anillado:S.anilPos, colorAnillo:S.anilColor, tapa:S.tapaTipo, fecha:fechaHoyIso() };
+  const datos = { tipoMontaje:S.modo, cantidad:S.cantidad, ancho:S.ancho, alto:S.alto, anillado:S.anilPos, encuadernacion:S.enc, colorAnillo:S.anilColor, tapa:S.tapaTipo, fecha:fechaHoyIso() };
   const d = await E.crearTrabajo(S.ot, S.cliente, datos);
   if(!d.ok){ msg.textContent = 'No se pudo crear la carpeta: '+(d.error||''); return null; }
   return d;
