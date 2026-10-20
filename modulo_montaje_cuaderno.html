@@ -609,6 +609,18 @@ function buscarCotizacion(){
         return variantesOT(ql).some(v=>o.includes(v)) || sinTildes(nombreClienteCot(c)||cli).includes(sinTildes(q));
       }).slice(-15).reverse();
     }
+    // Cotizaciones de Cuadernos que solo existen como negocio del CRM (opps / historial de cierres, con sus parámetros dentro)
+    try{
+      const base = variantesOT(q);
+      const { data:dOpps } = await tacticalSupabase.from('opps').select('*').or(base.map(v=>`ot.ilike.%${v}%`).concat([`nombre_cli.ilike.%${q}%`], idsClientesCRM(q)).join(',')).order('created_at', { ascending:false }).limit(15);
+      const { data:dHist } = await tacticalSupabase.from('historial_cierres').select('*').or(base.map(v=>`snapshot->>ot.ilike.%${v}%`).concat([`snapshot->>nombreCli.ilike.%${q}%`]).join(',')).order('fecha_cierre', { ascending:false }).limit(15);
+      const negocios = [...(dOpps||[]).map(tacticalOppDeDb), ...(dHist||[]).map(tacticalHistorialDeDb)].filter(o=>o.linea==='cuadernos');
+      negocios.forEach(o=>{
+        if(res.some(c=>c.id===o.id || (o.ot && c.ot===o.ot))) return;           // ya salió la cotización completa
+        const c = { id:'neg_'+o.id, ot:o.ot, idCli:o.idCli, cliente:{ empresa:o.nombreCli }, params:o.cotParams || { cantidad:o.cantidad }, desc:o.desc, _negocio:true };
+        if(!cotizaciones.some(x=>x.id===c.id)) cotizaciones.push(c); res.push(c);
+      });
+    } catch(e){ console.warn('Búsqueda en negocios del CRM', e); }
     // cotizaciones de las otras calculadoras (cajas, carpetas, volantes, libre...) con el mismo criterio
     let otras = [];
     try{
