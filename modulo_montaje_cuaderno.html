@@ -546,14 +546,30 @@ function volcarForm(){
 /* ======================= CLIENTES: sugerencias mientras se escribe ======================= */
 let CLIENTES = [];
 const sinTildes = t => String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+let _tSugCli = null;
+function clienteParaLista(c){ const n = (typeof tacticalNombreCliente==='function' ? tacticalNombreCliente(c) : (c.empresa||c.nombre||'')) || ''; return { ...c, _n:n, _k: sinTildes([n, c.empresa, c.nombre].join(' ')) }; }
 function sugerirClientes(){
-  const q = sinTildes(document.getElementById('fCliente').value.trim()), caja = document.getElementById('cliSug');
-  if(q.length < 2 || !CLIENTES.length){ caja.style.display = 'none'; return; }
-  const palabras = q.split(/\s+/);
-  const res = CLIENTES.filter(c=>palabras.every(w=>c._k.includes(w))).slice(0,8);
-  window._cliRes = res;
-  caja.innerHTML = res.length ? res.map((c,i)=>`<div onmousedown="elegirCliente(${i})"><b>${esc(c._n)}</b>${c.nombre && c.nombre!==c._n ? ` <small>· ${esc(c.nombre)}</small>` : ''}${c.wp ? ` <small>· ${esc(c.wp)}</small>` : ''}</div>`).join('') : '<div style="cursor:default;color:#64748b;">No hay clientes parecidos: se usará el nombre que escribes</div>';
-  caja.style.display = 'block';
+  clearTimeout(_tSugCli);
+  _tSugCli = setTimeout(async ()=>{
+    const crudo = document.getElementById('fCliente').value.trim(), q = sinTildes(crudo), caja = document.getElementById('cliSug');
+    if(q.length < 2){ caja.style.display = 'none'; return; }
+    const palabras = q.split(/\s+/);
+    let res = CLIENTES.filter(c=>palabras.every(w=>c._k.includes(w)));
+    // Consulta directa al CRM: la lista cargada al entrar puede estar vacía o incompleta (tope de 1000 filas, carga fallida)
+    let nota = '';
+    try{
+      const limpio = crudo.replace(/[,%()]/g,' ').trim();
+      const { data, error } = await tacticalSupabase.from('clientes').select('*').or(`empresa.ilike.%${limpio}%,nombre.ilike.%${limpio}%`).limit(15);
+      if(error) throw error;
+      (data||[]).map(tacticalClienteDeDb).map(clienteParaLista).filter(c=>c._n).forEach(c=>{
+        if(!CLIENTES.some(x=>x.id===c.id)) CLIENTES.push(c);
+        if(!res.some(x=>x.id===c.id)) res.push(c);
+      });
+    } catch(e){ console.warn('Búsqueda de clientes en el servidor', e); nota = ' · error: '+((e&&e.message)||e); }
+    res = res.slice(0,8); window._cliRes = res;
+    caja.innerHTML = res.length ? res.map((c,i)=>`<div onmousedown="elegirCliente(${i})"><b>${esc(c._n)}</b>${c.nombre && c.nombre!==c._n ? ` <small>· ${esc(c.nombre)}</small>` : ''}${c.wp ? ` <small>· ${esc(c.wp)}</small>` : ''}</div>`).join('') : '<div style="cursor:default;color:#64748b;font-size:12px;">Sin coincidencias en el CRM (clientes cargados: '+CLIENTES.length+')'+esc(nota)+'</div>';
+    caja.style.display = 'block';
+  }, 250);
 }
 function ocultarSugerencias(){ const c = document.getElementById('cliSug'); if(c) c.style.display = 'none'; }
 function elegirCliente(i){
@@ -565,7 +581,7 @@ function elegirCliente(i){
 async function cargarClientesCRM(){
   try{
     const lista = await tacticalClientesCargar();
-    CLIENTES = (lista||[]).map(c=>{ const n = (typeof tacticalNombreCliente==='function' ? tacticalNombreCliente(c) : (c.empresa||c.nombre||'')) || ''; return { ...c, _n:n, _k: sinTildes([n, c.empresa, c.nombre].join(' ')) }; }).filter(c=>c._n);
+    CLIENTES = (lista||[]).map(clienteParaLista).filter(c=>c._n);
   } catch(e){ console.warn('Clientes no disponibles', e); CLIENTES = []; }
 }
 
@@ -573,6 +589,14 @@ async function cargarClientesCRM(){
 // Las OT se guardan como OT-2610-18 (OT-AAMM-consecutivo). Quien escribe puede usar "2610-18", "261018", "OT 2610 18", "ot2610-18"...
 // Clientes del CRM cuyo nombre coincide (sin importar tildes ni mayúsculas): sus cotizaciones se buscan por id_cliente,
 // porque a veces la cotización no guardó el nombre de la empresa, solo el cliente enlazado.
+// Trae del CRM (directo al servidor) los clientes que coinciden y los suma a CLIENTES, para poder buscar sus cotizaciones por id
+async function traerClientesCRM(q){
+  try{
+    const limpio = String(q||'').replace(/[,%()]/g,' ').trim(); if(limpio.length < 2) return;
+    const { data } = await tacticalSupabase.from('clientes').select('*').or(`empresa.ilike.%${limpio}%,nombre.ilike.%${limpio}%`).limit(15);
+    (data||[]).map(tacticalClienteDeDb).map(clienteParaLista).filter(c=>c._n).forEach(c=>{ if(!CLIENTES.some(x=>x.id===c.id)) CLIENTES.push(c); });
+  } catch(e){ console.warn('Clientes del CRM', e); }
+}
 function idsClientesCRM(q){
   const k = sinTildes(q); if(k.length < 2) return [];
   const ids = CLIENTES.filter(c=>c._k.includes(k)).slice(0,40).map(c=>String(c.id)).filter(i=>/^[\w-]+$/.test(i));
@@ -598,6 +622,7 @@ function buscarCotizacion(){
     const caja = document.getElementById('cotResultados');
     if(q.length < 2){ caja.style.display='none'; return; }
     const ql = q.toLowerCase();
+    await traerClientesCRM(q);
     // búsqueda en el servidor (la carga inicial trae como máximo 1000 filas y deja fuera las cotizaciones más nuevas)
     let res = [], errBusq = '';
     try{
@@ -1230,20 +1255,18 @@ const ENC_NOM = { anillado:'Anillado', costura:'Cosido en hilo', gancho:'Con gan
 function esAnillo(){ return !S.enc || S.enc==='anillado'; }
 // Cuaderno cosido, con gancho o pegado: en lugar del anillo va la palabra (COSTURA / GANCHO / PEGUE) en la franja del lomo
 function dibujarLomoTexto(cx, x, y, w, h, cara, pos, s){
+  // (x,y,w,h) = la hoja misma. La palabra va DENTRO del diseño, a ~1,3 cm del borde del lomo (ese borde queda en el centro al abrir
+  // el cuaderno), sin ninguna línea: el lomo no se ve por fuera. Trazo blanco alrededor para que se lea sobre cualquier fondo.
   const t = ENC_TXT[S.enc]; if(!t) return;
-  const fr = Math.max(0.8, S.anilEntra || 1) * s;
+  const d = 1.3 * s, txt = t.split('').join(' ');
   cx.save();
-  cx.strokeStyle = '#94a3b8'; cx.lineWidth = Math.max(1, 0.03*s); cx.setLineDash([0.3*s, 0.2*s]);
-  cx.font = 'bold '+Math.round(0.5*s)+'px Arial, sans-serif'; cx.fillStyle = '#1e3a5f'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
-  const txt = t.split('').join(' ');
+  cx.font = 'bold '+Math.round(0.45*s)+'px Arial, sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+  cx.lineJoin = 'round'; cx.lineWidth = Math.max(2, 0.12*s); cx.strokeStyle = 'rgba(255,255,255,0.95)'; cx.fillStyle = '#1e3a5f';
   if(pos==='lateral'){
-    const xl = cara==='respaldo' ? x+w-fr : x+fr, xc = cara==='respaldo' ? x+w-fr/2 : x+fr/2;
-    cx.beginPath(); cx.moveTo(xl, y); cx.lineTo(xl, y+h); cx.stroke();
-    cx.setLineDash([]); cx.translate(xc, y+h/2); cx.rotate(-Math.PI/2); cx.fillText(txt, 0, 0);
-  } else {
-    cx.beginPath(); cx.moveTo(x, y+fr); cx.lineTo(x+w, y+fr); cx.stroke();
-    cx.setLineDash([]); cx.fillText(txt, x+w/2, y+fr/2);
-  }
+    const xc = cara==='respaldo' ? x+w-d : x+d;
+    cx.translate(xc, y+h/2); cx.rotate(-Math.PI/2);
+  } else { cx.translate(x+w/2, y+d); }
+  cx.strokeText(txt, 0, 0); cx.fillText(txt, 0, 0);
   cx.restore();
 }
 function dibujarAnillos(cx, x, y, w, h, cara, pos, color, s){
@@ -1398,7 +1421,7 @@ function dibujarMontaje(){
       else if(sl.blanco){ cx.fillStyle='#fff'; cx.fillRect(px,py,pwP,phP); }
       else { cx.fillStyle='#eef1f4'; cx.fillRect(px,py,pwP,phP); cx.fillStyle='#94a3b8'; cx.font='30px Arial'; cx.textAlign='center'; cx.fillText('Falta el archivo', px+pwP/2, py+phP/2); }
       cx.strokeStyle = '#c7ced6'; cx.lineWidth = 2; cx.strokeRect(px,py,pwP,phP);
-      if(S.modo!=='general') dibujarAnillos(cx, x, y, g.cw, g.ch, sl.cara || 'frente', S.anilPos, S.anilColor, s);
+      if(S.modo!=='general'){ if(esAnillo()) dibujarAnillos(cx, x, y, g.cw, g.ch, sl.cara || 'frente', S.anilPos, S.anilColor, s); else dibujarAnillos(cx, px, py, pwP, phP, sl.cara || 'frente', S.anilPos, S.anilColor, s); }
       if(sl.cotas) dibujarCotas(cx, px, py, pwP, phP, dm, (S.anilPos==='lateral' && sl.cara==='respaldo') ? 'izq' : 'der');
       const mat = materialDeSlot(sl);
       if(mat){   // material en gris, pequeño, debajo de la gráfica (y de la cota del ancho si la tiene)
