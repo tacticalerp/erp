@@ -565,6 +565,14 @@ async function cargarClientesCRM(){
 }
 
 /* ======================= COTIZACIONES DE CUADERNOS ======================= */
+// Las OT se guardan como OT-2610-18 (OT-AAMM-consecutivo). Quien escribe puede usar "2610-18", "261018", "OT 2610 18", "ot2610-18"...
+function variantesOT(q){
+  const v = new Set([q]); const limpio = q.replace(/^ot[\s-]*/i,'').trim(); if(limpio) v.add(limpio);
+  const dig = limpio.replace(/[^0-9]/g,'');
+  if(dig.length >= 5){ v.add(dig.slice(0,4)+'-'+dig.slice(4)); }          // 261018 -> 2610-18
+  const sep = limpio.replace(/[\s_.]+/g,'-'); if(sep) v.add(sep);        // "2610 18" -> 2610-18
+  return [...v].filter(x=>x.length>=2);
+}
 let _tBuscaCot = null;
 function buscarCotizacion(){
   clearTimeout(_tBuscaCot);
@@ -574,24 +582,25 @@ function buscarCotizacion(){
     if(q.length < 2){ caja.style.display='none'; return; }
     const ql = q.toLowerCase();
     // búsqueda en el servidor (la carga inicial trae como máximo 1000 filas y deja fuera las cotizaciones más nuevas)
-    let res = [];
+    let res = [], errBusq = '';
     try{
       const { data, error } = await tacticalSupabase.from('cotizaciones_cuadernos').select('*')
-        .or(`ot.ilike.%${q}%,cliente_empresa.ilike.%${q}%,cliente_encargado.ilike.%${q}%`).order('created_at', { ascending:false }).limit(15);
+        .or(variantesOT(q).map(v=>`ot.ilike.%${v}%`).concat([`cliente_empresa.ilike.%${q}%`, `cliente_encargado.ilike.%${q}%`]).join(',')).order('created_at', { ascending:false }).limit(15);
       if(error) throw error;
       res = (data||[]).map(tacticalCotizacionDeDb);
       res.forEach(c=>{ if(!cotizaciones.some(x=>x.id===c.id)) cotizaciones.push(c); });
     } catch(e){
-      console.warn('Búsqueda en el servidor falló, se usa la lista cargada', e);
+      console.warn('Búsqueda en el servidor falló, se usa la lista cargada', e); errBusq = (e && (e.message||e.details)) || String(e);
       res = cotizaciones.filter(c=>{
         const cli = (c.cliente && (c.cliente.empresa||c.cliente.encargado)) || '';
-        return (c.ot||'').toLowerCase().includes(ql) || cli.toLowerCase().includes(ql);
+        const o = (c.ot||'').toLowerCase();
+        return variantesOT(ql).some(v=>o.includes(v)) || cli.toLowerCase().includes(ql);
       }).slice(-15).reverse();
     }
     caja.innerHTML = res.length ? res.map(c=>{
       const cli = (c.cliente && (c.cliente.empresa||c.cliente.encargado)) || '(sin cliente)';
       return `<div onclick="cargarCotizacion('${c.id}')"><b>${esc(c.ot||'sin OT')}</b> — ${esc(cli)} <span style="color:#64748b">· ${esc((c.desc||'').slice(0,60))}</span></div>`;
-    }).join('') : '<div style="cursor:default;color:#64748b;">Sin resultados en cotizaciones de Cuadernos. Si es de otro producto (cajas, carpetas, bolsas…), usa "Otro producto".</div>';
+    }).join('') : '<div style="cursor:default;color:#64748b;">Sin resultados en cotizaciones de Cuadernos. Si es de otro producto (cajas, carpetas, bolsas…), usa "Otro producto".'+(errBusq ? '<br><b style="color:#b91c1c">Error de la búsqueda: '+esc(errBusq)+'</b>' : '')+'<br><span style="font-size:11px">Cotizaciones de Cuadernos cargadas en esta página: '+cotizaciones.length+'</span></div>';
     caja.style.display = 'block';
   }, 300);
 }
