@@ -565,19 +565,35 @@ async function cargarClientesCRM(){
 }
 
 /* ======================= COTIZACIONES DE CUADERNOS ======================= */
+let _tBuscaCot = null;
 function buscarCotizacion(){
-  const q = document.getElementById('buscaCot').value.trim().toLowerCase();
-  const caja = document.getElementById('cotResultados');
-  if(q.length < 2){ caja.style.display='none'; return; }
-  const res = cotizaciones.filter(c=>{
-    const cli = (c.cliente && (c.cliente.empresa||c.cliente.encargado)) || '';
-    return (c.ot||'').toLowerCase().includes(q) || cli.toLowerCase().includes(q);
-  }).slice(-15).reverse();
-  caja.innerHTML = res.length ? res.map(c=>{
-    const cli = (c.cliente && (c.cliente.empresa||c.cliente.encargado)) || '(sin cliente)';
-    return `<div onclick="cargarCotizacion('${c.id}')"><b>${esc(c.ot||'sin OT')}</b> — ${esc(cli)} <span style="color:#64748b">· ${esc((c.desc||'').slice(0,60))}</span></div>`;
-  }).join('') : '<div style="cursor:default;color:#64748b;">Sin resultados</div>';
-  caja.style.display = 'block';
+  clearTimeout(_tBuscaCot);
+  _tBuscaCot = setTimeout(async ()=>{
+    const q = document.getElementById('buscaCot').value.trim().replace(/[,%()]/g,' ').trim();
+    const caja = document.getElementById('cotResultados');
+    if(q.length < 2){ caja.style.display='none'; return; }
+    const ql = q.toLowerCase();
+    // búsqueda en el servidor (la carga inicial trae como máximo 1000 filas y deja fuera las cotizaciones más nuevas)
+    let res = [];
+    try{
+      const { data, error } = await tacticalSupabase.from('cotizaciones_cuadernos').select('*')
+        .or(`ot.ilike.%${q}%,cliente_empresa.ilike.%${q}%,cliente_encargado.ilike.%${q}%`).order('created_at', { ascending:false }).limit(15);
+      if(error) throw error;
+      res = (data||[]).map(tacticalCotizacionDeDb);
+      res.forEach(c=>{ if(!cotizaciones.some(x=>x.id===c.id)) cotizaciones.push(c); });
+    } catch(e){
+      console.warn('Búsqueda en el servidor falló, se usa la lista cargada', e);
+      res = cotizaciones.filter(c=>{
+        const cli = (c.cliente && (c.cliente.empresa||c.cliente.encargado)) || '';
+        return (c.ot||'').toLowerCase().includes(ql) || cli.toLowerCase().includes(ql);
+      }).slice(-15).reverse();
+    }
+    caja.innerHTML = res.length ? res.map(c=>{
+      const cli = (c.cliente && (c.cliente.empresa||c.cliente.encargado)) || '(sin cliente)';
+      return `<div onclick="cargarCotizacion('${c.id}')"><b>${esc(c.ot||'sin OT')}</b> — ${esc(cli)} <span style="color:#64748b">· ${esc((c.desc||'').slice(0,60))}</span></div>`;
+    }).join('') : '<div style="cursor:default;color:#64748b;">Sin resultados en cotizaciones de Cuadernos. Si es de otro producto (cajas, carpetas, bolsas…), usa "Otro producto".</div>';
+    caja.style.display = 'block';
+  }, 300);
 }
 function cargarCotizacion(id){
   const c = cotizaciones.find(x=>x.id===id); if(!c) return;
