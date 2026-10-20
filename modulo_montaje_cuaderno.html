@@ -646,10 +646,17 @@ function buscarCotizacion(){
       const base = variantesOT(q);
       const { data:dOpps } = await tacticalSupabase.from('opps').select('*').or(base.map(v=>`ot.ilike.%${v}%`).concat([`nombre_cli.ilike.%${q}%`], idsClientesCRM(q)).join(',')).order('created_at', { ascending:false }).limit(15);
       const { data:dHist } = await tacticalSupabase.from('historial_cierres').select('*').or(base.map(v=>`snapshot->>ot.ilike.%${v}%`).concat([`snapshot->>nombreCli.ilike.%${q}%`]).join(',')).order('fecha_cierre', { ascending:false }).limit(15);
-      const negocios = [...(dOpps||[]).map(tacticalOppDeDb), ...(dHist||[]).map(tacticalHistorialDeDb)].filter(o=>o.linea==='cuadernos');
+      const negocios = [...(dOpps||[]).map(tacticalOppDeDb), ...(dHist||[]).map(tacticalHistorialDeDb)];
       negocios.forEach(o=>{
         if(res.some(c=>c.id===o.id || (o.ot && c.ot===o.ot))) return;           // ya salió la cotización completa
-        const c = { id:'neg_'+o.id, ot:o.ot, idCli:o.idCli, cliente:{ empresa:o.nombreCli }, params:o.cotParams || { cantidad:o.cantidad }, desc:o.desc, _negocio:true };
+        const c = { id:'neg_'+o.id, ot:o.ot, idCli:o.idCli, cliente:{ empresa:o.nombreCli }, params:o.cotParams || { cantidad:o.cantidad }, desc:o.desc, _etq: o.linea==='cuadernos' ? 'negocio del CRM' : 'negocio del CRM: '+(o.linea||'') };
+        if(!cotizaciones.some(x=>x.id===c.id)) cotizaciones.push(c); res.push(c);
+      });
+      // fichas del Kanban (la OT y el cliente que se ven en el tablero), por si el negocio no se encuentra
+      const { data:dFich } = await tacticalSupabase.from('kanban_fichas').select('id, ot, id_cliente, nombre_cli, titulo').or(base.map(v=>`ot.ilike.%${v}%`).concat([`nombre_cli.ilike.%${q}%`]).join(',')).order('created_at', { ascending:false }).limit(10);
+      (dFich||[]).forEach(f=>{
+        if(res.some(c=>(f.ot && c.ot===f.ot))) return;
+        const c = { id:'kf_'+f.id, ot:f.ot, idCli:f.id_cliente, cliente:{ empresa:f.nombre_cli }, params:{}, desc:f.titulo, _etq:'ficha del Kanban' };
         if(!cotizaciones.some(x=>x.id===c.id)) cotizaciones.push(c); res.push(c);
       });
     } catch(e){ console.warn('Búsqueda en negocios del CRM', e); }
@@ -664,7 +671,7 @@ function buscarCotizacion(){
     const htmlOtras = otras.map((r,i)=>`<div onclick="cargarOtroDesdeBusqueda(${i})"><b>${esc(r.ot||'sin OT')}</b> — ${esc(r.cliente_empresa||'(sin cliente)')} <span style="color:#7c2d12">· OTRO PRODUCTO: ${esc(r.linea||'')} · ${esc((r.descripcion||'').slice(0,50))}</span></div>`).join('');
     caja.innerHTML = (res.length || otras.length) ? res.map(c=>{
       const cli = nombreClienteCot(c) || '(sin cliente)';
-      return `<div onclick="cargarCotizacion('${c.id}')"><b>${esc(c.ot||'sin OT')}</b> — ${esc(cli)} <span style="color:#64748b">· ${esc((c.desc||'').slice(0,60))}</span></div>`;
+      return `<div onclick="cargarCotizacion('${c.id}')"><b>${esc(c.ot||'sin OT')}</b> — ${esc(cli)} <span style="color:#64748b">· ${c._etq ? '<i>'+esc(c._etq)+'</i> · ' : ''}${esc((c.desc||'').slice(0,60))}</span></div>`;
     }).join('') + htmlOtras : '<div style="cursor:default;color:#64748b;">Sin resultados en cotizaciones de Cuadernos. Si es de otro producto (cajas, carpetas, bolsas…), usa "Otro producto".'+(errBusq ? '<br><b style="color:#b91c1c">Error de la búsqueda: '+esc(errBusq)+'</b>' : '')+'<br><span style="font-size:11px">Cotizaciones de Cuadernos cargadas en esta página: '+cotizaciones.length+'</span></div>';
     caja.style.display = 'block';
   }, 300);
