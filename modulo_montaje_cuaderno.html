@@ -609,12 +609,27 @@ function buscarCotizacion(){
         return variantesOT(ql).some(v=>o.includes(v)) || sinTildes(nombreClienteCot(c)||cli).includes(sinTildes(q));
       }).slice(-15).reverse();
     }
-    caja.innerHTML = res.length ? res.map(c=>{
+    // cotizaciones de las otras calculadoras (cajas, carpetas, volantes, libre...) con el mismo criterio
+    let otras = [];
+    try{
+      const filtro = variantesOT(q).map(v=>`ot.ilike.%${v}%`).concat([`cliente_empresa.ilike.%${q}%`], idsClientesCRM(q)).join(',');
+      const { data } = await tacticalSupabase.from('cotizaciones_calculadoras').select('id, linea, ot, cliente_empresa, descripcion, params, created_at').or(filtro).order('created_at', { ascending:false }).limit(15);
+      otras = data || [];
+    } catch(e){ console.warn('Búsqueda en otros productos', e); }
+    window._genFilas = otras;
+    const htmlOtras = otras.map((r,i)=>`<div onclick="cargarOtroDesdeBusqueda(${i})"><b>${esc(r.ot||'sin OT')}</b> — ${esc(r.cliente_empresa||'(sin cliente)')} <span style="color:#7c2d12">· OTRO PRODUCTO: ${esc(r.linea||'')} · ${esc((r.descripcion||'').slice(0,50))}</span></div>`).join('');
+    caja.innerHTML = (res.length || otras.length) ? res.map(c=>{
       const cli = nombreClienteCot(c) || '(sin cliente)';
       return `<div onclick="cargarCotizacion('${c.id}')"><b>${esc(c.ot||'sin OT')}</b> — ${esc(cli)} <span style="color:#64748b">· ${esc((c.desc||'').slice(0,60))}</span></div>`;
-    }).join('') : '<div style="cursor:default;color:#64748b;">Sin resultados en cotizaciones de Cuadernos. Si es de otro producto (cajas, carpetas, bolsas…), usa "Otro producto".'+(errBusq ? '<br><b style="color:#b91c1c">Error de la búsqueda: '+esc(errBusq)+'</b>' : '')+'<br><span style="font-size:11px">Cotizaciones de Cuadernos cargadas en esta página: '+cotizaciones.length+'</span></div>';
+    }).join('') + htmlOtras : '<div style="cursor:default;color:#64748b;">Sin resultados en cotizaciones de Cuadernos. Si es de otro producto (cajas, carpetas, bolsas…), usa "Otro producto".'+(errBusq ? '<br><b style="color:#b91c1c">Error de la búsqueda: '+esc(errBusq)+'</b>' : '')+'<br><span style="font-size:11px">Cotizaciones de Cuadernos cargadas en esta página: '+cotizaciones.length+'</span></div>';
     caja.style.display = 'block';
   }, 300);
+}
+// Resultado de otro producto elegido desde el buscador de Cuadernos: pasa el montaje a "Otro producto" y carga esa cotización
+function cargarOtroDesdeBusqueda(i){
+  document.getElementById('cotResultados').style.display = 'none'; document.getElementById('buscaCot').value = '';
+  const fm = document.getElementById('fModo'); fm.value = 'general'; cambiarModo();
+  cargarGeneral(i);
 }
 function cargarCotizacion(id){
   const c = cotizaciones.find(x=>x.id===id); if(!c) return;
