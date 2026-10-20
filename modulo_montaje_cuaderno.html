@@ -566,6 +566,18 @@ async function cargarClientesCRM(){
 
 /* ======================= COTIZACIONES DE CUADERNOS ======================= */
 // Las OT se guardan como OT-2610-18 (OT-AAMM-consecutivo). Quien escribe puede usar "2610-18", "261018", "OT 2610 18", "ot2610-18"...
+// Clientes del CRM cuyo nombre coincide (sin importar tildes ni mayúsculas): sus cotizaciones se buscan por id_cliente,
+// porque a veces la cotización no guardó el nombre de la empresa, solo el cliente enlazado.
+function idsClientesCRM(q){
+  const k = sinTildes(q); if(k.length < 2) return [];
+  const ids = CLIENTES.filter(c=>c._k.includes(k)).slice(0,40).map(c=>String(c.id)).filter(i=>/^[\w-]+$/.test(i));
+  return ids.length ? ['id_cliente.in.('+ids.join(',')+')'] : [];
+}
+function nombreClienteCot(c){
+  const n = (c.cliente && (c.cliente.empresa||c.cliente.encargado)) || '';
+  if(n) return n;
+  const crm = CLIENTES.find(x=>String(x.id)===String(c.idCli)); return crm ? crm._n : '';
+}
 function variantesOT(q){
   const v = new Set([q]); const limpio = q.replace(/^ot[\s-]*/i,'').trim(); if(limpio) v.add(limpio);
   const dig = limpio.replace(/[^0-9]/g,'');
@@ -585,7 +597,7 @@ function buscarCotizacion(){
     let res = [], errBusq = '';
     try{
       const { data, error } = await tacticalSupabase.from('cotizaciones_cuadernos').select('*')
-        .or(variantesOT(q).map(v=>`ot.ilike.%${v}%`).concat([`cliente_empresa.ilike.%${q}%`, `cliente_encargado.ilike.%${q}%`]).join(',')).order('created_at', { ascending:false }).limit(15);
+        .or(variantesOT(q).map(v=>`ot.ilike.%${v}%`).concat([`cliente_empresa.ilike.%${q}%`, `cliente_encargado.ilike.%${q}%`], idsClientesCRM(q)).join(',')).order('created_at', { ascending:false }).limit(15);
       if(error) throw error;
       res = (data||[]).map(tacticalCotizacionDeDb);
       res.forEach(c=>{ if(!cotizaciones.some(x=>x.id===c.id)) cotizaciones.push(c); });
@@ -594,11 +606,11 @@ function buscarCotizacion(){
       res = cotizaciones.filter(c=>{
         const cli = (c.cliente && (c.cliente.empresa||c.cliente.encargado)) || '';
         const o = (c.ot||'').toLowerCase();
-        return variantesOT(ql).some(v=>o.includes(v)) || cli.toLowerCase().includes(ql);
+        return variantesOT(ql).some(v=>o.includes(v)) || sinTildes(nombreClienteCot(c)||cli).includes(sinTildes(q));
       }).slice(-15).reverse();
     }
     caja.innerHTML = res.length ? res.map(c=>{
-      const cli = (c.cliente && (c.cliente.empresa||c.cliente.encargado)) || '(sin cliente)';
+      const cli = nombreClienteCot(c) || '(sin cliente)';
       return `<div onclick="cargarCotizacion('${c.id}')"><b>${esc(c.ot||'sin OT')}</b> — ${esc(cli)} <span style="color:#64748b">· ${esc((c.desc||'').slice(0,60))}</span></div>`;
     }).join('') : '<div style="cursor:default;color:#64748b;">Sin resultados en cotizaciones de Cuadernos. Si es de otro producto (cajas, carpetas, bolsas…), usa "Otro producto".'+(errBusq ? '<br><b style="color:#b91c1c">Error de la búsqueda: '+esc(errBusq)+'</b>' : '')+'<br><span style="font-size:11px">Cotizaciones de Cuadernos cargadas en esta página: '+cotizaciones.length+'</span></div>';
     caja.style.display = 'block';
@@ -607,7 +619,7 @@ function buscarCotizacion(){
 function cargarCotizacion(id){
   const c = cotizaciones.find(x=>x.id===id); if(!c) return;
   const p = c.params || {};
-  S.cliente = (c.cliente && (c.cliente.empresa||c.cliente.encargado)) || '';
+  S.cliente = nombreClienteCot(c);
   S.ot = c.ot || '';
   S.cantidad = p.cantidad || '';
   // El cotizador guarda "24 x 17" como ancho 24 / alto 17: el cuaderno se monta de pie (lado largo = alto)
