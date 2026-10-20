@@ -232,7 +232,7 @@
 
 <div class="panel">
   <h2><span class="n">3</span>Cada cuadro del montaje <span class="res" id="rCuadros"></span></h2>
-  <p class="hint">Arrastra una miniatura sobre el cuadro que le corresponde (o toca la miniatura y luego el cuadro). Puedes arrastrar de un cuadro a otro para intercambiarlos.</p>
+  <p class="hint">Arrastra una miniatura sobre el cuadro que le corresponde (con un clic en la miniatura la ves al doble de tamaño). Puedes arrastrar de un cuadro a otro para intercambiarlos.</p>
   <div id="slots"></div>
 
 </div>
@@ -1065,11 +1065,10 @@ function renderPool(){
   if(!_tmManual) tamMini(S.pool.length<=6 ? 104 : S.pool.length<=12 ? 76 : 56);
   cont.innerHTML = S.pool.map(p=>{
     const usado = S.slots.find(s=>s.poolId===p.id);
-    return `<div class="thumb ${S.sel===p.id?'sel':''} ${usado?'usada':''}" draggable="true" data-id="${p.id}" onclick="clickMiniatura('${p.id}')" title="${esc(p.nombre)}">
+    return `<div class="thumb ${S.sel===p.id?'sel':''} ${usado?'usada':''}" draggable="true" data-id="${p.id}" onclick="ampliarMiniatura('${p.id}', this)" title="Clic para ampliar al doble · arrástrala al cuadro que le corresponde: ${esc(p.nombre)}">
       ${usado?'<span class="tag">✓</span>':''}
       ${p.color && p.color.rgb ? '<span class="tag rgb">RGB</span>':''}
       ${pareceAbierta(p)?`<button class="abierta" title="Parece una página abierta (dos caras). Clic para cortarla por la mitad" onclick="event.stopPropagation(); dividirPagina('${p.id}')">✂ 2 caras</button>`:''}
-      <button type="button" class="lupa-mini" title="Ampliar esta página al doble para identificarla" onclick="event.stopPropagation(); ampliarMiniatura('${p.id}', this)"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="10" cy="10" r="6"/><path d="M15 15l6 6"/></svg></button>
       <span class="num">${S.pool.indexOf(p)+1}</span><img src="${p.dataUrl}" alt=""><div class="nom">${esc(p.nombre)}</div><div class="arch" style="background:${colorArchivo(p.archivo||p.nombre)}"></div></div>`;
   }).join('');
   cont.querySelectorAll('.thumb').forEach(el=>{
@@ -1080,7 +1079,7 @@ function renderPool(){
 function ampliarMiniatura(id, btn){
   const p = S.pool.find(x=>x.id===id); if(!p) return;
   cerrarMiniaturaAmpliada();
-  const th = btn.closest('.thumb'), im = th.querySelector('img'), r = im.getBoundingClientRect();
+  const th = btn.closest ? btn.closest('.thumb') : btn, im = th.querySelector('img'), r = im.getBoundingClientRect();
   let w = Math.max(160, r.width*2), h = w * p.h / p.w;
   const maxH = window.innerHeight - 70; if(h > maxH){ h = maxH; w = h * p.w / p.h; }
   const box = document.createElement('div'); box.id = 'miniAmp';
