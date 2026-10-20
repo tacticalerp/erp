@@ -1452,7 +1452,13 @@ function dibujarMontaje(){
   const grandes = general
     ? ['Cliente: '+(S.cliente||''), unica ? 'Cantidad: '+(unica.cantidad||'') : 'Piezas: '+S.piezas.length, unica ? 'Tamaño: '+fmtCm(parseFloat(unica.alto)||0)+' x '+fmtCm(parseFloat(unica.ancho)||0)+' cm' : '']
     : ['Cliente: '+(S.cliente||''), 'Cantidad: '+(S.cantidad ? S.cantidad+' cuadernos' : ''), 'Tamaño: '+fmtCm(S.alto)+' x '+fmtCm(S.ancho)+' cm'];
-  grandes.forEach((t,i)=>{ if(t) cx.fillText(recorta(t, 800), 680, fy+70+i*68); });
+  // el cliente puede ser largo: se parte en 2 líneas para no quedar debajo del recuadro de datos (a la derecha)
+  const anchoG = Math.max(300, bx - 680 - 30);
+  const lineasCli = envolverTexto(cx, grandes[0], anchoG, 2).map(t=>recorta(t, anchoG));
+  const base = fy + 70 - (lineasCli.length > 1 ? 24 : 0);
+  lineasCli.forEach((t,j)=>cx.fillText(t, 680, base + j*54));
+  const yRes = base + (lineasCli.length-1)*54;
+  grandes.slice(1).forEach((t,i)=>{ if(t) cx.fillText(recorta(t, anchoG), 680, yRes + 68*(i+1)); });
   // recuadro de datos del trabajo
   cx.fillStyle = '#f8fafc'; cx.strokeStyle = '#cbd5e1'; cx.lineWidth = 2;
   cx.beginPath(); cx.roundRect ? cx.roundRect(bx, fy, bw, bh, 14) : cx.rect(bx, fy, bw, bh); cx.fill(); cx.stroke();
