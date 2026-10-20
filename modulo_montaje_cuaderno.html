@@ -243,6 +243,7 @@
   <div class="row2" style="margin:0 0 10px;">
     <button class="btn rojo" onclick="descargar('pdf')">Descargar PDF</button>
     <button class="btn rojo" onclick="descargar('jpg')">Descargar JPG</button>
+    <button class="btn gris" title="Ver el montaje en grande para revisar textos y detalles" onclick="abrirLupaMontaje()">Ampliar vista (lupa)</button>
     <button class="btn verde" onclick="guardarNube()">Guardar en la nube</button>
     <button class="btn" style="background:#25d366;border-bottom:3px solid #128c7e;display:inline-flex;align-items:center;gap:6px;" onclick="enviarWaCliente()"><svg viewBox="0 0 24 24" width="18" height="18" fill="#fff"><path id="waIcoUi"></path></svg>Enviar al cliente por WhatsApp</button>
   </div>
@@ -1419,7 +1420,8 @@ function dibujarMontaje(){
       const px = x+ox, py = y+oy;
       const it = S.pool.find(q=>q.id===sl.poolId);
       if(it){ dibujarImagenEnCaja(cx, it.img, px, py, pwP, phP, sl.fit); }
-      else if(sl.blanco){ cx.fillStyle='#fff'; cx.fillRect(px,py,pwP,phP); }
+      else if(sl.blanco){ cx.fillStyle='#fff'; cx.fillRect(px,py,pwP,phP);   // hoja en blanco: sin relleno gris (no se imprime gris), solo el borde y el texto al centro
+        cx.fillStyle='#8b95a3'; cx.font='bold 34px Arial, sans-serif'; cx.textAlign='center'; cx.textBaseline='middle'; cx.fillText('HOJA EN BLANCO', px+pwP/2, py+phP/2); cx.textBaseline='alphabetic'; }
       else { cx.fillStyle='#eef1f4'; cx.fillRect(px,py,pwP,phP); cx.fillStyle='#94a3b8'; cx.font='30px Arial'; cx.textAlign='center'; cx.fillText('Falta el archivo', px+pwP/2, py+phP/2); }
       cx.strokeStyle = '#c7ced6'; cx.lineWidth = 2; cx.strokeRect(px,py,pwP,phP);
       if(S.modo!=='general'){ if(esAnillo()) dibujarAnillos(cx, x, y, g.cw, g.ch, sl.cara || 'frente', S.anilPos, S.anilColor, s); else dibujarAnillos(cx, px, py, pwP, phP, sl.cara || 'frente', S.anilPos, S.anilColor, s); }
@@ -1609,6 +1611,39 @@ function faltantes(){ return S.slots.filter(s=>!s.poolId && !s.blanco).map(s=>s.
 function confirmarFaltantes(){
   const f = faltantes();
   return !f.length || confirm('Estos cuadros no tienen archivo:\n\n- '+f.join('\n- ')+'\n\n¿Generar el montaje así de todas formas?');
+}
+/* ======================= LUPA: vista ampliada del montaje ======================= */
+const LUPAM = { z:1, aj:1 };
+function abrirLupaMontaje(){
+  let box = document.getElementById('lupaMBox');
+  if(!box){
+    box = document.createElement('div'); box.id = 'lupaMBox';
+    box.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.93);display:flex;flex-direction:column';
+    box.innerHTML = '<div style="display:flex;gap:8px;align-items:center;padding:8px 12px;background:#0f172a;color:#fff;flex-wrap:wrap"><b>Vista ampliada</b>'+
+      '<button class="btn gris" onclick="lupaMZoom(0.7)">−</button><span id="lupaMPct" style="min-width:52px;text-align:center"></span><button class="btn gris" onclick="lupaMZoom(1.4)">+</button>'+
+      '<button class="btn gris" onclick="lupaMZoom(0)">Ajustar al ancho</button><button class="btn gris" onclick="lupaMZoom(-1)">Tamaño real del archivo</button>'+
+      '<span style="opacity:.7;font-size:12px">Arrastra para moverte · Ctrl + rueda = zoom · Esc cierra</span><button class="btn rojo" style="margin-left:auto" onclick="cerrarLupaMontaje()">Cerrar</button></div>'+
+      '<div id="lupaMScroll" style="flex:1;overflow:auto;cursor:grab"><canvas id="lupaMCv" style="display:block;background:#fff"></canvas></div>';
+    document.body.appendChild(box);
+    const sc = document.getElementById('lupaMScroll'); let drag = null;
+    sc.addEventListener('mousedown', e=>{ drag = { x:e.clientX, y:e.clientY, l:sc.scrollLeft, t:sc.scrollTop }; sc.style.cursor = 'grabbing'; });
+    window.addEventListener('mouseup', ()=>{ drag = null; sc.style.cursor = 'grab'; });
+    window.addEventListener('mousemove', e=>{ if(drag){ sc.scrollLeft = drag.l - (e.clientX-drag.x); sc.scrollTop = drag.t - (e.clientY-drag.y); } });
+    sc.addEventListener('wheel', e=>{ if(e.ctrlKey){ e.preventDefault(); lupaMZoom(e.deltaY<0 ? 1.15 : 1/1.15); } }, { passive:false });
+    window.addEventListener('keydown', e=>{ if(e.key==='Escape') cerrarLupaMontaje(); });
+  }
+  const src = document.getElementById('lienzo'), dst = document.getElementById('lupaMCv');
+  dst.width = src.width; dst.height = src.height; dst.getContext('2d').drawImage(src, 0, 0);
+  box.style.display = 'flex';
+  lupaMZoom(0);
+}
+function cerrarLupaMontaje(){ const b = document.getElementById('lupaMBox'); if(b) b.style.display = 'none'; }
+function lupaMZoom(f){
+  const sc = document.getElementById('lupaMScroll'), cv = document.getElementById('lupaMCv'); if(!sc || !cv || !cv.width) return;
+  const aj = (sc.clientWidth - 4) / cv.width; LUPAM.aj = aj;
+  if(f===0) LUPAM.z = aj; else if(f===-1) LUPAM.z = 1; else LUPAM.z = Math.max(aj*0.5, Math.min(LUPAM.z*f, 4));
+  cv.style.width = (cv.width*LUPAM.z)+'px'; cv.style.height = (cv.height*LUPAM.z)+'px';
+  document.getElementById('lupaMPct').textContent = Math.round(LUPAM.z*100)+'%';
 }
 function canvasABlob(tipo, calidad){ return new Promise(ok=>document.getElementById('lienzo').toBlob(ok, tipo, calidad)); }
 async function pdfBlob(){
@@ -1823,6 +1858,8 @@ async function descargarPrueba(formato){
         const cv = document.createElement('canvas'); cv.width = wpx; cv.height = hpx;
         dibujarImagenEnCaja(cv.getContext('2d'), it.img, 0, 0, wpx, hpx, sl.fit);
         doc.addImage(cv.toDataURL('image/jpeg', 0.93), 'JPEG', x, yTop, w, hh);
+      } else if(sl.blanco){
+        doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(139,149,163); doc.text('HOJA EN BLANCO', x+w/2, yTop+hh/2, { align:'center', baseline:'middle' });
       }
       // marco gris fino (30%) para ver el límite del papel
       doc.setDrawColor(179,179,179); doc.setLineWidth(0.15); doc.rect(x-0.3, yTop-0.3, w+0.6, hh+0.6);
