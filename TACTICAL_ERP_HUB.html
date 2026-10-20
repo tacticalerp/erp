@@ -408,7 +408,9 @@
            columna, para saber dónde está una ficha aunque se baje el scroll. Los colores salen de
            KANBAN_COLUMNA_COLOR (JS) vía las variables --kb-col-bg y --kb-ac. La urgencia ya no usa el borde
            (ese es de la columna): se ve por la etiqueta roja URGENTE y un anillo rojo alrededor de la ficha. */
-        .kb-sel { cursor:text; -webkit-user-select:text; user-select:text; }
+        /* Conde 2026-10-20: "sigo sin poder seleccionar el texto en el kanban" -- antes solo la línea de cliente/OT era seleccionable;
+           ahora también el título, las notas, la entrega y el rótulo de cada foto del carrusel (todo lo que se quiera copiar). */
+        .kb-sel, .kanban-card-title, .kanban-card-meta, .kb-carr-info { cursor:text; -webkit-user-select:text; user-select:text; }
         .kb-sel-ot { -webkit-user-select:all; user-select:all; }
         .kanban-card { background:white; border:1px solid #e2e8f0; border-radius:6px; padding:10px 12px; margin-bottom:10px; box-shadow:0 1px 3px rgba(0,0,0,0.06); border-left:4px solid var(--kb-ac, var(--secondary)); cursor:grab; }
         .kanban-card.urgente { box-shadow:0 0 0 2px var(--peligro); }
@@ -5775,15 +5777,16 @@
         }
         // Texto seleccionable en las fichas (OT, cliente...): la ficha es arrastrable (draggable), y eso impedía seleccionar texto con el mouse.
         // Al apretar el mouse sobre un texto .kb-sel la ficha deja de ser arrastrable hasta soltarlo; y si quedó texto seleccionado, ese clic no abre la ficha.
+        const KB_TEXTO_SELECCIONABLE = '.kb-sel, .kanban-card-title, .kanban-card-meta, .kb-carr-info';
         document.addEventListener('mousedown', e=>{
-          const t = e.target && e.target.closest ? e.target.closest('.kb-sel') : null; if(!t) return;
+          const t = e.target && e.target.closest ? e.target.closest(KB_TEXTO_SELECCIONABLE) : null; if(!t) return;
           const card = t.closest('.kanban-card'); if(!card) return;
           card.setAttribute('draggable', 'false');
           const volver = ()=>{ card.setAttribute('draggable', 'true'); window.removeEventListener('mouseup', volver, true); };
           window.addEventListener('mouseup', volver, true);
         }, true);
         document.addEventListener('click', e=>{
-          const t = e.target && e.target.closest ? e.target.closest('.kb-sel') : null; if(!t) return;
+          const t = e.target && e.target.closest ? e.target.closest(KB_TEXTO_SELECCIONABLE) : null; if(!t) return;
           const sel = window.getSelection && window.getSelection(); if(sel && String(sel).length > 0){ e.stopPropagation(); }
         }, true);
         // ==== Drag por TOUCH (celular) ====
