@@ -244,6 +244,9 @@
     <button class="btn rojo" onclick="descargar('pdf')">Descargar PDF</button>
     <button class="btn rojo" onclick="descargar('jpg')">Descargar JPG</button>
     <button class="btn gris" title="Ver el montaje en grande para revisar textos y detalles" onclick="abrirLupaMontaje()">Ampliar vista (lupa)</button>
+    <button class="btn" style="background:#1e3a5f" title="Guarda todo el montaje (datos, cuadros y las imágenes cargadas) en un archivo .montaje.json para abrirlo después y cambiar solo una hoja" onclick="guardarProyecto()">Guardar proyecto (PC)</button>
+    <button class="btn gris" title="Abre un archivo .montaje.json guardado antes" onclick="document.getElementById('fProyecto').click()">Abrir proyecto</button>
+    <input type="file" id="fProyecto" accept=".json,.montaje" style="display:none" onchange="abrirProyecto(this.files[0]); this.value=''">
     <button class="btn verde" onclick="guardarNube()">Guardar en la nube</button>
     <button class="btn" style="background:#25d366;border-bottom:3px solid #128c7e;display:inline-flex;align-items:center;gap:6px;" onclick="enviarWaCliente()"><svg viewBox="0 0 24 24" width="18" height="18" fill="#fff"><path id="waIcoUi"></path></svg>Enviar al cliente por WhatsApp</button>
   </div>
@@ -1677,6 +1680,52 @@ async function descargar(tipo){
   dibujarMontaje();
   if(tipo==='pdf') bajar(await pdfBlob(), nombreArchivo()+'.pdf');
   else bajar(await canvasABlob('image/jpeg', 0.93), nombreArchivo()+'.jpg');
+}
+
+/* ======================= PROYECTO: guardar en el PC y volver a abrir ======================= */
+// Guarda TODO el estado del montaje (datos, cuadros, anillado, textos) y las páginas cargadas (miniaturas JPG del montaje) en un
+// archivo .montaje.json. Al abrirlo queda como estaba: solo hay que cargar la hoja nueva y arrastrarla al cuadro que se cambia.
+async function guardarProyecto(){
+  const msg = document.getElementById('msgGuardar');
+  try{
+    msg.style.color = '#1e3a5f'; msg.textContent = 'Guardando el proyecto…';
+    const copia = JSON.parse(JSON.stringify(S, (k, v)=> (k==='img' ? undefined : v)));
+    const datos = { version:1, guardado:new Date().toISOString(), S:copia };
+    const blob = new Blob([JSON.stringify(datos)], { type:'application/json' });
+    const nombre = nombreArchivo().replace('montaje_','proyecto_') + '.montaje.json';
+    // con la estación conectada se guarda en la carpeta del trabajo; si no, se descarga en la carpeta de Descargas del PC
+    let dest = '';
+    if(window.tacticalEstacion && (S.ot || S.cliente) && await tacticalEstacion.estado()){
+      const d = await estacionAsegurarCarpeta();
+      if(d){ const r = await tacticalEstacion.guardar(d.relativa+'/montaje/'+nombre, blob); if(r.ok) dest = d.ruta+'/montaje/'+nombre; }
+    }
+    if(!dest){ bajar(blob, nombre); dest = 'la carpeta de Descargas: '+nombre; }
+    msg.style.color = '#1a7d3f'; msg.textContent = 'Proyecto guardado en '+dest+' ('+(blob.size/1048576).toFixed(1)+' MB). Para continuar, usa "Abrir proyecto".';
+  } catch(e){ console.error(e); msg.style.color = '#b91c1c'; msg.textContent = 'No se pudo guardar el proyecto: '+(e.message||e); }
+}
+async function abrirProyecto(file){
+  const msg = document.getElementById('msgGuardar'); if(!file) return;
+  try{
+    msg.style.color = '#1e3a5f'; msg.textContent = 'Abriendo el proyecto…';
+    const datos = JSON.parse(await file.text());
+    if(!datos || !datos.S || !Array.isArray(datos.S.pool)) throw new Error('el archivo no es un proyecto de montaje');
+    if((S.pool.length || S.ot || S.cliente) && !confirm('Se reemplaza el montaje actual por el del archivo. ¿Continuar?')) { msg.textContent = ''; return; }
+    const g = datos.S;
+    for(const k of Object.keys(S)) delete S[k];
+    Object.assign(S, g);
+    for(const it of S.pool){ it.img = await cargarImagen(it.dataUrl); }
+    let mx = 0; S.pool.forEach(p=>{ const n = parseInt(String(p.id).replace(/\D/g,''),10); if(n > mx) mx = n; });
+    if(typeof uid !== 'undefined' && uid <= mx) uid = mx + 1;
+    S.sel = null;
+    volcarForm(); volcarAnillado(); cambiarModoSinReset(); renderAnillado(); renderTodo();
+    msg.style.color = '#1a7d3f'; msg.textContent = 'Proyecto abierto. Para cambiar una hoja: súbela en el paso 2 y arrástrala al cuadro que corresponde.';
+  } catch(e){ console.error(e); msg.style.color = '#b91c1c'; msg.textContent = 'No se pudo abrir el proyecto: '+(e.message||e); }
+}
+// muestra u oculta los campos según el tipo de montaje, sin vaciar los cuadros
+function cambiarModoSinReset(){
+  const fm = document.getElementById('fModo'); if(fm) fm.value = S.modo;
+  document.body.classList.toggle('modo-general', S.modo==='general');
+  if(S.modo==='general') renderPiezas();
 }
 
 /* ======================= NUBE (1 mes) ======================= */
