@@ -502,6 +502,7 @@ function leerForm(reconstruir){
   S.alto = parseFloat(document.getElementById('fAlto').value) || 22;
   S.anilPos = S.modo==='general' ? 'ninguno' : document.getElementById('fAnilPos').value;
   S.enc = (document.getElementById('fEnc')||{}).value || 'anillado';
+  if(S.modo!=='general' && S.enc!=='anillado' && S.anilPos==='ninguno'){ S.anilPos = 'lateral'; document.getElementById('fAnilPos').value = 'lateral'; }   // cosido / gancho / pegado siempre llevan su palabra en el lomo
   S.waCom = document.getElementById('fWaCom').value; S.nomCom = document.getElementById('fNomCom').value; S.waCli = document.getElementById('fWaCli').value; guardarContactos();
   S.anilColor = document.getElementById('fAnilColor').value;
   S.reduccion = isNaN(parseFloat(document.getElementById('fReduccion').value)) ? 0.5 : parseFloat(document.getElementById('fReduccion').value);
@@ -1269,6 +1270,7 @@ function dibujarLomoTexto(cx, x, y, w, h, cara, pos, s){
   cx.restore();
 }
 function dibujarAnillos(cx, x, y, w, h, cara, pos, color, s){
+  if(!esAnillo() && pos==='ninguno') pos = 'lateral';
   if(pos==='ninguno') return;
   if(!esAnillo()){ dibujarLomoTexto(cx, x, y, w, h, cara, pos, s); return; }
   const da = datosAnillado(pos); if(!da) return;
