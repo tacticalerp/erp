@@ -2506,7 +2506,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="tactical-supabase.js?v=20261016a"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
-    <script src="precios_tactical.js?v=20261017b"></script>
+    <script src="precios_tactical.js?v=20261020a"></script>
     <script src="precios_promocionales.js?v=20260919a"></script>
     <script>
         // NAVEGACIÓN SPA DEL HUB
@@ -6256,6 +6256,8 @@
             case 'offsetCtp': return PRECIOS_OFFSET_CTP_COP;
             case 'offsetMillar': return PRECIOS_OFFSET_MILLAR_COP;
             case 'offsetRecargoFondoPleno': return PRECIOS_OFFSET_RECARGO_FONDO_PLENO_COP;
+            case 'cartonC620K': return PRECIOS_CARTON_C620K_COP;
+            case 'cartonMicro': return PRECIOS_CARTON_MICRO_COP;
             case 'digitalClicCuadernos': return PRECIOS_DIGITAL_CLIC_CUADERNOS;
             case 'digitalClicOtrasLineas': return PRECIOS_DIGITAL_CLIC_OTRAS_LINEAS;
           }
@@ -6689,7 +6691,7 @@
 
         async function guardarPanelPrecios(){
           if(!tacticalRequiereAdministrador()) return;
-          const ov = { sustratos:{}, offsetCtp:{}, offsetMillar:{}, offsetRecargoFondoPleno:{}, digitalClicCuadernos:{}, digitalClicOtrasLineas:{}, acabadosCustom:{} };
+          const ov = { sustratos:{}, offsetCtp:{}, offsetMillar:{}, offsetRecargoFondoPleno:{}, cartonC620K:{}, cartonMicro:{}, digitalClicCuadernos:{}, digitalClicOtrasLineas:{}, acabadosCustom:{} };
           document.querySelectorAll('.precio-input').forEach(inp => {
             const tipo = inp.dataset.tipo, clave = inp.dataset.clave, subclave = inp.dataset.subclave, subcampo = inp.dataset.subcampo;
             const raw = inp.value.trim();

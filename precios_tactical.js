@@ -342,6 +342,21 @@ function tacticalSeleccionarSustratos(claves, calculadoraId){
 const PRECIOS_OFFSET_CTP_COP = tacticalMergeNivel1({medio_pliego:22000, cuarto:11000, octavo:9000}, TACTICAL_PRECIOS_OVERRIDE.offsetCtp);
 const PRECIOS_OFFSET_MILLAR_COP = tacticalMergeNivel1({medio_pliego_color:25000, medio_pliego_policromia_4x0:100000, cuarto:17000, octavo:12000}, TACTICAL_PRECIOS_OVERRIDE.offsetMillar);
 const PRECIOS_OFFSET_RECARGO_FONDO_PLENO_COP = tacticalMergeNivel1({medio_pliego:90000, cuarto:50000, octavo:50000}, TACTICAL_PRECIOS_OVERRIDE.offsetRecargoFondoPleno);
+// Conde 2026-10-20: lista de precios de CARTÓN CORRUGADO (proveedor MIC, lista 2026). Precio por HOJA, en pesos, MÁS IVA; la medida es de la hoja en cm.
+// Solo se anexaron el Calibre C-620K y el Microcorrugado (lo demás de la lista -- doble pared, C-930K, C-790K, C-720K, C-540K, B-540K y cajas -- no se usa).
+// Se editan desde el Panel de Precios (mismo mecanismo que el resto: override en TACTICAL_PRECIOS_OVERRIDE). Todavía ninguna calculadora los consume.
+const PRECIOS_BASE_CARTON_C620K = {
+  "204x157":18600, "205x123":14600, "205x103":12200, "204x94":11000, "194x150":16800, "187x112":12200, "163x122":11500,
+  "164x196":18600, "167x110":10600, "155x87":7800, "146x196":16600, "146x155":13000, "147x86":7400, "142x103":8500,
+  "133x196":15000, "132x164":12000, "138x98":7800, "125x125":9000, "106x85":5200, "100x78":4500, "105x67":3800,
+};
+const PRECIOS_BASE_CARTON_MICRO = {
+  "Micro Blanco 110x145":12000, "Micro Kraft 125x125":8000, "Micro Kraft 85x142":6200, "Micro Kraft 126x83":5500,
+  "Micro Kraft 126x111":7300, "Micro Kraft 100x107":5600,
+};
+const PRECIOS_CARTON_C620K_COP = tacticalMergeNivel1(PRECIOS_BASE_CARTON_C620K, TACTICAL_PRECIOS_OVERRIDE.cartonC620K);
+const PRECIOS_CARTON_MICRO_COP = tacticalMergeNivel1(PRECIOS_BASE_CARTON_MICRO, TACTICAL_PRECIOS_OVERRIDE.cartonMicro);
+const tacticalEtiquetasCarton = (obj, prefijo) => Object.fromEntries(Object.keys(obj).map(k => [k, prefijo + k.replace(/(\d)x(\d)/g, '$1 × $2') + ' cm']));
 const PRECIOS_OFFSET_TOLERANCIA_MERMA_MILLAR = (TACTICAL_PRECIOS_OVERRIDE.offsetToleranciaMerma != null) ? TACTICAL_PRECIOS_OVERRIDE.offsetToleranciaMerma : 180;
 
 /* ---- IMPRESIÓN DIGITAL (dos tarifarios: Cuadernos usa un tiraje distinto al de las demás líneas) ---- */
@@ -421,6 +436,8 @@ const PRECIOS_CAMPOS_PANEL = [
     {clave:"plastificadoPiso", etiqueta:"Plastificado (piso mínimo OT)", base:30000},
     {clave:"colaminadoM2", etiqueta:"Colaminado ($/m²)", base:900},
   ]},
+  {grupo:"Cartón corrugado C-620K (lista MIC 2026 — $ por hoja, + IVA)", tipo:"nivel1", clave:"cartonC620K", base:PRECIOS_BASE_CARTON_C620K, etiquetas:tacticalEtiquetasCarton(PRECIOS_BASE_CARTON_C620K, 'C-620K — ')},
+  {grupo:"Cartón microcorrugado (lista MIC 2026 — $ por hoja, + IVA)", tipo:"nivel1", clave:"cartonMicro", base:PRECIOS_BASE_CARTON_MICRO, etiquetas:tacticalEtiquetasCarton(PRECIOS_BASE_CARTON_MICRO, '')},
   {grupo:"Imanes (Volantes)", tipo:"simple", campos:[
     {clave:"imanC5Lamina", etiqueta:"Lámina Imán C5 100x60cm ($/lámina)", base:12000},
     {clave:"corteLaserIman", etiqueta:"Corte láser imán ($/pieza -- AJUSTAR con proveedor real)", base:500},
