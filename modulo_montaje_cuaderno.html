@@ -116,9 +116,10 @@
   <div class="grid">
     <div><label>Tipo de montaje</label><select id="fModo" onchange="cambiarModo()"><option value="cuaderno">Cuaderno (anillado, cosido, gancho o pegado)</option><option value="general">Otro producto (caja, carpeta, sobre, bolsa, sticker…)</option></select></div>
     <div><label>Cliente</label><div style="position:relative;"><input type="text" id="fCliente" autocomplete="off" placeholder="Escribe para buscar un cliente" oninput="leerForm(false); sugerirClientes()" onfocus="sugerirClientes()" onblur="setTimeout(ocultarSugerencias,180)"><div id="cliSug"></div></div></div>
-    <div><label>OT</label><input type="text" id="fOt" oninput="leerForm(false)"></div>
+    <div><label>OT</label><input type="text" id="fOt" oninput="leerForm(false); autoOT()" placeholder="Ej: OT-2609-95"></div>
     <div class="solo-cuaderno"><label>Cantidad de cuadernos</label><input type="number" id="fCantidad" min="1" oninput="leerForm(false)"></div>
   </div>
+  <div id="msgOT" style="font-size:12.5px;font-weight:700;margin-top:6px;"></div>
   <div class="solo-cuaderno" style="margin-top:10px;">
     <label>Buscar cotización de Cuadernos (OT o cliente) para llenar todo solo</label>
     <input type="text" id="buscaCot" placeholder="Ej: OT-1234 o nombre del cliente" oninput="buscarCotizacion()">
@@ -581,7 +582,7 @@ function sugerirClientes(){
 function ocultarSugerencias(){ const c = document.getElementById('cliSug'); if(c) c.style.display = 'none'; }
 function elegirCliente(i){
   const c = (window._cliRes||[])[i]; if(!c) return;
-  document.getElementById('fCliente').value = c._n;
+  document.getElementById('fCliente').value = (c.empresa && c.empresa.trim()) || soloEmpresa(c._n);   // solo la empresa, sin el contacto
   if(c.wp){ const d = String(c.wp).replace(/\D/g,''); if(d) document.getElementById('fWaCli').value = d.length===10 ? '57'+d : d; }
   ocultarSugerencias(); leerForm(false);
 }
@@ -609,10 +610,13 @@ function idsClientesCRM(q){
   const ids = CLIENTES.filter(c=>c._k.includes(k)).slice(0,40).map(c=>String(c.id)).filter(i=>/^[\w-]+$/.test(i));
   return ids.length ? ['id_cliente.in.('+ids.join(',')+')'] : [];
 }
+// Solo el nombre de la EMPRESA (no la persona de contacto): "ARTEZOOM - ALIRIS OCAMPO" -> "ARTEZOOM"
+function soloEmpresa(n){ return String(n||'').split(/\s+[-–—]\s+/)[0].trim(); }
 function nombreClienteCot(c){
+  const crm = CLIENTES.find(x=>String(x.id)===String(c.idCli));
+  if(crm && crm.empresa) return crm.empresa.trim();
   const n = (c.cliente && (c.cliente.empresa||c.cliente.encargado)) || '';
-  if(n) return n;
-  const crm = CLIENTES.find(x=>String(x.id)===String(c.idCli)); return crm ? crm._n : '';
+  return soloEmpresa(n || (crm ? crm._n : ''));
 }
 function variantesOT(q){
   const v = new Set([q]); const limpio = q.replace(/^ot[\s-]*/i,'').trim(); if(limpio) v.add(limpio);
@@ -621,6 +625,37 @@ function variantesOT(q){
   const sep = limpio.replace(/[\s_.]+/g,'-'); if(sep) v.add(sep);        // "2610 18" -> 2610-18
   return [...v].filter(x=>x.length>=2);
 }
+// Busca por OT o cliente en todas las fuentes: cotizaciones de Cuadernos, negocios del CRM (abiertos y cerrados), fichas del Kanban y cotizaciones de otros productos.
+async function buscarFuentes(q){
+  const ql = q.toLowerCase(), base = variantesOT(q), errores = [];
+  await traerClientesCRM(q);
+  let res = [];
+  try{
+    const { data, error } = await tacticalSupabase.from('cotizaciones_cuadernos').select('*')
+      .or(base.map(v=>`ot.ilike.%${v}%`).concat([`cliente_empresa.ilike.%${q}%`, `cliente_encargado.ilike.%${q}%`], idsClientesCRM(q)).join(',')).order('created_at', { ascending:false }).limit(15);
+    if(error) throw error;
+    res = (data||[]).map(tacticalCotizacionDeDb);
+    res.forEach(c=>{ if(!cotizaciones.some(x=>x.id===c.id)) cotizaciones.push(c); });
+  } catch(e){
+    errores.push('cotizaciones de Cuadernos: '+((e && (e.message||e.details)) || e));
+    res = cotizaciones.filter(c=>{ const o = (c.ot||'').toLowerCase(); return base.some(v=>o.includes(v.toLowerCase())) || sinTildes(nombreClienteCot(c)).includes(sinTildes(q)); }).slice(-15).reverse();
+  }
+  const sumar = c=>{ if(!cotizaciones.some(x=>x.id===c.id)) cotizaciones.push(c); res.push(c); };
+  const llamar = async (nombre, consulta)=>{ try{ const { data, error } = await consulta; if(error) throw error; return data || []; } catch(e){ errores.push(nombre+': '+((e && (e.message||e.details)) || e)); return []; } };
+  const dOpps = await llamar('negocios', tacticalSupabase.from('opps').select('*').or(base.map(v=>`ot.ilike.%${v}%`).concat([`nombre_cli.ilike.%${q}%`], idsClientesCRM(q)).join(',')).order('created_at', { ascending:false }).limit(15));
+  const dHist = await llamar('historial', tacticalSupabase.from('historial_cierres').select('*').or(base.map(v=>`snapshot->>ot.ilike.%${v}%`).concat([`snapshot->>nombreCli.ilike.%${q}%`]).join(',')).order('fecha_cierre', { ascending:false }).limit(15));
+  [...dOpps.map(tacticalOppDeDb), ...dHist.map(tacticalHistorialDeDb)].forEach(o=>{
+    if(res.some(c=>c.id===o.id || (o.ot && c.ot===o.ot))) return;           // ya salió la cotización completa
+    sumar({ id:'neg_'+o.id, ot:o.ot, idCli:o.idCli, cliente:{ empresa:o.nombreCli }, params:o.cotParams || { cantidad:o.cantidad }, desc:o.desc, cantidadNeg:o.cantidad, _etq: o.linea==='cuadernos' ? 'negocio del CRM' : 'negocio del CRM: '+(o.linea||'') });
+  });
+  const dFich = await llamar('fichas del Kanban', tacticalSupabase.from('kanban_fichas').select('id, ot, id_cliente, nombre_cli, titulo').or(base.map(v=>`ot.ilike.%${v}%`).concat([`nombre_cli.ilike.%${q}%`]).join(',')).order('created_at', { ascending:false }).limit(10));
+  dFich.forEach(f=>{
+    if(res.some(c=>(f.ot && c.ot===f.ot))) return;
+    sumar({ id:'kf_'+f.id, ot:f.ot, idCli:f.id_cliente, cliente:{ empresa:f.nombre_cli }, params:{}, desc:f.titulo, _etq:'ficha del Kanban' });
+  });
+  const otras = await llamar('otros productos', tacticalSupabase.from('cotizaciones_calculadoras').select('id, linea, ot, cliente_empresa, descripcion, params, created_at').or(base.map(v=>`ot.ilike.%${v}%`).concat([`cliente_empresa.ilike.%${q}%`], idsClientesCRM(q)).join(',')).order('created_at', { ascending:false }).limit(15));
+  return { res, otras, errores };
+}
 let _tBuscaCot = null;
 function buscarCotizacion(){
   clearTimeout(_tBuscaCot);
@@ -628,58 +663,46 @@ function buscarCotizacion(){
     const q = document.getElementById('buscaCot').value.trim().replace(/[,%()]/g,' ').trim();
     const caja = document.getElementById('cotResultados');
     if(q.length < 2){ caja.style.display='none'; return; }
-    const ql = q.toLowerCase();
-    await traerClientesCRM(q);
-    // búsqueda en el servidor (la carga inicial trae como máximo 1000 filas y deja fuera las cotizaciones más nuevas)
-    let res = [], errBusq = '';
-    try{
-      const { data, error } = await tacticalSupabase.from('cotizaciones_cuadernos').select('*')
-        .or(variantesOT(q).map(v=>`ot.ilike.%${v}%`).concat([`cliente_empresa.ilike.%${q}%`, `cliente_encargado.ilike.%${q}%`], idsClientesCRM(q)).join(',')).order('created_at', { ascending:false }).limit(15);
-      if(error) throw error;
-      res = (data||[]).map(tacticalCotizacionDeDb);
-      res.forEach(c=>{ if(!cotizaciones.some(x=>x.id===c.id)) cotizaciones.push(c); });
-    } catch(e){
-      console.warn('Búsqueda en el servidor falló, se usa la lista cargada', e); errBusq = (e && (e.message||e.details)) || String(e);
-      res = cotizaciones.filter(c=>{
-        const cli = (c.cliente && (c.cliente.empresa||c.cliente.encargado)) || '';
-        const o = (c.ot||'').toLowerCase();
-        return variantesOT(ql).some(v=>o.includes(v)) || sinTildes(nombreClienteCot(c)||cli).includes(sinTildes(q));
-      }).slice(-15).reverse();
-    }
-    // Cotizaciones de Cuadernos que solo existen como negocio del CRM (opps / historial de cierres, con sus parámetros dentro)
-    try{
-      const base = variantesOT(q);
-      const { data:dOpps } = await tacticalSupabase.from('opps').select('*').or(base.map(v=>`ot.ilike.%${v}%`).concat([`nombre_cli.ilike.%${q}%`], idsClientesCRM(q)).join(',')).order('created_at', { ascending:false }).limit(15);
-      const { data:dHist } = await tacticalSupabase.from('historial_cierres').select('*').or(base.map(v=>`snapshot->>ot.ilike.%${v}%`).concat([`snapshot->>nombreCli.ilike.%${q}%`]).join(',')).order('fecha_cierre', { ascending:false }).limit(15);
-      const negocios = [...(dOpps||[]).map(tacticalOppDeDb), ...(dHist||[]).map(tacticalHistorialDeDb)];
-      negocios.forEach(o=>{
-        if(res.some(c=>c.id===o.id || (o.ot && c.ot===o.ot))) return;           // ya salió la cotización completa
-        const c = { id:'neg_'+o.id, ot:o.ot, idCli:o.idCli, cliente:{ empresa:o.nombreCli }, params:o.cotParams || { cantidad:o.cantidad }, desc:o.desc, _etq: o.linea==='cuadernos' ? 'negocio del CRM' : 'negocio del CRM: '+(o.linea||'') };
-        if(!cotizaciones.some(x=>x.id===c.id)) cotizaciones.push(c); res.push(c);
-      });
-      // fichas del Kanban (la OT y el cliente que se ven en el tablero), por si el negocio no se encuentra
-      const { data:dFich } = await tacticalSupabase.from('kanban_fichas').select('id, ot, id_cliente, nombre_cli, titulo').or(base.map(v=>`ot.ilike.%${v}%`).concat([`nombre_cli.ilike.%${q}%`]).join(',')).order('created_at', { ascending:false }).limit(10);
-      (dFich||[]).forEach(f=>{
-        if(res.some(c=>(f.ot && c.ot===f.ot))) return;
-        const c = { id:'kf_'+f.id, ot:f.ot, idCli:f.id_cliente, cliente:{ empresa:f.nombre_cli }, params:{}, desc:f.titulo, _etq:'ficha del Kanban' };
-        if(!cotizaciones.some(x=>x.id===c.id)) cotizaciones.push(c); res.push(c);
-      });
-    } catch(e){ console.warn('Búsqueda en negocios del CRM', e); }
-    // cotizaciones de las otras calculadoras (cajas, carpetas, volantes, libre...) con el mismo criterio
-    let otras = [];
-    try{
-      const filtro = variantesOT(q).map(v=>`ot.ilike.%${v}%`).concat([`cliente_empresa.ilike.%${q}%`], idsClientesCRM(q)).join(',');
-      const { data } = await tacticalSupabase.from('cotizaciones_calculadoras').select('id, linea, ot, cliente_empresa, descripcion, params, created_at').or(filtro).order('created_at', { ascending:false }).limit(15);
-      otras = data || [];
-    } catch(e){ console.warn('Búsqueda en otros productos', e); }
+    const { res, otras, errores } = await buscarFuentes(q);
     window._genFilas = otras;
-    const htmlOtras = otras.map((r,i)=>`<div onclick="cargarOtroDesdeBusqueda(${i})"><b>${esc(r.ot||'sin OT')}</b> — ${esc(r.cliente_empresa||'(sin cliente)')} <span style="color:#7c2d12">· OTRO PRODUCTO: ${esc(r.linea||'')} · ${esc((r.descripcion||'').slice(0,50))}</span></div>`).join('');
+    const htmlOtras = otras.map((r,i)=>`<div onclick="cargarOtroDesdeBusqueda(${i})"><b>${esc(r.ot||'sin OT')}</b> — ${esc(soloEmpresa(r.cliente_empresa)||'(sin cliente)')} <span style="color:#7c2d12">· OTRO PRODUCTO: ${esc(r.linea||'')} · ${esc((r.descripcion||'').slice(0,50))}</span></div>`).join('');
     caja.innerHTML = (res.length || otras.length) ? res.map(c=>{
       const cli = nombreClienteCot(c) || '(sin cliente)';
       return `<div onclick="cargarCotizacion('${c.id}')"><b>${esc(c.ot||'sin OT')}</b> — ${esc(cli)} <span style="color:#64748b">· ${c._etq ? '<i>'+esc(c._etq)+'</i> · ' : ''}${esc((c.desc||'').slice(0,60))}</span></div>`;
-    }).join('') + htmlOtras : '<div style="cursor:default;color:#64748b;">Sin resultados en cotizaciones de Cuadernos. Si es de otro producto (cajas, carpetas, bolsas…), usa "Otro producto".'+(errBusq ? '<br><b style="color:#b91c1c">Error de la búsqueda: '+esc(errBusq)+'</b>' : '')+'<br><span style="font-size:11px">Cotizaciones de Cuadernos cargadas en esta página: '+cotizaciones.length+'</span></div>';
+    }).join('') + htmlOtras : '<div style="cursor:default;color:#64748b;">Sin resultados.'+(errores.length ? '<br><b style="color:#b91c1c">Errores: '+esc(errores.join(' · '))+'</b>' : '')+'</div>';
     caja.style.display = 'block';
   }, 300);
+}
+// Al escribir la OT (campo OT del trabajo) se busca sola y se llenan cliente (solo la empresa), OT y cantidad. La medida NO se toca.
+function cantidadDeCot(c){
+  const p = c.params || {};
+  const n = parseFloat(p.cantidad) || parseFloat(p.cantidadTotal) || parseFloat(c.cantidadNeg) || 0;
+  if(n) return n;
+  const m = /(\d[\d.]*)\s*cuadernos?/i.exec(String(c.desc||'')); return m ? parseInt(m[1].replace(/\./g,''),10) : 0;
+}
+let _tAutoOT = null;
+function autoOT(){
+  clearTimeout(_tAutoOT);
+  const msg = document.getElementById('msgOT'); const q = (document.getElementById('fOt').value||'').trim().replace(/[,%()]/g,' ').trim();
+  if(msg) msg.textContent = '';
+  if(q.length < 5) return;
+  _tAutoOT = setTimeout(async ()=>{
+    const { res, errores } = await buscarFuentes(q);
+    const base = variantesOT(q).map(v=>v.toLowerCase());
+    const cand = res.filter(c=>c.ot && base.some(v=>String(c.ot).toLowerCase().includes(v)));
+    const ots = [...new Set(cand.map(c=>String(c.ot).toLowerCase()))];
+    if(msg) msg.style.color = '#b45309';
+    if(!cand.length){ if(msg) msg.textContent = 'No encontré esa OT en cotizaciones, negocios ni fichas del Kanban.'+(errores.length ? ' ('+errores.join(' · ')+')' : ''); return; }
+    if(ots.length > 1){ if(msg) msg.textContent = 'Hay varias OT parecidas ('+ots.length+'): escribe la OT completa, por ejemplo OT-2609-95.'; return; }
+    const c = cand.find(x=>!x._etq) || cand[0];                         // prefiere la cotización completa; si no, el negocio o la ficha
+    const cant = cantidadDeCot(c), cli = nombreClienteCot(c);
+    S.ot = c.ot; if(cli) S.cliente = cli; if(cant) S.cantidad = cant;
+    const fo = document.getElementById('fOt'); if(fo) fo.value = S.ot;
+    const fc = document.getElementById('fCliente'); if(fc && cli) fc.value = cli;
+    const fq = document.getElementById('fCantidad'); if(fq && cant) fq.value = cant;
+    leerForm(false);
+    if(msg){ msg.style.color = '#1a7d3f'; msg.textContent = '✔ '+c.ot+' · '+(cli||'sin cliente')+(cant ? ' · '+cant+' cuadernos' : '')+(c._etq ? ' (datos tomados de: '+c._etq+')' : ''); }
+  }, 600);
 }
 // Resultado de otro producto elegido desde el buscador de Cuadernos: pasa el montaje a "Otro producto" y carga esa cotización
 function cargarOtroDesdeBusqueda(i){
