@@ -1148,9 +1148,21 @@
                     </div>
                 </div>
 
+                <!-- Conde 2026-10-21: "quiero un nuevo módulo que se llame Administrativo, y allí llegará el informe de facturación, ya no será en
+                     Comercial" -- área nueva del Plan de Tareas; la tarea automática "Facturar a..." (ficha que pasa a Para Entregar) ahora cae aquí. -->
+                <div class="accordion-item">
+                    <div class="accordion-header" id="head-administrativo" onclick="toggleSection('administrativo')">
+                        <span>🧾 4. Área Administrativa</span><span class="arrow" id="arrow-administrativo">►</span>
+                    </div>
+                    <div id="administrativo" class="accordion-content">
+                        <div class="table-responsive"><table id="table-administrativo"><thead><tr><th>Descripción de la Tarea</th><th>Notas Administrativas</th><th>Responsable</th><th>Estado</th><th>Origen</th><th></th></tr></thead><tbody></tbody></table></div>
+                        <button class="btn-add" onclick="addTask('administrativo')">+ Añadir Tarea Administrativa</button>
+                    </div>
+                </div>
+
                 <div class="accordion-item">
                     <div class="accordion-header" id="head-gerencia" onclick="toggleSection('gerencia')">
-                        <span>👑 4. Área de Gerencia</span><span class="arrow" id="arrow-gerencia">►</span>
+                        <span>👑 5. Área de Gerencia</span><span class="arrow" id="arrow-gerencia">►</span>
                     </div>
                     <div id="gerencia" class="accordion-content">
                         <div class="table-responsive"><table id="table-gerencia"><thead><tr><th>Descripción de la Tarea</th><th>Notas Generales</th><th>Responsable</th><th>Estado</th><th>Origen</th><th></th></tr></thead><tbody></tbody></table></div>
@@ -1204,7 +1216,7 @@
                         <p style="font-size:0.85rem; color:#718096; margin-top:-8px;">Marca en qué áreas puede recibir tareas cada persona. Este mismo listado alimenta el selector "Responsable del Error" de Control de Reprocesos.</p>
                         <div class="table-responsive">
                             <table id="table-personal">
-                                <thead><tr><th>Nombre</th><th>Diseño</th><th>Producción</th><th>Comercial</th><th>Gerencia</th><th></th></tr></thead>
+                                <thead><tr><th>Nombre</th><th>Diseño</th><th>Producción</th><th>Comercial</th><th>Administrativa</th><th>Gerencia</th><th></th></tr></thead>
                                 <tbody></tbody>
                             </table>
                         </div>
@@ -1833,7 +1845,22 @@
                         <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M19.4 7.5V5a2 2 0 0 0-2-2h-3a2.5 2.5 0 1 0-5 0h-3a2 2 0 0 0-2 2v3a2.5 2.5 0 1 1 0 5v3a2 2 0 0 0 2 2h3a2.5 2.5 0 1 1 5 0h3a2 2 0 0 0 2-2v-2.5a2.5 2.5 0 1 0 0-5z"></path></svg>Rompecabezas personalizados</span><span class="arrow" id="arrow-rep-rompe-pers">▼</span>
                     </div>
                     <div id="rep-rompe-pers" class="accordion-content active">
-                        <p style="font-size:0.85rem; color:#718096; margin-top:0;">Ventas mes a mes del canal Personalizado (Norely): rompecabezas B2C y otros ingresos sin factura, año contra año.</p>
+                        <p style="font-size:0.85rem; color:#718096; margin-top:0;">Ventas mes a mes del canal Personalizado (Norely y Yasmid): rompecabezas B2C y otros ingresos sin factura, año contra año.</p>
+                        <!-- Conde 2026-10-21: "la información de rompecabezas personalizados de ventas la pueda ver en Radar y Reportes donde la pueda seleccionar por mes". -->
+                        <div class="data-card" style="margin-bottom:14px;">
+                            <div class="card-title" style="font-size:1rem;">Ver un mes (pedidos B2C aprobados)</div>
+                            <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:8px 0 12px;">
+                                <button class="btn-action" onclick="rpMesNavegar(-1)">◀</button>
+                                <select id="rp-mes-mes" onchange="renderRpMes()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;"></select>
+                                <select id="rp-mes-anio" onchange="renderRpMes()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;"></select>
+                                <button class="btn-action" onclick="rpMesNavegar(1)">▶</button>
+                                <select id="rp-mes-comercial" onchange="renderRpMes()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;"></select>
+                            </div>
+                            <div id="rp-mes-nota" style="display:none; font-size:0.82rem; color:#7a5b00; background:#fff3cd; border:1px solid #f0d98c; border-radius:6px; padding:8px 12px; margin-bottom:10px; line-height:1.5;"></div>
+                            <div class="dash-grid" id="rp-mes-kpis"></div>
+                            <div id="rp-mes-resumen" style="font-size:0.85rem; color:#4a5568; margin:10px 0 6px; line-height:1.6;"></div>
+                            <div id="rp-mes-tabla" style="overflow-x:auto;"></div>
+                        </div>
                         <div id="rp-aviso" style="display:none; padding:12px; background:#fff3cd; border-left:4px solid #f0d98c; border-radius:4px; font-size:0.86rem; margin-bottom:12px; line-height:1.5;"></div>
                         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:10px; background:var(--light-gray); border-radius:6px; border:1px solid #cbd5e0; margin-bottom:14px;">
                             <span style="font-size:0.85rem; font-weight:bold; color:#4a5568;">Ver desde</span>
@@ -2504,9 +2531,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Conde 2026-09-16: "convertir esos informes en graficos" (Tendencia Histórica en Reportes) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-    <script src="tactical-supabase.js?v=20261016a"></script>
+    <script src="tactical-supabase.js?v=20261021a"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
-    <script src="precios_tactical.js?v=20261020a"></script>
+    <script src="precios_tactical.js?v=20261021a"></script>
     <script src="precios_promocionales.js?v=20260919a"></script>
     <script>
         // NAVEGACIÓN SPA DEL HUB
@@ -2684,6 +2711,11 @@
                 if(seccionGerencia){
                     const item = seccionGerencia.closest('.accordion-item');
                     if(item) item.style.display = (rolActualTareas === 'administrador') ? '' : 'none';
+                }
+                const seccionAdministrativa = document.getElementById('head-administrativo');
+                if(seccionAdministrativa){
+                    const item = seccionAdministrativa.closest('.accordion-item');
+                    if(item) item.style.display = (rolActualTareas === 'administrador' || rolActualTareas === 'contabilidad') ? '' : 'none';
                 }
                 const seccionComercial = document.getElementById('head-comercial');
                 if(seccionComercial){
@@ -2890,13 +2922,13 @@
             guardarFila(tr);
             proyectosRender();
         }
-        function proyectosFilas(){ return [...document.querySelectorAll('#view-tareas tbody tr[data-id]')].filter(tr => tr.closest('table') && /^table-(diseno|produccion|comercial|gerencia)$/.test(tr.closest('table').id)); }
+        function proyectosFilas(){ return [...document.querySelectorAll('#view-tareas tbody tr[data-id]')].filter(tr => tr.closest('table') && /^table-(diseno|produccion|comercial|administrativo|gerencia)$/.test(tr.closest('table').id)); }
         function proyectosSetFiltro(f){
             proyectoFiltro = f; proyectoDetalleAbierto = false;
             proyectosFilas().forEach(taskPintarProyecto);
             // Al mirar un proyecto/sin proyecto se abren las áreas que sí tienen tareas visibles.
             if(f !== 'todo'){
-                ['diseno','produccion','comercial','gerencia'].forEach(a => {
+                ['diseno','produccion','comercial','administrativo','gerencia'].forEach(a => {
                     const hay = [...document.querySelectorAll(`#table-${a} tbody tr`)].some(tr => !tr.classList.contains('proy-oculta'));
                     const abierta = document.getElementById(a).classList.contains('active');
                     if(hay && !abierta) toggleSection(a);
@@ -3004,7 +3036,7 @@
         // Personal editable desde "Plan de Tareas -> Gestionar Personal" (Conde 2026-08-19) --
         // reemplaza la lista fija que antes estaba escrita aquí a mano.
         let db_personal = [];
-        const PERSONAL_AREAS = [{clave:'diseno', label:'Diseño'}, {clave:'produccion', label:'Producción'}, {clave:'comercial', label:'Comercial'}, {clave:'gerencia', label:'Gerencia'}];
+        const PERSONAL_AREAS = [{clave:'diseno', label:'Diseño'}, {clave:'produccion', label:'Producción'}, {clave:'comercial', label:'Comercial'}, {clave:'administrativo', label:'Administrativa'}, {clave:'gerencia', label:'Gerencia'}];
         function empleadosPorArea(area){ return db_personal.filter(p => (p.areas||[]).includes(area)).map(p => p.nombre); }
         function nombresTodoPersonal(){ return db_personal.map(p => p.nombre); }
         function renderPersonal(){
@@ -5733,7 +5765,7 @@
           // Conde 2026-10-19: los rompecabezas personalizados (origen b2c) NO crean esta tarea -- Comercial siempre se entera
           // porque debe enviarle la foto del producto al cliente, así que la tarea "Facturar" sobraba.
           if(columnaAnterior==='terminados' && columnaNueva==='entregar' && f.origen !== 'b2c'){
-            crearTareaAutomatica('comercial', `Facturar a "${f.nombreCli}" "${f.titulo}"`);
+            crearTareaAutomatica('administrativo', `Facturar a "${f.nombreCli}" "${f.titulo}"`); // Conde 2026-10-21: antes caía en Comercial
           }
           // Conde 2026-08-27: "que el urgente se borre automaticamente al quedar en la columna para
           // entregar" -- ya cumplió su propósito de alertar a producción; de ahí en adelante
@@ -9806,6 +9838,8 @@
           const corte = texto.indexOf(' ', max);
           return corte === -1 ? texto : texto.slice(0, corte).trim() + '…';
         }
+        // Conde 2026-10-21: además de los vendedores de las calculadoras, los comerciales de Rompecabezas B2C (Norely y Yasmid) tienen pestaña.
+        function comercialVendedores(){ return [...new Set([...Object.keys(VENDEDORES), ...(typeof VENDEDORES_ROMPECABEZAS !== 'undefined' ? VENDEDORES_ROMPECABEZAS : [])])]; }
         let comercialVendedorActivo = Object.keys(VENDEDORES)[0];
         function comercialCambiarVendedor(v){ comercialVendedorActivo = v; renderComercial(); }
         function comercialGuardarB2C(id, campo, valor){
@@ -10065,7 +10099,7 @@
         function renderComercial(){
           const tabsCont = document.getElementById('comercial-tabs');
           if(!tabsCont) return;
-          tabsCont.innerHTML = Object.keys(VENDEDORES).map(v =>
+          tabsCont.innerHTML = comercialVendedores().map(v =>
             `<button class="comercial-vendedor-tab ${v===comercialVendedorActivo?'active':''}" onclick="comercialCambiarVendedor('${v.replace(/'/g,"\\'")}')">${v}</button>`
           ).join('');
 
@@ -10075,7 +10109,9 @@
           // ---- PERSONALIZADOS (Rompecabezas B2C) -- el módulo B2C es autoservicio, no captura
           // vendedor todavía; por ahora TODO queda bajo Norely (Conde 2026-08-27: "el vendedor de
           // rompecabezas hoy es Norely, luego lo pasamos a un comercial nuevo").
-          const esNorely = comercialVendedorActivo === 'Norely Sarmiento';
+          // Conde 2026-10-21: Personalizados se reparte entre Norely y Yasmid según el comercial elegido en Montajes B2C; los pedidos viejos
+          // (sin comercial guardado) siguen siendo de Norely.
+          const esNorely = (typeof VENDEDORES_ROMPECABEZAS !== 'undefined' ? VENDEDORES_ROMPECABEZAS : ['Norely Sarmiento']).includes(comercialVendedorActivo);
 
           // Conde 2026-08-28: "en Helver deja de último la sección de personalizados porque no lo
           // usaré" -- para quien no es Norely, Personalizados siempre sale vacía (ver filtro de
@@ -10093,6 +10129,7 @@
           // Kanban a Postventa, solo escribe "despachado" a mano en la casilla "Pendiente" -- por eso
           // el filtro de Postventa solo no bastaba, se agrega este segundo disparador.
           let personalizados = esNorely ? db_b2cPedidos.filter(p => {
+            if((p.vendedor || 'Norely Sarmiento') !== comercialVendedorActivo) return false; // pedido de otro comercial
             if((p.notaComercial||'').toLowerCase().includes('despachado')) return false; // marcado a mano -- sale de la vista
             const ficha = p.idKanban ? db_kanban.find(f=>f.id===p.idKanban) : null;
             return !(ficha && ficha.columna==='postventa'); // ya entregado -- sale de la vista
@@ -10808,8 +10845,97 @@
           }
           return out.join(', ');
         }
+        // ---- Ver un mes: pedidos B2C aprobados del mes elegido (Conde 2026-10-21) ----
+        const RP_FORMAS = { rectangular:'Rectangular', portarretrato:'Portarretrato', corazon:'Corazón', circulo:'Círculo' };
+        function rpMesComercialDe(p){ return p.vendedor || 'Norely Sarmiento'; } // pedidos viejos (sin comercial guardado) = Norely
+        function rpMesPoblar(){
+          const selM = document.getElementById('rp-mes-mes'), selA = document.getElementById('rp-mes-anio'), selC = document.getElementById('rp-mes-comercial');
+          if(!selM || selM.dataset.poblado) return;
+          const hoy = new Date();
+          selM.innerHTML = TH_MESES.map((m, i) => '<option value="' + (i + 1) + '">' + m + '</option>').join('');
+          const anios = db_b2cPedidos.map(x => new Date(x.fechaAprobado || x.fecha).getFullYear()).filter(a => !isNaN(a))
+            .concat(db_historicoMensual.filter(r => r.canal === 'personalizado').map(r => r.anio));
+          const primero = anios.length ? Math.min(...anios) : hoy.getFullYear();
+          selA.innerHTML = ''; for(let a = hoy.getFullYear(); a >= primero; a--) selA.appendChild(new Option(a, a));
+          const comerciales = (typeof VENDEDORES_ROMPECABEZAS !== 'undefined') ? VENDEDORES_ROMPECABEZAS : ['Norely Sarmiento'];
+          selC.innerHTML = '<option value="">Todos los comerciales</option>' + comerciales.map(c => '<option value="' + c + '">' + c + '</option>').join('');
+          selM.value = String(hoy.getMonth() + 1); selA.value = String(hoy.getFullYear());
+          selM.dataset.poblado = '1';
+        }
+        function rpMesNavegar(delta){
+          rpMesPoblar();
+          const selM = document.getElementById('rp-mes-mes'), selA = document.getElementById('rp-mes-anio');
+          let m = parseInt(selM.value) + delta, a = parseInt(selA.value);
+          if(m < 1){ m = 12; a--; } else if(m > 12){ m = 1; a++; }
+          if(![...selA.options].some(o => o.value === String(a))) return; // fuera del rango con datos
+          selM.value = String(m); selA.value = String(a);
+          renderRpMes();
+        }
+        function rpMesPedidos(anio, mes){
+          return db_b2cPedidos.filter(p => {
+            if(p.estado !== 'aprobado') return false;
+            const d = new Date(p.fechaAprobado || p.fecha);
+            return !isNaN(d) && d.getFullYear() === anio && d.getMonth() + 1 === mes;
+          });
+        }
+        function renderRpMes(){
+          if(!document.getElementById('rp-mes-tabla')) return;
+          rpMesPoblar();
+          const mes = parseInt(document.getElementById('rp-mes-mes').value), anio = parseInt(document.getElementById('rp-mes-anio').value);
+          const filtro = document.getElementById('rp-mes-comercial').value;
+          const todos = rpMesPedidos(anio, mes);
+          const peds = (filtro ? todos.filter(x => rpMesComercialDe(x) === filtro) : todos).sort((a, b) => new Date(a.fechaAprobado || a.fecha) - new Date(b.fechaAprobado || b.fecha));
+          const ingresos = peds.reduce((s, x) => s + (x.total || 0), 0), unidades = peds.reduce((s, x) => s + (x.cantidad || 0), 0);
+          const mAnt = mes === 1 ? 12 : mes - 1, aAnt = mes === 1 ? anio - 1 : anio;
+          const antPeds = rpMesPedidos(aAnt, mAnt).filter(x => !filtro || rpMesComercialDe(x) === filtro);
+          const antIng = antPeds.reduce((s, x) => s + (x.total || 0), 0);
+
+          // Meses viejos: el ERP solo tiene el total mensual del histórico (sin pedidos uno a uno).
+          const hist = db_historicoMensual.find(r => r.canal === 'personalizado' && r.anio === anio && r.mes === mes);
+          const nota = document.getElementById('rp-mes-nota');
+          if(hist && !todos.length){
+            nota.style.display = 'block';
+            nota.innerHTML = 'De ' + TH_MESES[mes - 1] + ' ' + anio + ' solo se tiene el <strong>total mensual</strong> del histórico: <strong>' + cotFormatoCop(hist.ingresos) + '</strong> (canal Personalizado, incluye otros ingresos sin factura). No hay detalle de pedidos.';
+          } else if(hist && todos.length){
+            nota.style.display = 'block';
+            nota.innerHTML = 'Este mes también tiene un total en el histórico (<strong>' + cotFormatoCop(hist.ingresos) + '</strong>, canal Personalizado completo); abajo solo se listan los pedidos B2C aprobados en el ERP.';
+          } else nota.style.display = 'none';
+
+          document.getElementById('rp-mes-kpis').innerHTML =
+            '<div class="kpi-box" style="border-color:var(--primary);"><div class="kpi-label">Ingresos del mes</div><div class="kpi-value" style="font-size:1.4rem;">' + cotFormatoCop(ingresos) + '</div><div style="font-size:0.8rem; color:#64748b;">Mes anterior: ' + cotFormatoCop(antIng) + '</div></div>' +
+            '<div class="kpi-box"><div class="kpi-label">Pedidos aprobados</div><div class="kpi-value" style="font-size:1.4rem;">' + peds.length + '</div></div>' +
+            '<div class="kpi-box"><div class="kpi-label">Rompecabezas vendidos</div><div class="kpi-value" style="font-size:1.4rem;">' + unidades + '</div></div>' +
+            '<div class="kpi-box"><div class="kpi-label">Valor promedio por pedido</div><div class="kpi-value" style="font-size:1.4rem;">' + (peds.length ? cotFormatoCop(ingresos / peds.length) : '-') + '</div></div>';
+
+          // Resumen por comercial y por forma
+          const porCom = {}, porForma = {};
+          peds.forEach(x => {
+            const c = rpMesComercialDe(x); porCom[c] = porCom[c] || { n: 0, total: 0 }; porCom[c].n++; porCom[c].total += (x.total || 0);
+            (x.items || []).forEach(it => { const f = RP_FORMAS[it.forma] || (it.forma ? it.forma : 'Rectangular'); porForma[f] = (porForma[f] || 0) + (it.cantidad || 0); });
+          });
+          document.getElementById('rp-mes-resumen').innerHTML = peds.length
+            ? '<strong>Por comercial:</strong> ' + Object.keys(porCom).map(c => c + ' — ' + porCom[c].n + ' pedido(s), ' + cotFormatoCop(porCom[c].total)).join(' · ') +
+              (Object.keys(porForma).length ? '<br><strong>Por forma (unidades):</strong> ' + Object.keys(porForma).map(f => f + ' ' + porForma[f]).join(' · ') : '')
+            : '';
+
+          const filas = peds.map(x => {
+            const d = new Date(x.fechaAprobado || x.fecha);
+            const prod = (x.items || []).map(it => (it.cantidad || 1) + 'x ' + (it.linea === 'laser' ? 'Láser' : 'Troquel') + (it.forma && RP_FORMAS[it.forma] && it.forma !== 'rectangular' ? ' ' + RP_FORMAS[it.forma] : '') + ' ' + (it.medida || '') + 'cm (' + (it.fichas || '?') + 'f)').join('<br>');
+            return '<tr style="border-bottom:1px solid #edf2f7;"><td style="padding:6px 8px; white-space:nowrap;">' + d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) + '</td>' +
+              '<td style="padding:6px 8px;">' + resumenCotEsc(x.nombre || '') + '</td>' +
+              '<td style="padding:6px 8px;">' + resumenCotEsc(rpMesComercialDe(x)) + '</td>' +
+              '<td style="padding:6px 8px;">' + (prod || '-') + '</td>' +
+              '<td style="padding:6px 8px; text-align:right;">' + (x.cantidad || 0) + '</td>' +
+              '<td style="padding:6px 8px; text-align:right; font-weight:700;">' + cotFormatoCop(x.total || 0) + '</td></tr>';
+          }).join('');
+          document.getElementById('rp-mes-tabla').innerHTML = peds.length
+            ? '<table style="width:100%; border-collapse:collapse; font-size:0.82rem;"><thead><tr style="background:#f7fafc; color:#4a5568; text-align:left;"><th style="padding:6px 8px;">Aprobado</th><th style="padding:6px 8px;">Cliente</th><th style="padding:6px 8px;">Comercial</th><th style="padding:6px 8px;">Productos</th><th style="padding:6px 8px; text-align:right;">Unid.</th><th style="padding:6px 8px; text-align:right;">Total</th></tr></thead><tbody>' + filas + '</tbody></table>'
+            : '<p style="color:#a0aec0; font-size:0.85rem; margin:4px 0;">No hay pedidos B2C aprobados en este mes' + (filtro ? ' para ' + filtro : '') + '.</p>';
+        }
+
         function renderRompecabezasPersonalizados(){
           if(!document.getElementById('rep-rompe-pers')) return;
+          renderRpMes();
           const hoy = new Date(), anioActual = hoy.getFullYear(), mesActual = hoy.getMonth() + 1;
           const aniosConDato = [...new Set(db_historicoMensual.filter(r => r.canal === 'personalizado').map(r => r.anio))];
           if(!aniosConDato.length) { document.getElementById('rp-aviso').style.display = 'none'; return; }

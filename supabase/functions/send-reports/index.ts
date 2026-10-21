@@ -190,7 +190,7 @@ async function tareasPendientesFilas(filtro: { area?: string | string[]; respons
 // administrador ve las 4), en vez de UNA lista mezclada de todas, arma UNA SECCIÓN POR ÁREA (cada
 // una ya ordenada por más atrasada primero). El nombre del área ya no se repite en cada línea
 // (era redundante con el título de la sección).
-const AREA_LABEL: Record<string, string> = { diseno: "Diseño", produccion: "Producción", comercial: "Comercial", gerencia: "Gerencia" };
+const AREA_LABEL: Record<string, string> = { diseno: "Diseño", produccion: "Producción", comercial: "Comercial", administrativo: "Administrativa", gerencia: "Gerencia" };
 async function tareasPendientesFilasDeArea(area: string): Promise<string[]> {
   const { data, error } = await supabase.from("tareas").select("descripcion, fecha_origen")
     .eq("cerrada", false).not("status", "in", "(listo,finalizado)").eq("area", area);
@@ -513,7 +513,7 @@ const INFORMES: Record<string, Record<string, () => Promise<{ asunto: string; se
     diario: async () => {
       // Conde 2026-08-25: "administrador vea todos los pendientes de todos" -- antes solo mostraba
       // las que llevaban 3+ días (tareasVencidasTodasLasAreasFilas), dejando fuera todo lo demás.
-      const secciones = await seccionesTareasPorArea(["diseno", "produccion", "comercial", "gerencia"]);
+      const secciones = await seccionesTareasPorArea(["diseno", "produccion", "comercial", "administrativo", "gerencia"]);
       const cartera = await carteraVencida();
       return { asunto: "📋 Informe diario -- Gerencia", secciones: [
         ...secciones,

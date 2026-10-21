@@ -248,6 +248,11 @@ const VENDEDORES = {
   "Helver Conde": { correo: "gerencia@tacticalmg.co", telefono: "320 840 1643" },
 };
 
+// Conde 2026-10-21: comerciales que atienden Rompecabezas personalizados (B2C): "hay 2 vendedores de rompecabezas, Norely y Yasmid".
+// Se eligen al crear el pedido en Montajes B2C y salen como pestaña en el tablero Comercial del Hub. Aparte de VENDEDORES a propósito:
+// Yasmid todavía no aparece en las calculadoras (ni en los PDF, que necesitan su correo y teléfono). Para agregar a alguien: ponerlo aquí.
+const VENDEDORES_ROMPECABEZAS = ["Norely Sarmiento", "Yasmid"];
+
 function tacticalLeerOverridesPrecios(){
   try{ return JSON.parse(localStorage.getItem('tactical_precios_override_v1')) || {}; }
   catch(e){ return {}; }

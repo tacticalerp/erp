@@ -1,0 +1,12 @@
+-- ==========================================================================
+-- TACTICAL ERP -- Comercial de cada pedido de Rompecabezas B2C (Conde 2026-10-21)
+--
+-- "quiero que aquí esté la opción de seleccionar comercial, hay 2 vendedores de
+-- rompecabezas: Norely y Yasmid". Montajes B2C guarda ahora quién atiende cada pedido;
+-- el tablero Comercial del Hub reparte la sección "Personalizados" por comercial.
+--
+-- Pegar en el SQL Editor de Supabase y ejecutar (se puede correr más de una vez).
+-- Los pedidos que ya existen quedan sin comercial = se tratan como de Norely.
+-- Mientras NO se corra, el ERP sigue funcionando: guarda los pedidos sin el comercial y avisa.
+-- ==========================================================================
+alter table public.b2c_pedidos add column if not exists vendedor text;

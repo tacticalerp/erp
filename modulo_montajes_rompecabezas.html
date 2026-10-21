@@ -147,6 +147,11 @@
     <div class="panel controls">
 
       <div>
+        <h2>Comercial a cargo</h2>
+        <div class="radio-row" id="comercialButtons"></div>
+      </div>
+
+      <div>
         <h2>1 · Línea de producción</h2>
         <div class="radio-row">
           <button data-linea="laser" class="active">Láser</button>
@@ -296,9 +301,9 @@ function tacticalIrHub(vista){
      y además entiende lenguaje natural en vez de necesitar la palabra clave exacta. -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="tactical-supabase.js?v=20261016a"></script>
+<script src="tactical-supabase.js?v=20261021a"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
-<script src="precios_tactical.js?v=20261020a"></script>
+<script src="precios_tactical.js?v=20261021a"></script>
 <script src="template_svg_data.js?v=7"></script>
 <script>
 /* =====================  CATÁLOGOS  ===================== */
@@ -1047,6 +1052,29 @@ function cancelarCarrito(){
   updatePriceBox();
 }
 
+/* Comercial a cargo del pedido (Conde 2026-10-21: "hay 2 vendedores de rompecabezas, Norely y Yasmid"). Se recuerda la última elección. */
+const COMERCIALES = (typeof VENDEDORES_ROMPECABEZAS !== 'undefined') ? VENDEDORES_ROMPECABEZAS : ['Norely Sarmiento', 'Yasmid'];
+let comercialSel = (()=>{ try{ const v = localStorage.getItem('tactical_b2c_comercial'); if(COMERCIALES.includes(v)) return v; }catch(e){} return COMERCIALES[0]; })();
+function pintarComercial(){
+  const cont = document.getElementById('comercialButtons'); if(!cont) return;
+  cont.innerHTML = COMERCIALES.map(c => '<button type="button" data-comercial="' + c + '" class="' + (c === comercialSel ? 'active' : '') + '">' + c + '</button>').join('');
+  cont.querySelectorAll('button').forEach(b => b.addEventListener('click', ()=>{
+    comercialSel = b.getAttribute('data-comercial');
+    try{ localStorage.setItem('tactical_b2c_comercial', comercialSel); }catch(e){}
+    pintarComercial();
+  }));
+}
+pintarComercial();
+// Cambiar el comercial de un pedido ya guardado (desde la pestaña Buscar / Aprobar). Si ya tiene ficha en el Kanban, se actualiza también.
+async function cambiarComercialPedido(id, v){
+  const p = db_ventas_b2c.find(x => x.id === id); if(!p) return;
+  const anterior = p.vendedor || '';
+  p.vendedor = v;
+  let ok = await tacticalGuardarVendedorB2C(id, v);
+  if(p.idKanban && typeof tacticalGuardarCamposFicha === 'function') ok = (await tacticalGuardarCamposFicha(p.idKanban, { vendedor: v })) && ok;
+  if(!ok){ p.vendedor = anterior; alert('No se pudo guardar el cambio de comercial (revisa tu conexión o el aviso en pantalla). Quedó como estaba.'); renderBusqueda(); }
+}
+
 document.getElementById('btnGuardarPedido').addEventListener('click', async ()=>{
   const nombre = document.getElementById('cliNombre').value.trim();
   const cel = document.getElementById('cliCel').value.trim();
@@ -1068,6 +1096,7 @@ document.getElementById('btnGuardarPedido').addEventListener('click', async ()=>
     estado: 'pendiente',
     nombre, cel, correo, entrega,
     items, total, cantidad,
+    vendedor: comercialSel,
     idKanban: null,
     // Conde 2026-08-27 (módulo Comercial): arranca así, el comercial lo reescribe a mano según
     // avanza el proceso real (ver tablero "Comercial" en el Hub).
@@ -1133,7 +1162,7 @@ function renderBusqueda(){
     const accion = (p.estado==='pendiente'
       ? `<button class="btn ok" style="padding:5px 10px;width:auto;" onclick="aprobarPedido('${p.id}')">✅ Aprobar (pagó)</button>`
       : '') + `<button style="background:none; border:none; color:var(--danger); cursor:pointer; padding:2px 4px; display:inline-flex; align-items:center; vertical-align:middle; margin-left:4px;" onclick="eliminarPedidoB2C('${p.id}')" title="Eliminar pedido (ej. pruebas)">${ticon('trash',{noMargin:true})}</button>`;
-    return `<tr><td>${fechaTxt}</td><td>${p.nombre}<br><span style="color:var(--muted);">${p.cel}</span></td><td>${prodTxt}</td><td>${p.cantidad}</td><td>${totalTxt}</td><td><span class="status-pill ${pillCls}">${p.estado}</span></td><td style="white-space:nowrap;">${accion}</td></tr>`;
+    return `<tr><td>${fechaTxt}</td><td>${p.nombre}<br><span style="color:var(--muted);">${p.cel}</span><br><select style="font-size:11px;padding:2px 4px;margin-top:3px;max-width:130px;" title="Comercial a cargo" onchange="cambiarComercialPedido('${p.id}', this.value)">${COMERCIALES.map(c => '<option value="' + c + '"' + (c === (p.vendedor || COMERCIALES[0]) ? ' selected' : '') + '>' + c + '</option>').join('')}</select></td><td>${prodTxt}</td><td>${p.cantidad}</td><td>${totalTxt}</td><td><span class="status-pill ${pillCls}">${p.estado}</span></td><td style="white-space:nowrap;">${accion}</td></tr>`;
   }).join('');
   if(filtrados.length===0) body.innerHTML = '<tr><td colspan="7" style="color:var(--muted);">Sin resultados.</td></tr>';
 }
@@ -1253,7 +1282,7 @@ async function aprobarPedido(id){
     // Solo impresión: no hay diseño que aprobar -> nace con el diseño resuelto y el Kanban omite el botón "Diseño aprobado".
     disenoAprobado: decision !== 'diseno',
     checklist: [], urgente:false, fechaEntrega, entrega: pedido.entrega||'',
-    fechaCreacion: new Date().toISOString(), responsable:'', origen:'b2c',
+    fechaCreacion: new Date().toISOString(), responsable:'', origen:'b2c', vendedor: pedido.vendedor || COMERCIALES[0],
   };
   // Conde 2026-08-22: antes se avisaba "Pedido aprobado" sin esperar a que la ficha realmente
   // quedara guardada en Supabase -- si el guardado fallaba (sin conexión, sesión vencida, etc.)

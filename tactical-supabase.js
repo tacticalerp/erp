@@ -546,14 +546,36 @@ async function tacticalEliminarFotoFichaRemoto(fichaId, url){
 // ============ B2C PEDIDOS (Módulo de Montajes Rompecabezas) ============
 // Mismo patrón que Kanban: cada pedido tiene 1 tabla hija (items) -- se
 // sincroniza UN pedido a la vez, no toda la lista (Conde 2026-08-20).
+// Conde 2026-10-21: comercial (Norely / Yasmid) de cada pedido de Rompecabezas B2C. Requiere la columna b2c_pedidos.vendedor
+// (supabase/migracion_b2c_vendedor.sql). Si todavía no se corrió, se detecta al primer guardado y se sigue guardando SIN el comercial
+// (en vez de romper el guardado de pedidos).
+let tacticalB2CSinColumnaVendedor = false;
+function tacticalB2CAvisoColumnaVendedor(){
+  tacticalB2CSinColumnaVendedor = true;
+  console.warn('b2c_pedidos no tiene la columna vendedor: correr supabase/migracion_b2c_vendedor.sql');
+  tacticalAvisoErrorGuardado('Falta correr el SQL del comercial (migracion_b2c_vendedor.sql): el pedido se guardó pero SIN el comercial');
+}
 function tacticalB2CPedidoADb(p){
-  return {
+  const fila = {
     id: p.id, fecha: p.fecha||new Date().toISOString(), estado: p.estado||'pendiente',
     nombre: p.nombre||'', celular: p.cel||'', correo: p.correo||'', entrega: p.entrega||'',
     total: p.total||0, cantidad: p.cantidad||0, kanban_ficha_id: p.idKanban||null,
     fecha_aprobado: p.fechaAprobado||null,
     nota_comercial: p.notaComercial||null, observaciones_comercial: p.observacionesComercial||null,
   };
+  if(!tacticalB2CSinColumnaVendedor) fila.vendedor = p.vendedor||null;
+  return fila;
+}
+// Cambia SOLO el comercial de un pedido (sin reescribir el pedido ni sus ítems).
+async function tacticalGuardarVendedorB2C(id, vendedor){
+  if(tacticalB2CSinColumnaVendedor){ tacticalB2CAvisoColumnaVendedor(); return false; }
+  const { error } = await tacticalSupabase.from('b2c_pedidos').update({ vendedor: vendedor||null }).eq('id', id);
+  if(error){
+    console.error('Error guardando comercial del pedido B2C:', error);
+    if(/vendedor/i.test((error.message||'') + (error.details||''))) tacticalB2CAvisoColumnaVendedor(); else tacticalAvisoErrorGuardado('Error guardando el comercial del pedido');
+    return false;
+  }
+  return true;
 }
 function tacticalB2CPedidoDeDb(r, items){
   return {
@@ -561,6 +583,7 @@ function tacticalB2CPedidoDeDb(r, items){
     correo: r.correo, entrega: r.entrega, total: Number(r.total)||0, cantidad: Number(r.cantidad)||0,
     idKanban: r.kanban_ficha_id, fechaAprobado: r.fecha_aprobado, items: items||[],
     notaComercial: r.nota_comercial||'', observacionesComercial: r.observaciones_comercial||'',
+    vendedor: r.vendedor||'',
   };
 }
 function tacticalB2CItemADb(pedidoId, it){
@@ -588,7 +611,11 @@ async function tacticalB2CPedidosCargar(){
 // Conde 2026-10-13: devuelve true/false (antes no devolvía nada) para poder confirmarle al usuario, con el nombre del
 // cliente, que el pedido SÍ quedó guardado -- y avisar si no.
 async function tacticalSyncB2CPedido(p){
-  const { error: errP } = await tacticalSupabase.from('b2c_pedidos').upsert(tacticalB2CPedidoADb(p));
+  let { error: errP } = await tacticalSupabase.from('b2c_pedidos').upsert(tacticalB2CPedidoADb(p));
+  if(errP && !tacticalB2CSinColumnaVendedor && /vendedor/i.test((errP.message||'') + (errP.details||''))){
+    tacticalB2CAvisoColumnaVendedor();
+    ({ error: errP } = await tacticalSupabase.from('b2c_pedidos').upsert(tacticalB2CPedidoADb(p)));
+  }
   if(errP){ console.error('Error guardando pedido B2C:', errP); return false; }
   await tacticalSupabase.from('b2c_pedido_items').delete().eq('pedido_id', p.id);
   if(p.items && p.items.length){
