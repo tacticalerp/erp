@@ -906,11 +906,45 @@ function recalcular(){
   if(S.pool.length){ renderPool(); }
   ORIENT = '';
   S.plan = planificar();
+  aplicarCambiosCeldas(S.plan);
   anilloNotas(S.plan.notas);
   renderLibre();
   if(S.hojaVer >= S.plan.hojas.length) S.hojaVer = 0;
   dibujar();
 }
+
+/* ======================= CAMBIOS POR PÁGINA (clic en la vista previa) ======================= */
+// Clic en una página del montaje: girarla 180° o dejar esa posición en blanco. Sirve para las excepciones sin llenar más casillas.
+const CAMBIOS = {};     // clave "hoja|x,y" -> { blanco:true, giro:true }
+function claveCelda(hh, c){ return hh+'|'+Math.round(c.x)+','+Math.round(c.y); }
+function aplicarCambiosCeldas(plan){
+  if(!plan || !plan.hojas) return;
+  plan.hojas.forEach((hp, hh)=>{
+    if(!hp.celdas) return;
+    const quitar = (arr, c)=> (arr||[]).filter(b=>!(Math.abs((b.x+b.w/2)-(c.x+c.w/2)) < 0.5 && Math.abs((b.y+b.h/2)-(c.y+c.h/2)) < 0.5));
+    const nuevas = []; hp.blancos = [];
+    hp.celdas.forEach(c=>{
+      const k = claveCelda(hh, c), ov = CAMBIOS[k] || {};
+      c.clave = k;
+      if(ov.blanco){ hp.blancos.push({ x:c.x, y:c.y, w:c.w, h:c.h, clave:k }); hp.cajasImg = quitar(hp.cajasImg, c); hp.sangrados = quitar(hp.sangrados, c); return; }
+      if(ov.giro) c.rot = ((c.rot||0) + 180) % 360;
+      nuevas.push(c);
+    });
+    hp.celdas = nuevas;
+  });
+}
+function menuCelda(ev, clave){
+  ev.stopPropagation(); cerrarMenuCelda();
+  const ov = CAMBIOS[clave] || {};
+  const m = document.createElement('div'); m.id = 'menuCelda';
+  m.style.cssText = 'position:fixed;z-index:9999;left:'+Math.min(ev.clientX, window.innerWidth-190)+'px;top:'+Math.min(ev.clientY, window.innerHeight-130)+'px;background:#fff;border:1px solid #94a3b8;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25);padding:6px;display:flex;flex-direction:column;gap:4px;min-width:170px;';
+  const b = (txt, fn)=>{ const e = document.createElement('button'); e.type = 'button'; e.className = 'btn gris'; e.style.cssText = 'text-align:left;padding:6px 10px;'; e.textContent = txt; e.onclick = ()=>{ cerrarMenuCelda(); fn(); }; m.appendChild(e); };
+  if(!ov.blanco) b(ov.giro ? 'Quitar el giro de 180°' : 'Girar 180°', ()=>{ CAMBIOS[clave] = { ...ov, giro:!ov.giro }; recalcular(); });
+  b(ov.blanco ? 'Volver a poner la página' : 'Dejar en blanco', ()=>{ CAMBIOS[clave] = { ...ov, blanco:!ov.blanco }; recalcular(); });
+  document.body.appendChild(m);
+}
+function cerrarMenuCelda(){ const m = document.getElementById('menuCelda'); if(m) m.remove(); }
+document.addEventListener('click', cerrarMenuCelda);
 
 function dibujar(){
   const plan = S.plan, svg = $('lienzo');
@@ -945,6 +979,9 @@ function svgHoja(plan, hp, s, ox, oy, hi){
   if(hp){
     (hp.sangrados||[]).forEach(b=>{ g += '<rect x="'+(ox+b.x*s)+'" y="'+(oy+b.y*s)+'" width="'+b.w*s+'" height="'+b.h*s+'" fill="#EF9F27" fill-opacity="0.32" stroke="#378ADD" stroke-width="0.8" stroke-dasharray="4 3"/>'; });
     (hp.marcos||[]).forEach(r=>{ g += '<rect x="'+(ox+r.x*s)+'" y="'+(oy+r.y*s)+'" width="'+r.w*s+'" height="'+r.h*s+'" fill="none" stroke="#000" stroke-width="1.2"/><text x="'+(ox+(r.x+r.w/2)*s)+'" y="'+(oy+(r.y+r.h/2)*s)+'" text-anchor="middle" dominant-baseline="central" style="font-size:12px;fill:#475569">Pegar cartón</text>'; });
+    (hp.blancos||[]).forEach(b=>{
+      g += '<rect x="'+(ox+b.x*s)+'" y="'+(oy+b.y*s)+'" width="'+b.w*s+'" height="'+b.h*s+'" fill="#fff" stroke="#94a3b8" stroke-width="0.8" stroke-dasharray="5 3" style="cursor:pointer" onclick="menuCelda(event,\''+b.clave+'\')"/><text x="'+(ox+(b.x+b.w/2)*s)+'" y="'+(oy+(b.y+b.h/2)*s)+'" text-anchor="middle" dominant-baseline="central" style="font-size:11px;fill:#94a3b8;pointer-events:none">EN BLANCO</text>';
+    });
     hp.celdas.forEach(c=>{
       const X = ox+c.x*s, Y = oy+c.y*s, w = c.w*s, h = c.h*s, cx = X+w/2, cy = Y+h/2;
       const col = c.label==='R' ? '#d97706' : '#2563eb';
@@ -957,6 +994,7 @@ function svgHoja(plan, hp, s, ox, oy, hi){
       if(c.label==='T'||c.label==='R'){
         g += '<circle cx="'+(X+11)+'" cy="'+(Y+11)+'" r="8" fill="'+col+'"/><text x="'+(X+11)+'" y="'+(Y+11)+'" text-anchor="middle" dominant-baseline="central" style="font-size:10px;font-weight:700;fill:#fff">'+c.label+'</text>';
       }
+      if(c.clave) g += '<rect x="'+X+'" y="'+Y+'" width="'+w+'" height="'+h+'" fill="transparent" style="cursor:pointer" onclick="menuCelda(event,\'' + c.clave + '\')"><title>Clic: girar 180° o dejar en blanco</title></rect>';
     });
     if(hp.flecha){ const ay2 = oy+hoja.H/2*s, ax1 = ox+4*s, ax2 = ox+7*s; g += '<path d="M'+ax2+' '+ay2+'H'+ax1+'M'+(ax1+3)+' '+(ay2-3)+'L'+ax1+' '+ay2+'L'+(ax1+3)+' '+(ay2+3)+'" fill="none" stroke="#000" stroke-width="1.2" stroke-linecap="round"/>'; }
     if(hp.eje!=null){ const ex = ox+hp.eje*s; g += '<line x1="'+ex+'" y1="'+oy+'" x2="'+ex+'" y2="'+(oy+hoja.H*s)+'" stroke="#dc2626" stroke-width="1" stroke-dasharray="5 3"/>'; }
