@@ -1149,8 +1149,23 @@ function imagenCelda(c, pre, hi){
   const ix = -pre[0]/2 - (T.x-mb.x)*k, iy = -pre[1]/2 - ((mb.y+mb.h)-(T.y+T.h))*k, iw = mb.w*k, ih = mb.h*k;
   let bl = { l:0, r:0, t:0, b:0 };
   if(c.sangrar && c.dec==='yatrae'){ const disp = Math.min(T.x-mb.x, T.y-mb.y, mb.x+mb.w-(T.x+T.w), mb.y+mb.h-(T.y+T.h)), L = bleedLados(c), f = v=>Math.max(0, Math.min(v, disp))*k; bl = { l:f(L.l), r:f(L.r), t:f(L.t), b:f(L.b) }; }
+  // sangrado por espejo (el que se aplica con «Sangrados automáticos»): se dibuja reflejada la propia imagen en los lados que lo necesitan
+  const copias = [];
+  if(c.sangrar && c.dec==='espejo'){
+    const L = bleedLados(c); bl = { l:L.l*k, r:L.r*k, t:L.t*k, b:L.b*k };
+    const cov = { l:(T.x-mb.x)*k, r:(mb.x+mb.w-(T.x+T.w))*k, t:((mb.y+mb.h)-(T.y+T.h))*k, b:(T.y-mb.y)*k };
+    const need = { l:bl.l>0 && cov.l < bl.l-0.01, r:bl.r>0 && cov.r < bl.r-0.01, t:bl.t>0 && cov.t < bl.t-0.01, b:bl.b>0 && cov.b < bl.b-0.01 };
+    for(const sy of [-1,0,1]) for(const sx of [-1,0,1]){
+      if(!sx && !sy) continue;
+      const nx = sx===-1 ? need.l : (sx===1 ? need.r : true), ny = sy===-1 ? need.t : (sy===1 ? need.b : true);
+      if(nx && ny) copias.push([sx, sy]);
+    }
+    copias.sort((p1, p2)=>(Math.abs(p2[0])+Math.abs(p2[1]))-(Math.abs(p1[0])+Math.abs(p1[1])));   // esquinas, lados y al final el centro
+  }
   const id = 'cl'+(++CLIP_N);
-  return '<clipPath id="'+id+'"><rect x="'+(-pre[0]/2-bl.l)+'" y="'+(-pre[1]/2-bl.t)+'" width="'+(pre[0]+bl.l+bl.r)+'" height="'+(pre[1]+bl.t+bl.b)+'"/></clipPath><image clip-path="url(#'+id+')" href="'+t+'" x="'+ix+'" y="'+iy+'" width="'+iw+'" height="'+ih+'" preserveAspectRatio="none"/>';
+  const img = '<image href="'+t+'" x="'+ix+'" y="'+iy+'" width="'+iw+'" height="'+ih+'" preserveAspectRatio="none"';
+  const refl = copias.map(([sx, sy])=>img+' transform="matrix('+(sx?-1:1)+' 0 0 '+(sy?-1:1)+' '+(sx===-1 ? 2*ix : sx===1 ? 2*(ix+iw) : 0)+' '+(sy===-1 ? 2*iy : sy===1 ? 2*(iy+ih) : 0)+')"/>').join('');
+  return '<clipPath id="'+id+'"><rect x="'+(-pre[0]/2-bl.l)+'" y="'+(-pre[1]/2-bl.t)+'" width="'+(pre[0]+bl.l+bl.r)+'" height="'+(pre[1]+bl.t+bl.b)+'"/></clipPath><g clip-path="url(#'+id+')">'+refl+img+'/></g>';
 }
 function svgHoja(plan, hp, s, ox, oy, hi, inter){
   inter = inter !== false;
@@ -1160,7 +1175,7 @@ function svgHoja(plan, hp, s, ox, oy, hi, inter){
   const ax = ox+(hoja.W-hoja.aW)/2*s, ay = oy+(hoja.H-hoja.aH)/2*s;
   g += '<rect x="'+ax+'" y="'+ay+'" width="'+hoja.aW*s+'" height="'+hoja.aH*s+'" fill="none" stroke="#94a3b8" stroke-width="0.7" stroke-dasharray="5 4"/>';
   if(hp){
-    (hp.sangrados||[]).forEach(b=>{ g += '<rect x="'+(ox+b.x*s)+'" y="'+(oy+b.y*s)+'" width="'+b.w*s+'" height="'+b.h*s+'" fill="#EF9F27" fill-opacity="0.32" stroke="#378ADD" stroke-width="0.8" stroke-dasharray="4 3"/>'; });
+    (hp.sangrados||[]).forEach(b=>{ g += '<rect x="'+(ox+b.x*s)+'" y="'+(oy+b.y*s)+'" width="'+b.w*s+'" height="'+b.h*s+'" fill="none" stroke="#378ADD" stroke-width="0.8" stroke-dasharray="4 3"/>'; });
     (hp.marcos||[]).forEach(r=>{ g += '<rect x="'+(ox+r.x*s)+'" y="'+(oy+r.y*s)+'" width="'+r.w*s+'" height="'+r.h*s+'" fill="none" stroke="#000" stroke-width="1.2"/><text x="'+(ox+(r.x+r.w/2)*s)+'" y="'+(oy+(r.y+r.h/2)*s)+'" text-anchor="middle" dominant-baseline="central" style="font-size:12px;fill:#475569">Pegar cartón</text>'; });
     (hp.blancos||[]).forEach(b=>{
       g += '<rect x="'+(ox+b.x*s)+'" y="'+(oy+b.y*s)+'" width="'+b.w*s+'" height="'+b.h*s+'" fill="#fff" stroke="#94a3b8" stroke-width="0.8" stroke-dasharray="5 3" style="cursor:pointer" onclick="menuCelda(event,\''+b.clave+'\')"/><text x="'+(ox+(b.x+b.w/2)*s)+'" y="'+(oy+(b.y+b.h/2)*s)+'" text-anchor="middle" dominant-baseline="central" style="font-size:11px;fill:#94a3b8;pointer-events:none">EN BLANCO</text>';
