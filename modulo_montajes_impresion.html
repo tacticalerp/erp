@@ -1002,6 +1002,40 @@ function manAccion(hh, i, que){
   if(que==='quitar'){ q.pid = null; q.giro = false; } else if(que==='giro'){ q.giro = !q.giro; }
   recalcular();
 }
+// Clic en una posición: ventana para colocar una página sin arrastrar (por número o eligiendo la miniatura)
+function numPagina(p){ return S.files.filter(Boolean).length > 1 ? S.pool.indexOf(p)+1 : p.pidx+1; }
+function elegirPagina(ev, hh, i){
+  if(ev && ev.stopPropagation) ev.stopPropagation();
+  cerrarMenuCelda(); cerrarElegirPagina();
+  const mh = MAN.hojas[hh]; if(!mh) return;
+  const usadas = new Set(mh.pos.map(q=>q && q.pid).filter(Boolean));
+  const x = ev && ev.clientX != null ? ev.clientX : 200, y = ev && ev.clientY != null ? ev.clientY : 200;
+  const b = document.createElement('div'); b.id = 'elegirPag';
+  b.style.cssText = 'position:fixed;z-index:9999;left:'+Math.max(8, Math.min(x, window.innerWidth-390))+'px;top:'+Math.max(8, Math.min(y, window.innerHeight-430))+'px;width:370px;max-height:420px;display:flex;flex-direction:column;background:#fff;border:1px solid #64748b;border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.3);padding:10px;';
+  b.onclick = e=>e.stopPropagation();
+  b.innerHTML = '<div style="font:bold 13px Arial;color:#1e3a5f;margin-bottom:6px;">Colocar página en la hoja '+(hh+1)+', posición '+(i+1)+'</div>'+
+    '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;"><input id="epNum" type="number" min="1" placeholder="Nº de página" style="width:130px;padding:6px 8px;border:1px solid #94a3b8;border-radius:6px;"> <button class="btn verde mini" id="epOk">Colocar</button> <label style="font-size:12px;display:flex;gap:4px;align-items:center;margin-left:auto;"><input type="checkbox" id="epSeguir" '+(MAN.seguir===false ? '' : 'checked')+'> seguir con la siguiente</label></div>'+
+    '<div style="overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:6px;">'+S.pool.map(p=>'<div data-id="'+p.id+'" style="border:2px solid '+(usadas.has(p.id) ? '#16a34a' : '#cbd5e1')+';border-radius:6px;padding:3px;text-align:center;cursor:pointer;font:11px Arial;background:#f8fafc;"><img src="'+p.thumb+'" style="width:100%;height:70px;object-fit:contain;display:block;"><div>pág. '+numPagina(p)+(usadas.has(p.id) ? ' ✓' : '')+'</div></div>').join('')+'</div>'+
+    '<div style="margin-top:8px;text-align:right;"><button class="btn gris mini" id="epCerrar">Cerrar</button></div>';
+  document.body.appendChild(b);
+  const colocar = pid=>{
+    MAN.seguir = $('epSeguir').checked;
+    const seguir = MAN.seguir;
+    MAN.hojas[hh].pos[i] = { pid, giro:false }; S.hojaVer = hh;
+    cerrarElegirPagina(); recalcular();
+    if(seguir){ const sig = MAN.hojas[hh].pos.findIndex((q, k)=>k > i && !(q && q.pid)); if(sig >= 0) setTimeout(()=>elegirPagina({ clientX:x, clientY:y }, hh, sig), 0); }
+  };
+  b.querySelectorAll('[data-id]').forEach(e=>{ e.onclick = ()=>colocar(parseInt(e.dataset.id,10)); });
+  const porNumero = ()=>{ const n = parseInt($('epNum').value,10); const p = S.pool.find(q=>numPagina(q)===n); if(!p){ $('epNum').style.borderColor = '#dc2626'; return; } colocar(p.id); };
+  $('epOk').onclick = porNumero;
+  $('epNum').addEventListener('keydown', e=>{ if(e.key==='Enter') porNumero(); });
+  $('epCerrar').onclick = cerrarElegirPagina;
+  setTimeout(()=>$('epNum').focus(), 30);
+}
+function cerrarElegirPagina(){ const b = document.getElementById('elegirPag'); if(b) b.remove(); }
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') cerrarElegirPagina(); });
+document.addEventListener('click', e=>{ const b = document.getElementById('elegirPag'); if(b && !b.contains(e.target)) cerrarElegirPagina(); });
+
 function manCtlVisible(){ const e = $('manualCtl'); if(e) e.style.display = $('tipo').value==='manual' ? '' : 'none'; }
 
 /* ======================= CAMBIOS POR PÁGINA (clic en la vista previa) ======================= */
@@ -1031,7 +1065,7 @@ function menuCelda(ev, clave){
   const m = document.createElement('div'); m.id = 'menuCelda';
   m.style.cssText = 'position:fixed;z-index:9999;left:'+Math.min(ev.clientX, window.innerWidth-190)+'px;top:'+Math.min(ev.clientY, window.innerHeight-130)+'px;background:#fff;border:1px solid #94a3b8;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25);padding:6px;display:flex;flex-direction:column;gap:4px;min-width:170px;';
   const b = (txt, fn)=>{ const e = document.createElement('button'); e.type = 'button'; e.className = 'btn gris'; e.style.cssText = 'text-align:left;padding:6px 10px;'; e.textContent = txt; e.onclick = ()=>{ cerrarMenuCelda(); fn(); }; m.appendChild(e); };
-  if(man){ b(man.giro ? 'Quitar el giro de 180°' : 'Girar 180°', ()=>manAccion(man.hh, man.i, 'giro')); b('Quitar de esta posición', ()=>manAccion(man.hh, man.i, 'quitar')); document.body.appendChild(m); return; }
+  if(man){ b('Cambiar por otra página…', ()=>elegirPagina({ clientX:ev.clientX, clientY:ev.clientY }, man.hh, man.i)); b(man.giro ? 'Quitar el giro de 180°' : 'Girar 180°', ()=>manAccion(man.hh, man.i, 'giro')); b('Quitar de esta posición', ()=>manAccion(man.hh, man.i, 'quitar')); document.body.appendChild(m); return; }
   if(!ov.blanco) b(ov.giro ? 'Quitar el giro de 180°' : 'Girar 180°', ()=>{ CAMBIOS[clave] = { ...ov, giro:!ov.giro }; recalcular(); });
   b(ov.blanco ? 'Volver a poner la página' : 'Dejar en blanco', ()=>{ CAMBIOS[clave] = { ...ov, blanco:!ov.blanco }; recalcular(); });
   document.body.appendChild(m);
@@ -1077,7 +1111,7 @@ function svgHoja(plan, hp, s, ox, oy, hi, inter){
       g += '<rect x="'+(ox+b.x*s)+'" y="'+(oy+b.y*s)+'" width="'+b.w*s+'" height="'+b.h*s+'" fill="#fff" stroke="#94a3b8" stroke-width="0.8" stroke-dasharray="5 3" style="cursor:pointer" onclick="menuCelda(event,\''+b.clave+'\')"/><text x="'+(ox+(b.x+b.w/2)*s)+'" y="'+(oy+(b.y+b.h/2)*s)+'" text-anchor="middle" dominant-baseline="central" style="font-size:11px;fill:#94a3b8;pointer-events:none">EN BLANCO</text>';
     });
     (hp.vacias||[]).forEach(v=>{
-      g += '<rect x="'+(ox+v.x*s)+'" y="'+(oy+v.y*s)+'" width="'+v.w*s+'" height="'+v.h*s+'" fill="#f1f5f9" stroke="#64748b" stroke-width="0.8" stroke-dasharray="5 3" ondragover="event.preventDefault()" ondrop="soltarManual(event,'+v.hh+','+v.i+')"/><text x="'+(ox+(v.x+v.w/2)*s)+'" y="'+(oy+(v.y+v.h/2)*s)+'" text-anchor="middle" dominant-baseline="central" style="font-size:11px;fill:#64748b;pointer-events:none">Arrastra una página aquí</text>';
+      g += '<rect x="'+(ox+v.x*s)+'" y="'+(oy+v.y*s)+'" width="'+v.w*s+'" height="'+v.h*s+'" fill="#f1f5f9" stroke="#64748b" stroke-width="0.8" stroke-dasharray="5 3" style="cursor:pointer" onclick="elegirPagina(event,'+v.hh+','+v.i+')" ondragover="event.preventDefault()" ondrop="soltarManual(event,'+v.hh+','+v.i+')"/><text x="'+(ox+(v.x+v.w/2)*s)+'" y="'+(oy+(v.y+v.h/2)*s)+'" text-anchor="middle" dominant-baseline="central" style="font-size:11px;fill:#64748b;pointer-events:none">Clic para elegir la página (o arrástrala aquí)</text>';
     });
     hp.celdas.forEach(c=>{
       const X = ox+c.x*s, Y = oy+c.y*s, w = c.w*s, h = c.h*s, cx = X+w/2, cy = Y+h/2;
