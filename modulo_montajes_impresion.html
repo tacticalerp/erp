@@ -1008,7 +1008,9 @@ function elegirPagina(ev, hh, i){
   if(ev && ev.stopPropagation) ev.stopPropagation();
   cerrarMenuCelda(); cerrarElegirPagina();
   const mh = MAN.hojas[hh]; if(!mh) return;
-  const usadas = new Set(mh.pos.map(q=>q && q.pid).filter(Boolean));
+  // páginas ya colocadas en CUALQUIER hoja del montaje (marco rojo aunque se pase a otra hoja): pid -> números de hoja
+  const enHojas = {}; MAN.hojas.forEach((h, k)=>h.pos.forEach(q=>{ if(q && q.pid){ (enHojas[q.pid] = enHojas[q.pid] || []); if(!enHojas[q.pid].includes(k+1)) enHojas[q.pid].push(k+1); } }));
+  const usadas = { has: id=>!!enHojas[id] };
   const x = ev && ev.clientX != null ? ev.clientX : 200, y = ev && ev.clientY != null ? ev.clientY : 200;
   if(!document.getElementById('estiloElegirPag')){ const st = document.createElement('style'); st.id = 'estiloElegirPag'; st.textContent = '#elegirPag [data-id]{position:relative;transition:transform .12s ease;} #elegirPag [data-id]:hover{transform:scale(1.5);z-index:5;box-shadow:0 6px 18px rgba(0,0,0,.35);background:#fff;}'; document.head.appendChild(st); }
   const b = document.createElement('div'); b.id = 'elegirPag';
@@ -1016,7 +1018,7 @@ function elegirPagina(ev, hh, i){
   b.onclick = e=>e.stopPropagation();
   b.innerHTML = '<div style="font:bold 13px Arial;color:#1e3a5f;margin-bottom:6px;">Colocar página en la hoja '+(hh+1)+', posición '+(i+1)+'</div>'+
     '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;"><input id="epNum" type="number" min="1" placeholder="Nº de página" style="width:130px;padding:6px 8px;border:1px solid #94a3b8;border-radius:6px;"> <button class="btn verde mini" id="epOk">Colocar</button> <label style="font-size:12px;display:flex;gap:4px;align-items:center;margin-left:auto;"><input type="checkbox" id="epSeguir" '+(MAN.seguir===false ? '' : 'checked')+'> seguir con la siguiente</label></div>'+
-    '<div style="overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:10px 8px;padding:14px 10px;">'+S.pool.map(p=>'<div data-id="'+p.id+'" style="border:2px solid '+(usadas.has(p.id) ? '#dc2626' : '#cbd5e1')+';border-radius:6px;padding:3px;text-align:center;cursor:pointer;font:11px Arial;background:#f8fafc;"><img src="'+p.thumb+'" style="width:100%;height:70px;object-fit:contain;display:block;"><div style="'+(usadas.has(p.id) ? 'color:#dc2626;font-weight:700;' : '')+'">pág. '+numPagina(p)+(usadas.has(p.id) ? ' · ya está en esta hoja' : '')+'</div></div>').join('')+'</div>'+
+    '<div style="overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:10px 8px;padding:14px 10px;">'+S.pool.map(p=>'<div data-id="'+p.id+'" style="border:2px solid '+(usadas.has(p.id) ? '#dc2626' : '#cbd5e1')+';border-radius:6px;padding:3px;text-align:center;cursor:pointer;font:11px Arial;background:#f8fafc;"><img src="'+p.thumb+'" style="width:100%;height:70px;object-fit:contain;display:block;"><div style="'+(usadas.has(p.id) ? 'color:#dc2626;font-weight:700;' : '')+'">pág. '+numPagina(p)+(usadas.has(p.id) ? ' · ya está en la hoja '+enHojas[p.id].join(', ') : '')+'</div></div>').join('')+'</div>'+
     '<div style="margin-top:8px;text-align:right;"><button class="btn gris mini" id="epCerrar">Cerrar</button></div>';
   document.body.appendChild(b);
   const colocar = pid=>{
