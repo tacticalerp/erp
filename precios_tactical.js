@@ -922,6 +922,7 @@ const TACTICAL_SVG_ICONOS = {
   mail: '<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline>',
   briefcase: '<rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>',
   idcard: '<rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line>',
+  copy: '<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>',
   clipboard: '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>',
   target: '<circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle>',
   dollar: '<line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>',
@@ -1326,3 +1327,23 @@ function tacticalAnilloBloqueOP(p, fontSize){
   if(window.__tacticalHubBtn || document.getElementById('tactical-hub-btn-js')) return;
   const s = document.createElement('script'); s.id = 'tactical-hub-btn-js'; s.src = 'tactical-hub-btn.js?v=20261017a'; document.head.appendChild(s);
 })();
+
+/* ============ DUPLICAR COTIZACIÓN (Conde 2026-10-21) ============
+   "algunos clientes piden exactamente el mismo trabajo o con cambios muy mínimos; la idea no es hacer la cotización de nuevo desde cero" y
+   "no quiero que se cambie algún dato de algo que se aprobó". Duplicar abre la calculadora con TODO cargado y editable, pero NO es una
+   edición: sin versión (-B), al guardar sale con un número (OT) NUEVO y la cotización original (aunque esté ganada) no se toca.
+   Se activa con ?dup=<id del negocio> en la URL de cada calculadora (o desde el Hub en Cuadernos). */
+function tacticalCopTxt(n){ return '$' + Math.round(n).toLocaleString('es-CO'); }
+function tacticalBannerDuplicarHtml(ot, antes, ahora){
+  let cmp = '';
+  if(typeof antes === 'number' && typeof ahora === 'number' && antes > 0){
+    const pct = (ahora - antes) / antes * 100;
+    cmp = ' Precio de la original: <strong>' + tacticalCopTxt(antes) + '</strong> · precio con los valores de hoy: <strong>' + tacticalCopTxt(ahora) + '</strong> (' + (pct >= 0 ? '+' : '') + pct.toFixed(1).replace('.', ',') + '%).';
+  }
+  return '📄 Duplicando <strong>' + (ot || '') + '</strong> -- al guardar se crea una cotización <strong>NUEVA con número nuevo</strong>; la original no se toca.' + cmp +
+    ' Cambia lo que haga falta (incluso el cliente) y vuelve a calcular. <button type="button" class="btn-action" onclick="cotCancelarEdicion()">Cancelar</button>';
+}
+// params de la cotización nueva, con la referencia a la original (queda en el JSON de params, sin cambios de base de datos)
+function tacticalParamsConDuplicado(p){
+  return window.tacticalDuplicadaDe ? Object.assign({}, p, { duplicadaDe: window.tacticalDuplicadaDe }) : p;
+}

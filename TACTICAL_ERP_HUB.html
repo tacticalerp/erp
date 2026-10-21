@@ -2533,7 +2533,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="tactical-supabase.js?v=20261021a"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
-    <script src="precios_tactical.js?v=20261021a"></script>
+    <script src="precios_tactical.js?v=20261021b"></script>
     <script src="precios_promocionales.js?v=20260919a"></script>
     <script>
         // NAVEGACIÓN SPA DEL HUB
@@ -6954,6 +6954,7 @@
               <td class="cot-td-detalle">
                 <div style="display:flex; gap:4px;">
                   <button class="btn-action" style="padding:5px 8px;" onclick="verPDFCotizacionGuardada('${o.id}')" title="Ver PDF">${ticon('printer')}</button>
+                  ${((o.linea==='cuadernos' || o.linea==='manual' || LINEA_A_CALCULADORA_ARCHIVO[o.linea]) && !(o.opcionesComparativa && o.opcionesComparativa.length>1)) ? `<button class="btn-action" style="padding:5px 8px; color:#059669; border-color:#059669;" onclick="tacticalAbrirDuplicado('${o.id}','${o.linea}','${(o.ot||'').replace(/'/g,'')}')" title="Duplicar: crea una cotización NUEVA (número nuevo) con estos mismos datos; la original no se modifica">${ticon('copy')}</button>` : ''}
                   ${(o.etapa && (o.linea==='cuadernos' || LINEA_A_CALCULADORA_ARCHIVO[o.linea])) ? `<button class="btn-action" style="padding:5px 8px; color:#d97706; border-color:#d97706;" onclick="tacticalAbrirEdicionCotizacion('${o.id}','${o.linea}','${o.ot||''}')" title="Ver el desglose y crear una nueva versión con cambios, sin borrar esta">✏️</button>` : ''}
                   ${(o.etapa && o.linea==='multi' && Array.isArray(o.lineas) && o.lineas.length) ? `<button class="btn-action" style="padding:5px 8px; color:#d97706; border-color:#d97706;" onclick="tacticalAbrirEdicionMulti('${o.id}')" title="Elegir cuál de los productos de este pedido editar">✏️</button>` : ''}
                   <button class="btn-action" style="padding:5px 8px; color:#2563eb; border-color:#2563eb;" onclick="buscadorCambiarVendedor('${o.id}')" title="Cambiar de comercial">${ticon('refresh')}</button>
@@ -8311,6 +8312,8 @@
            mientras se está editando, ACTUALIZA esa misma cotización (mismo id/OT) en vez de crear
            una duplicada -- ver cotEditandoId más abajo. ---- */
         let cotEditandoId = null;
+        // Conde 2026-10-21: DUPLICAR una cotización (ver tacticalBannerDuplicarHtml en precios_tactical.js).
+        let cotModoDuplicar = false;
         let cotEditandoOtOriginal = null; // respaldo del OT si la cotización original ya no está en db_opps
         // Quita la letra de versión de un OT si la tiene (ej. "OT-2608-34-B" -> "OT-2608-34";
         // "OT-2608-34" se queda igual, es la original y nunca tiene letra).
@@ -8386,6 +8389,14 @@
           // linea solo. No es una de las 8 calculadoras "con motor real" (su propio comentario dice
           // "Producto sin motor de cálculo").
         };
+        // Conde 2026-10-21: DUPLICAR (cualquier estado, también ganadas/perdidas). Cuadernos y las 7 calculadoras con motor reabren su desglose;
+        // Producto Libre (linea 'manual') reconstruye desde el propio negocio. La original nunca se modifica.
+        function tacticalAbrirDuplicado(id, linea, ot){
+          if(linea === 'cuadernos'){ cotCargarParaDuplicar(id); return; }
+          const archivo = linea === 'manual' ? 'calculadora_libre.html' : LINEA_A_CALCULADORA_ARCHIVO[linea];
+          if(!archivo) return;
+          window.open(`${archivo}?dup=${encodeURIComponent(id)}&ot=${encodeURIComponent(ot||'')}`, '_blank');
+        }
         function tacticalAbrirEdicionCotizacion(id, linea, ot){
           if(linea === 'cuadernos'){ cotCargarCotizacionGuardada(id); return; }
           const archivo = LINEA_A_CALCULADORA_ARCHIVO[linea];
@@ -8521,6 +8532,13 @@
           if(!archivo) return;
           window.open(`${archivo}?otedit=${encodeURIComponent(idPedido)}&lineaidx=${lineaIdx}`, '_blank');
         }
+        // DUPLICAR una cotización de Cuadernos (también las ya ganadas/perdidas): abre el formulario cargado, pero como cotización NUEVA.
+        function cotCargarParaDuplicar(id){
+          const cot = db_cotizaciones.find(c => c.id === id || c.idOpp === id);
+          if(!cot){ alert('No se encontró el detalle guardado de esta cotización (puede ser muy antigua, de antes de que se empezara a guardar el desglose).'); return; }
+          cotModoDuplicar = true;
+          cotPoblarFormularioEdicion(cot);
+        }
         function cotCargarCotizacionGuardada(id){
           const cot = db_cotizaciones.find(c => c.id === id);
           if(!cot){ alert('No se encontró el detalle guardado de esta cotización (puede ser muy antigua, de antes de que se empezara a guardar el desglose).'); return; }
@@ -8591,6 +8609,16 @@
             dc.style.height = 'auto'; dc.style.height = (dc.scrollHeight+2)+'px';
           }
 
+          if(cotModoDuplicar){
+            // DUPLICAR (no editar): sin cotEditandoId -> al guardar sale con número nuevo y la original (aunque esté ganada) no se toca.
+            cotEditandoId = null; cotEditandoOtOriginal = null;
+            window.tacticalDuplicadaDe = cot.ot || '';
+            const bannerDup = document.getElementById('cot-edicion-banner');
+            bannerDup.style.display = 'block';
+            bannerDup.innerHTML = tacticalBannerDuplicarHtml(cot.ot, cot.resultado && cot.resultado.precioFinalTotal, (typeof cotUltimoResultado !== 'undefined' && cotUltimoResultado) ? cotUltimoResultado.precioFinalTotal : null);
+            document.getElementById('view-cotizador').scrollIntoView({behavior:'smooth'});
+            return;
+          }
           cotEditandoId = cot.id;
           cotEditandoOtOriginal = cot.ot;
           const otBaseVista = cotOtBase(cot.ot);
@@ -8601,6 +8629,7 @@
           document.getElementById('view-cotizador').scrollIntoView({behavior:'smooth'});
         }
         function cotCancelarEdicion(){
+          cotModoDuplicar = false; window.tacticalDuplicadaDe = '';
           cotEditandoId = null;
           cotEditandoOtOriginal = null;
           const banner = document.getElementById('cot-edicion-banner');
@@ -9007,7 +9036,7 @@
 
           const cotizacion = {
             ot, id: opp.id, idOpp: opp.id, idCli: cli.id, fecha: new Date().toISOString(),
-            cliente: {empresa, encargado, telefono, correo}, vendedor, desc, params: p, resultado: r,
+            cliente: {empresa, encargado, telefono, correo}, vendedor, desc, params: tacticalParamsConDuplicado(p), resultado: r,
             plazoEntrega, validezOferta, observaciones, condicionesComerciales,
             fotoUrl: cotFotoElegidaUrl(), videoUrl: cotVideoElegidoUrl(),
           };

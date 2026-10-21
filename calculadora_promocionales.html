@@ -326,7 +326,7 @@
 <script src="tactical-supabase.js?v=20261021a"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
 <script src="precios_promocionales.js?v=20260919a"></script>
-<script src="precios_tactical.js?v=20261021a"></script>
+<script src="precios_tactical.js?v=20261021b"></script>
 <script>
 function cop(n){ return "$" + Math.round(n).toLocaleString("es-CO"); }
 // Conde 2026-08-27: "negrilla con ** no esta funcionando en todas las calculadoras" -- esta
@@ -900,7 +900,7 @@ async function guardarCotizacionClick(){
   const cotizacionGuardada = {
     id: opp.id, linea: 'promocionales', ot, idOpp: opp.id, idCli: cli.id,
     cliente: {empresa: cli.empresa, encargado: cli.nombre, telefono: cli.wp, correo: cli.correo},
-    vendedor, desc: ultimoResultado.descripcion, params: ultimoParams, resultado: ultimoResultado,
+    vendedor, desc: ultimoResultado.descripcion, params: tacticalParamsConDuplicado(ultimoParams), resultado: ultimoResultado,
     condicionesComerciales: leerCondicionesComerciales(), plazoEntrega: leerPlazoEntrega(),
   };
   const desgloseGuardadoOk = await tacticalSyncCotizacionCalc(cotizacionGuardada);
@@ -971,6 +971,16 @@ function cargarCotizacionGuardada(cot){
 
   calcular();
 
+  if(window.tacticalModoDuplicar){
+    // Conde 2026-10-21: DUPLICAR (no editar): sin cotEditandoId -> al guardar sale con número nuevo y la original no se toca.
+    cotEditandoId = null; cotEditandoOtOriginal = null;
+    window.tacticalDuplicadaDe = cot.ot || '';
+    const bannerDup = document.getElementById('cot-edicion-banner');
+    bannerDup.style.display = 'block';
+    bannerDup.innerHTML = tacticalBannerDuplicarHtml(cot.ot, cot.resultado && cot.resultado.precioFinalTotal, ultimoResultado && ultimoResultado.precioFinalTotal);
+    bannerDup.scrollIntoView({behavior:'smooth'});
+    return;
+  }
   cotEditandoId = cot.id;
   cotEditandoOtOriginal = cot.ot;
   const otBaseVista = tacticalCotOtBase(cot.ot);
@@ -981,6 +991,7 @@ function cargarCotizacionGuardada(cot){
   banner.scrollIntoView({behavior:'smooth'});
 }
 function cotCancelarEdicion(){
+  window.tacticalModoDuplicar = false; window.tacticalDuplicadaDe = '';
   cotEditandoId = null;
   cotEditandoOtOriginal = null;
   const banner = document.getElementById('cot-edicion-banner');
@@ -997,9 +1008,11 @@ async function tacticalCargarEdicionDesdeURL(){
   }
   const ot = url.get('ot');
   if(!ot) return;
+  const dup = url.get('dup');
+  if(dup) window.tacticalModoDuplicar = true;
   const cots = await tacticalCotizacionesCalcCargar('promocionales', ot);
-  if(!cots.length){ alert(`No se encontró el desglose guardado de la cotización ${ot} (puede ser muy antigua, de antes de que se empezara a guardar).`); return; }
-  cargarCotizacionGuardada(cots[cots.length-1]);
+  if(!cots.length){ alert(`No se encontró el desglose guardado de la cotización ${ot} (puede ser muy antigua, de antes de que se empezara a guardar).`); window.tacticalModoDuplicar = false; return; }
+  cargarCotizacionGuardada((dup && cots.find(c => c.idOpp === dup || c.id === dup)) || cots[cots.length-1]);
 }
 
 /* ============ PEDIDO MULTI-PRODUCTO (varias líneas, un solo cliente/OT) ============ */

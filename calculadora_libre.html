@@ -143,6 +143,8 @@
 <div class="layout">
   <div class="col-form">
 
+    <div id="cot-edicion-banner" style="display:none; margin-bottom:14px; padding:10px 14px; background:#fff3cd; border:1px solid #f0d98c; border-radius:6px; color:#7a5b00; font-size:0.88rem;"></div>
+
     <div class="card">
       <h2>0. Datos del Cliente</h2>
       <div class="fila">
@@ -262,7 +264,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="tactical-supabase.js?v=20261021a"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
-<script src="precios_tactical.js?v=20261021a"></script>
+<script src="precios_tactical.js?v=20261021b"></script>
 <script>
 function cop(n){ return "$" + Math.round(n).toLocaleString("es-CO"); }
 // Conde 2026-08-27: "negrilla con ** no esta funcionando en todas las calculadoras" -- esta
@@ -354,8 +356,78 @@ window.tacticalOnLogin = async function(){
   poblarFotoFototeca();
   await tacticalPedidoBorradorCargar(); refrescarBannerPedido();
   await tacticalComparacionBorradorCargar(); refrescarBannerComparacion();
+  await libreCargarDuplicado();
 };
 let ultimoResultado = null, ultimoParams = null, ultimoOT = null;
+
+/* ============ DUPLICAR (Conde 2026-10-21) ============
+   "si necesito que esté la opción con la calculadora libre, es la más sencilla: a veces el cambio es mínimo, por ejemplo una exactamente igual que
+   solo sube un 2% aprox." Abre una cotización existente (cualquier estado: activa, ganada o perdida) como una NUEVA: número nuevo, la original no se toca.
+   Si la original se guardó con desglose (desde esta fecha) se recarga exacto; si es vieja, se reconstruye desde el negocio (descripción, cantidad y total:
+   precio unitario = total / cantidad, sin IVA si aplica) -- un "Extra" aparte, si lo tenía, queda sumado al precio unitario. */
+let libreDupPrecioBase = null;
+function cotCancelarEdicion(){
+  window.tacticalModoDuplicar = false; window.tacticalDuplicadaDe = ''; libreDupPrecioBase = null;
+  const b = document.getElementById('cot-edicion-banner'); if(b){ b.style.display = 'none'; b.innerHTML = ''; }
+}
+function libreAplicarPorcentaje(){
+  if(libreDupPrecioBase == null) return;
+  const pct = parseFloat(String(document.getElementById('dup-pct').value).replace(',', '.'));
+  if(isNaN(pct)){ alert('Escribe el porcentaje, por ejemplo 2 para subir 2% o -3 para bajar 3%.'); return; }
+  document.getElementById('in-precioVentaUnitario').value = Math.round(libreDupPrecioBase * (1 + pct / 100));
+  calcular();
+}
+async function libreCargarDuplicado(){
+  const url = new URLSearchParams(window.location.search);
+  const dup = url.get('dup'); if(!dup) return;
+  window.tacticalModoDuplicar = true;
+  // 1) desglose guardado (negocios guardados desde que Libre guarda su desglose)
+  const ot = url.get('ot');
+  let guardada = null;
+  if(ot){ try{ const cots = await tacticalCotizacionesCalcCargar('libre', ot); guardada = cots.find(c => c.idOpp === dup || c.id === dup) || null; }catch(e){} }
+  // 2) el negocio mismo (activo o cerrado)
+  let opp = db_opps.find(x => x.id === dup);
+  if(!opp){ try{ const cerrados = await tacticalHistorialCargar(); opp = cerrados.find(x => x.id === dup); }catch(e){} }
+  if(!guardada && !opp){ alert('No se encontró esta cotización para duplicarla.'); window.tacticalModoDuplicar = false; return; }
+  const cli = db_clientes.find(c => c.id === ((guardada && guardada.idCli) || (opp && opp.idCli)));
+  const set = (id, v) => { const el = document.getElementById(id); if(el) el.value = v == null ? '' : v; };
+  if(cli){
+    set('in-cli-empresa', cli.empresa); set('in-cli-encargado', cli.nombre); set('in-cli-telefono', cli.wp); set('in-cli-correo', cli.correo);
+    set('in-cli-tipo', cli.tipo); set('in-cli-identificacion', cli.identificacion);
+    clienteEditandoId = cli.id; actualizarBotonesCliente();
+    const nota = document.getElementById('cli-existente-nota'); if(nota) nota.style.display = 'block';
+  } else if(guardada && guardada.cliente){
+    set('in-cli-empresa', guardada.cliente.empresa); set('in-cli-encargado', guardada.cliente.encargado); set('in-cli-telefono', guardada.cliente.telefono); set('in-cli-correo', guardada.cliente.correo);
+  }
+  const vend = (guardada && guardada.vendedor) || (opp && opp.vendedor); if(vend) set('in-vendedor', vend);
+  let precioOriginalTotal;
+  if(guardada && guardada.params){
+    const p = guardada.params;
+    set('in-descripcion', p.descripcion); set('in-cantidad', Math.round(p.cantidad || 1).toLocaleString('es-CO')); set('in-precioVentaUnitario', p.precioVentaUnitario);
+    set('in-extraDesc', p.extraDescripcion); set('in-extraCantidad', p.extraCantidad || ''); set('in-extraValorUnitario', p.extraValorUnitario || '');
+    if(guardada.plazoEntrega) set('in-plazoEntrega', guardada.plazoEntrega);
+    if(guardada.condicionesComerciales && guardada.condicionesComerciales.length) set('in-condicionesComerciales', guardada.condicionesComerciales.join('\n'));
+    libreDupPrecioBase = p.precioVentaUnitario;
+    precioOriginalTotal = guardada.resultado && guardada.resultado.precioFinalTotal;
+  } else {
+    const cant = opp.cantidad || 1, aplicaIva = !(cli && cli.tipo === 'personalizado');
+    const unit = (opp.monto || 0) / cant / (aplicaIva ? 1.19 : 1);
+    set('in-descripcion', opp.desc); set('in-cantidad', Math.round(cant).toLocaleString('es-CO')); set('in-precioVentaUnitario', Math.round(unit * 100) / 100);
+    libreDupPrecioBase = Math.round(unit * 100) / 100;
+    precioOriginalTotal = opp.monto;
+  }
+  window.tacticalDuplicadaDe = (opp && opp.ot) || ot || '';
+  calcular();
+  const b = document.getElementById('cot-edicion-banner');
+  b.style.display = 'block';
+  b.innerHTML = '📄 Duplicando <strong>' + (window.tacticalDuplicadaDe || '') + '</strong> -- al guardar se crea una cotización <strong>NUEVA con número nuevo</strong>; la original no se toca.' +
+    (precioOriginalTotal ? ' Total de la original: <strong>' + tacticalCopTxt(precioOriginalTotal) + '</strong>.' : '') +
+    (guardada ? '' : ' (Cotización de antes de que se guardara el detalle: se reconstruyó desde la descripción, la cantidad y el total; revísala.)') +
+    '<div style="margin-top:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">Ajustar el precio unitario en <input type="text" id="dup-pct" inputmode="decimal" placeholder="2" style="width:70px; padding:4px 6px;"> % ' +
+    '<button type="button" class="btn-action" onclick="libreAplicarPorcentaje()">Aplicar</button> <span style="font-size:0.8rem;">(2 = sube 2%, -3 = baja 3%; siempre sobre el precio original)</span> ' +
+    '<button type="button" class="btn-action" onclick="cotCancelarEdicion()">Cancelar</button></div>';
+  b.scrollIntoView({behavior:'smooth'});
+}
 
 function refrescarDatalistClientes(){
   const dlEmpresa = document.getElementById('cli-datalist');
@@ -722,6 +794,14 @@ async function guardarCotizacionClick(){
   const opp = { id: crypto.randomUUID(), ot: ultimoOT, idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc: ultimoResultado.descripcion, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'manual', cantidad: ultimoParams.cantidad, maquina: null, material: null, nPliegos: null, fotoUrl: fotoParaCotizacion(), videoUrl: videoParaCotizacion() };
   db_opps.push(opp);
   const oppGuardadoOk = await tacticalSyncOpps(db_opps);
+  // Conde 2026-10-21: Libre ahora guarda su desglose (descripción, cantidad, precio, extra) para poder DUPLICAR la cotización exacta después.
+  await tacticalSyncCotizacionCalc({
+    id: opp.id, linea: 'libre', ot: ultimoOT, idOpp: opp.id, idCli: cli.id,
+    cliente: {empresa: cli.empresa, encargado: cli.nombre, telefono: cli.wp, correo: cli.correo},
+    vendedor, desc: opp.desc, params: tacticalParamsConDuplicado(ultimoParams), resultado: ultimoResultado,
+    condicionesComerciales: leerCondicionesComerciales(), plazoEntrega: leerPlazoEntrega(),
+  });
+  cotCancelarEdicion();
 
   refrescarDatalistClientes();
   const nota = document.getElementById('cot-ot-nota');
