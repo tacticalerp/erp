@@ -94,6 +94,7 @@
         <option value="caratula">Carátula de cuaderno (sin lomo)</option>
         <option value="catalogo">Catálogo (páginas distintas)</option>
         <option value="libre">Montaje libre (tarjetas, etiquetas…)</option>
+        <option value="manual">Montaje manual (hoja por hoja, arrastrando)</option>
       </select></div>
     <div id="wGiro"><label>Giro del taco</label>
       <select id="giro" onchange="recalcular()">
@@ -170,6 +171,14 @@
 
 <div class="panel">
   <h2><span class="n">4</span>Vista previa y descarga</h2>
+  <div id="manualCtl" style="display:none;margin:6px 0;padding:8px 10px;background:#eef2f7;border:1px solid #cbd5e1;border-radius:8px;">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;"><b style="font-size:13px;color:#1e3a5f">Montaje manual:</b>
+      <button class="btn verde mini" onclick="manNueva()">+ Nueva hoja</button>
+      <button class="btn gris mini" onclick="manDuplicar()" title="Copia la hoja que estás viendo">Duplicar esta hoja</button>
+      <button class="btn gris mini" onclick="manVaciar()">Vaciar esta hoja</button>
+      <button class="btn rojo mini" onclick="manQuitar()">Quitar esta hoja</button></div>
+    <div class="hint" style="margin:6px 0 0">Arrastra las miniaturas del paso 2 a las posiciones de la hoja (las vacías salen en blanco). Clic en una página colocada: girarla 180° o quitarla de esa posición. Cada hoja es una cara: el retiro es otra hoja.</div>
+  </div>
   <div class="hojas" id="hojasSel"></div>
   <div style="margin-bottom:6px"><button class="btn gris mini" onclick="abrirLupa()" title="Ver el montaje en grande para revisar detalles, sin descargar el PDF">Ampliar vista (lupa)</button> <button class="btn gris mini" onclick="abrirLupa('todas')" title="Ver todas las hojas del montaje juntas, una al lado de otra">Ver todas las hojas</button></div>
   <div id="lienzoWrap"><svg id="lienzo" viewBox="0 0 680 400" role="img" aria-label="Vista previa del montaje"></svg></div>
@@ -251,20 +260,21 @@ function cambioTipo(){
   $('wPinza').style.display = (t==='taco' && $('giro').value==='tr') ? '' : 'none';
   $('wT').style.display = t==='taco' ? '' : 'none';
   $('wR').style.display = t==='taco' ? '' : 'none';
-  $('wCorte').style.display = (t==='taco' || t==='catalogo' || t==='libre') ? '' : 'none';
-  $('wGap').style.display = ((t==='taco' || t==='catalogo' || t==='libre') && $('corte').value==='doble') ? '' : 'none';
+  $('wCorte').style.display = (t==='taco' || t==='catalogo' || t==='libre' || t==='manual') ? '' : 'none';
+  $('wGap').style.display = ((t==='taco' || t==='catalogo' || t==='libre' || t==='manual') && $('corte').value==='doble') ? '' : 'none';
+  manCtlVisible();
   if(t==='caratula' && !['42x28','35x25','50x33','custom'].includes($('hoja').value)){ $('hoja').value = '42x28'; $('wCustom').style.display = 'none'; }
-  if(t!=='caratula' && t!=='catalogo' && t!=='libre' && DIGITALES.includes($('hoja').value)){ $('hoja').value = '70x50'; }
+  if(t!=='caratula' && t!=='catalogo' && t!=='libre' && t!=='manual' && DIGITALES.includes($('hoja').value)){ $('hoja').value = '70x50'; }
   recalcular();
   if(prepActivo() && S.pool.length && !PREP.analizado && !PREP.analizando) analizarTodo();
 }
 // Doble corte: franja entre piezas que se corta por los dos lados; cada pieza necesita la mitad de la franja como sangrado
 function corteGap(){ return $('corte').value==='doble' ? Math.max(1, Math.min(10, +$('gap').value || 3)) : 0; }
 function bleedNecesario(){ const t = $('tipo').value; if(t==='caratula') return PREP.B; return corteGap()/2; }
-function prepActivo(){ const t = $('tipo').value; return t==='caratula' || ((t==='taco' || t==='catalogo' || t==='libre') && corteGap()>0); }
+function prepActivo(){ const t = $('tipo').value; return t==='caratula' || ((t==='taco' || t==='catalogo' || t==='libre' || t==='manual') && corteGap()>0); }
 function cambioCorte(){
   const t = $('tipo').value;
-  $('wGap').style.display = ((t==='taco' || t==='catalogo' || t==='libre') && $('corte').value==='doble') ? '' : 'none';
+  $('wGap').style.display = ((t==='taco' || t==='catalogo' || t==='libre' || t==='manual') && $('corte').value==='doble') ? '' : 'none';
   PREP.analizado = false;
   recalcular();
   if(prepActivo() && S.pool.length) analizarTodo();
@@ -399,7 +409,7 @@ function renderPool(){
   $('pool').innerHTML = S.pool.map(p=>{
     const cls = taco ? (p.id===tid ? 't' : (p.id===rid ? 'r' : '')) : '';
     const tag = taco ? (p.id===tid ? ' · TIRO' : (p.id===rid ? ' · RETIRO' : '')) : '';
-    return '<div class="thumb '+cls+'" style="position:relative">'+(p.pf ? '<span class="sem '+p.pf+'" title="Revisión del archivo: '+({rojo:'hay errores',amarillo:'hay avisos',verde:'sin observaciones'}[p.pf])+'"></span>' : '')+'<button class="x" title="Quitar solo esta página" onclick="quitarPagina('+p.id+')">✕</button>'+(p.thumb?'<img src="'+p.thumb+'">':'<div style="height:100px"></div>')+'<div class="nom">'+esc(p.nombre)+'</div><div>pág. '+(p.pidx+1)+tag+'</div></div>';
+    return '<div class="thumb '+cls+'" style="position:relative" draggable="true" ondragstart="event.dataTransfer.setData(\'text/plain\',\'pag:'+p.id+'\')">'+(p.pf ? '<span class="sem '+p.pf+'" title="Revisión del archivo: '+({rojo:'hay errores',amarillo:'hay avisos',verde:'sin observaciones'}[p.pf])+'"></span>' : '')+'<button class="x" title="Quitar solo esta página" onclick="quitarPagina('+p.id+')">✕</button>'+(p.thumb?'<img src="'+p.thumb+'">':'<div style="height:100px"></div>')+'<div class="nom">'+esc(p.nombre)+'</div><div>pág. '+(p.pidx+1)+tag+'</div></div>';
   }).join('');
 }
 
@@ -774,6 +784,58 @@ function planificar(){
     return plan;
   }
 
+  if(tipo==='manual'){
+    // Montaje manual: tú armas cada hoja; arrastras las páginas del archivo a las posiciones de la hoja (las vacías quedan en blanco)
+    const pgs = S.pool;
+    const usadas = MAN.hojas.flatMap(h=>h.pos.map(q=>q && q.pid)).filter(Boolean);
+    const base = poolPorId(usadas[0]) || pgs[0];
+    const a = piezaMm(base);
+    if(pgs.some(p=>{ const q = piezaMm(p); return Math.abs(q.w-a.w)>0.5 || Math.abs(q.h-a.h)>0.5; }))
+      notas.push({ t:'warn', m:'Las páginas no miden lo mismo: se usa la medida de la primera ('+fmt(a.w)+'×'+fmt(a.h)+' mm) para todas las posiciones.' });
+    const litho = !!AREA_PINZA[hoja.key] || hoja.key==='custom';
+    const gap = corteGap();
+    const egM = elegirGrilla(a.w, a.h, hoja, 'libre', gap, notas);
+    if(!egM) return plan;
+    const g = egM.g, guiasM = egM.cfg;
+    const gw = g.cols*g.w + (g.cols-1)*gap, gh = g.rows*g.h + (g.rows-1)*gap, x0 = (hoja.W-gw)/2, y0 = (hoja.H-gh)/2;
+    const n = g.cols*g.rows, Bd = gap/2;
+    const completa = [];
+    for(let r=0;r<g.rows;r++) for(let c=0;c<g.cols;c++) completa.push({ x:x0+c*(g.w+gap), y:y0+r*(g.h+gap), w:g.w, h:g.h });
+    if(!MAN.hojas.length) MAN.hojas.push({ pos:[] });
+    MAN.hojas.forEach(h=>{ while(h.pos.length<n) h.pos.push({ pid:null, giro:false }); h.pos.length = n; });
+    plan.manual = { n, cols:g.cols, rows:g.rows };
+    const N = MAN.hojas.length;
+    MAN.hojas.forEach((mh, hh)=>{
+      const celdas = [], vacias = [];
+      completa.forEach((box, idx)=>{
+        const q = mh.pos[idx], src = q && q.pid ? poolPorId(q.pid) : null;
+        if(src) celdas.push({ ...box, rot:(g.rot + (q.giro ? 180 : 0)) % 360, src, label:'Pág. '+(src.pidx+1), sangrar:gap>0, bmm:gap/2, dec: gap>0 ? decision(src) : 'sin', manual:{ hh, i:idx, giro:!!q.giro } });
+        else vacias.push({ ...box, hh, i:idx });
+      });
+      const cajas = celdas.map(c=>({ x:c.x-Bd, y:c.y-Bd, w:c.w+2*Bd, h:c.h+2*Bd }));
+      const hp = { celdas, vacias, marcas:[], textos:[], cajasImg:cajas, sangrados:(gap>0 && PREP.aplicado) ? cajas : [], eje:null, titulo:'Hoja '+(hh+1), flecha:!litho };
+      marcasExteriores(completa, hp.marcas, guiasM);
+      const slug = [ot, 'Hoja '+(hn0+hh)+'/'+(hn0+N-1), litho&&tintaLinea ? tintaLinea : ''].filter(Boolean).join('  ·  ');
+      if(litho) ponerTexto(hoja, hp, slug, (hoja.H+hoja.aH)/2-1.5, 'La línea de OT (hoja '+(hh+1)+')', false, notas, true);
+      else ponerTexto(hoja, hp, slug, hoja.H-2.5, 'La línea de OT (hoja '+(hh+1)+')', false, notas, false);
+      plan.hojas.push(hp);
+    });
+    const colocadas = new Set(usadas.map(String)), sueltas = pgs.filter(p=>!colocadas.has(String(p.id)));
+    if(sueltas.length) notas.push({ t:'warn', m:'Páginas sin colocar en ninguna hoja: '+sueltas.map(p=>'pág. '+(p.pidx+1)).join(', ')+'.' });
+    info.push(['Hoja', fmt(hoja.W/10)+'×'+fmt(hoja.H/10)+' cm'+(litho?' (litografía)':' (digital)')], ['Pieza', fmt(a.w)+'×'+fmt(a.h)+' mm'+(g.rot?' (girada 90°)':'')],
+      ['Posiciones por hoja', n+' ('+g.cols+' × '+g.rows+')'], ['Hojas', String(N)], ['Páginas colocadas', String(usadas.length)],
+      ['Corte', gap>0 ? 'Doble corte, franja de '+fmt(gap)+' mm' : 'Único, piezas pegadas']);
+    if(!litho) info.push(['Flecha de salida', '3 mm, centro izquierdo']);
+    if(gap>0){
+      notasAvisos(S.pool, notas);
+      if(!PREP.aplicado && S.pool.some(p=>decision(p)==='sin' && p.diag && decisionNecesita(p))) notas.push({ t:'warn', m:'Doble corte: hay páginas sin sangrado, la franja de '+fmt(gap)+' mm quedará blanca. Usa «Sangrados automáticos».' });
+      plan.sangradoB = gap/2;
+    }
+    plan.listo = plan.hojas.some(h=>h.celdas.length);
+    if(!plan.listo) notas.push({ t:'warn', m:'Arrastra las páginas (miniaturas del paso 2) a las posiciones de la hoja.' });
+    return plan;
+  }
+
   if(tipo==='catalogo'){
     const pgs = S.pool;
     const a = piezaMm(pgs[0]);
@@ -913,6 +975,35 @@ function recalcular(){
   dibujar();
 }
 
+/* ======================= MONTAJE MANUAL (hoja por hoja) ======================= */
+const MAN = { hojas:[ { pos:[] } ] };      // cada hoja: pos[i] = { pid: id de la página del archivo | null, giro: true/false }
+function soltarManual(ev, hh, i){
+  ev.preventDefault(); ev.stopPropagation();
+  const d = (ev.dataTransfer && ev.dataTransfer.getData('text/plain')) || '';
+  if(d.indexOf('pag:') !== 0) return;
+  const pid = parseInt(d.slice(4), 10); if(!pid || !MAN.hojas[hh]) return;
+  MAN.hojas[hh].pos[i] = { pid, giro:false };
+  S.hojaVer = hh; recalcular();
+}
+function manNueva(){ MAN.hojas.push({ pos:[] }); S.hojaVer = MAN.hojas.length-1; recalcular(); }
+function manDuplicar(){
+  const h = MAN.hojas[S.hojaVer]; if(!h) return;
+  MAN.hojas.splice(S.hojaVer+1, 0, JSON.parse(JSON.stringify(h))); S.hojaVer++; recalcular();
+}
+function manQuitar(){
+  if(MAN.hojas.length <= 1){ MAN.hojas[0] = { pos:[] }; recalcular(); return; }
+  if(!confirm('¿Quitar la hoja '+(S.hojaVer+1)+' del montaje?')) return;
+  MAN.hojas.splice(S.hojaVer, 1); S.hojaVer = Math.max(0, S.hojaVer-1); recalcular();
+}
+function manVaciar(){ const h = MAN.hojas[S.hojaVer]; if(!h) return; h.pos = h.pos.map(()=>({ pid:null, giro:false })); recalcular(); }
+function manCelda(clave){ for(const hp of (S.plan && S.plan.hojas) || []) for(const c of hp.celdas||[]) if(c.clave===clave && c.manual) return c.manual; return null; }
+function manAccion(hh, i, que){
+  const q = MAN.hojas[hh] && MAN.hojas[hh].pos[i]; if(!q) return;
+  if(que==='quitar'){ q.pid = null; q.giro = false; } else if(que==='giro'){ q.giro = !q.giro; }
+  recalcular();
+}
+function manCtlVisible(){ const e = $('manualCtl'); if(e) e.style.display = $('tipo').value==='manual' ? '' : 'none'; }
+
 /* ======================= CAMBIOS POR PÁGINA (clic en la vista previa) ======================= */
 // Clic en una página del montaje: girarla 180° o dejar esa posición en blanco. Sirve para las excepciones sin llenar más casillas.
 const CAMBIOS = {};     // clave "hoja|x,y" -> { blanco:true, giro:true }
@@ -926,6 +1017,7 @@ function aplicarCambiosCeldas(plan){
     hp.celdas.forEach(c=>{
       const k = claveCelda(hh, c), ov = CAMBIOS[k] || {};
       c.clave = k;
+      if(c.manual){ nuevas.push(c); return; }
       if(ov.blanco){ hp.blancos.push({ x:c.x, y:c.y, w:c.w, h:c.h, clave:k }); hp.cajasImg = quitar(hp.cajasImg, c); hp.sangrados = quitar(hp.sangrados, c); return; }
       if(ov.giro) c.rot = ((c.rot||0) + 180) % 360;
       nuevas.push(c);
@@ -935,10 +1027,11 @@ function aplicarCambiosCeldas(plan){
 }
 function menuCelda(ev, clave){
   ev.stopPropagation(); cerrarMenuCelda();
-  const ov = CAMBIOS[clave] || {};
+  const ov = CAMBIOS[clave] || {}, man = manCelda(clave);
   const m = document.createElement('div'); m.id = 'menuCelda';
   m.style.cssText = 'position:fixed;z-index:9999;left:'+Math.min(ev.clientX, window.innerWidth-190)+'px;top:'+Math.min(ev.clientY, window.innerHeight-130)+'px;background:#fff;border:1px solid #94a3b8;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25);padding:6px;display:flex;flex-direction:column;gap:4px;min-width:170px;';
   const b = (txt, fn)=>{ const e = document.createElement('button'); e.type = 'button'; e.className = 'btn gris'; e.style.cssText = 'text-align:left;padding:6px 10px;'; e.textContent = txt; e.onclick = ()=>{ cerrarMenuCelda(); fn(); }; m.appendChild(e); };
+  if(man){ b(man.giro ? 'Quitar el giro de 180°' : 'Girar 180°', ()=>manAccion(man.hh, man.i, 'giro')); b('Quitar de esta posición', ()=>manAccion(man.hh, man.i, 'quitar')); document.body.appendChild(m); return; }
   if(!ov.blanco) b(ov.giro ? 'Quitar el giro de 180°' : 'Girar 180°', ()=>{ CAMBIOS[clave] = { ...ov, giro:!ov.giro }; recalcular(); });
   b(ov.blanco ? 'Volver a poner la página' : 'Dejar en blanco', ()=>{ CAMBIOS[clave] = { ...ov, blanco:!ov.blanco }; recalcular(); });
   document.body.appendChild(m);
@@ -983,6 +1076,9 @@ function svgHoja(plan, hp, s, ox, oy, hi, inter){
     (hp.blancos||[]).forEach(b=>{
       g += '<rect x="'+(ox+b.x*s)+'" y="'+(oy+b.y*s)+'" width="'+b.w*s+'" height="'+b.h*s+'" fill="#fff" stroke="#94a3b8" stroke-width="0.8" stroke-dasharray="5 3" style="cursor:pointer" onclick="menuCelda(event,\''+b.clave+'\')"/><text x="'+(ox+(b.x+b.w/2)*s)+'" y="'+(oy+(b.y+b.h/2)*s)+'" text-anchor="middle" dominant-baseline="central" style="font-size:11px;fill:#94a3b8;pointer-events:none">EN BLANCO</text>';
     });
+    (hp.vacias||[]).forEach(v=>{
+      g += '<rect x="'+(ox+v.x*s)+'" y="'+(oy+v.y*s)+'" width="'+v.w*s+'" height="'+v.h*s+'" fill="#f1f5f9" stroke="#64748b" stroke-width="0.8" stroke-dasharray="5 3" ondragover="event.preventDefault()" ondrop="soltarManual(event,'+v.hh+','+v.i+')"/><text x="'+(ox+(v.x+v.w/2)*s)+'" y="'+(oy+(v.y+v.h/2)*s)+'" text-anchor="middle" dominant-baseline="central" style="font-size:11px;fill:#64748b;pointer-events:none">Arrastra una página aquí</text>';
+    });
     hp.celdas.forEach(c=>{
       const X = ox+c.x*s, Y = oy+c.y*s, w = c.w*s, h = c.h*s, cx = X+w/2, cy = Y+h/2;
       const col = c.label==='R' ? '#d97706' : '#2563eb';
@@ -995,7 +1091,7 @@ function svgHoja(plan, hp, s, ox, oy, hi, inter){
       if(c.label==='T'||c.label==='R'){
         g += '<circle cx="'+(X+11)+'" cy="'+(Y+11)+'" r="8" fill="'+col+'"/><text x="'+(X+11)+'" y="'+(Y+11)+'" text-anchor="middle" dominant-baseline="central" style="font-size:10px;font-weight:700;fill:#fff">'+c.label+'</text>';
       }
-      if(c.clave) g += '<rect x="'+X+'" y="'+Y+'" width="'+w+'" height="'+h+'" fill="transparent" style="cursor:pointer" onclick="menuCelda(event,\'' + c.clave + '\')"><title>Clic: girar 180° o dejar en blanco</title></rect>';
+      if(c.clave) g += '<rect x="'+X+'" y="'+Y+'" width="'+w+'" height="'+h+'" fill="transparent" style="cursor:pointer" onclick="menuCelda(event,\'' + c.clave + '\')"' + (c.manual ? ' ondragover="event.preventDefault()" ondrop="soltarManual(event,'+c.manual.hh+','+c.manual.i+')"' : '') + '><title>Clic: girar 180° o dejar en blanco</title></rect>';
     });
     if(hp.flecha){ const ay2 = oy+hoja.H/2*s, ax1 = ox+4*s, ax2 = ox+7*s; g += '<path d="M'+ax2+' '+ay2+'H'+ax1+'M'+(ax1+3)+' '+(ay2-3)+'L'+ax1+' '+ay2+'L'+(ax1+3)+' '+(ay2+3)+'" fill="none" stroke="#000" stroke-width="1.2" stroke-linecap="round"/>'; }
     if(hp.eje!=null){ const ex = ox+hp.eje*s; g += '<line x1="'+ex+'" y1="'+oy+'" x2="'+ex+'" y2="'+(oy+hoja.H*s)+'" stroke="#dc2626" stroke-width="1" stroke-dasharray="5 3"/>'; }
