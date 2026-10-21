@@ -598,6 +598,15 @@ function renderLibre(){
   $('libreBody').innerHTML = h;
 }
 function notasAvisos(pgs, notas){
+  // sangrado parcial: el archivo trae menos sangrado que la mitad de la franja del doble corte
+  if(!PREP.aplicado && $('tipo').value!=='caratula'){
+    const B = bleedNecesario(), gapTotal = corteGap();
+    const parc = pgs.filter(p=>{ const dg = p.diag; if(!dg || dg.blanco) return false; const cm = Math.min(dg.cubre.l, dg.cubre.r, dg.cubre.t, dg.cubre.b); return B>0 && cm > 0.05 && cm < B - 0.05; });
+    if(parc.length){
+      const cm = Math.min(...parc.map(p=>Math.min(p.diag.cubre.l, p.diag.cubre.r, p.diag.cubre.t, p.diag.cubre.b)));
+      notas.push({ t:'warn', m:'Sangrado parcial en '+parc.length+' página(s): el archivo trae '+fmt(cm)+' mm y la franja de '+fmt(gapTotal)+' mm pide '+fmt(B)+' mm por lado. Se usa el que trae y queda una franja sin imagen de '+fmt(Math.max(0, gapTotal-2*cm))+' mm entre páginas. Para cubrirla usa «Sangrados automáticos».' });
+    }
+  }
   const lados = { l:'lateral izquierdo', r:'lateral derecho', t:'borde superior', b:'borde inferior' };
   pgs.slice(0,40).forEach(p=>{ ((p.diag && p.diag.avisos) || []).forEach(av=>{
     notas.push({ t:'warn', m:etiquetaPag(p)+' · '+lados[av.lado]+': '+av.fuente+' a '+fmt(av.d)+' mm del corte'+(av.tramo?' (tramo '+av.tramo+')':'')+'. Revisar.' });
@@ -1506,8 +1515,9 @@ function decision(p){
   const B = bleedNecesario(), dg = p.diag, esCar = $('tipo').value==='caratula';
   const cm = dg ? Math.min(dg.cubre.l, dg.cubre.r, dg.cubre.t, dg.cubre.b) : 0;
   if(!PREP.aplicado){
-    // con doble corte, si el archivo YA trae el sangrado se usa solo, sin tener que aplicar nada
-    if(!esCar && B>0 && dg && cm >= B - 0.05) return 'yatrae';
+    // con doble corte, si el archivo YA trae el sangrado se usa solo, sin tener que aplicar nada; si trae menos del necesario (sangrado parcial)
+    // se usa el que trae y queda una franja sin imagen en el centro (se avisa en notasAvisos)
+    if(!esCar && B>0 && dg && cm > 0.05) return 'yatrae';
     return 'sin';
   }
   if(!dg) return 'espejo';
