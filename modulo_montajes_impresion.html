@@ -171,7 +171,7 @@
 <div class="panel">
   <h2><span class="n">4</span>Vista previa y descarga</h2>
   <div class="hojas" id="hojasSel"></div>
-  <div style="margin-bottom:6px"><button class="btn gris mini" onclick="abrirLupa()" title="Ver el montaje en grande para revisar detalles, sin descargar el PDF">Ampliar vista (lupa)</button></div>
+  <div style="margin-bottom:6px"><button class="btn gris mini" onclick="abrirLupa()" title="Ver el montaje en grande para revisar detalles, sin descargar el PDF">Ampliar vista (lupa)</button> <button class="btn gris mini" onclick="abrirLupa('todas')" title="Ver todas las hojas del montaje juntas, una al lado de otra">Ver todas las hojas</button></div>
   <div id="lienzoWrap"><svg id="lienzo" viewBox="0 0 680 400" role="img" aria-label="Vista previa del montaje"></svg></div>
   <div class="hint" id="orientLinea" style="margin:6px 0"></div>
   <div class="info" id="info"></div>
@@ -970,7 +970,8 @@ function imagenCelda(c, pre, hi){
   const id = 'cl'+(++CLIP_N);
   return '<clipPath id="'+id+'"><rect x="'+(-pre[0]/2-B)+'" y="'+(-pre[1]/2-B)+'" width="'+(pre[0]+2*B)+'" height="'+(pre[1]+2*B)+'"/></clipPath><image clip-path="url(#'+id+')" href="'+t+'" x="'+ix+'" y="'+iy+'" width="'+iw+'" height="'+ih+'" preserveAspectRatio="none"/>';
 }
-function svgHoja(plan, hp, s, ox, oy, hi){
+function svgHoja(plan, hp, s, ox, oy, hi, inter){
+  inter = inter !== false;
   const hoja = plan.hoja;
   let g = '<rect x="'+ox+'" y="'+oy+'" width="'+hoja.W*s+'" height="'+hoja.H*s+'" fill="#fff" stroke="#64748b" stroke-width="1"/>';
   // área real de imagen (pinza)
@@ -1015,14 +1016,16 @@ async function miniHi(p){
   await pg.render({ canvasContext:ctx, viewport:vp }).promise;
   return p.thumbHi = c.toDataURL('image/jpeg', 0.9);
 }
-async function abrirLupa(){
+async function abrirLupa(modo, idx){
+  modo = modo === 'todas' ? 'todas' : 'una';
+  if(idx !== undefined) S.hojaVer = idx;
   let box = $('lupaBox');
   if(!box){
     box = document.createElement('div'); box.id = 'lupaBox';
     box.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.92);display:flex;flex-direction:column';
-    box.innerHTML = '<div style="display:flex;gap:8px;align-items:center;padding:8px 12px;background:#0f172a;color:#fff;flex-wrap:wrap"><b>Vista ampliada</b>'+
-      '<button class="btn gris mini" onclick="lupaZoom(0.7)">−</button><span id="lupaPct" style="min-width:48px;text-align:center"></span><button class="btn gris mini" onclick="lupaZoom(1.4)">+</button>'+
-      '<button class="btn gris mini" onclick="lupaZoom(0)">Ajustar</button><button class="btn gris mini" onclick="lupaZoom(-1)">100% (tamaño real de pantalla)</button>'+
+    box.innerHTML = '<div style="display:flex;gap:8px;align-items:center;padding:8px 12px;background:#0f172a;color:#fff;flex-wrap:wrap"><b>Vista ampliada</b><span id="lupaNav"></span>'+
+      '<span id="lupaCtl"><button class="btn gris mini" onclick="lupaZoom(0.7)">−</button><span id="lupaPct" style="min-width:48px;text-align:center"></span><button class="btn gris mini" onclick="lupaZoom(1.4)">+</button>'+
+      '<button class="btn gris mini" onclick="lupaZoom(0)">Ajustar</button><button class="btn gris mini" onclick="lupaZoom(-1)">100% (tamaño real de pantalla)</button></span>'+
       '<span style="opacity:.7;font-size:12px">Arrastra para moverte · Ctrl + rueda = zoom · Esc cierra</span><button class="btn rojo mini" style="margin-left:auto" onclick="cerrarLupa()">Cerrar</button></div>'+
       '<div id="lupaScroll" style="flex:1;overflow:auto;cursor:grab"><div id="lupaSvg"></div></div>';
     document.body.appendChild(box);
@@ -1035,7 +1038,23 @@ async function abrirLupa(){
   }
   box.style.display = 'flex';
   $('lupaSvg').innerHTML = '<div style="color:#fff;padding:20px">Cargando imágenes en alta…</div>';
-  const plan = S.plan, hp = plan.hojas[S.hojaVer]; if(!hp) return;
+  const plan = S.plan, N = plan.hojas.length;
+  const nav = $('lupaNav'), ctl = $('lupaCtl');
+  if(S.hojaVer >= N) S.hojaVer = 0;
+  nav.innerHTML = (N > 1 ? '<button class="btn gris mini" onclick="abrirLupa(' + "'una'" + ',(S.hojaVer+N-1)%N)">◀</button> <b>Hoja ' + (S.hojaVer+1) + ' de ' + N + '</b> <button class="btn gris mini" onclick="abrirLupa(' + "'una'" + ',(S.hojaVer+1)%N)">▶</button> ' : '') +
+    (N > 1 ? '<button class="btn ' + (modo==='todas' ? 'verde' : 'gris') + ' mini" onclick="abrirLupa(' + "'todas'" + ')">Ver todas las hojas</button>' : '');
+  if(modo === 'todas'){
+    ctl.style.display = 'none';
+    const hoja = plan.hoja, s2 = 3;
+    const W = hoja.W*s2+10, H = hoja.H*s2+10;
+    $('lupaSvg').innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(520px,1fr));gap:14px;padding:14px;">' + plan.hojas.map((hp, i)=>{
+      const g = svgHoja(plan, hp, s2, 5, 5, false).replace(/ onclick="menuCelda\([^"]*"/g, '').replace(/cursor:pointer/g, 'cursor:zoom-in');
+      return '<div style="background:#fff;border-radius:8px;padding:8px;cursor:zoom-in;' + (i===S.hojaVer ? 'outline:3px solid #2563eb;' : '') + '" onclick="abrirLupa(' + "'una'" + ',' + i + ')"><div style="font:bold 14px Arial;color:#1e3a5f;margin-bottom:4px;">' + esc(hp.titulo || ('Hoja ' + (i+1))) + ' <span style="font-weight:400;color:#64748b">(' + (i+1) + ' de ' + N + ') · clic para ampliar</span></div><svg viewBox="0 0 ' + W + ' ' + H + '" style="display:block;width:100%;height:auto;">' + g + '</svg></div>';
+    }).join('') + '</div>';
+    return;
+  }
+  ctl.style.display = '';
+  const hp = plan.hojas[S.hojaVer]; if(!hp) return;
   for(const p of new Set(hp.celdas.map(c=>c.src).filter(Boolean))){ try{ await miniHi(p); }catch(e){ console.warn(e); } }
   const hoja = plan.hoja, s = LUPA.s, ox = 10, oy = 10;
   LUPA.W = hoja.W*s+20; LUPA.H = hoja.H*s+20;
