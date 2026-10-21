@@ -114,7 +114,7 @@
         <option value="custom">Otra medida…</option>
       </select></div>
     <div id="wCorte"><label>Corte</label>
-      <select id="corte" onchange="cambioCorte()"><option value="unico">Único (piezas pegadas)</option><option value="doble">Doble corte (por página)</option><option value="pleg">Doble corte por plegado (franja solo vertical)</option></select></div>
+      <select id="corte" onchange="cambioCorte()"><option value="unico">Único (piezas pegadas)</option><option value="doble">Doble corte (por página)</option><option value="pleg">Doble corte por plegado (franja solo vertical)</option><option value="plegH">Doble corte solo horizontal (franja solo entre filas)</option></select></div>
     <div id="wGap" style="display:none"><label>Separación entre piezas (mm)</label><input type="number" id="gap" value="3" min="1" max="10" step="0.5" oninput="cambioCorte()"></div>
     <div id="wCustom" style="display:none"><label>Hoja personalizada (largo × corto, cm)</label>
       <div style="display:flex;gap:6px"><input type="number" id="cw" value="70" step="0.1" oninput="recalcular()"><input type="number" id="ch" value="50" step="0.1" oninput="recalcular()"></div></div>
@@ -257,14 +257,14 @@ function leerHoja(){
 function cambioHoja(){ $('wCustom').style.display = $('hoja').value==='custom' ? '' : 'none'; recalcular(); }
 function cambioTipo(){
   const t = $('tipo').value;
-  Array.from($('corte').options).forEach(o=>{ if(o.value==='pleg') o.disabled = (t!=='manual'); });
-  if(t!=='manual' && $('corte').value==='pleg') $('corte').value = 'doble';
+  Array.from($('corte').options).forEach(o=>{ if(o.value.indexOf('pleg')===0) o.disabled = (t!=='manual'); });
+  if(t!=='manual' && $('corte').value.indexOf('pleg')===0) $('corte').value = 'doble';
   $('wGiro').style.display = t==='taco' ? '' : 'none';
   $('wPinza').style.display = (t==='taco' && $('giro').value==='tr') ? '' : 'none';
   $('wT').style.display = t==='taco' ? '' : 'none';
   $('wR').style.display = t==='taco' ? '' : 'none';
   $('wCorte').style.display = (t==='taco' || t==='catalogo' || t==='libre' || t==='manual') ? '' : 'none';
-  $('wGap').style.display = ((t==='taco' || t==='catalogo' || t==='libre' || t==='manual') && ['doble','pleg'].includes($('corte').value)) ? '' : 'none';
+  $('wGap').style.display = ((t==='taco' || t==='catalogo' || t==='libre' || t==='manual') && ['doble','pleg','plegH'].includes($('corte').value)) ? '' : 'none';
   manCtlVisible();
   if(t==='caratula' && !['42x28','35x25','50x33','custom'].includes($('hoja').value)){ $('hoja').value = '42x28'; $('wCustom').style.display = 'none'; }
   if(t!=='caratula' && t!=='catalogo' && t!=='libre' && t!=='manual' && DIGITALES.includes($('hoja').value)){ $('hoja').value = '70x50'; }
@@ -272,14 +272,16 @@ function cambioTipo(){
   if(prepActivo() && S.pool.length && !PREP.analizado && !PREP.analizando) analizarTodo();
 }
 // Doble corte: franja entre piezas que se corta por los dos lados; cada pieza necesita la mitad de la franja como sangrado
-function corteGap(){ return ['doble','pleg'].includes($('corte').value) ? Math.max(1, Math.min(10, +$('gap').value || 3)) : 0; }
+function corteGap(){ return ['doble','pleg','plegH'].includes($('corte').value) ? Math.max(1, Math.min(10, +$('gap').value || 3)) : 0; }
 // Doble corte por plegado: la hoja se pliega por las líneas horizontales (entre filas): ahí NO hay franja ni sangrado; solo entre columnas (cortes verticales)
 function corteGapY(){ return $('corte').value==='pleg' ? 0 : corteGap(); }
+// Doble corte solo horizontal: franja entre filas, y las columnas van pegadas
+function corteGapX(){ return $('corte').value==='plegH' ? 0 : corteGap(); }
 function bleedNecesario(){ const t = $('tipo').value; if(t==='caratula') return PREP.B; return corteGap()/2; }
 function prepActivo(){ const t = $('tipo').value; return t==='caratula' || ((t==='taco' || t==='catalogo' || t==='libre' || t==='manual') && corteGap()>0); }
 function cambioCorte(){
   const t = $('tipo').value;
-  $('wGap').style.display = ((t==='taco' || t==='catalogo' || t==='libre' || t==='manual') && ['doble','pleg'].includes($('corte').value)) ? '' : 'none';
+  $('wGap').style.display = ((t==='taco' || t==='catalogo' || t==='libre' || t==='manual') && ['doble','pleg','plegH'].includes($('corte').value)) ? '' : 'none';
   PREP.analizado = false;
   recalcular();
   if(prepActivo() && S.pool.length) analizarTodo();
@@ -815,7 +817,7 @@ function planificar(){
     if(pgs.some(p=>{ const q = piezaMm(p); return Math.abs(q.w-a.w)>0.5 || Math.abs(q.h-a.h)>0.5; }))
       notas.push({ t:'warn', m:'Las páginas no miden lo mismo: se usa la medida de la primera ('+fmt(a.w)+'×'+fmt(a.h)+' mm) para todas las posiciones.' });
     const litho = !!AREA_PINZA[hoja.key] || hoja.key==='custom';
-    const gap = corteGap(), gy = corteGapY();
+    const gap0 = corteGap(), gap = corteGapX(), gy = corteGapY(), corta = gap>0 || gy>0;
     const egM = elegirGrilla(a.w, a.h, hoja, 'libre', gap, notas, gy);
     if(!egM) return plan;
     const g = egM.g, guiasM = egM.cfg;
@@ -831,7 +833,7 @@ function planificar(){
       const celdas = [], vacias = [];
       completa.forEach((box, idx)=>{
         const q = mh.pos[idx], src = q && q.pid ? poolPorId(q.pid) : null;
-        if(src) celdas.push({ ...box, rot:(g.rot + (q.giro ? 180 : 0)) % 360, src, label:'Pág. '+(src.pidx+1), sangrar:gap>0, bmm:gap/2, bmmY:gy/2, dec: gap>0 ? decision(src) : 'sin', manual:{ hh, i:idx, giro:!!q.giro } });
+        if(src) celdas.push({ ...box, rot:(g.rot + (q.giro ? 180 : 0)) % 360, src, label:'Pág. '+(src.pidx+1), sangrar:corta, bmm:gap/2, bmmY:gy/2, dec: corta ? decision(src) : 'sin', manual:{ hh, i:idx, giro:!!q.giro } });
         else vacias.push({ ...box, hh, i:idx });
       });
       const cajas = celdas.map(c=>({ x:c.x-Bd, y:c.y-Bdy, w:c.w+2*Bd, h:c.h+2*Bdy }));
@@ -847,12 +849,12 @@ function planificar(){
     if(sueltas.length) notas.push({ t:'warn', m:'Páginas sin colocar en ninguna hoja: '+sueltas.map(p=>'pág. '+(p.pidx+1)).join(', ')+'.' });
     info.push(['Hoja', fmt(hoja.W/10)+'×'+fmt(hoja.H/10)+' cm'+(litho?' (litografía)':' (digital)')], ['Pieza', fmt(a.w)+'×'+fmt(a.h)+' mm'+(g.rot?' (girada 90°)':'')],
       ['Posiciones por hoja', n+' ('+g.cols+' × '+g.rows+')'], ['Hojas', String(N)], ['Páginas colocadas', String(usadas.length)],
-      ['Corte', gap>0 ? (gy===0 ? 'Doble corte por plegado: franja de '+fmt(gap)+' mm solo entre columnas (sin franja horizontal)' : 'Doble corte, franja de '+fmt(gap)+' mm') : 'Único, piezas pegadas']);
+      ['Corte', corta ? (gy===0 ? 'Doble corte por plegado: franja de '+fmt(gap0)+' mm solo entre columnas (sin franja horizontal)' : (gap===0 ? 'Doble corte solo horizontal: franja de '+fmt(gap0)+' mm solo entre filas (columnas pegadas)' : 'Doble corte, franja de '+fmt(gap0)+' mm')) : 'Único, piezas pegadas']);
     if(!litho) info.push(['Flecha de salida', '3 mm, centro izquierdo']);
-    if(gap>0){
+    if(corta){
       notasAvisos(S.pool, notas);
-      if(!PREP.aplicado && S.pool.some(p=>decision(p)==='sin' && p.diag && decisionNecesita(p))) notas.push({ t:'warn', m:'Doble corte: hay páginas sin sangrado, la franja de '+fmt(gap)+' mm quedará blanca. Usa «Sangrados automáticos».' });
-      plan.sangradoB = gap/2;
+      if(!PREP.aplicado && S.pool.some(p=>decision(p)==='sin' && p.diag && decisionNecesita(p))) notas.push({ t:'warn', m:'Doble corte: hay páginas sin sangrado, la franja de '+fmt(gap0)+' mm quedará blanca. Usa «Sangrados automáticos».' });
+      plan.sangradoB = gap0/2;
     }
     plan.listo = plan.hojas.some(h=>h.celdas.length);
     if(!plan.listo) notas.push({ t:'warn', m:'Arrastra las páginas (miniaturas del paso 2) a las posiciones de la hoja.' });
@@ -940,7 +942,7 @@ function otCargar(){
 function otFicha(){
   const P = S.plan; if(!P){ return; }
   const txt = id=>{ const e = $(id); return e ? (e.tagName==='SELECT' ? e.options[e.selectedIndex].text : e.value) : ''; };
-  const filas = [['OT',txt('ot')||'—'],['Tipo',txt('tipo')],['Hoja de impresión',txt('hoja')],['Corte',txt('corte')+(['doble','pleg'].includes($('corte').value) ? ', separación '+txt('gap')+' mm' : '')],['Tinta',txt('tinta')==='Personalizado…' ? txt('tintaC') : txt('tinta')],['Archivos',S.files.filter(Boolean).map(f=>f.nombre).join(', ')||'—']].concat(P.info);
+  const filas = [['OT',txt('ot')||'—'],['Tipo',txt('tipo')],['Hoja de impresión',txt('hoja')],['Corte',txt('corte')+(['doble','pleg','plegH'].includes($('corte').value) ? ', separación '+txt('gap')+' mm' : '')],['Tinta',txt('tinta')==='Personalizado…' ? txt('tintaC') : txt('tinta')],['Archivos',S.files.filter(Boolean).map(f=>f.nombre).join(', ')||'—']].concat(P.info);
   const ficha = '<!doctype html><meta charset="utf-8"><title>Ficha de montaje '+esc(txt('ot'))+'</title><style>body{font:13px Arial,sans-serif;margin:24px;color:#111}h1{font-size:18px;margin:0 0 4px}table{border-collapse:collapse;width:100%;margin:10px 0}td{border:1px solid #bbb;padding:4px 8px}td:first-child{width:32%;color:#555}.av{border:1px solid #d97706;background:#fffbeb;padding:5px 8px;margin:4px 0}.err{border-color:#b91c1c;background:#fef2f2}svg{width:100%;max-height:380px;border:1px solid #ccc}</style>'+
     '<h1>Ficha de montaje — Tactical Marketing</h1><div>'+new Date().toLocaleDateString('es-CO')+'</div><table>'+filas.map(r=>'<tr><td>'+esc(r[0])+'</td><td><b>'+esc(r[1])+'</b></td></tr>').join('')+'</table>'+
     (ORIENT ? '<p>'+esc(ORIENT)+'</p>' : '')+$('lienzoWrap').innerHTML+
