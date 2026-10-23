@@ -13050,11 +13050,53 @@
             }
             renderContabilidad();
         }
+        // Conde 2026-10-24: "quiero que me dejes editar y eliminar las notas crédito, porque en ocasiones necesitamos modificar el valor".
+        // Se edita número, fecha y valor (antes de IVA e IVA). La factura SIGUE anulada igual (decisión de Conde): el valor editado solo cambia lo que
+        // la nota resta en las ventas (en el mes de su fecha). Eliminar ya existía (reactiva la factura).
+        let ncEditando = new Set();
+        function ncToggleEditar(id){ if(ncEditando.has(id)) ncEditando.delete(id); else ncEditando.add(id); renderNotasCredito(); }
+        async function ncGuardarEdicion(id){
+            const n = db_notasCredito.find(x => x.id === id); if(!n) return;
+            const numero = document.getElementById('nc-ed-numero-' + id).value.trim().toUpperCase();
+            const fecha = document.getElementById('nc-ed-fecha-' + id).value;
+            const bruto = contNumeroDesdeInput(document.getElementById('nc-ed-bruto-' + id));
+            const iva = contNumeroDesdeInput(document.getElementById('nc-ed-iva-' + id));
+            if(!numero){ alert('El número de la Nota Crédito no puede quedar vacío.'); return; }
+            if(!fecha){ alert('Elige la fecha de la Nota Crédito.'); return; }
+            if(db_notasCredito.some(x => x.id !== id && x.numero === numero)){ alert('El número ' + numero + ' ya lo tiene otra Nota Crédito.'); return; }
+            if(bruto <= 0){ alert('El valor antes de IVA debe ser mayor a 0.'); return; }
+            const anterior = { numero: n.numero, fecha: n.fecha, valorBruto: n.valorBruto, iva: n.iva, totalDocumento: n.totalDocumento, totalCobrar: n.totalCobrar };
+            const diferencia = (n.totalCobrar || 0) - (n.totalDocumento || 0); // envío / ReteIVA que ya traía la factura, se conserva
+            n.numero = numero; n.fecha = fecha; n.valorBruto = bruto; n.iva = iva; n.totalDocumento = bruto + iva; n.totalCobrar = n.totalDocumento + diferencia;
+            const ok = await tacticalSyncNotaCredito(n);
+            if(!ok){ Object.assign(n, anterior); alert('No se pudo guardar el cambio en Supabase; la Nota Crédito quedó como estaba.'); return; }
+            if(numero !== anterior.numero) contActualizarContadorDesdeNumero('nc', numero);
+            ncEditando.delete(id);
+            renderContabilidad();
+        }
         function renderNotasCredito(){
             const cont = document.getElementById('lista-notascredito');
             if(!cont) return;
             cont.innerHTML = contOrdenar(db_notasCredito).map(n => {
                 const cli = db_clientes.find(c => c.id === n.idCli);
+                if(ncEditando.has(n.id)){
+                    const fmt = v => (v || 0).toLocaleString('es-CO');
+                    return `<div class="data-card">
+                        <span class="tag" style="float:right; background:#d97706; color:#fff;">EDITANDO · ANULA ${n.numeroDoc || ''}</span>
+                        <div class="card-title">${cli ? cli.empresa : 'Cliente eliminado'}</div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
+                            <div><label style="font-size:0.75rem; color:#4a5568;">N° de Nota</label><input type="text" id="nc-ed-numero-${n.id}" value="${n.numero}" style="text-transform:uppercase;"></div>
+                            <div><label style="font-size:0.75rem; color:#4a5568;">Fecha (mes en que resta de las ventas)</label><input type="date" id="nc-ed-fecha-${n.id}" value="${String(n.fecha || '').slice(0, 10)}"></div>
+                            <div><label style="font-size:0.75rem; color:#4a5568;">Valor antes de IVA</label><input type="text" inputmode="numeric" id="nc-ed-bruto-${n.id}" value="${fmt(n.valorBruto)}" oninput="contFormatearMiles(this)"></div>
+                            <div><label style="font-size:0.75rem; color:#4a5568;">IVA</label><input type="text" inputmode="numeric" id="nc-ed-iva-${n.id}" value="${fmt(n.iva)}" oninput="contFormatearMiles(this)"></div>
+                        </div>
+                        <div style="font-size:0.78rem; color:#718096; margin-top:6px;">La factura ${n.numeroDoc || ''} sigue anulada; el nuevo valor solo cambia lo que esta nota resta en las ventas.</div>
+                        <div class="action-row">
+                            <button class="btn-action" style="background:var(--ganado); color:#fff;" onclick="ncGuardarEdicion('${n.id}')">${ticon('check',{color:'#fff'})}Guardar cambios</button>
+                            <button class="btn-action" onclick="ncToggleEditar('${n.id}')">Cancelar</button>
+                        </div>
+                    </div>`;
+                }
                 return `<div class="data-card">
                     <span class="tag" style="float:right; background:#718096; color:#fff;">ANULA ${n.numeroDoc || ''}</span>
                     <div class="card-title">${n.numero} — ${cotFormatoCop(n.totalDocumento)}</div>
@@ -13062,6 +13104,7 @@
                     <div style="font-size:0.85rem; color:#4a5568;">${n.motivo || ''}${n.cobradoPrevio > 0 ? `<br><span style="color:#b45309;">⚠ Tenía ${cotFormatoCop(n.cobradoPrevio)} cobrados</span>` : ''}</div>
                     <div class="action-row">
                         <button class="btn-action" onclick="contImprimirNotaCredito('${n.id}')">${ticon('printer')}Imprimir</button>
+                        <button class="btn-action" onclick="ncToggleEditar('${n.id}')">${ticon('edit')}Editar</button>
                         <button class="btn-action" style="color:var(--peligro); border-color:var(--peligro);" onclick="eliminarNotaCredito('${n.id}')">${ticon('trash')}Eliminar</button>
                     </div>
                 </div>`;
