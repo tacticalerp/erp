@@ -2122,6 +2122,11 @@
                             <div class="form-group" style="display:flex; align-items:flex-end;">
                                 <div class="checkbox-row"><input type="checkbox" id="doc-aplicaReteiva" onchange="contToggleReteivaCol()"><label for="doc-aplicaReteiva" style="font-weight:normal; margin:0;">Cliente aplica RETEIVA 15% (agente retenedor)</label></div>
                             </div>
+                            <!-- Conde 2026-10-24: "necesito que me dejes modificar el valor del ReteIVA" -- se calcula solo (15% del IVA) pero se puede escribir otro valor. -->
+                            <div class="form-group" id="doc-reteivaValor-grupo" style="display:none;">
+                                <label>Valor de la ReteIVA ($): <a href="#" onclick="contReteivaAuto(); return false;" style="font-weight:normal; font-size:0.8rem;">volver al 15% automático</a></label>
+                                <input type="text" inputmode="numeric" id="doc-reteivaValor" value="0" oninput="contFormatearMiles(this); this.dataset.manual='true'; contActualizarTotalDoc()">
+                            </div>
                             <div class="form-group"><label>Vendedor:</label><select id="doc-vendedor"></select></div>
                         </div>
                         <label style="display:block; font-weight:bold; margin-bottom:5px; font-size:0.88rem; color:var(--secondary);">Ítems del documento (hasta 10):</label>
@@ -11468,8 +11473,19 @@
         }
         // Conde 2026-08-21: al activar/desactivar "Cliente aplica RETEIVA 15%" se muestra/oculta la
         // columna ReteIVA 15% (encabezado + celdas de todas las filas) y se recalcula cada fila.
+        // Valor de la ReteIVA del formulario: el que la persona escribió (si lo cambió) o, si no, el 15% del IVA. Solo aplica a Factura con la casilla marcada.
+        function contReteivaForm(ivaTotal){
+            if(!document.getElementById('doc-aplicaReteiva').checked || document.getElementById('doc-tipoDoc').value !== 'factura') return 0;
+            const campo = document.getElementById('doc-reteivaValor');
+            return campo && campo.dataset.manual === 'true' ? contNumeroDesdeInput(campo) : Math.round(ivaTotal * 0.15);
+        }
+        function contReteivaAuto(){
+            const campo = document.getElementById('doc-reteivaValor'); if(campo) campo.dataset.manual = '';
+            contActualizarTotalDoc();
+        }
         function contToggleReteivaCol(){
             const aplica = document.getElementById('doc-aplicaReteiva').checked;
+            if(!aplica){ const rv = document.getElementById('doc-reteivaValor'); if(rv) rv.dataset.manual = ''; }
             const th = document.getElementById('doc-th-reteiva');
             if(th) th.style.display = aplica ? '' : 'none';
             document.querySelectorAll('#doc-items-body .col-reteiva').forEach(td => td.style.display = aplica ? '' : 'none');
@@ -11488,13 +11504,19 @@
             document.getElementById('doc-iva-total').innerText = `IVA total (suma de los ítems): ${cotFormatoCop(ivaTotal)} — Total con IVA: ${cotFormatoCop(valorBruto+ivaTotal)}`;
             // Conde 2026-08-22: "al calcular el reteiva mostrar el valor neto a pagar".
             const reteivaDiv = document.getElementById('doc-reteiva-total');
+            const grupoReteiva = document.getElementById('doc-reteivaValor-grupo');
             if(document.getElementById('doc-aplicaReteiva').checked){
-                const reteivaTotal = Math.round(ivaTotal*0.15);
+                const campoRv = document.getElementById('doc-reteivaValor');
+                const esManual = campoRv.dataset.manual === 'true';
+                const reteivaTotal = esManual ? contNumeroDesdeInput(campoRv) : Math.round(ivaTotal*0.15);
+                if(!esManual) campoRv.value = reteivaTotal.toLocaleString('es-CO');
                 const netoAPagar = valorBruto + ivaTotal - reteivaTotal;
+                grupoReteiva.style.display = '';
                 reteivaDiv.style.display = 'block';
-                reteivaDiv.innerText = `ReteIVA (15% del IVA): -${cotFormatoCop(reteivaTotal)} — Valor NETO a pagar: ${cotFormatoCop(netoAPagar)}`;
+                reteivaDiv.innerText = `ReteIVA${esManual ? ' (valor escrito por ti)' : ' (15% del IVA)'}: -${cotFormatoCop(reteivaTotal)} — Valor NETO a pagar: ${cotFormatoCop(netoAPagar)}`;
             } else {
                 reteivaDiv.style.display = 'none';
+                if(grupoReteiva) grupoReteiva.style.display = 'none';
             }
             contRenderAnticiposDoc();
             return valorBruto;
@@ -11696,7 +11718,9 @@
         /* ============ ORDEN DE LAS LISTAS (Conde 2026-10-23) ============
            "ordenar las facturas por orden ascendente" -- por número (prefijo y consecutivo: CC-0001, CC-0002… y FV-0001, FV-0002…), en todas las
            listas de Contabilidad; un botón arriba lo cambia a descendente (lo más nuevo primero, como estaba antes). Se recuerda por navegador. */
-        let contOrdenAsc = (function(){ try{ return localStorage.getItem('tactical_cont_orden') !== 'desc'; }catch(e){ return true; } })();
+        // Conde 2026-10-24: "ordena las facturas en lugar descendente, es decir que vea las últimas" -- por defecto DESCENDENTE (la más nueva primero);
+        // el botón de arriba permite pasar a ascendente. (Clave nueva: la preferencia anterior, cuando el defecto era ascendente, no se arrastra.)
+        let contOrdenAsc = (function(){ try{ return localStorage.getItem('tactical_cont_orden_v2') === 'asc'; }catch(e){ return false; } })();
         function contClaveNumero(n){
             const m = String(n || '').match(/^\s*([A-Za-z]+)[^0-9]*0*(\d+)/);
             return m ? [m[1].toUpperCase(), parseInt(m[2], 10)] : [String(n || '').toUpperCase(), 0];
@@ -11711,7 +11735,7 @@
         }
         function contToggleOrden(){
             contOrdenAsc = !contOrdenAsc;
-            try{ localStorage.setItem('tactical_cont_orden', contOrdenAsc ? 'asc' : 'desc'); }catch(e){}
+            try{ localStorage.setItem('tactical_cont_orden_v2', contOrdenAsc ? 'asc' : 'desc'); }catch(e){}
             renderContabilidad();
         }
 
@@ -11734,7 +11758,7 @@
             const items = contObtenerItemsDoc();
             const bruto = items.reduce((s, i) => s + (i.cantidad * i.valorUnitario), 0), iva = items.reduce((s, i) => s + i.iva, 0);
             const tipoDoc = document.getElementById('doc-tipoDoc').value, aplica = document.getElementById('doc-aplicaReteiva').checked;
-            const reteiva = (tipoDoc === 'factura' && aplica) ? Math.round(iva * 0.15) : 0;
+            const reteiva = contReteivaForm(iva);
             return bruto + iva - reteiva + contNumeroDesdeInput(document.getElementById('doc-valorEnvio'));
         }
         function contAnticiposSeleccionadosDoc(){
@@ -11963,7 +11987,7 @@
             // El IVA ya no se calcula automático -- es la suma del IVA que se escribió en cada ítem
             // (Conde 2026-08-20, columna IVA por ítem, 100% manual).
             const iva = items.reduce((s,i)=>s+i.iva,0);
-            const reteiva = (tipoDoc === 'factura' && aplicaReteiva) ? Math.round(iva*0.15) : 0;
+            const reteiva = (tipoDoc === 'factura' && aplicaReteiva) ? contReteivaForm(iva) : 0;
             const totalDocumento = valorBruto + iva - reteiva;
             const totalCobrar = totalDocumento + valorEnvio;
             const fechaVencimiento = condicionPago === 'credito30' ? contSumarDias(fechaDoc,30) : (condicionPago === 'credito1' ? contSumarDias(fechaDoc,1) : (condicionPago === 'contado' ? fechaDoc : ''));
@@ -12023,6 +12047,7 @@
             }
 
             contLimpiarItemsDoc();
+            { const rv = document.getElementById('doc-reteivaValor'); if(rv){ rv.dataset.manual = ''; rv.value = '0'; } }
             document.getElementById('doc-valorEnvio').value = '0';
             document.getElementById('doc-numero').value = ''; document.getElementById('doc-numero').dataset.auto = '';
             document.getElementById('doc-fecha').value = contHoy();
@@ -12052,7 +12077,7 @@
               <table class="doc-table">
                 <tr><td>Valor Bruto</td><td style="text-align:right;">${cotFormatoCop(doc.valorBruto)}</td></tr>
                 ${doc.iva>0?`<tr><td>IVA (19%)</td><td style="text-align:right;">${cotFormatoCop(doc.iva)}</td></tr>`:''}
-                ${doc.reteiva>0?`<tr><td>RETEIVA (15%)</td><td style="text-align:right;">-${cotFormatoCop(doc.reteiva)}</td></tr>`:''}
+                ${doc.reteiva>0?`<tr><td>RETEIVA${Math.round((doc.iva||0)*0.15)===doc.reteiva?' (15%)':''}</td><td style="text-align:right;">-${cotFormatoCop(doc.reteiva)}</td></tr>`:''}
                 ${doc.valorEnvio>0?`<tr><td>Envío (no incluido en el ingreso)</td><td style="text-align:right;">${cotFormatoCop(doc.valorEnvio)}</td></tr>`:''}
               </table>
               <div class="doc-total-box">TOTAL A PAGAR: ${cotFormatoCop(doc.totalCobrar)} COP</div>
@@ -12085,6 +12110,12 @@
             document.getElementById('doc-valorEnvio').value = (doc.valorEnvio||0).toLocaleString('es-CO');
             document.getElementById('doc-condicionPago').value = doc.condicionPago;
             document.getElementById('doc-aplicaReteiva').checked = !!doc.reteiva;
+            { // ReteIVA editable: si el valor guardado no es el 15% del IVA, se carga como "escrito por ti"
+                const rv = document.getElementById('doc-reteivaValor');
+                rv.value = (doc.reteiva || 0).toLocaleString('es-CO');
+                rv.dataset.manual = (doc.reteiva && doc.reteiva !== Math.round((doc.iva || 0) * 0.15)) ? 'true' : '';
+                document.getElementById('doc-reteivaValor-grupo').style.display = doc.reteiva ? '' : 'none';
+            }
             // Poner .checked por código no dispara el onchange del checkbox -- hay que mostrar/
             // ocultar el encabezado de la columna ReteIVA a mano (las celdas de cada fila se
             // resuelven solas dentro de contAgregarItemDoc, que sí lee el checkbox directo).
