@@ -1994,6 +1994,11 @@
         <div id="view-contabilidad" class="app-view">
             <div style="padding:10px;">
 
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px; font-size:0.85rem; color:#cbd5e0;">
+                    <span>Orden de las listas (facturas, ingresos, egresos…):</span>
+                    <button type="button" id="cont-orden-btn" class="btn-action" onclick="contToggleOrden()"></button>
+                </div>
+
                 <div class="accordion-item">
                     <div class="accordion-header header-special" id="head-cont-tablero" onclick="toggleSection('cont-tablero')">
                         <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>Tablero Financiero (Tiempo Real)</span><span class="arrow" id="arrow-cont-tablero">▼</span>
@@ -2022,6 +2027,37 @@
                                 <div id="cont-ventas-por-linea" style="font-size:0.9rem; line-height:1.6; margin-top:4px;"></div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Conde 2026-10-23: informes por rango -- lo facturado a cada cliente, y todos los documentos (facturas, ingresos, egresos...). -->
+                <div class="accordion-item">
+                    <div class="accordion-header" id="head-cont-informes" onclick="toggleSection('cont-informes')">
+                        <span>📊 Informes por rango (facturado por cliente y todos los documentos)</span><span class="arrow" id="arrow-cont-informes">►</span>
+                    </div>
+                    <div id="cont-informes" class="accordion-content">
+                        <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px; padding:10px; background:var(--light-gray); border-radius:6px; border:1px solid #cbd5e0;">
+                            <select id="inf-modo" onchange="contInformeRender()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;">
+                                <option value="facturado">Facturado por cliente</option>
+                                <option value="documentos">Todos los documentos</option>
+                            </select>
+                            Desde <input type="date" id="inf-desde" onchange="contInformeRender()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;">
+                            Hasta <input type="date" id="inf-hasta" onchange="contInformeRender()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;">
+                            <button type="button" class="btn-action" onclick="contInformeRapido('mes')">Este mes</button>
+                            <button type="button" class="btn-action" onclick="contInformeRapido('mesAnt')">Mes anterior</button>
+                            <button type="button" class="btn-action" onclick="contInformeRapido('anio')">Este año</button>
+                            <button type="button" class="btn-action" onclick="contInformeDescargar()" title="Descarga el informe en CSV (se abre en Excel)">Descargar Excel</button>
+                            <div id="inf-tipos-box" style="display:none; flex-basis:100%; flex-wrap:wrap; gap:10px; align-items:center; font-size:0.85rem;">
+                                <label style="font-weight:normal;"><input type="checkbox" id="inf-t-factura" checked onchange="contInformeRender()" style="width:auto;"> Facturas</label>
+                                <label style="font-weight:normal;"><input type="checkbox" id="inf-t-cuenta_cobro" checked onchange="contInformeRender()" style="width:auto;"> Cuentas de cobro</label>
+                                <label style="font-weight:normal;"><input type="checkbox" id="inf-t-nc" checked onchange="contInformeRender()" style="width:auto;"> Notas crédito</label>
+                                <label style="font-weight:normal;"><input type="checkbox" id="inf-t-ingreso" checked onchange="contInformeRender()" style="width:auto;"> Ingresos</label>
+                                <label style="font-weight:normal;"><input type="checkbox" id="inf-t-egreso" checked onchange="contInformeRender()" style="width:auto;"> Egresos</label>
+                                <label style="font-weight:normal;"><input type="checkbox" id="inf-t-cxp" checked onchange="contInformeRender()" style="width:auto;"> Cuentas por pagar</label>
+                                <input type="text" id="inf-buscar" placeholder="Buscar cliente, número o detalle…" oninput="contInformeRender()" style="flex:1; min-width:200px; padding:6px; border:1px solid #cbd5e0; border-radius:4px;">
+                            </div>
+                        </div>
+                        <div id="cont-informe-resultado"></div>
                     </div>
                 </div>
 
@@ -2073,7 +2109,7 @@
                             </div>
                             <div class="form-group"><label>N° de Documento:</label><input type="text" id="doc-numero" placeholder="Ej: FV-0001 / CC-0001" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase(); this.dataset.auto=''"></div>
                             <div class="form-group"><label>Fecha del documento:</label><input type="date" id="doc-fecha"><span style="font-size:0.78rem; color:#718096;">Se puede fechar en el mes pasado (facturas que llegan tarde, cierre de mes).</span></div>
-                            <div class="form-group"><label>Valor Envío (no es ingreso, pass-through transportadora):</label><input type="text" inputmode="numeric" id="doc-valorEnvio" value="0" oninput="contFormatearMiles(this)"></div>
+                            <div class="form-group"><label>Valor Envío (no es ingreso, pass-through transportadora):</label><input type="text" inputmode="numeric" id="doc-valorEnvio" value="0" oninput="contFormatearMiles(this); contRenderAnticiposDoc()"></div>
                             <div class="form-group">
                                 <label>Condición de Pago:</label>
                                 <select id="doc-condicionPago">
@@ -2097,6 +2133,13 @@
                         <div class="metric-total" id="doc-valorBruto-total" style="margin-top:10px;">Valor Bruto Total: $0</div>
                         <div class="metric-total" id="doc-iva-total" style="margin-top:4px; color:#718096; font-weight:normal;">IVA total (suma de los ítems): $0</div>
                         <div class="metric-total" id="doc-reteiva-total" style="margin-top:4px; color:var(--primary); font-weight:bold; display:none;"></div>
+                        <!-- Conde 2026-10-23: anticipos del cliente (ingresos sin factura) que se cruzan automáticamente con esta factura. -->
+                        <div id="doc-anticipos-box" style="display:none; margin-top:12px; padding:12px; background:#eafaf0; border:1px solid #b7e4c7; border-left:4px solid #059669; border-radius:6px;">
+                            <div style="font-weight:700; margin-bottom:4px;">Anticipos de este cliente sin cruzar</div>
+                            <div style="font-size:0.8rem; color:#4a5568; margin-bottom:6px;">Se cruzan solos con esta factura, del más antiguo al más nuevo, hasta cubrir su valor. Desmarca los que no correspondan (por ejemplo, abonos de facturas que ya cobraste por otro lado).</div>
+                            <div id="doc-anticipos-lista"></div>
+                            <div id="doc-anticipos-resumen" style="margin-top:8px; font-size:0.9rem;"></div>
+                        </div>
                         <div style="display:flex; gap:8px; margin-top:12px;">
                             <button class="btn-submit" id="doc-btn-guardar" style="margin-top:0; flex:1;" onclick="contGuardarDocVenta()">+ Registrar Documento de Venta</button>
                             <button class="btn-action" id="doc-btn-cancelar-edicion" style="display:none;" onclick="cancelarEdicionDocVenta()">Cancelar edición</button>
@@ -11453,6 +11496,7 @@
             } else {
                 reteivaDiv.style.display = 'none';
             }
+            contRenderAnticiposDoc();
             return valorBruto;
         }
         function contObtenerItemsDoc(){
@@ -11649,6 +11693,250 @@
             sel.innerHTML = CONT_SUBCATEGORIAS[cat].map(s => `<option value="${s}">${s}</option>`).join('');
         }
 
+        /* ============ ORDEN DE LAS LISTAS (Conde 2026-10-23) ============
+           "ordenar las facturas por orden ascendente" -- por número (prefijo y consecutivo: CC-0001, CC-0002… y FV-0001, FV-0002…), en todas las
+           listas de Contabilidad; un botón arriba lo cambia a descendente (lo más nuevo primero, como estaba antes). Se recuerda por navegador. */
+        let contOrdenAsc = (function(){ try{ return localStorage.getItem('tactical_cont_orden') !== 'desc'; }catch(e){ return true; } })();
+        function contClaveNumero(n){
+            const m = String(n || '').match(/^\s*([A-Za-z]+)[^0-9]*0*(\d+)/);
+            return m ? [m[1].toUpperCase(), parseInt(m[2], 10)] : [String(n || '').toUpperCase(), 0];
+        }
+        function contOrdenar(lista){
+            const a = [...lista].sort((x, y) => { const kx = contClaveNumero(x.numero), ky = contClaveNumero(y.numero); return kx[0] < ky[0] ? -1 : kx[0] > ky[0] ? 1 : kx[1] - ky[1]; });
+            return contOrdenAsc ? a : a.reverse();
+        }
+        function contPintarOrdenBtn(){
+            const b = document.getElementById('cont-orden-btn');
+            if(b) b.textContent = contOrdenAsc ? 'Ascendente ▲ (el número más bajo primero)' : 'Descendente ▼ (el más nuevo primero)';
+        }
+        function contToggleOrden(){
+            contOrdenAsc = !contOrdenAsc;
+            try{ localStorage.setItem('tactical_cont_orden', contOrdenAsc ? 'asc' : 'desc'); }catch(e){}
+            renderContabilidad();
+        }
+
+        /* ============ CRUCE DE ANTICIPOS (Conde 2026-10-23) ============
+           "que en el módulo contable permita cruzar anticipos cuando se haga la factura: que me traiga los anticipos de ese cliente que no se hayan
+           cruzado a una factura pasada, los reúna y me genere un saldo si lo hay a partir del monto total de la factura".
+           Un ANTICIPO es un Comprobante de Ingreso SIN factura asociada (abono sin factura). Cruzar = aplicarlo como cobro a la factura:
+             - si el anticipo cabe completo, el MISMO comprobante queda enlazado a la factura (concepto "CRUCE DE ANTICIPO CON FV-0001 — …");
+             - si el anticipo es mayor que lo que falta, se parte: el original queda con el remanente (sigue disponible) y se crea un comprobante
+               hijo por lo aplicado, con la MISMA fecha y medio de pago del original (el flujo de caja no cambia ni se cuenta dos veces).
+           Sin tablas nuevas: todo se apoya en los Comprobantes de Ingreso y en el saldo de la factura que ya existen. */
+        let docAnticiposOff = new Set(); // anticipos que la persona desmarcó en el formulario
+        function contEsCruce(i){ return /^CRUCE DE ANTICIPO/i.test(i.concepto || ''); }
+        function contAnticiposDisponibles(idCli){
+            if(!idCli) return [];
+            return db_ingresos.filter(i => i.idCli === idCli && !i.idDocVenta && !(i.idsDocVenta && i.idsDocVenta.length) && i.valor > 0)
+                .sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)) || contClaveNumero(a.numero)[1] - contClaveNumero(b.numero)[1]);
+        }
+        function contTotalCobrarForm(){
+            const items = contObtenerItemsDoc();
+            const bruto = items.reduce((s, i) => s + (i.cantidad * i.valorUnitario), 0), iva = items.reduce((s, i) => s + i.iva, 0);
+            const tipoDoc = document.getElementById('doc-tipoDoc').value, aplica = document.getElementById('doc-aplicaReteiva').checked;
+            const reteiva = (tipoDoc === 'factura' && aplica) ? Math.round(iva * 0.15) : 0;
+            return bruto + iva - reteiva + contNumeroDesdeInput(document.getElementById('doc-valorEnvio'));
+        }
+        function contAnticiposSeleccionadosDoc(){
+            if(docVentaEditandoId) return [];
+            return contAnticiposDisponibles(document.getElementById('doc-cliente').value).filter(a => !docAnticiposOff.has(a.id)).map(a => a.id);
+        }
+        function contToggleAnticipoDoc(id, marcado){ if(marcado) docAnticiposOff.delete(id); else docAnticiposOff.add(id); contRenderAnticiposDoc(); }
+        function contRenderAnticiposDoc(){
+            const box = document.getElementById('doc-anticipos-box'); if(!box) return;
+            const idCli = document.getElementById('doc-cliente').value;
+            const disp = docVentaEditandoId ? [] : contAnticiposDisponibles(idCli);
+            if(!disp.length){ box.style.display = 'none'; return; }
+            box.style.display = 'block';
+            const total = contTotalCobrarForm();
+            let restante = total, aplicado = 0, disponibleMarcado = 0;
+            const filas = disp.map(a => {
+                const marcado = !docAnticiposOff.has(a.id);
+                let usa = 0;
+                if(marcado){ disponibleMarcado += a.valor; usa = Math.min(a.valor, Math.max(0, restante)); restante -= usa; aplicado += usa; }
+                const fecha = new Date(String(a.fecha).slice(0, 10) + 'T12:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
+                return '<label style="display:flex; gap:8px; align-items:flex-start; padding:5px 0; border-bottom:1px solid #d5ecd9; cursor:pointer; font-weight:normal;">' +
+                    '<input type="checkbox" ' + (marcado ? 'checked' : '') + ' style="width:auto; margin-top:3px;" onchange="contToggleAnticipoDoc(\'' + a.id + '\', this.checked)">' +
+                    '<span style="flex:1;"><strong>' + a.numero + '</strong> · ' + fecha + ' · <strong>' + cotFormatoCop(a.valor) + '</strong><br><span style="font-size:0.8rem; color:#4a5568;">' + resumenCotEsc(a.concepto || '') + '</span></span>' +
+                    (marcado && usa > 0 ? '<span style="font-size:0.8rem; color:#059669; white-space:nowrap;">se cruzan ' + cotFormatoCop(usa) + '</span>' : '') + '</label>';
+            }).join('');
+            const saldo = Math.max(0, total - aplicado), sobran = Math.max(0, disponibleMarcado - aplicado);
+            document.getElementById('doc-anticipos-lista').innerHTML = filas;
+            document.getElementById('doc-anticipos-resumen').innerHTML = 'Total a cobrar de esta factura: <strong>' + cotFormatoCop(total) + '</strong> − anticipos que se cruzan: <strong style="color:#059669;">' + cotFormatoCop(aplicado) + '</strong> = <strong>saldo por cobrar: ' + cotFormatoCop(saldo) + '</strong>' +
+                (sobran > 0 ? '<br><span style="font-size:0.8rem; color:#4a5568;">Sobran ' + cotFormatoCop(sobran) + ' de anticipos: quedan disponibles para la siguiente factura de este cliente.</span>' : '');
+        }
+        // Aplica los anticipos elegidos (ids) a la factura "doc", en orden de fecha, hasta cubrir su saldo. Modifica doc (saldo/estado) y los ingresos;
+        // quien llama debe sincronizar el doc. Devuelve { total, detalle }.
+        async function contAplicarCrucesAnticipos(doc, ids){
+            let pendiente = doc.saldoPendiente, aplicadoTotal = 0; const detalle = [];
+            const anticipos = ids.map(id => db_ingresos.find(i => i.id === id)).filter(a => a && !a.idDocVenta)
+                .sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)) || contClaveNumero(a.numero)[1] - contClaveNumero(b.numero)[1]);
+            for(const a of anticipos){
+                if(pendiente <= 0) break;
+                const usar = Math.min(a.valor, pendiente);
+                if(usar >= a.valor){
+                    a.idDocVenta = doc.id; a.idsDocVenta = [doc.id];
+                    a.concepto = 'CRUCE DE ANTICIPO CON ' + doc.numero + ' — ' + (a.concepto || '');
+                    tacticalSyncIngreso(a);
+                    detalle.push({ numero: a.numero, valor: usar });
+                } else {
+                    const numero = await contSiguienteNumero('ingreso', 'IN-');
+                    const hijo = { id: crypto.randomUUID(), numero, fecha: a.fecha, idCli: a.idCli, idDocVenta: doc.id, idsDocVenta: [doc.id], valor: usar,
+                        concepto: 'CRUCE DE ANTICIPO ' + a.numero + ' CON ' + doc.numero, medioPago: a.medioPago, referenciaSoporte: a.referenciaSoporte, reteivaRecibida: false };
+                    a.valor -= usar;
+                    db_ingresos.push(hijo);
+                    tacticalSyncIngreso(a); tacticalSyncIngreso(hijo);
+                    detalle.push({ numero: numero, valor: usar });
+                }
+                pendiente -= usar; aplicadoTotal += usar;
+            }
+            doc.saldoPendiente = pendiente;
+            doc.estado = pendiente <= 0 ? 'pagada' : (pendiente < doc.totalCobrar ? 'abonado_parcial' : 'pendiente');
+            return { total: aplicadoTotal, detalle };
+        }
+        function contCrucesDeDoc(idDoc){ return db_ingresos.filter(i => i.idDocVenta === idDoc && contEsCruce(i)); }
+        // Deshace un cruce (id = comprobante de cruce): el anticipo vuelve a quedar disponible y la factura recupera su saldo.
+        function contDescruzar(id, soloLiberar){
+            const i = db_ingresos.find(x => x.id === id); if(!i || !contEsCruce(i)) return false;
+            const doc = db_docventa.find(d => d.id === i.idDocVenta);
+            const valor = i.valor;
+            const m = String(i.concepto).match(/^CRUCE DE ANTICIPO\s+(IN-\d+)\s+CON\s/i);
+            if(m){
+                const padre = db_ingresos.find(x => x.numero === m[1].toUpperCase() && !x.idDocVenta);
+                if(padre){ padre.valor += valor; tacticalSyncIngreso(padre); db_ingresos = db_ingresos.filter(x => x.id !== i.id); tacticalEliminarIngresoRemoto(i.id); }
+                else { i.idDocVenta = null; i.idsDocVenta = []; i.concepto = 'ANTICIPO (cruce deshecho de ' + (doc ? doc.numero : '') + ')'; tacticalSyncIngreso(i); }
+            } else {
+                i.idDocVenta = null; i.idsDocVenta = [];
+                i.concepto = String(i.concepto).replace(/^CRUCE DE ANTICIPO CON \S+\s*—\s*/i, '') || 'ANTICIPO';
+                tacticalSyncIngreso(i);
+            }
+            if(doc && !soloLiberar && doc.estado !== 'anulada'){
+                doc.saldoPendiente = Math.min(doc.totalCobrar, doc.saldoPendiente + valor);
+                doc.estado = doc.saldoPendiente <= 0 ? 'pagada' : (doc.saldoPendiente < doc.totalCobrar ? 'abonado_parcial' : 'pendiente');
+                tacticalSyncDocVenta(doc);
+            }
+            return true;
+        }
+        function contDescruzarClick(id){
+            const i = db_ingresos.find(x => x.id === id); if(!i) return;
+            if(!confirm('¿Deshacer este cruce de anticipo (' + i.numero + ' por ' + cotFormatoCop(i.valor) + ')?\n\nEl anticipo vuelve a quedar disponible y la factura recupera ese saldo por cobrar.')) return;
+            contDescruzar(id); renderContabilidad();
+        }
+        function contCrucesHtml(doc){
+            const cr = contCrucesDeDoc(doc.id); if(!cr.length) return '';
+            const total = cr.reduce((s, i) => s + i.valor, 0);
+            return 'Anticipos cruzados: <strong style="color:#059669;">' + cotFormatoCop(total) + '</strong> <span style="font-size:0.78rem; color:#718096;">(' +
+                cr.map(i => i.numero + ' ' + cotFormatoCop(i.valor) + ' <a href="#" onclick="contDescruzarClick(\'' + i.id + '\'); return false;" title="Deshacer este cruce">deshacer</a>').join(' · ') + ')</span><br>';
+        }
+        function contBotonCruzarHtml(doc){
+            if(doc.estado === 'anulada' || !(doc.saldoPendiente > 0) || !contAnticiposDisponibles(doc.idCli).length) return '';
+            return '<button class="btn-action" style="color:#059669; border-color:#059669;" onclick="contModalCruzarAnticipos(\'' + doc.id + '\')" title="Cruzar anticipos de este cliente contra esta factura">Cruzar anticipos</button>';
+        }
+        // Para una factura que YA existe: elegir qué anticipos del cliente cruzar.
+        function contModalCruzarAnticipos(idDoc){
+            const doc = db_docventa.find(d => d.id === idDoc); if(!doc) return;
+            const disp = contAnticiposDisponibles(doc.idCli);
+            if(!disp.length){ alert('Este cliente no tiene anticipos sin cruzar.'); return; }
+            const previo = document.getElementById('cont-cruce-overlay'); if(previo) previo.remove();
+            const ov = document.createElement('div'); ov.id = 'cont-cruce-overlay';
+            ov.style.cssText = 'position:fixed; inset:0; background:rgba(26,32,44,0.6); z-index:99999; display:flex; align-items:center; justify-content:center; padding:20px;';
+            const filas = disp.map(a => '<label style="display:flex; gap:8px; padding:6px 0; border-bottom:1px solid #e2e8f0; cursor:pointer;"><input type="checkbox" class="cont-cruce-chk" value="' + a.id + '" checked style="width:auto;"><span><strong>' + a.numero + '</strong> · ' + String(a.fecha).slice(0, 10) + ' · <strong>' + cotFormatoCop(a.valor) + '</strong><br><span style="font-size:0.8rem; color:#4a5568;">' + resumenCotEsc(a.concepto || '') + '</span></span></label>').join('');
+            ov.innerHTML = '<div style="background:#fff; border-radius:10px; padding:22px; max-width:480px; width:100%; max-height:80vh; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.35);">' +
+                '<div style="font-weight:800; font-size:1.02rem; margin-bottom:4px;">Cruzar anticipos con ' + doc.numero + '</div>' +
+                '<div style="font-size:0.85rem; color:#4a5568; margin-bottom:10px;">Saldo por cobrar de la factura: <strong>' + cotFormatoCop(doc.saldoPendiente) + '</strong>. Se cruzan en orden de fecha hasta cubrirlo; lo que sobre queda disponible.</div>' +
+                filas + '<div style="display:flex; gap:8px; margin-top:14px;"><button type="button" id="cont-cruce-ok" class="btn-submit" style="margin-top:0; flex:1;">Cruzar</button><button type="button" id="cont-cruce-no" class="btn-action" style="flex:1;">Cancelar</button></div></div>';
+            document.body.appendChild(ov);
+            document.getElementById('cont-cruce-no').onclick = () => ov.remove();
+            document.getElementById('cont-cruce-ok').onclick = async () => {
+                const ids = [...ov.querySelectorAll('.cont-cruce-chk')].filter(c => c.checked).map(c => c.value);
+                ov.remove();
+                if(!ids.length) return;
+                const r = await contAplicarCrucesAnticipos(doc, ids);
+                tacticalSyncDocVenta(doc);
+                renderContabilidad();
+                alert('Se cruzaron anticipos por ' + cotFormatoCop(r.total) + ' con ' + doc.numero + '. Saldo por cobrar: ' + cotFormatoCop(doc.saldoPendiente) + '.');
+            };
+        }
+
+        /* ============ INFORMES POR RANGO (Conde 2026-10-23) ============
+           1) Facturado por cliente: listado de facturas / cuentas de cobro agrupado por cliente, con subtotal y solo el TOTAL CON IVA.
+           2) Todos los documentos (facturas, notas crédito, ingresos, egresos, cuentas por pagar) en el rango elegido.
+           "Total con IVA" = valor + IVA (+ envío si lo hubo); no descuenta la ReteIVA. Las facturas anuladas por Nota Crédito no se cuentan. */
+        const CONT_INF_TIPOS = { factura: 'Factura', cuenta_cobro: 'Cuenta de cobro', nc: 'Nota crédito', ingreso: 'Ingreso', egreso: 'Egreso', cxp: 'Cuenta por pagar' };
+        let contInformeUltimo = null;
+        function contF10(f){ return String(f || '').slice(0, 10); }
+        function contTotalConIva(d){ return (d.valorBruto || 0) + (d.iva || 0) + (d.valorEnvio || 0); }
+        function contInformeRapido(cual){
+            const hoy = new Date(); let d, h;
+            if(cual === 'mes'){ d = new Date(hoy.getFullYear(), hoy.getMonth(), 1); h = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0); }
+            else if(cual === 'mesAnt'){ d = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1); h = new Date(hoy.getFullYear(), hoy.getMonth(), 0); }
+            else { d = new Date(hoy.getFullYear(), 0, 1); h = new Date(hoy.getFullYear(), 11, 31); }
+            const f = x => x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
+            document.getElementById('inf-desde').value = f(d); document.getElementById('inf-hasta').value = f(h);
+            contInformeRender();
+        }
+        function contInformeRender(){
+            const cont = document.getElementById('cont-informe-resultado'); if(!cont) return;
+            if(!document.getElementById('inf-desde').value && !document.getElementById('inf-hasta').value){ contInformeRapido('mes'); return; }
+            const desde = document.getElementById('inf-desde').value || '0000-01-01', hasta = document.getElementById('inf-hasta').value || '9999-12-31';
+            const modo = document.getElementById('inf-modo').value;
+            document.getElementById('inf-tipos-box').style.display = modo === 'documentos' ? 'flex' : 'none';
+            const nombreCli = id => { const c = db_clientes.find(x => x.id === id); return c ? c.empresa : 'Cliente eliminado'; };
+            const enRango = f => { const x = contF10(f); return x >= desde && x <= hasta; };
+            const esc = resumenCotEsc;
+            if(modo === 'facturado'){
+                const docs = db_docventa.filter(d => d.estado !== 'anulada' && enRango(d.fecha));
+                const anulados = db_docventa.filter(d => d.estado === 'anulada' && enRango(d.fecha)).length;
+                const porCli = {};
+                docs.forEach(d => { const k = nombreCli(d.idCli); (porCli[k] = porCli[k] || []).push(d); });
+                const clientes = Object.keys(porCli).sort((a, b) => a.localeCompare(b, 'es'));
+                let granTotal = 0, html = '', csv = [['Cliente', 'N° documento', 'Fecha', 'Tipo', 'Descripción', 'Total con IVA']];
+                clientes.forEach(c => {
+                    const lista = contOrdenar(porCli[c]); const sub = lista.reduce((s, d) => s + contTotalConIva(d), 0); granTotal += sub;
+                    html += '<tr style="background:#edf2f7;"><td colspan="4" style="padding:7px 8px; font-weight:700;">' + esc(c) + ' <span style="font-weight:400; color:#718096;">(' + lista.length + ' documento' + (lista.length === 1 ? '' : 's') + ')</span></td><td style="padding:7px 8px; text-align:right; font-weight:700;">' + cotFormatoCop(sub) + '</td></tr>';
+                    lista.forEach(d => {
+                        const desc = String(d.descripcion || '').slice(0, 80);
+                        html += '<tr style="border-bottom:1px solid #edf2f7;"><td style="padding:5px 8px 5px 22px;">' + esc(d.numero) + '</td><td style="padding:5px 8px;">' + contF10(d.fecha) + '</td><td style="padding:5px 8px;">' + CONT_INF_TIPOS[d.tipoDoc] + '</td><td style="padding:5px 8px; color:#4a5568;">' + esc(desc) + '</td><td style="padding:5px 8px; text-align:right;">' + cotFormatoCop(contTotalConIva(d)) + '</td></tr>';
+                        csv.push([c, d.numero, contF10(d.fecha), CONT_INF_TIPOS[d.tipoDoc], d.descripcion || '', Math.round(contTotalConIva(d))]);
+                    });
+                    csv.push([c + ' — SUBTOTAL', '', '', '', '', Math.round(sub)]);
+                });
+                csv.push(['TOTAL FACTURADO', '', '', '', '', Math.round(granTotal)]);
+                cont.innerHTML = docs.length
+                    ? '<div style="margin:6px 0 10px; font-size:0.9rem;"><strong>' + clientes.length + '</strong> cliente(s) · <strong>' + docs.length + '</strong> documento(s) · Total facturado con IVA: <strong style="color:var(--primary);">' + cotFormatoCop(granTotal) + '</strong>' + (anulados ? ' <span style="color:#718096;">(' + anulados + ' anulado(s) por Nota Crédito no se cuentan)</span>' : '') + '</div>' +
+                      '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:0.85rem;"><thead><tr style="background:#f7fafc; color:#4a5568; text-align:left;"><th style="padding:6px 8px;">N°</th><th style="padding:6px 8px;">Fecha</th><th style="padding:6px 8px;">Tipo</th><th style="padding:6px 8px;">Descripción</th><th style="padding:6px 8px; text-align:right;">Total con IVA</th></tr></thead><tbody>' + html + '</tbody><tfoot><tr style="border-top:2px solid #4a5568; font-weight:800;"><td colspan="4" style="padding:8px;">TOTAL FACTURADO</td><td style="padding:8px; text-align:right;">' + cotFormatoCop(granTotal) + '</td></tr></tfoot></table></div>'
+                    : '<p style="color:#a0aec0;">No hay facturas ni cuentas de cobro en este rango.</p>';
+                contInformeUltimo = { nombre: 'facturado_por_cliente_' + desde + '_a_' + hasta, filas: csv };
+                return;
+            }
+            // modo documentos
+            const activos = Object.keys(CONT_INF_TIPOS).filter(t => { const el = document.getElementById('inf-t-' + t); return el && el.checked; });
+            const q = (document.getElementById('inf-buscar').value || '').trim().toLowerCase();
+            const filas = [];
+            db_docventa.forEach(d => { if(enRango(d.fecha)) filas.push({ tipo: d.tipoDoc, numero: d.numero, fecha: contF10(d.fecha), tercero: nombreCli(d.idCli), detalle: d.descripcion || '', valor: contTotalConIva(d), estado: { pendiente: 'Pendiente', abonado_parcial: 'Abonada', pagada: 'Pagada', anulada: 'Anulada' }[d.estado] || d.estado }); });
+            db_notasCredito.forEach(n => { if(enRango(n.fecha)) filas.push({ tipo: 'nc', numero: n.numero, fecha: contF10(n.fecha), tercero: nombreCli(n.idCli), detalle: 'Anula ' + (n.numeroDoc || '') + (n.motivo ? ' — ' + n.motivo : ''), valor: -(n.totalDocumento || 0), estado: '' }); });
+            db_ingresos.forEach(i => { if(enRango(i.fecha)) filas.push({ tipo: 'ingreso', numero: i.numero, fecha: contF10(i.fecha), tercero: nombreCli(i.idCli), detalle: i.concepto || '', valor: i.valor, estado: contEsCruce(i) ? 'Cruce de anticipo' : (i.idDocVenta ? 'Aplicado a factura' : 'Anticipo sin cruzar') }); });
+            db_egresos.forEach(e => { if(enRango(e.fecha)) filas.push({ tipo: 'egreso', numero: e.numero, fecha: contF10(e.fecha), tercero: e.beneficiario || '', detalle: e.concepto || '', valor: e.monto, estado: '' }); });
+            db_cxp.forEach(c => { if(enRango(c.fecha)) filas.push({ tipo: 'cxp', numero: c.numero, fecha: contF10(c.fecha), tercero: c.proveedor || '', detalle: 'Factura proveedor ' + (c.numeroFacturaProveedor || ''), valor: c.monto, estado: { pendiente: 'Pendiente', abonado_parcial: 'Abonada', pagada: 'Pagada' }[c.estado] || c.estado || '' }); });
+            let sel = filas.filter(f => activos.includes(f.tipo) && (!q || (f.numero + ' ' + f.tercero + ' ' + f.detalle).toLowerCase().includes(q)));
+            sel.sort((a, b) => a.fecha.localeCompare(b.fecha) || contClaveNumero(a.numero)[0].localeCompare(contClaveNumero(b.numero)[0]) || contClaveNumero(a.numero)[1] - contClaveNumero(b.numero)[1]);
+            if(!contOrdenAsc) sel.reverse();
+            const totales = {}; sel.forEach(f => { totales[f.tipo] = (totales[f.tipo] || 0) + f.valor; });
+            const cuerpo = sel.map(f => '<tr style="border-bottom:1px solid #edf2f7;"><td style="padding:5px 8px; white-space:nowrap;">' + f.fecha + '</td><td style="padding:5px 8px;">' + CONT_INF_TIPOS[f.tipo] + '</td><td style="padding:5px 8px;">' + esc(f.numero) + '</td><td style="padding:5px 8px;">' + esc(f.tercero) + '</td><td style="padding:5px 8px; color:#4a5568;">' + esc(String(f.detalle).slice(0, 90)) + '</td><td style="padding:5px 8px; text-align:right;">' + cotFormatoCop(f.valor) + '</td><td style="padding:5px 8px; color:#718096;">' + esc(f.estado) + '</td></tr>').join('');
+            cont.innerHTML = sel.length
+                ? '<div style="margin:6px 0 10px; font-size:0.85rem; line-height:1.7;"><strong>' + sel.length + '</strong> documento(s). ' + Object.keys(totales).map(t => CONT_INF_TIPOS[t] + ': <strong>' + cotFormatoCop(totales[t]) + '</strong>').join(' · ') + '<br><span style="color:#718096;">Las notas crédito van en negativo. Facturas y cuentas de cobro con IVA (+ envío).</span></div>' +
+                  '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:0.83rem;"><thead><tr style="background:#f7fafc; color:#4a5568; text-align:left;"><th style="padding:6px 8px;">Fecha</th><th style="padding:6px 8px;">Tipo</th><th style="padding:6px 8px;">N°</th><th style="padding:6px 8px;">Cliente / proveedor</th><th style="padding:6px 8px;">Detalle</th><th style="padding:6px 8px; text-align:right;">Valor</th><th style="padding:6px 8px;">Estado</th></tr></thead><tbody>' + cuerpo + '</tbody></table></div>'
+                : '<p style="color:#a0aec0;">No hay documentos con esos filtros en el rango.</p>';
+            contInformeUltimo = { nombre: 'documentos_' + desde + '_a_' + hasta, filas: [['Fecha', 'Tipo', 'N°', 'Cliente / proveedor', 'Detalle', 'Valor', 'Estado']].concat(sel.map(f => [f.fecha, CONT_INF_TIPOS[f.tipo], f.numero, f.tercero, f.detalle, Math.round(f.valor), f.estado])) };
+        }
+        function contInformeDescargar(){
+            if(!contInformeUltimo || contInformeUltimo.filas.length < 2){ alert('No hay datos en este informe para descargar.'); return; }
+            const celda = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+            const blob = new Blob(['﻿' + contInformeUltimo.filas.map(f => f.map(celda).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = contInformeUltimo.nombre + '.csv';
+            document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        }
+
         /* ---- DOCUMENTOS DE VENTA ---- */
         // Conde 2026-08-21: "quiero que me permitas editar y borrar las facturas de los clientes"
         // -- docVentaEditandoId guarda el id del documento en edición (null = crear nuevo, de siempre).
@@ -11715,7 +12003,13 @@
                     condicionPago, fechaVencimiento, saldoPendiente: totalCobrar, estado: 'pendiente', vendedor,
                 };
                 db_docventa.push(doc);
+                // Conde 2026-10-23: cruce automático de los anticipos del cliente (los marcados en el formulario) contra esta factura.
+                const idsAnticipos = contAnticiposSeleccionadosDoc();
+                let cruce = null;
+                if(idsAnticipos.length) cruce = await contAplicarCrucesAnticipos(doc, idsAnticipos);
                 tacticalSyncDocVenta(doc);
+                docAnticiposOff.clear();
+                if(cruce && cruce.total > 0) alert('Documento ' + numero + ' guardado.\n\nSe cruzaron anticipos del cliente por ' + cotFormatoCop(cruce.total) + '.\nSaldo por cobrar: ' + cotFormatoCop(doc.saldoPendiente) + '.');
 
                 // Si este documento se generó desde "Prefacturas pendientes", las marca facturadas
                 // para que desaparezcan de esa lista y no se vuelvan a facturar por error.
@@ -11829,6 +12123,7 @@
             // Conde 2026-09-25: candado suavizado a confirm(), ver editarDocVenta arriba.
             if(doc.estado==='pagada' && !confirm(`Este documento "${doc.numero}" ya está pagado. ¿Seguro que quieres eliminarlo?\n\nYa se registraron cobros contra este documento.`)) return;
             if(!confirm(`¿Eliminar el documento "${doc.numero}"?\n\nEsta acción no se puede deshacer.`)) return;
+            contCrucesDeDoc(id).forEach(c => contDescruzar(c.id, true)); // los anticipos cruzados con esta factura vuelven a quedar disponibles
             tacticalEliminarDocVentaRemoto(id);
             db_docventa = db_docventa.filter(d=>d.id!==id);
             if(docVentaEditandoId===id) cancelarEdicionDocVenta();
@@ -11838,7 +12133,7 @@
             const container = document.getElementById('lista-docventa');
             if(!container) return;
             container.innerHTML = '';
-            [...db_docventa].reverse().forEach(doc => {
+            contOrdenar(db_docventa).forEach(doc => {
                 const cli = db_clientes.find(c => c.id === doc.idCli);
                 const badgeTipo = doc.tipoDoc==='factura' ? '🏢 Factura (DIAN externa)' : '🎨 Cuenta de Cobro';
                 // Conde 2026-08-21: "en la descripción quiero solo el encabezado y ver detalle sea
@@ -11857,9 +12152,11 @@
                         <div style="font-size:0.9rem; line-height:1.5;">
                             Total a cobrar: <strong>${cotFormatoCop(doc.totalCobrar)}</strong><br>
                             Saldo pendiente: <strong style="color:var(--primary);">${cotFormatoCop(doc.saldoPendiente)}</strong><br>
+                            ${contCrucesHtml(doc)}
                             Vencimiento: <strong>${doc.fechaVencimiento||'-'}</strong>
                         </div>
                         <div class="action-row">
+                            ${contBotonCruzarHtml(doc)}
                             ${doc.tipoDoc==='cuenta_cobro'?`<button class="btn-stage btn-avanzar" style="flex:none; padding:8px 14px;" onclick="contImprimirCuentaCobro('${doc.id}')">🖨️ Imprimir</button>`:''}
                             <button class="btn-action" onclick="editarDocVenta('${doc.id}')">✏️ Editar</button><button class="btn-action" style="color:var(--peligro); border-color:var(--peligro);" onclick="eliminarDocVenta('${doc.id}')">🗑️ Eliminar</button>
                             ${doc.estado==='pagada'?'<span style="font-size:0.78rem; color:#718096; margin-left:6px;">🔓 Pagado — editar con cuidado</span>':''}
@@ -12054,6 +12351,10 @@
         function eliminarIngreso(id){
             const i = db_ingresos.find(x=>x.id===id);
             if(!i) return;
+            if(contEsCruce(i)){
+                if(!confirm('Este comprobante (' + i.numero + ') es un CRUCE DE ANTICIPO con una factura.\n\n¿Deshacer el cruce? El anticipo vuelve a quedar disponible y la factura recupera ese saldo por cobrar.')) return;
+                contDescruzar(id); renderContabilidad(); return;
+            }
             if(!confirm(`¿Eliminar el Comprobante de Ingreso "${i.numero}"?\n\nEsto restaura el saldo pendiente del/los documento(s) que cobraba.\n\nEsta acción no se puede deshacer.`)) return;
             contRevertirEfectoIngreso(i);
             tacticalEliminarIngresoRemoto(id);
@@ -12066,7 +12367,7 @@
             const container = document.getElementById('lista-ingresos');
             if(!container) return;
             container.innerHTML = '';
-            [...db_ingresos].reverse().forEach(i => {
+            contOrdenar(db_ingresos).forEach(i => {
                 const cli = db_clientes.find(c => c.id === i.idCli);
                 container.innerHTML += `
                     <div class="data-card">
@@ -12193,7 +12494,7 @@
             const container = document.getElementById('lista-cxp');
             if(!container) return;
             container.innerHTML = '';
-            [...db_cxp].reverse().forEach(c => {
+            contOrdenar(db_cxp).forEach(c => {
                 container.innerHTML += `
                     <div class="data-card">
                         <span class="tag" style="float:right; background:${c.estado==='pagado'?'var(--ganado)':(c.estado==='abonado_parcial'?'var(--proceso)':'var(--pendiente)')}; color:${c.estado==='pendiente'?'#744210':'white'};">${c.estado.toUpperCase()}</span>
@@ -12386,7 +12687,7 @@
             const container = document.getElementById('lista-egresos');
             if(!container) return;
             container.innerHTML = '';
-            [...db_egresos].reverse().forEach(e => {
+            contOrdenar(db_egresos).forEach(e => {
                 container.innerHTML += `
                     <div class="data-card">
                         <div class="card-title">${e.numero} — ${cotFormatoCop(e.monto)}</div>
@@ -12721,7 +13022,7 @@
         function renderNotasCredito(){
             const cont = document.getElementById('lista-notascredito');
             if(!cont) return;
-            cont.innerHTML = [...db_notasCredito].reverse().map(n => {
+            cont.innerHTML = contOrdenar(db_notasCredito).map(n => {
                 const cli = db_clientes.find(c => c.id === n.idCli);
                 return `<div class="data-card">
                     <span class="tag" style="float:right; background:#718096; color:#fff;">ANULA ${n.numeroDoc || ''}</span>
@@ -12775,6 +13076,9 @@
             if(document.getElementById('cxp-subcategoria') && !document.getElementById('cxp-subcategoria').options.length) contLlenarSubcategorias();
             renderPrefacturas();
             renderDocVenta();
+            contRenderAnticiposDoc();
+            contPintarOrdenBtn();
+            if(document.getElementById('cont-informes') && document.getElementById('cont-informes').classList.contains('active')) contInformeRender();
             contNcLlenarSelect();
             renderNotasCredito();
             renderIngresos();
