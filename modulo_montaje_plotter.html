@@ -608,16 +608,21 @@ function dibujarPuesto(cx, p, S, ox, oy, it){        // p: puesto dentro del blo
   else { cx.save(); cx.translate(x + w, y); cx.rotate(Math.PI/2); if(fo) recortarSilueta(cx, fo, h, w); dibujarCover(cx, p.item.img, 0, 0, h, w, p.item.enc); cx.restore(); }   // girado 90°: se dibuja con la medida original y se rota
   if(p.item.bordeBlanco && !fo){ const lw = Math.max(1, 0.03*S); cx.save(); cx.strokeStyle = '#d9d9d9'; cx.lineWidth = lw; cx.strokeRect(x+lw/2, y+lw/2, w-lw, h-lw); cx.restore(); }   // borde blanco: línea fina gris al 15% como guía de corte
 }
+function guiaImagen(cx, g, x, y, w, h){      // imagen de la guía; corazón/círculo: recortada a su silueta
+  const fo = formaPuesto(g.item); cx.save();
+  if(!g.rot){ if(fo){ cx.translate(x,y); recortarSilueta(cx, fo, w, h); cx.translate(-x,-y); } dibujarCover(cx, g.item.img, x, y, w, h, g.item.enc); }
+  else { cx.translate(x + w, y); cx.rotate(Math.PI/2); if(fo) recortarSilueta(cx, fo, h, w); dibujarCover(cx, g.item.img, 0, 0, h, w, g.item.enc); }
+  cx.restore();
+}
 function dibujarGuia(cx, g, S){
   const x = g.x*S, y = g.y*S, w = g.w*S, h = g.h*S;
-  if(g.tipo==='500'){ if(!g.item.img){ cx.fillStyle='#d1d5db'; cx.fillRect(x,y,w,h); } else if(!g.rot) dibujarCover(cx, g.item.img, x, y, w, h, g.item.enc); else { cx.save(); cx.translate(x + w, y); cx.rotate(Math.PI/2); dibujarCover(cx, g.item.img, 0, 0, h, w, g.item.enc); cx.restore(); } return; }
+  if(g.tipo==='500'){ if(!g.item.img){ cx.fillStyle='#d1d5db'; cx.fillRect(x,y,w,h); } else guiaImagen(cx, g, x, y, w, h); return; }
   if(PL.img){ cx.drawImage(PL.img, x, y, w, h); } else { cx.fillStyle = '#fff'; cx.fillRect(x,y,w,h); cx.strokeStyle = '#334155'; cx.lineWidth = Math.max(1, S*0.05); cx.strokeRect(x,y,w,h); cx.fillStyle = '#334155'; cx.font = 'bold '+(S*0.9)+'px Arial'; cx.textAlign = 'center'; cx.fillText('GUÍA DE ARMADO', x+w/2, y+S*1.1); }
   const zx = PL.img ? PL.zx : 1, zy = PL.img ? PL.zy : 1.6, zw = PL.img ? PL.zw : g.w-2, zh = PL.img ? PL.zh : g.h-2.6;
   if(g.item.img && zw>0 && zh>0){   // misma gráfica reducida, completa y centrada en la zona
     const a = (g.rot ? g.item.h/g.item.w : g.item.w/g.item.h); let dw = zw, dh = zw/a; if(dh>zh){ dh = zh; dw = zh*a; }
     const gx0 = x+(zx+(zw-dw)/2)*S, gy0 = y+(zy+(zh-dh)/2)*S;
-    if(!g.rot) dibujarCover(cx, g.item.img, gx0, gy0, dw*S, dh*S, g.item.enc);
-    else { cx.save(); cx.translate(gx0 + dw*S, gy0); cx.rotate(Math.PI/2); dibujarCover(cx, g.item.img, 0, 0, dh*S, dw*S, g.item.enc); cx.restore(); }   // gira igual que el rompecabezas en la lámina
+    guiaImagen(cx, g, gx0, gy0, dw*S, dh*S);   // gira igual que el rompecabezas en la lámina
   }
 }
 function pintarRollo(cx, S, desdeCm, hastaCm, vista){
