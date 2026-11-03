@@ -166,7 +166,7 @@
 <script src="tactical-estacion.js?v=20261017b"></script>
 <script src="jpeg_cmyk.js?v=20261019b"></script>
 <script src="precios_tactical.js?v=20261021b"></script>
-<script src="rompecabezas_catalogo.js?v=20261017a"></script>
+<script src="rompecabezas_catalogo.js?v=20261103a"></script>
 <script>
 if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 const ROLES_PERMITIDOS = ['administrador','diseno'];
@@ -198,7 +198,7 @@ function opcionesCatalogo(){
 }
 function elegirMedida(id, idx){
   const it = ITEMS.find(x=>x.id===id); if(idx==='' || !it) return; const m = ROMPECABEZAS_CATALOGO[+idx];
-  it.w = m.w; it.h = m.h; it.fichas = m.fichas; it.guia500 = m.fichas >= 500; it.forma = NOMBRE_FORMA[m.forma];
+  it.w = m.w; it.h = m.h; it.fichas = m.fichas; it.guia500 = m.fichas >= 500; it.forma = NOMBRE_FORMA[m.forma]; it.heartIdx = m.forma==='corazon' ? ROMPECABEZAS_CATALOGO.filter(z=>z.forma==='corazon').indexOf(m) : null;
   if(it.nombre.startsWith('Rompecabezas ')) it.nombre = NOMBRE_FORMA[m.forma]+' '+m.fichas+'f';
   orientarItem(it); renderItems(); planificar();
 }
@@ -243,7 +243,7 @@ async function cargarImagenItem(id, file){
 }
 function dpiItem(it){
   if(!it.img || !it.w || !it.h) return null;
-  const cmPorPx = Math.max(it.w/it.img.width, it.h/it.img.height) / it.enc.z;  // cm de la lámina que ocupa cada píxel
+  const sg = sangreForma(it); const cmPorPx = Math.max((it.w+sg)/it.img.width, (it.h+sg)/it.img.height) / it.enc.z;  // cm de la lámina que ocupa cada píxel
   return 2.54 / cmPorPx;
 }
 function avisosItems(){
@@ -541,7 +541,7 @@ function disponer(bins){          // diseño en el rollo: láminas una debajo de
 function azar(sem){ let a = sem>>>0; return ()=>{ a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a>>>15, 1 | a); t = t + Math.imul(t ^ t>>>7, 61 | t) ^ t; return ((t ^ t>>>14) >>> 0) / 4294967296; }; }
 function planificar(profundo){
   const piezas = [];
-  ITEMS.forEach(it=>{ if(it.w>0 && it.h>0) for(let c=0;c<Math.max(1,it.cant);c++) piezas.push({ item:it, copia:c, w:it.w, h:it.h }); });
+  ITEMS.forEach(it=>{ if(it.w>0 && it.h>0) for(let c=0;c<Math.max(1,it.cant);c++) piezas.push({ item:it, copia:c, w:it.w+sangreForma(it), h:it.h+sangreForma(it) }); });
   // se prueban muchas formas (horizontal/vertical/libre, con o sin giro, por lado o por área) y se elige la que menos láminas y menos vinilo gasta
   let mejor = null, mejorP = null;
   const clampBins = r=>r.bins.forEach(bin=>bin.puestos.forEach(p=>{ p.x = Math.max(0, Math.min(p.x, bin.W - p.w)); p.y = Math.max(0, Math.min(p.y, bin.H - p.h)); }));
@@ -598,12 +598,15 @@ function resumenPlan(){
 }
 
 /* ======================= DIBUJO ======================= */
+const SANGRE_FORMA_CM = 0.5;      // corazon y circulo: la imagen sale 5 mm mas grande en ancho y alto (sangrado, se corta por dentro)
+function sangreForma(it){ return formaPuesto(it) ? SANGRE_FORMA_CM : 0; }
 function dibujarPuesto(cx, p, S, ox, oy, it){        // p: puesto dentro del bloque; S px por cm
   const x = (ox + p.x)*S, y = (oy + p.y)*S, w = p.w*S, h = p.h*S;
   if(!p.item.img){ cx.fillStyle = '#d1d5db'; cx.fillRect(x,y,w,h); return; }
-  if(!p.rot) dibujarCover(cx, p.item.img, x, y, w, h, p.item.enc);
-  else { cx.save(); cx.translate(x + w, y); cx.rotate(Math.PI/2); dibujarCover(cx, p.item.img, 0, 0, h, w, p.item.enc); cx.restore(); }   // girado 90°: se dibuja con la medida original y se rota
-  if(p.item.bordeBlanco){ const lw = Math.max(1, 0.03*S); cx.save(); cx.strokeStyle = '#d9d9d9'; cx.lineWidth = lw; cx.strokeRect(x+lw/2, y+lw/2, w-lw, h-lw); cx.restore(); }   // borde blanco: línea fina gris al 15% como guía de corte
+  const fo = formaPuesto(p.item);      // corazon / circulo: la imagen se recorta a la silueta y fuera de ella queda blanco
+  if(!p.rot){ cx.save(); if(fo){ cx.translate(x,y); recortarSilueta(cx, fo, w, h); cx.translate(-x,-y); } dibujarCover(cx, p.item.img, x, y, w, h, p.item.enc); cx.restore(); }
+  else { cx.save(); cx.translate(x + w, y); cx.rotate(Math.PI/2); if(fo) recortarSilueta(cx, fo, h, w); dibujarCover(cx, p.item.img, 0, 0, h, w, p.item.enc); cx.restore(); }   // girado 90°: se dibuja con la medida original y se rota
+  if(p.item.bordeBlanco && !fo){ const lw = Math.max(1, 0.03*S); cx.save(); cx.strokeStyle = '#d9d9d9'; cx.lineWidth = lw; cx.strokeRect(x+lw/2, y+lw/2, w-lw, h-lw); cx.restore(); }   // borde blanco: línea fina gris al 15% como guía de corte
 }
 function dibujarGuia(cx, g, S){
   const x = g.x*S, y = g.y*S, w = g.w*S, h = g.h*S;
