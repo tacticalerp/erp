@@ -1087,6 +1087,41 @@ function cambiarFit(key){ const s=S.slots.find(x=>x.key===key); if(s){ s.fit = s
 function renombrarSlot(key, v){ const s=S.slots.find(x=>x.key===key); if(s){ s.titulo=v.toUpperCase(); s.tituloEditado=true; dibujarMontaje(); } }
 function clickMiniatura(id){ S.sel = (S.sel===id) ? null : id; renderPool(); }
 function clickSlot(key){ if(S.sel){ asignar(key, S.sel); } }
+// Clic en un cuadro: ventana con las miniaturas para colocar una página sin arrastrar (por número o eligiendo la miniatura)
+let _epSeguir = true;
+function abrirElegirPagina(ev, key){
+  if(ev && ev.stopPropagation) ev.stopPropagation();
+  if(S.sel){ asignar(key, S.sel); return; }      // si ya hay una miniatura seleccionada arriba, se coloca esa
+  const sl = S.slots.find(s=>s.key===key); if(!sl) return;
+  cerrarElegirPagina();
+  if(!S.pool.length){ alert('Primero sube el archivo en el paso 2 (PDF, .ai, JPG o PNG) para poder elegir las páginas.'); return; }
+  const x = ev && ev.clientX != null ? ev.clientX : 200, y = ev && ev.clientY != null ? ev.clientY : 200;
+  if(!document.getElementById('estiloElegirPag')){ const st = document.createElement('style'); st.id = 'estiloElegirPag'; st.textContent = '#elegirPag [data-id]{position:relative;transition:transform .12s ease;} #elegirPag [data-id]:hover{transform:scale(1.5);z-index:5;box-shadow:0 6px 18px rgba(0,0,0,.35);background:#fff;}'; document.head.appendChild(st); }
+  const dondeUsada = {}; S.slots.forEach(s=>{ if(s.poolId) dondeUsada[s.poolId] = s.titulo; });
+  const b = document.createElement('div'); b.id = 'elegirPag';
+  b.style.cssText = 'position:fixed;z-index:9999;left:'+Math.max(8, Math.min(x, window.innerWidth-390))+'px;top:'+Math.max(8, Math.min(y, window.innerHeight-430))+'px;width:370px;max-height:420px;display:flex;flex-direction:column;background:#fff;border:1px solid #64748b;border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.3);padding:10px;';
+  b.onclick = e=>e.stopPropagation();
+  b.innerHTML = '<div style="font:bold 13px Arial;color:#1e3a5f;margin-bottom:6px;">Colocar página en: '+esc(sl.titulo)+'</div>'+
+    '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;"><input id="epNum" type="number" min="1" placeholder="Nº de página" style="width:130px;padding:6px 8px;border:1px solid #94a3b8;border-radius:6px;"> <button class="btn verde mini" id="epOk">Colocar</button> <label style="font-size:12px;display:flex;gap:4px;align-items:center;margin-left:auto;"><input type="checkbox" id="epSeguir" '+(_epSeguir?'checked':'')+'> Seguir con el siguiente cuadro vacío</label></div>'+
+    '<div style="overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:10px 8px;padding:14px 10px;">'+S.pool.map((p,k)=>'<div data-id="'+p.id+'" title="'+esc(p.nombre)+(dondeUsada[p.id]?' · ya está en '+esc(dondeUsada[p.id]):'')+'" style="border:2px solid '+(dondeUsada[p.id]?'#dc2626':'#cbd5e1')+';border-radius:6px;padding:3px;text-align:center;cursor:pointer;font:11px Arial;background:#f8fafc;"><img src="'+p.dataUrl+'" style="width:100%;height:70px;object-fit:contain;display:block;"><b>'+(k+1)+'</b></div>').join('')+'</div>'+
+    '<div style="margin-top:8px;display:flex;gap:6px;justify-content:space-between;"><span style="font:11px Arial;color:#64748b;align-self:center;">Marco rojo = ya colocada en otro cuadro (se mueve aquí)</span><span><button class="btn gris mini" id="epBlanco">En blanco</button> <button class="btn gris mini" id="epCerrar">Cerrar</button></span></div>';
+  document.body.appendChild(b);
+  const colocar = pid=>{
+    _epSeguir = document.getElementById('epSeguir').checked;
+    cerrarElegirPagina(); asignar(key, pid);
+    if(_epSeguir){ const i = S.slots.findIndex(s=>s.key===key); const sig = S.slots.find((s,k)=>k>i && !s.poolId && !s.blanco); if(sig) setTimeout(()=>abrirElegirPagina({ clientX:x, clientY:y }, sig.key), 0); }
+  };
+  b.querySelectorAll('[data-id]').forEach(e=>{ e.onclick = ()=>colocar(e.dataset.id); });
+  const porNumero = ()=>{ const n = parseInt(document.getElementById('epNum').value,10); const p = S.pool[n-1]; if(!p){ document.getElementById('epNum').style.borderColor = '#dc2626'; return; } colocar(p.id); };
+  document.getElementById('epOk').onclick = porNumero;
+  document.getElementById('epNum').addEventListener('keydown', e=>{ if(e.key==='Enter') porNumero(); });
+  document.getElementById('epBlanco').onclick = ()=>{ cerrarElegirPagina(); if(!sl.blanco) marcarBlanco(key); };
+  document.getElementById('epCerrar').onclick = cerrarElegirPagina;
+  setTimeout(()=>{ const e = document.getElementById('epNum'); if(e) e.focus(); }, 30);
+}
+function cerrarElegirPagina(){ const b = document.getElementById('elegirPag'); if(b) b.remove(); }
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') cerrarElegirPagina(); });
+document.addEventListener('click', e=>{ const b = document.getElementById('elegirPag'); if(b && !b.contains(e.target)) cerrarElegirPagina(); });
 
 /* Revisión: tamaño, sangrado y resolución -- en lenguaje simple */
 function medirMargenesCuadricula(slot, it){
@@ -1201,7 +1236,7 @@ function renderSlots(){
     const it = S.pool.find(p=>p.id===s.poolId);
     const rev = it ? revisarPieza(s) : null;
     const avisos = rev ? rev.map(m=>`<div class="aviso ${m.ok?'ok':''}">${m.ok?'✔':'⚠'} ${esc(m.t)}</div>`).join('') : '';
-    let vista = '<span>Arrastra aquí el archivo</span>';
+    let vista = '<span>Arrastra aquí el archivo o haz clic para elegir la página</span>';
     if(s.blanco) vista = '<span>Hoja en blanco</span>';
     else if(it) vista = `<img src="${it.dataUrl}" draggable="false" alt="">`;
     return `<div class="slot ${it||s.blanco?'llena':''}" data-key="${s.key}" draggable="${it||s.blanco?'true':'false'}" onclick="clickSlot('${s.key}')">
@@ -1210,7 +1245,7 @@ function renderSlots(){
       <input class="nom" type="text" style="color:#6b7280;" placeholder="Material (sale en gris abajo)" title="Material que se imprime en gris debajo de la gráfica" value="${esc(materialDeSlot(s))}" onclick="event.stopPropagation()" oninput="editarMaterial('${s.key}', this.value)">
       ${S.modo==='general' || S.modo==='calendario' ? '' : `<select style="font-size:11.5px;padding:2px 4px;" onclick="event.stopPropagation()" onchange="cambiarTipo('${s.key}', this.value)"><option value="tapa" ${s.tipo==='tapa'?'selected':''}>Tamaño: carátula</option><option value="interior" ${s.tipo==='interior'?'selected':''}>Tamaño: hoja interior (−${fmtCm(S.reduccion)} cm)</option></select>`}
       ${s.tipo==='interior'?`<label style="font-size:11px;font-weight:600;display:flex;gap:4px;align-items:center;" onclick="event.stopPropagation()"><input type="checkbox" ${s.regla?'checked':''} onchange="cambiarRegla('${s.key}', this.checked)"> Revisar márgenes de la cuadrícula</label>`:''}
-      <div class="vista">${vista}</div>
+      <div class="vista" style="cursor:pointer;" title="Clic: elegir la página entre las miniaturas" onclick="abrirElegirPagina(event, '${s.key}')">${vista}</div>
       ${avisos}
       <div class="acc">
         <button class="btn gris mini" onclick="event.stopPropagation(); marcarBlanco('${s.key}')">${s.blanco?'Quitar "en blanco"':'En blanco'}</button>
