@@ -91,6 +91,9 @@
   .slot input.nom{font-size:12px;padding:3px 5px;}
   body.modo-general .solo-cuaderno{display:none !important;}
   body:not(.modo-general) .solo-general{display:none !important;}
+  body.modo-calendario .no-cal{display:none !important;}
+  body:not(.modo-calendario) .solo-cal{display:none !important;}
+  textarea.cal-det{width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:5px;font-size:14px;background:#fff;font-family:inherit;resize:vertical;}
   .pieza-fila{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto auto;gap:6px;align-items:end;margin-bottom:6px;}
   @media(max-width:700px){.pieza-fila{grid-template-columns:1fr 1fr;}}
   #lienzoWrap{background:#fff;border:1px solid var(--border);border-radius:6px;overflow:auto;}
@@ -114,13 +117,13 @@
 <div class="panel" id="pnlDatos">
   <h2><span class="n">1</span>Datos del trabajo</h2>
   <div class="grid">
-    <div><label>Tipo de montaje</label><select id="fModo" onchange="cambiarModo()"><option value="cuaderno">Cuaderno (anillado, cosido, gancho o pegado)</option><option value="general">Otro producto (caja, carpeta, sobre, bolsa, sticker…)</option></select></div>
+    <div><label>Tipo de montaje</label><select id="fModo" onchange="cambiarModo()"><option value="cuaderno">Cuaderno (anillado, cosido, gancho o pegado)</option><option value="calendario">Calendario (anillado arriba, hojas frente y atrás, base)</option><option value="general">Otro producto (caja, carpeta, sobre, bolsa, sticker…)</option></select></div>
     <div><label>Cliente</label><div style="position:relative;"><input type="text" id="fCliente" autocomplete="off" placeholder="Escribe para buscar un cliente" oninput="leerForm(false); sugerirClientes()" onfocus="sugerirClientes()" onblur="setTimeout(ocultarSugerencias,180)"><div id="cliSug"></div></div></div>
     <div><label>OT</label><input type="text" id="fOt" oninput="leerForm(false); autoOT()" placeholder="Ej: OT-2609-95"></div>
-    <div class="solo-cuaderno"><label>Cantidad de cuadernos</label><input type="number" id="fCantidad" min="1" oninput="leerForm(false)"></div>
+    <div class="solo-cuaderno"><label id="lblCant">Cantidad de cuadernos</label><input type="number" id="fCantidad" min="1" oninput="leerForm(false)"></div>
   </div>
   <div id="msgOT" style="font-size:12.5px;font-weight:700;margin-top:6px;"></div>
-  <div class="solo-cuaderno" style="margin-top:10px;">
+  <div class="solo-cuaderno no-cal" style="margin-top:10px;">
     <label>Buscar cotización de Cuadernos (OT o cliente) para llenar todo solo</label>
     <input type="text" id="buscaCot" placeholder="Ej: OT-1234 o nombre del cliente" oninput="buscarCotizacion()">
     <div id="cotResultados"></div>
@@ -141,8 +144,8 @@
         <div class="grid">
           <div class="solo-cuaderno"><label>Ancho cerrado (cm)</label><input type="number" id="fAncho" step="0.1" value="17" oninput="leerForm(true)"></div>
       <div class="solo-cuaderno"><label>Alto cerrado (cm)</label><input type="number" id="fAlto" step="0.1" value="24" oninput="leerForm(true)"> <button class="btn gris mini" style="margin-top:4px;" onclick="girarMedidas()">⟳ Girar ancho/alto</button></div>
-      <div class="solo-cuaderno"><label>Encuadernación</label><select id="fEnc" onchange="leerForm(false)"><option value="anillado">Anillado (doble O)</option><option value="costura">Cosido en hilo (costura)</option><option value="gancho">Con gancho (grapa)</option><option value="pegue">Pegado (pegue)</option></select></div>
-      <div class="solo-cuaderno"><label>Lado del lomo / anillado</label><select id="fAnilPos" onchange="leerForm(false)"><option value="lateral">Lateral (cuaderno)</option><option value="superior">Superior (libreta)</option><option value="ninguno">Sin anillado</option></select></div>
+      <div class="solo-cuaderno no-cal"><label>Encuadernación</label><select id="fEnc" onchange="leerForm(false)"><option value="anillado">Anillado (doble O)</option><option value="costura">Cosido en hilo (costura)</option><option value="gancho">Con gancho (grapa)</option><option value="pegue">Pegado (pegue)</option></select></div>
+      <div class="solo-cuaderno no-cal"><label>Lado del lomo / anillado</label><select id="fAnilPos" onchange="leerForm(false)"><option value="lateral">Lateral (cuaderno)</option><option value="superior">Superior (libreta)</option><option value="ninguno">Sin anillado</option></select></div>
       <div class="solo-cuaderno"><label>Color del anillo</label><select id="fAnilColor" onchange="leerForm(false)"><option value="blanco">Blanco</option><option value="negro">Negro</option></select></div>
       <div class="solo-cuaderno"><label>Cobertura del anillo</label><select id="fAnilCob" onchange="leerForm(false)"><option value="total">Total (todo el lado)</option><option value="parcial">Parcial (2 secciones)</option></select></div>
         </div>
@@ -150,7 +153,28 @@
       </div>
     </details>
 
-    <details class="acc solo-cuaderno">
+    <details class="acc solo-cal" open>
+      <summary><span class="t">Hojas y base del calendario</span><span class="res" id="rCal"></span></summary>
+      <div class="acc-cuerpo">
+        <p class="hint">Cada hoja lleva frente (tiro) y atrás (retiro) y se llama "Hoja 1 frente", "Hoja 1 atrás", etc. El anillado va arriba. La <b>base</b> es la última página: su medida se escribe a mano porque cambia mucho de un trabajo a otro. El ancho y el alto de arriba (Medidas y anillado) son los de <b>cada hoja</b>.</p>
+        <div class="grid">
+          <div><label>Cantidad de hojas</label><input type="number" id="fCalHojas" min="1" max="36" value="12" oninput="leerForm(true)"></div>
+          <div><label>Las hojas se imprimen</label><select id="fCalCaras" onchange="leerForm(true)"><option value="doble">Por los dos lados (frente y atrás)</option><option value="simple">Solo por el frente</option></select></div>
+          <div><label>Base: ancho (cm)</label><input type="number" id="fCalBaseW" step="0.1" min="1" oninput="leerForm(true)"></div>
+          <div><label>Base: alto (cm)</label><input type="number" id="fCalBaseH" step="0.1" min="1" oninput="leerForm(true)"></div>
+          <div><label>Anillado en la base</label><select id="fCalBaseAnillo" onchange="leerForm(false)"><option value="si">Sí (mismos aros de las hojas, centrados)</option><option value="no">No lleva</option></select></div>
+        </div>
+        <div class="row2"><span style="font-size:12px;font-weight:700;color:#475569;">Medida rápida de la base:</span>
+          <button class="btn gris mini" onclick="calBaseRapida('igual')">= a la hoja</button>
+          <button class="btn gris mini" onclick="calBaseRapida('alto')">Alto x2</button>
+          <button class="btn gris mini" onclick="calBaseRapida('ancho')">Ancho x2</button></div>
+        <div style="margin-top:10px;"><label>Detalles del calendario (plastificada, tapa dura, tapa blanda, papel…)</label>
+          <textarea class="cal-det" id="fCalDetalle" rows="3" placeholder="Ej: Tapa dura, base plastificada mate, hojas en propalcote 150 g" oninput="leerForm(false)"></textarea>
+          <p class="hint" style="margin-top:4px;">Este texto sale en el montaje del cliente, debajo de la base y en el recuadro "Datos del trabajo".</p></div>
+      </div>
+    </details>
+
+    <details class="acc solo-cuaderno no-cal">
       <summary><span class="t">Componentes del cuaderno</span><span class="res" id="rComp"></span></summary>
       <div class="acc-cuerpo">
         <div class="grid">
@@ -186,11 +210,11 @@
     <details class="acc solo-cuaderno">
       <summary><span class="t">Reglas de preprensa</span><span class="res" id="rReglas"></span></summary>
       <div class="acc-cuerpo">
-        <p class="hint">Las hojas interiores miden 5 mm menos que la carátula en ancho y en alto (ej. 24 x 17 → 23,5 x 16,5). La cuadrícula debe quedar mínimo a 7 mm del borde del papel y a 13 mm del lado del anillado. El módulo revisa y avisa.</p>
+        <p class="hint no-cal">Las hojas interiores miden 5 mm menos que la carátula en ancho y en alto (ej. 24 x 17 → 23,5 x 16,5). La cuadrícula debe quedar mínimo a 7 mm del borde del papel y a 13 mm del lado del anillado. El módulo revisa y avisa.</p>
         <div class="grid">
-          <div class="solo-cuaderno"><label>Hojas interiores más pequeñas que la carátula (cm)</label><input type="number" id="fReduccion" step="0.1" min="0" value="0.5" oninput="leerForm(false)"></div>
-      <div class="solo-cuaderno"><label>Margen mínimo de la cuadrícula al borde (cm)</label><input type="number" id="fMargenMin" step="0.1" min="0" value="0.7" oninput="leerForm(false)"></div>
-      <div class="solo-cuaderno"><label>Margen mínimo de la cuadrícula en el lado del anillado (cm)</label><input type="number" id="fMargenAnillo" step="0.1" min="0" value="1.3" oninput="leerForm(false)"></div>
+          <div class="solo-cuaderno no-cal"><label>Hojas interiores más pequeñas que la carátula (cm)</label><input type="number" id="fReduccion" step="0.1" min="0" value="0.5" oninput="leerForm(false)"></div>
+      <div class="solo-cuaderno no-cal"><label>Margen mínimo de la cuadrícula al borde (cm)</label><input type="number" id="fMargenMin" step="0.1" min="0" value="0.7" oninput="leerForm(false)"></div>
+      <div class="solo-cuaderno no-cal"><label>Margen mínimo de la cuadrícula en el lado del anillado (cm)</label><input type="number" id="fMargenAnillo" step="0.1" min="0" value="1.3" oninput="leerForm(false)"></div>
       <div class="solo-cuaderno"><label>Zona libre sin anillo, arriba y abajo (mm)</label><input type="number" id="fMargenLibre" step="1" min="0" value="12" oninput="leerForm(false)"></div>
       <div class="solo-cuaderno"><label>El anillo entra en el diseño (cm)</label><input type="number" id="fAnilEntra" step="0.1" min="0.3" value="1" oninput="leerForm(false)"></div>
         </div>
@@ -316,7 +340,7 @@ if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.clou
 /* ======================= ESTADO ======================= */
 const ROLES_PERMITIDOS = ['administrador','comercial','diseno','produccion'];
 const DIAS_RETENCION = 30;
-const S = { enc:'anillado', modo:'cuaderno', mat:{}, plastCar:'', piezas:[], waCom:'', nomCom:'', waCli:'', ultimaUrlPdf:'', ot:'', cliente:'', cantidad:'', ancho:17, alto:24, anilPos:'lateral', anilColor:'blanco', anilEntra:1, anilPaso:0.8467, tapaTipo:'dura', cartonCal:1.5, hojasTaco:100, gramTaco:70, hojasIns:0, gramIns:150, hojasGuar:0, gramGuar:150, calibreManual:0, sobrante:null, reduccion:0.5, margenMin:0.7, margenAnillo:1.3, margenLibre:1.2, anilCobertura:'total', ver:false,
+const S = { enc:'anillado', modo:'cuaderno', calHojas:12, calCaras:'doble', calBaseW:'', calBaseH:'', calBaseAnillo:'si', calDetalle:'', calHojasPrev:0, mat:{}, plastCar:'', piezas:[], waCom:'', nomCom:'', waCli:'', ultimaUrlPdf:'', ot:'', cliente:'', cantidad:'', ancho:17, alto:24, anilPos:'lateral', anilColor:'blanco', anilEntra:1, anilPaso:0.8467, tapaTipo:'dura', cartonCal:1.5, hojasTaco:100, gramTaco:70, hojasIns:0, gramIns:150, hojasGuar:0, gramGuar:150, calibreManual:0, sobrante:null, reduccion:0.5, margenMin:0.7, margenAnillo:1.3, margenLibre:1.2, anilCobertura:'total', ver:false,
   guardas:0, insertos:[], interior:'Hoja interior (cuadrícula)', slots:[], extras:[], pool:[], sel:null };
 let cotizaciones = [];
 let uid = 1;
@@ -342,6 +366,23 @@ function construirSlots(){
           material: (pr && pr.materialEditado) ? pr.material : matPz, materialEditado: pr ? pr.materialEditado : false });
       });
     });
+    S.slots = lista; return;
+  }
+  if(S.modo==='calendario'){
+    // Calendario: cada hoja con su frente y su atrás (tiro y retiro), y al final la BASE con medida manual.
+    const doble = S.calCaras!=='simple', B = calBase();
+    const addC = (key, titulo, sub, cara, gid, gtit, gsub, cotas, extra) => {
+      const p = previos[key];
+      lista.push(Object.assign({ key, titulo: p && p.tituloEditado ? p.titulo : titulo, tituloEditado: p ? p.tituloEditado : false, sub, cara,
+        poolId: p ? p.poolId : null, blanco: p ? p.blanco : false, fit: p ? p.fit : 'cover', tipo:'tapa', cotas, regla:false,
+        gid, gtit, gsub, material: p ? p.material : '', materialEditado: p ? p.materialEditado : false }, extra || {}));
+    };
+    for(let i=1;i<=(S.calHojas||12);i++){
+      const gs = doble ? 'Frente y atrás de la hoja' : 'Solo por el frente';
+      addC('h'+i+'f', 'HOJA '+i+' FRENTE', doble ? 'Frente (tiro)' : 'Frente', 'frente', 'h'+i, 'HOJA '+i, gs, i===1);
+      if(doble) addC('h'+i+'a', 'HOJA '+i+' ATRÁS', 'Atrás (retiro)', 'respaldo', 'h'+i, 'HOJA '+i, gs, false);
+    }
+    addC('base', 'BASE', 'Última página', 'frente', 'base', 'BASE', 'Última página del calendario', true, { w:B.w, h:B.h, esBase:true });
     S.slots = lista; return;
   }
   const add = (key, titulo, sub, cara, tipo, cotas, regla) => {
@@ -385,6 +426,7 @@ function textoPlastCar(){
 function materialDeSlot(sl){
   if(sl.materialEditado) return sl.material || '';
   if(S.modo==='general') return sl.material || '';
+  if(S.modo==='calendario') return sl.esBase ? String(S.calDetalle||'').replace(/\s*\n+\s*/g,' · ') : '';
   const M = S.mat || {};
   const tapa = { dura:'Tapa dura', semidura:'Tapa semidura', blanda:'Tapa blanda' }[S.tapaTipo] || '';
   const anillo = S.anilPos!=='ninguno' ? (esAnillo() ? 'Anillado '+S.anilColor : ENC_NOM[S.enc]) : '';
@@ -405,14 +447,38 @@ function dimsSlot(sl){ if(sl.w) return { w: sl.w, h: sl.h }; const r = sl.tipo==
 function fmtCm(n){ return (Math.round(n*10)/10).toString().replace('.', ','); }
 function cambiarTipo(key, v){ const sl = S.slots.find(x=>x.key===key); if(sl){ sl.tipo = v; if(v==='tapa') sl.regla = false; renderTodo(); } }
 function cambiarRegla(key, v){ const sl = S.slots.find(x=>x.key===key); if(sl){ sl.regla = !!v; renderTodo(); } }
+/* ======================= MODO "CALENDARIO" ======================= */
+function esCal(){ return S.modo==='calendario'; }
+// Medida de la base (manual). Si aún no se escribió, usa la de la hoja.
+function calBase(){ const w = parseFloat(S.calBaseW), h = parseFloat(S.calBaseH); return { w: w>0 ? w : S.ancho, h: h>0 ? h : S.alto }; }
+function calBaseRapida(t){
+  S.calBaseW = t==='ancho' ? Math.round(S.ancho*20)/10 : S.ancho;
+  S.calBaseH = t==='alto' ? Math.round(S.alto*20)/10 : S.alto;
+  volcarForm(); construirSlots(); renderTodo();
+}
+function aplicarModoUI(){
+  document.body.classList.toggle('modo-general', S.modo==='general');
+  document.body.classList.toggle('modo-calendario', S.modo==='calendario');
+  const l = document.getElementById('lblCant'); if(l) l.textContent = S.modo==='calendario' ? 'Cantidad de calendarios' : 'Cantidad de cuadernos';
+}
 /* ======================= MODO "OTRO PRODUCTO" ======================= */
 let piezaContador = 0;
 function nuevaPieza(){ piezaContador++; return { id:'z'+piezaContador, nombre:'Pieza '+piezaContador, cantidad:'', ancho:'', alto:'', reverso:false, papel:'', plast:'' }; }
 function cambiarModo(){
+  const antes = S.modo;
   S.modo = document.getElementById('fModo').value;
-  document.body.classList.toggle('modo-general', S.modo==='general');
+  aplicarModoUI();
   if(S.modo==='general'){ S.anilPos = 'ninguno'; if(!S.piezas.length) S.piezas.push(nuevaPieza()); renderPiezas(); }
-  else { S.anilPos = document.getElementById('fAnilPos').value; }
+  else if(S.modo==='calendario'){
+    S.enc = 'anillado'; S.anilPos = 'superior';
+    if(!(parseFloat(S.calBaseW) > 0)){ S.calBaseW = S.ancho; S.calBaseH = S.alto; }
+    S.calHojas = S.calHojas || 12; S.calHojasPrev = S.calHojas; S.hojasTaco = S.calHojas; if(S.gramTaco === 70) S.gramTaco = 150;
+    volcarForm(); volcarAnillado();
+  }
+  else {
+    if(antes==='calendario'){ document.getElementById('fAnilPos').value = 'lateral'; S.hojasTaco = 100; S.gramTaco = 70; volcarAnillado(); }   // al salir de Calendario vuelven los valores de un cuaderno
+    S.anilPos = document.getElementById('fAnilPos').value;
+  }
   S.slots = []; construirSlots(); renderAnillado(); renderTodo();
 }
 function renderPiezas(){
@@ -507,8 +573,8 @@ function leerForm(reconstruir){
   S.cantidad = document.getElementById('fCantidad').value;
   S.ancho = parseFloat(document.getElementById('fAncho').value) || 16;
   S.alto = parseFloat(document.getElementById('fAlto').value) || 22;
-  S.anilPos = S.modo==='general' ? 'ninguno' : document.getElementById('fAnilPos').value;
-  S.enc = (document.getElementById('fEnc')||{}).value || 'anillado';
+  S.anilPos = S.modo==='general' ? 'ninguno' : S.modo==='calendario' ? 'superior' : document.getElementById('fAnilPos').value;
+  S.enc = S.modo==='calendario' ? 'anillado' : ((document.getElementById('fEnc')||{}).value || 'anillado');
   if(S.modo!=='general' && S.enc!=='anillado' && S.anilPos==='ninguno'){ S.anilPos = 'lateral'; document.getElementById('fAnilPos').value = 'lateral'; }   // cosido / gancho / pegado siempre llevan su palabra en el lomo
   S.waCom = document.getElementById('fWaCom').value; S.nomCom = document.getElementById('fNomCom').value; S.waCli = document.getElementById('fWaCli').value; guardarContactos();
   S.anilColor = document.getElementById('fAnilColor').value;
@@ -525,6 +591,14 @@ function leerForm(reconstruir){
   while(S.insertos.length < nIns) S.insertos.push('');
   S.insertos.length = nIns;
   S.interior = document.getElementById('fInterior').value;
+  if(document.getElementById('fCalHojas')){
+    const e = id => document.getElementById(id);
+    S.calHojas = Math.max(1, Math.min(36, parseInt(e('fCalHojas').value,10) || 1));
+    S.calCaras = e('fCalCaras').value; S.calBaseW = e('fCalBaseW').value; S.calBaseH = e('fCalBaseH').value;
+    S.calBaseAnillo = e('fCalBaseAnillo').value; S.calDetalle = e('fCalDetalle').value;
+    // el taco del anillo (hojas que van dentro del anillo) sigue la cantidad de hojas del calendario
+    if(S.modo==='calendario' && S.calHojasPrev !== S.calHojas){ S.calHojasPrev = S.calHojas; S.hojasTaco = S.calHojas; e('aHojasTaco').value = S.calHojas; }
+  }
   if(reconstruir) construirSlots();
   renderAnillado();
   renderTodo();
@@ -549,6 +623,12 @@ function volcarForm(){
   document.getElementById('fPlastCar').value = S.plastCar;
   document.getElementById('fInsertos').value = S.insertos.length;
   document.getElementById('fInterior').value = S.interior;
+  if(document.getElementById('fCalHojas')){
+    const e = id => document.getElementById(id);
+    e('fCalHojas').value = S.calHojas || 12; e('fCalCaras').value = S.calCaras || 'doble';
+    e('fCalBaseW').value = S.calBaseW === undefined ? '' : S.calBaseW; e('fCalBaseH').value = S.calBaseH === undefined ? '' : S.calBaseH;
+    e('fCalBaseAnillo').value = S.calBaseAnillo || 'si'; e('fCalDetalle').value = S.calDetalle || '';
+  }
 }
 
 /* ======================= CLIENTES: sugerencias mientras se escribe ======================= */
@@ -1052,7 +1132,7 @@ function revisarPieza(slot){
       msgs.push({ok:false, t:`Colores en RGB en ${donde}: hay que pasarlo a CMYK antes de imprimir (en pantalla se ve más vivo que en papel)`});
     } else if(c.cmyk) msgs.push({ok:true, t:'Colores en CMYK'});
   }
-  if(S.anilPos!=='ninguno' && esAnillo()){
+  if(S.anilPos!=='ninguno' && esAnillo() && !(slot.esBase && S.calBaseAnillo==='no')){
     if(perforadoMuerdeGrafica(slot, it)) msgs.push({ok:false, t:`Hay gráfica en la franja de ${S.anilEntra} cm del anillado: el perforado la puede morder`});
     else msgs.push({ok:true, t:'Zona de perforado libre de gráficas'});
   }
@@ -1128,7 +1208,7 @@ function renderSlots(){
       <input class="nom" type="text" value="${esc(s.titulo)}" onclick="event.stopPropagation()" onchange="renombrarSlot('${s.key}', this.value)">
       <div class="s">${esc(s.sub)} · ${fmtCm(dimsSlot(s).w)} x ${fmtCm(dimsSlot(s).h)} cm</div>
       <input class="nom" type="text" style="color:#6b7280;" placeholder="Material (sale en gris abajo)" title="Material que se imprime en gris debajo de la gráfica" value="${esc(materialDeSlot(s))}" onclick="event.stopPropagation()" oninput="editarMaterial('${s.key}', this.value)">
-      ${S.modo==='general' ? '' : `<select style="font-size:11.5px;padding:2px 4px;" onclick="event.stopPropagation()" onchange="cambiarTipo('${s.key}', this.value)"><option value="tapa" ${s.tipo==='tapa'?'selected':''}>Tamaño: carátula</option><option value="interior" ${s.tipo==='interior'?'selected':''}>Tamaño: hoja interior (−${fmtCm(S.reduccion)} cm)</option></select>`}
+      ${S.modo==='general' || S.modo==='calendario' ? '' : `<select style="font-size:11.5px;padding:2px 4px;" onclick="event.stopPropagation()" onchange="cambiarTipo('${s.key}', this.value)"><option value="tapa" ${s.tipo==='tapa'?'selected':''}>Tamaño: carátula</option><option value="interior" ${s.tipo==='interior'?'selected':''}>Tamaño: hoja interior (−${fmtCm(S.reduccion)} cm)</option></select>`}
       ${s.tipo==='interior'?`<label style="font-size:11px;font-weight:600;display:flex;gap:4px;align-items:center;" onclick="event.stopPropagation()"><input type="checkbox" ${s.regla?'checked':''} onchange="cambiarRegla('${s.key}', this.checked)"> Revisar márgenes de la cuadrícula</label>`:''}
       <div class="vista">${vista}</div>
       ${avisos}
@@ -1162,6 +1242,7 @@ function actualizarResumenes(){
   const set = (id, txt, mal)=>{ const el = document.getElementById(id); if(el){ el.textContent = txt; el.classList.toggle('mal', !!mal); } };
   const pos = { lateral:'lateral', superior:'superior', ninguno:'sin anillado' }[S.anilPos] || '';
   set('rMedidas', `${fmtCm(S.ancho)} x ${fmtCm(S.alto)} cm · ${esAnillo() ? pos : ENC_NOM[S.enc].toLowerCase()+' '+pos}${(S.anilPos!=='ninguno' && esAnillo()) ? ' '+S.anilColor+(S.anilCobertura==='parcial'?' (parcial)':'') : ''}`);
+  { const B = calBase(); set('rCal', esCal() ? `${S.calHojas} hoja(s) ${S.calCaras==='simple'?'solo frente':'frente y atrás'} · base ${fmtCm(B.h)} x ${fmtCm(B.w)} cm` : ''); }
   set('rComp', `${S.guardas ? 'con guardas' : 'sin guardas'} · ${S.insertos.length} inserto(s)`);
   set('rReglas', esAnillo() ? `hoja interior −${fmtCm(S.reduccion*10)} mm · márgenes ${Math.round(S.margenMin*10)}/${Math.round(S.margenAnillo*10)} mm` : `hoja interior igual a la carátula · márgenes mín. ${Math.round(S.margenMin*10)} mm por los 4 lados`);
   set('rWa', S.waCom ? `${S.nomCom||'Comercial'} · +${waNumero(S.waCom)}` : 'falta el número', !S.waCom);
@@ -1214,6 +1295,13 @@ function disenarLayout(){
   const grupos = agruparSlots();
   const pw = Math.floor(Math.min(700, 1000*S.ancho/S.alto));
   const ph = Math.round(pw * S.alto / S.ancho);
+  // Calendario: una sola escala para todo (la base se ve del tamaño real frente a las hojas) y tope de alto del lienzo
+  let kCal = 0;
+  if(S.modo==='calendario'){
+    const dms = S.slots.map(dimsSlot), nH = grupos.length;
+    const sumH = grupos.reduce((a,g)=>a + Math.max(...g.slots.map(sl=>dimsSlot(sl).h)), 0);
+    kCal = Math.min(700/Math.max(...dms.map(d=>d.w)), 1000/Math.max(...dms.map(d=>d.h)), 75, Math.max(5, (30000 - 890 - nH*(altoCab+altoTitulo+bajoPieza+sepGrupo))/sumH));
+  }
   let y = 450;
   grupos.forEach(g=>{
     if(S.modo==='general'){
@@ -1221,6 +1309,9 @@ function disenarLayout(){
       const mw = Math.max(...dms.map(d=>d.w)), mh = Math.max(...dms.map(d=>d.h));
       g.k = Math.min(700/mw, 900/mh, 75);          // px por cm (todas las caras de una pieza a la misma escala)
       g.cw = mw*g.k; g.ch = mh*g.k;
+    } else if(kCal){
+      const dms = g.slots.map(dimsSlot);
+      g.k = kCal; g.cw = Math.max(...dms.map(d=>d.w))*kCal; g.ch = Math.max(...dms.map(d=>d.h))*kCal;
     } else { g.k = pw / S.ancho; g.cw = pw; g.ch = ph; }
     g.yG = y; g.altoFila = altoCab + altoTitulo + g.ch + bajoPieza + sepGrupo; y += g.altoFila;
   });
@@ -1438,7 +1529,7 @@ function dibujarMontaje(){
 
   // --- leyenda para el cliente ---
   cx.textAlign = 'left'; cx.fillStyle = '#475569'; cx.font = '28px Arial, sans-serif';
-  cx.fillText(S.modo==='general' ? 'Cada cuadro muestra una pieza del trabajo con su medida final.' : 'Cada cuadro muestra una cara del cuaderno' + (S.anilPos==='ninguno' ? '.' : ' y las espirales muestran por dónde va el anillado.'), L.margen, 395);
+  cx.fillText(S.modo==='general' ? 'Cada cuadro muestra una pieza del trabajo con su medida final.' : S.modo==='calendario' ? 'Cada cuadro muestra una cara del calendario' : 'Cada cuadro muestra una cara del cuaderno' + (S.anilPos==='ninguno' ? '.' : ' y las espirales muestran por dónde va el anillado.'), L.margen, 395);
 
   // --- piezas, una sección por fila ---
   L.grupos.forEach((g, gi)=>{
@@ -1476,7 +1567,11 @@ function dibujarMontaje(){
         cx.fillStyle='#8b95a3'; cx.font='bold 34px Arial, sans-serif'; cx.textAlign='center'; cx.textBaseline='middle'; cx.fillText('HOJA EN BLANCO', px+pwP/2, py+phP/2); cx.textBaseline='alphabetic'; }
       else { cx.fillStyle='#eef1f4'; cx.fillRect(px,py,pwP,phP); cx.fillStyle='#94a3b8'; cx.font='30px Arial'; cx.textAlign='center'; cx.fillText('Falta el archivo', px+pwP/2, py+phP/2); }
       cx.strokeStyle = '#c7ced6'; cx.lineWidth = 2; cx.strokeRect(px,py,pwP,phP);
-      if(S.modo!=='general'){ if(esAnillo()) dibujarAnillos(cx, x, y, g.cw, g.ch, sl.cara || 'frente', S.anilPos, S.anilColor, s); else dibujarAnillos(cx, px, py, pwP, phP, sl.cara || 'frente', S.anilPos, S.anilColor, s); }
+      if(S.modo==='calendario'){
+        // anillado arriba: en cada hoja (frente y atrás) y, si se pidió, en la base (los mismos aros de la hoja, centrados)
+        if(!sl.esBase) dibujarAnillos(cx, px, py, pwP, phP, sl.cara || 'frente', 'superior', S.anilColor, s);
+        else if(S.calBaseAnillo !== 'no'){ const wh = S.ancho*s; dibujarAnillos(cx, px + (pwP-wh)/2, py, wh, phP, 'frente', 'superior', S.anilColor, s); }
+      } else if(S.modo!=='general'){ if(esAnillo()) dibujarAnillos(cx, x, y, g.cw, g.ch, sl.cara || 'frente', S.anilPos, S.anilColor, s); else dibujarAnillos(cx, px, py, pwP, phP, sl.cara || 'frente', S.anilPos, S.anilColor, s); }
       if(sl.cotas) dibujarCotas(cx, px, py, pwP, phP, dm, (S.anilPos==='lateral' && sl.cara==='respaldo') ? 'izq' : 'der');
       const mat = materialDeSlot(sl);
       if(mat){   // material en gris, pequeño, debajo de la gráfica (y de la cota del ancho si la tiene)
@@ -1496,7 +1591,7 @@ function dibujarMontaje(){
   const unica = general && S.piezas.length===1 ? S.piezas[0] : null;
   const grandes = general
     ? ['Cliente: '+(S.cliente||''), unica ? 'Cantidad: '+(unica.cantidad||'') : 'Piezas: '+S.piezas.length, unica ? 'Tamaño: '+fmtCm(parseFloat(unica.alto)||0)+' x '+fmtCm(parseFloat(unica.ancho)||0)+' cm' : '']
-    : ['Cliente: '+(S.cliente||''), 'Cantidad: '+(S.cantidad ? S.cantidad+' cuadernos' : ''), 'Tamaño: '+fmtCm(S.alto)+' x '+fmtCm(S.ancho)+' cm'];
+    : ['Cliente: '+(S.cliente||''), 'Cantidad: '+(S.cantidad ? S.cantidad+(esCal()?' calendarios':' cuadernos') : ''), (esCal()?'Hoja: ':'Tamaño: ')+fmtCm(S.alto)+' x '+fmtCm(S.ancho)+' cm'];
   // el cliente puede ser largo: se parte en 2 líneas para no quedar debajo del recuadro de datos (a la derecha)
   const anchoG = Math.max(300, bx - 680 - 30);
   const lineasCli = envolverTexto(cx, grandes[0], anchoG, 2).map(t=>recorta(t, anchoG));
@@ -1513,6 +1608,12 @@ function dibujarMontaje(){
     izq = ['OT: '+(S.ot||'-'), 'Fecha: '+fechaHoyLarga(), 'Piezas: '+S.piezas.length];
     der = S.piezas.slice(0,4).map(pz=>(pz.nombre||'Pieza')+(pz.cantidad?' · '+pz.cantidad+' u.':''));
     if(S.piezas.length>4) der[3] = '… y '+(S.piezas.length-3)+' más';
+  } else if(esCal()){
+    const ra = calcularAnillado(), B = calBase(), doble = S.calCaras!=='simple';
+    cx.font = '27px Arial, sans-serif';
+    const det = S.calDetalle ? envolverTexto(cx, 'Detalles: '+String(S.calDetalle).replace(/\s*\n+\s*/g,' · '), 410, 2).map(x=>recorta(x, 410)) : [];
+    izq = ['OT: '+(S.ot||'-'), 'Fecha: '+fechaHoyLarga(), 'Hojas: '+S.calHojas+(doble?' (frente y atrás)':' (solo frente)'), 'Base: '+fmtCm(B.h)+' x '+fmtCm(B.w)+' cm'];
+    der = ['Anillado superior · '+S.anilColor, ra.elegido ? 'Calibre del anillo: '+ra.elegido+' mm' : ''].concat(det);
   } else {
     const ra = calcularAnillado();
     const tapaNom = { dura:'Tapa dura'+(S.cartonCal?' ('+fmtCm(S.cartonCal)+' mm)':''), semidura:'Tapa semidura', blanda:'Tapa blanda' }[S.tapaTipo] || '';
@@ -1766,7 +1867,7 @@ async function abrirProyecto(file){
 // muestra u oculta los campos según el tipo de montaje, sin vaciar los cuadros
 function cambiarModoSinReset(){
   const fm = document.getElementById('fModo'); if(fm) fm.value = S.modo;
-  document.body.classList.toggle('modo-general', S.modo==='general');
+  aplicarModoUI();
   if(S.modo==='general') renderPiezas();
 }
 
@@ -1785,7 +1886,7 @@ async function guardarNube(){
     if(r1.error) throw r1.error;
     const r2 = await bucket.upload(base+'.jpg', jpg, { contentType:'image/jpeg', upsert:true });
     if(r2.error){ await bucket.remove([base+'.pdf']); throw r2.error; }
-    const fila = { ot:S.ot||null, cliente:S.cliente||null, descripcion: S.modo==='general' ? `${S.piezas.length} pieza(s) · ${S.slots.length} cuadros` : (()=>{ const ra = calcularAnillado(); return `${S.alto} x ${S.ancho} cm · ${S.slots.length} cuadros` + (S.anilPos!=='ninguno' && ra.elegido ? ` · anillo ${ra.elegido} mm, ${ra.tirasTotal} tiras de ${ra.loops} loops` : ''); })(),
+    const fila = { ot:S.ot||null, cliente:S.cliente||null, descripcion: S.modo==='calendario' ? `Calendario ${fmtCm(S.alto)} x ${fmtCm(S.ancho)} cm · ${S.calHojas} hoja(s) · base ${fmtCm(calBase().h)} x ${fmtCm(calBase().w)} cm` : S.modo==='general' ? `${S.piezas.length} pieza(s) · ${S.slots.length} cuadros` : (()=>{ const ra = calcularAnillado(); return `${S.alto} x ${S.ancho} cm · ${S.slots.length} cuadros` + (S.anilPos!=='ninguno' && ra.elegido ? ` · anillo ${ra.elegido} mm, ${ra.tirasTotal} tiras de ${ra.loops} loops` : ''); })(),
       ruta_pdf: base+'.pdf', ruta_jpg: base+'.jpg', url_pdf: bucket.getPublicUrl(base+'.pdf').data.publicUrl, url_jpg: bucket.getPublicUrl(base+'.jpg').data.publicUrl,
       creado_por: (window.tacticalUsuarioPerfil && (window.tacticalUsuarioPerfil.nombre||window.tacticalUsuarioPerfil.email)) || null };
     const { error } = await tacticalSupabase.from('montajes_cuaderno').insert(fila);
@@ -1968,7 +2069,7 @@ async function descargarPrueba(formato){
       // marco gris fino (30%) para ver el límite del papel
       doc.setDrawColor(179,179,179); doc.setLineWidth(0.15); doc.rect(x-0.3, yTop-0.3, w+0.6, hh+0.6);
       // anillo: se dibuja en su lugar real (zona libre arriba y abajo, agujeros sobre el diseño) para que el cliente vea dónde queda
-      if(S.modo!=='general' && S.anilPos!=='ninguno'){
+      if(S.modo!=='general' && S.anilPos!=='ninguno' && !(sl.esBase && S.calBaseAnillo==='no')){
         const ppc = DPI_PRUEBA/2.54, padPx = Math.round(1.0*ppc);
         const celdaW = S.ancho*esc, celdaH = S.alto*esc;                       // la carátula completa (las hojas interiores quedan dentro de esa celda)
         const cwPx = Math.round(celdaW*ppc), chPx = Math.round(celdaH*ppc);
