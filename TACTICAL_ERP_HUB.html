@@ -2033,19 +2033,20 @@
                 <!-- Conde 2026-10-23: informes por rango -- lo facturado a cada cliente, y todos los documentos (facturas, ingresos, egresos...). -->
                 <div class="accordion-item">
                     <div class="accordion-header" id="head-cont-informes" onclick="toggleSection('cont-informes')">
-                        <span>📊 Informes por rango (facturado por cliente y todos los documentos)</span><span class="arrow" id="arrow-cont-informes">►</span>
+                        <span>📊 Informes (facturado por cliente, todos los documentos y anticipos por cliente)</span><span class="arrow" id="arrow-cont-informes">►</span>
                     </div>
                     <div id="cont-informes" class="accordion-content">
                         <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px; padding:10px; background:var(--light-gray); border-radius:6px; border:1px solid #cbd5e0;">
                             <select id="inf-modo" onchange="contInformeRender()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;">
                                 <option value="facturado">Facturado por cliente</option>
                                 <option value="documentos">Todos los documentos</option>
+                                <option value="anticipos">Anticipos por cliente (para cruzar con facturas)</option>
                             </select>
-                            Desde <input type="date" id="inf-desde" onchange="contInformeRender()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;">
+                            <span id="inf-rango-box" style="display:contents;">Desde <input type="date" id="inf-desde" onchange="contInformeRender()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;">
                             Hasta <input type="date" id="inf-hasta" onchange="contInformeRender()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;">
                             <button type="button" class="btn-action" onclick="contInformeRapido('mes')">Este mes</button>
                             <button type="button" class="btn-action" onclick="contInformeRapido('mesAnt')">Mes anterior</button>
-                            <button type="button" class="btn-action" onclick="contInformeRapido('anio')">Este año</button>
+                            <button type="button" class="btn-action" onclick="contInformeRapido('anio')">Este año</button></span>
                             <button type="button" class="btn-action" onclick="contInformeDescargar()" title="Descarga el informe en CSV (se abre en Excel)">Descargar Excel</button>
                             <div id="inf-tipos-box" style="display:none; flex-basis:100%; flex-wrap:wrap; gap:10px; align-items:center; font-size:0.85rem;">
                                 <label style="font-weight:normal;"><input type="checkbox" id="inf-t-factura" checked onchange="contInformeRender()" style="width:auto;"> Facturas</label>
@@ -2159,17 +2160,24 @@
                         <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="9" y1="15" x2="15" y2="15"></line></svg>Notas Crédito (anular facturas)</span><span class="arrow" id="arrow-cont-notacredito">►</span>
                     </div>
                     <div id="cont-notacredito" class="accordion-content">
-                        <p style="font-size:0.85rem; color:#718096; margin-top:0;">Una Nota Crédito anula COMPLETA una factura o cuenta de cobro: el documento queda "anulada", sale de la cartera por cobrar y la venta se resta en el mes en que haces la Nota. Si te equivocas, eliminar la Nota reactiva la factura.</p>
+                        <p style="font-size:0.85rem; color:#718096; margin-top:0;"><strong>Anulación total:</strong> el documento queda "anulada", sale de la cartera por cobrar y la venta se resta en el mes de la Nota. <strong>Nota parcial:</strong> acreditas solo una parte (valor antes de IVA + IVA); la factura sigue viva y lo que el cliente debe baja ese valor. En ambos casos, si te equivocas, eliminar la Nota lo revierte.</p>
                         <div class="form-grid">
                             <div class="form-group" style="flex-basis:100%;"><label>Factura / Cuenta de cobro a anular:</label>
                                 <input type="text" id="nc-doc-filtro" placeholder="Escribe el número o el cliente para buscar..." oninput="contNcLlenarSelect()" style="margin-bottom:4px;">
-                                <select id="nc-docventa" onchange="contNcMostrarResumen()"></select></div>
+                                <select id="nc-docventa" onchange="contNcCambioDoc()"></select></div>
+                            <div class="form-group" style="flex-basis:100%;"><label>Tipo de Nota:</label>
+                                <select id="nc-tipo" onchange="contNcCambiarTipo()"><option value="total">Anulación total (se anula toda la factura)</option><option value="parcial">Nota parcial (acredita solo una parte del valor)</option></select></div>
+                            <div id="nc-parcial-box" style="display:none; flex-basis:100%; flex-wrap:wrap; gap:12px; background:#fffbeb; border:1px solid #f6e05e; border-radius:6px; padding:10px 12px;">
+                                <div class="form-group" style="flex:1; min-width:200px;"><label>Valor a acreditar ANTES de IVA:</label><input type="text" inputmode="numeric" id="nc-bruto" placeholder="Ej: 500.000" oninput="contFormatearMiles(this); contNcParcialCalcIva(); contNcParcialResumen()"></div>
+                                <div class="form-group" style="flex:1; min-width:200px;"><label>IVA a acreditar:</label><input type="text" inputmode="numeric" id="nc-iva" placeholder="0" oninput="contFormatearMiles(this); this.dataset.manual='true'; contNcParcialResumen()"></div>
+                                <div id="nc-parcial-info" style="flex-basis:100%; font-size:0.86rem; line-height:1.5; color:#4a5568;"></div>
+                            </div>
                             <div id="nc-resumen" style="display:none; flex-basis:100%; background:#f1f5f9; border-left:4px solid var(--peligro); border-radius:4px; padding:8px 12px; font-size:0.86rem; line-height:1.5; margin-bottom:8px;"></div>
                             <div class="form-group"><label>N° de Nota Crédito:</label><input type="text" id="nc-numero" placeholder="Ej: NC-0001" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase(); this.dataset.auto=''"></div>
                             <div class="form-group"><label>Fecha de la Nota:</label><input type="date" id="nc-fecha"></div>
-                            <div class="form-group" style="flex-basis:100%;"><label>Motivo de la anulación:</label><input type="text" id="nc-motivo" placeholder="Ej: Error en la facturación / el cliente canceló el pedido"></div>
+                            <div class="form-group" style="flex-basis:100%;"><label>Motivo de la Nota:</label><input type="text" id="nc-motivo" placeholder="Ej: Error en la facturación / el cliente canceló el pedido"></div>
                         </div>
-                        <button class="btn-submit" style="margin-top:12px;" onclick="contGuardarNotaCredito()">Generar Nota Crédito y anular la factura</button>
+                        <button class="btn-submit" id="nc-btn-generar" style="margin-top:12px;" onclick="contGuardarNotaCredito()">Generar Nota Crédito y anular la factura</button>
                         <div class="card-grid" id="lista-notascredito"></div>
                     </div>
                 </div>
@@ -11905,23 +11913,28 @@
             const desde = document.getElementById('inf-desde').value || '0000-01-01', hasta = document.getElementById('inf-hasta').value || '9999-12-31';
             const modo = document.getElementById('inf-modo').value;
             document.getElementById('inf-tipos-box').style.display = modo === 'documentos' ? 'flex' : 'none';
+            { const rb = document.getElementById('inf-rango-box'); if(rb) rb.style.display = modo === 'anticipos' ? 'none' : 'contents'; }
             const nombreCli = id => { const c = db_clientes.find(x => x.id === id); return c ? c.empresa : 'Cliente eliminado'; };
             const enRango = f => { const x = contF10(f); return x >= desde && x <= hasta; };
             const esc = resumenCotEsc;
+            if(modo === 'anticipos'){ contInformeAnticipos(cont, nombreCli, esc); return; }
             if(modo === 'facturado'){
-                const docs = db_docventa.filter(d => d.estado !== 'anulada' && enRango(d.fecha));
+                // Las Notas Crédito PARCIALES del rango restan como una fila negativa en su cliente (las totales ya sacan la factura del informe).
+                const ncParciales = db_notasCredito.filter(x => enRango(x.fecha) && ncEsParcial(x)).map(x => ({ _nc: true, numero: x.numero, fecha: x.fecha, tipoDoc: 'nc', idCli: x.idCli, descripcion: 'Nota crédito parcial sobre ' + (x.numeroDoc || ''), _valor: -((x.valorBruto || 0) + (x.iva || 0)) }));
+                const valInf = d => d._nc ? d._valor : contTotalConIva(d);
+                const docs = db_docventa.filter(d => d.estado !== 'anulada' && enRango(d.fecha)).concat(ncParciales);
                 const anulados = db_docventa.filter(d => d.estado === 'anulada' && enRango(d.fecha)).length;
                 const porCli = {};
                 docs.forEach(d => { const k = nombreCli(d.idCli); (porCli[k] = porCli[k] || []).push(d); });
                 const clientes = Object.keys(porCli).sort((a, b) => a.localeCompare(b, 'es'));
                 let granTotal = 0, html = '', csv = [['Cliente', 'N° documento', 'Fecha', 'Tipo', 'Descripción', 'Total con IVA']];
                 clientes.forEach(c => {
-                    const lista = contOrdenar(porCli[c]); const sub = lista.reduce((s, d) => s + contTotalConIva(d), 0); granTotal += sub;
+                    const lista = contOrdenar(porCli[c]); const sub = lista.reduce((s, d) => s + valInf(d), 0); granTotal += sub;
                     html += '<tr style="background:#edf2f7;"><td colspan="4" style="padding:7px 8px; font-weight:700;">' + esc(c) + ' <span style="font-weight:400; color:#718096;">(' + lista.length + ' documento' + (lista.length === 1 ? '' : 's') + ')</span></td><td style="padding:7px 8px; text-align:right; font-weight:700;">' + cotFormatoCop(sub) + '</td></tr>';
                     lista.forEach(d => {
                         const desc = String(d.descripcion || '').slice(0, 80);
-                        html += '<tr style="border-bottom:1px solid #edf2f7;"><td style="padding:5px 8px 5px 22px;">' + esc(d.numero) + '</td><td style="padding:5px 8px;">' + contF10(d.fecha) + '</td><td style="padding:5px 8px;">' + CONT_INF_TIPOS[d.tipoDoc] + '</td><td style="padding:5px 8px; color:#4a5568;">' + esc(desc) + '</td><td style="padding:5px 8px; text-align:right;">' + cotFormatoCop(contTotalConIva(d)) + '</td></tr>';
-                        csv.push([c, d.numero, contF10(d.fecha), CONT_INF_TIPOS[d.tipoDoc], d.descripcion || '', Math.round(contTotalConIva(d))]);
+                        html += '<tr style="border-bottom:1px solid #edf2f7;"><td style="padding:5px 8px 5px 22px;">' + esc(d.numero) + '</td><td style="padding:5px 8px;">' + contF10(d.fecha) + '</td><td style="padding:5px 8px;">' + CONT_INF_TIPOS[d.tipoDoc] + '</td><td style="padding:5px 8px; color:#4a5568;">' + esc(desc) + '</td><td style="padding:5px 8px; text-align:right;">' + cotFormatoCop(valInf(d)) + '</td></tr>';
+                        csv.push([c, d.numero, contF10(d.fecha), CONT_INF_TIPOS[d.tipoDoc], d.descripcion || '', Math.round(valInf(d))]);
                     });
                     csv.push([c + ' — SUBTOTAL', '', '', '', '', Math.round(sub)]);
                 });
@@ -11952,6 +11965,54 @@
                   '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:0.83rem;"><thead><tr style="background:#f7fafc; color:#4a5568; text-align:left;"><th style="padding:6px 8px;">Fecha</th><th style="padding:6px 8px;">Tipo</th><th style="padding:6px 8px;">N°</th><th style="padding:6px 8px;">Cliente / proveedor</th><th style="padding:6px 8px;">Detalle</th><th style="padding:6px 8px; text-align:right;">Valor</th><th style="padding:6px 8px;">Estado</th></tr></thead><tbody>' + cuerpo + '</tbody></table></div>'
                 : '<p style="color:#a0aec0;">No hay documentos con esos filtros en el rango.</p>';
             contInformeUltimo = { nombre: 'documentos_' + desde + '_a_' + hasta, filas: [['Fecha', 'Tipo', 'N°', 'Cliente / proveedor', 'Detalle', 'Valor', 'Estado']].concat(sel.map(f => [f.fecha, CONT_INF_TIPOS[f.tipo], f.numero, f.tercero, f.detalle, Math.round(f.valor), f.estado])) };
+        }
+        /* Conde 2026-11-06: "un informe de anticipo por cliente para saber cómo cruzarlos con las facturas".
+           Por cada cliente: sus anticipos SIN cruzar (comprobantes de ingreso sin factura) y sus facturas / cuentas de cobro con saldo pendiente,
+           con una sugerencia (el anticipo coincide exacto con una factura, la cubre o la abona) y el botón "Cruzar" de cada factura.
+           Es el estado de HOY: no depende del rango de fechas. */
+        function contInformeAnticipos(cont, nombreCli, esc){
+            const sinCruzar = db_ingresos.filter(i => !i.idDocVenta && !(i.idsDocVenta && i.idsDocVenta.length) && i.valor > 0);
+            const grupos = {};
+            sinCruzar.forEach(i => { const k = i.idCli || '__sin'; (grupos[k] = grupos[k] || []).push(i); });
+            const ids = Object.keys(grupos).sort((a, b) => (a === '__sin' ? 'zzz' : nombreCli(a)).localeCompare(b === '__sin' ? 'zzz' : nombreCli(b), 'es'));
+            const fecha = f => { const x = contF10(f); return x ? x.split('-').reverse().join('/') : '-'; };
+            let granAnt = 0, granCruzable = 0, html = '', csv = [['Cliente', 'Tipo', 'N°', 'Fecha', 'Valor o saldo', 'Detalle', 'Sugerencia']];
+            ids.forEach(id => {
+                const ants = grupos[id].slice().sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)) || contClaveNumero(a.numero)[1] - contClaveNumero(b.numero)[1]);
+                const totalAnt = ants.reduce((s, i) => s + i.valor, 0);
+                const facts = id === '__sin' ? [] : db_docventa.filter(d => d.idCli === id && d.estado !== 'anulada' && d.saldoPendiente > 0).sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)));
+                const totalSaldo = facts.reduce((s, d) => s + d.saldoPendiente, 0);
+                const cruzable = Math.min(totalAnt, totalSaldo); granAnt += totalAnt; granCruzable += cruzable;
+                const nombre = id === '__sin' ? 'Sin cliente asignado' : nombreCli(id);
+                const sug = a => {
+                    const igual = facts.find(d => Math.abs(d.saldoPendiente - a.valor) < 1);
+                    if(igual) return 'Coincide exacto con ' + igual.numero;
+                    const cubre = facts.find(d => a.valor > d.saldoPendiente);
+                    if(cubre) return 'Cubre ' + cubre.numero + ' (' + cotFormatoCop(cubre.saldoPendiente) + ') y sobra';
+                    return facts.length ? 'Abona a ' + facts[0].numero : '';
+                };
+                html += '<div style="border:1px solid #cbd5e0; border-radius:8px; padding:10px 12px; margin-bottom:12px; background:#fff;">' +
+                    '<div style="display:flex; flex-wrap:wrap; gap:8px; align-items:baseline; justify-content:space-between;"><strong style="font-size:1rem;">' + esc(nombre) + '</strong>' +
+                    '<span style="font-size:0.86rem;">Anticipos sin cruzar: <strong style="color:#059669;">' + cotFormatoCop(totalAnt) + '</strong> · Facturas con saldo: <strong style="color:var(--primary);">' + cotFormatoCop(totalSaldo) + '</strong>' +
+                    (cruzable > 0 ? ' · Se pueden cruzar: <strong>' + cotFormatoCop(cruzable) + '</strong>' : '') + '</span></div>' +
+                    '<div style="overflow-x:auto; margin-top:6px;"><table style="width:100%; border-collapse:collapse; font-size:0.83rem;"><thead><tr style="background:#f0fff4; color:#276749; text-align:left;"><th style="padding:5px 8px;">Anticipo</th><th style="padding:5px 8px;">Fecha</th><th style="padding:5px 8px;">Detalle</th><th style="padding:5px 8px; text-align:right;">Valor</th><th style="padding:5px 8px;">Sugerencia</th></tr></thead><tbody>' +
+                    ants.map(a => '<tr style="border-bottom:1px solid #edf2f7;"><td style="padding:4px 8px;">' + esc(a.numero) + '</td><td style="padding:4px 8px; white-space:nowrap;">' + fecha(a.fecha) + '</td><td style="padding:4px 8px; color:#4a5568;">' + esc(String(a.concepto || '').slice(0, 90)) + (a.medioPago ? ' <span style="color:#a0aec0;">· ' + esc(a.medioPago) + '</span>' : '') + '</td><td style="padding:4px 8px; text-align:right; font-weight:600;">' + cotFormatoCop(a.valor) + '</td><td style="padding:4px 8px; color:#2b6cb0;">' + esc(sug(a)) + '</td></tr>').join('') +
+                    '</tbody></table></div>' +
+                    (facts.length
+                        ? '<div style="overflow-x:auto; margin-top:8px;"><table style="width:100%; border-collapse:collapse; font-size:0.83rem;"><thead><tr style="background:#ebf8ff; color:#2c5282; text-align:left;"><th style="padding:5px 8px;">Factura / cuenta de cobro con saldo</th><th style="padding:5px 8px;">Fecha</th><th style="padding:5px 8px;">Vence</th><th style="padding:5px 8px; text-align:right;">Total a cobrar</th><th style="padding:5px 8px; text-align:right;">Saldo</th><th style="padding:5px 8px;"></th></tr></thead><tbody>' +
+                          facts.map(d => '<tr style="border-bottom:1px solid #edf2f7;"><td style="padding:4px 8px;">' + esc(d.numero) + '</td><td style="padding:4px 8px; white-space:nowrap;">' + fecha(d.fecha) + '</td><td style="padding:4px 8px; white-space:nowrap;">' + (d.fechaVencimiento ? fecha(d.fechaVencimiento) : '-') + '</td><td style="padding:4px 8px; text-align:right;">' + cotFormatoCop(d.totalCobrar) + '</td><td style="padding:4px 8px; text-align:right; font-weight:600;">' + cotFormatoCop(d.saldoPendiente) + '</td><td style="padding:4px 8px; text-align:right;"><button type="button" class="btn-action" style="color:#059669; border-color:#059669; padding:3px 10px;" onclick="contModalCruzarAnticipos(' + "'" + d.id + "'" + ')">Cruzar</button></td></tr>').join('') +
+                          '</tbody></table></div>'
+                        : '<div style="margin-top:8px; font-size:0.83rem; color:#718096;">' + (id === '__sin' ? 'Estos ingresos no tienen cliente: asígnales uno editando el comprobante.' : 'Este cliente no tiene facturas con saldo pendiente: el anticipo queda a favor para su próxima factura.') + '</div>') +
+                    '</div>';
+                ants.forEach(a => csv.push([nombre, 'Anticipo', a.numero, contF10(a.fecha), Math.round(a.valor), a.concepto || '', sug(a)]));
+                facts.forEach(d => csv.push([nombre, 'Factura con saldo', d.numero, contF10(d.fecha), Math.round(d.saldoPendiente), 'Total a cobrar ' + Math.round(d.totalCobrar), '']));
+                csv.push([nombre + ' — TOTALES', '', '', '', '', 'Anticipos ' + Math.round(totalAnt) + ' · Saldo facturas ' + Math.round(totalSaldo), 'Se pueden cruzar ' + Math.round(cruzable)]);
+            });
+            csv.push(['TOTAL ANTICIPOS SIN CRUZAR', '', '', '', Math.round(granAnt), '', '']);
+            cont.innerHTML = ids.length
+                ? '<div style="margin:6px 0 10px; font-size:0.9rem;"><strong>' + ids.length + '</strong> cliente(s) con anticipos sin cruzar · Total anticipos: <strong style="color:#059669;">' + cotFormatoCop(granAnt) + '</strong> · Cruzable contra facturas pendientes: <strong>' + cotFormatoCop(granCruzable) + '</strong><br><span style="font-size:0.8rem; color:#718096;">Muestra el estado de hoy (no depende de las fechas). Un anticipo es un Comprobante de Ingreso sin factura. Con "Cruzar" eliges cuáles se aplican a cada factura.</span></div>' + html
+                : '<p style="color:#a0aec0;">No hay anticipos sin cruzar: todos los ingresos ya están aplicados a una factura.</p>';
+            contInformeUltimo = { nombre: 'anticipos_por_cliente_' + contHoy(), filas: csv };
         }
         function contInformeDescargar(){
             if(!contInformeUltimo || contInformeUltimo.filas.length < 2){ alert('No hay datos en este informe para descargar.'); return; }
@@ -12092,6 +12153,7 @@
         function editarDocVenta(id){
             const doc = db_docventa.find(d=>d.id===id);
             if(!doc) return;
+            if(ncParcialesDe(doc).length){ alert('Este documento tiene Nota(s) Crédito parcial(es) (' + ncParcialesDe(doc).map(x => x.numero).join(', ') + '), no se puede editar. Si necesitas cambiarlo, elimina primero esas Notas Crédito (sección Notas Crédito).'); return; }
             if(doc.estado==='anulada'){ alert('Este documento está anulado por una Nota Crédito, no se puede editar. Si fue un error, elimina primero la Nota Crédito (sección Notas Crédito) para reactivarlo.'); return; }
             // Conde 2026-08-21: "de cliente ya pagadas no las deje eliminar ni editar" -- mismo
             // candado que CxP.
@@ -12150,6 +12212,7 @@
         function eliminarDocVenta(id){
             const doc = db_docventa.find(d=>d.id===id);
             if(!doc) return;
+            if(ncParcialesDe(doc).length){ alert('Este documento tiene Nota(s) Crédito parcial(es) (' + ncParcialesDe(doc).map(x => x.numero).join(', ') + '), no se puede eliminar. Si quieres borrarlo, elimina primero esas Notas Crédito (sección Notas Crédito).'); return; }
             if(doc.estado==='anulada'){ alert('Este documento está anulado por una Nota Crédito, no se puede eliminar. Si quieres borrarlo, elimina primero la Nota Crédito (sección Notas Crédito).'); return; }
             // Conde 2026-09-25: candado suavizado a confirm(), ver editarDocVenta arriba.
             if(doc.estado==='pagada' && !confirm(`Este documento "${doc.numero}" ya está pagado. ¿Seguro que quieres eliminarlo?\n\nYa se registraron cobros contra este documento.`)) return;
@@ -12184,6 +12247,7 @@
                             Total a cobrar: <strong>${cotFormatoCop(doc.totalCobrar)}</strong><br>
                             Saldo pendiente: <strong style="color:var(--primary);">${cotFormatoCop(doc.saldoPendiente)}</strong><br>
                             ${contCrucesHtml(doc)}
+                            ${ncParcialesDe(doc).length ? `Notas crédito parciales: <strong style="color:#c53030;">-${cotFormatoCop(ncParcialesDe(doc).reduce((s, x) => s + (x.totalCobrar || 0), 0))}</strong> <span style="font-size:0.78rem; color:#718096;">(${ncParcialesDe(doc).map(x => x.numero).join(' · ')})</span><br>` : ''}
                             Vencimiento: <strong>${doc.fechaVencimiento||'-'}</strong>
                         </div>
                         <div class="action-row">
@@ -12972,7 +13036,7 @@
                 const c = db_clientes.find(x => x.id === d.idCli);
                 return !txt || (d.numero + ' ' + (c ? c.empresa : '')).toLowerCase().includes(txt);
             }).sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')));
-            sel.innerHTML = '<option value="">-- Elige la factura a anular --</option>' + docs.map(d => {
+            sel.innerHTML = '<option value="">-- Elige la factura --</option>' + docs.map(d => {
                 const c = db_clientes.find(x => x.id === d.idCli);
                 return `<option value="${d.id}">${d.numero} — ${c ? c.empresa : 'Cliente eliminado'} — ${cotFormatoCop(d.totalCobrar)} — ${d.estado}</option>`;
             }).join('');
@@ -12989,12 +13053,126 @@
             el.style.display = 'block';
             el.innerHTML = `<strong>${doc.numero}</strong> — ${cli ? cli.empresa : 'Cliente eliminado'} — ${doc.fecha ? String(doc.fecha).slice(0, 10) : '-'}<br>
                 Total a anular: <strong>${cotFormatoCop(doc.totalCobrar)}</strong> (IVA ${cotFormatoCop(doc.iva)}) — saldo pendiente hoy: ${cotFormatoCop(doc.saldoPendiente)}
-                ${cobrado > 0 ? `<br><span style="color:#b45309; font-weight:bold;">⚠ Ya tiene ${cotFormatoCop(cobrado)} cobrados: la Nota no borra esos Ingresos, tendrás que devolver o reasignar ese dinero por aparte.</span>` : ''}`;
+                ${cobrado > 0 ? `<br><span style="color:#b45309; font-weight:bold;">⚠ Ya tiene ${cotFormatoCop(cobrado)} cobrados: la Nota no borra esos Ingresos, tendrás que devolver o reasignar ese dinero por aparte.</span>` : ''}
+                ${ncParcialesDe(doc).length ? `<br>Notas parciales ya hechas: ${ncParcialesDe(doc).map(x => x.numero + ' (' + cotFormatoCop(x.valorBruto + x.iva) + ')').join(', ')}` : ''}`;
+        }
+        /* Conde 2026-11-06: "en la nota crédito debe dejar modificar el valor de la factura: hay notas crédito donde se modifica el valor parcial,
+           no se hace por el total". Nota PARCIAL: la factura NO se anula; se acredita un valor (antes de IVA + IVA) y lo que el cliente debe en esa
+           factura baja ese valor (menos la ReteIVA proporcional si la factura la llevaba). No hay columna nueva: una nota es parcial cuando su factura
+           NO está anulada. En las notas parciales, totalDocumento = totalCobrar = lo que baja la cartera (neto de ReteIVA, igual que cuentan las facturas
+           en ventas) y cobradoPrevio guarda lo que el cliente ya había pagado de más (saldo a favor) para poder revertir bien. */
+        function ncParcialesDe(doc){ return doc && doc.estado !== 'anulada' ? db_notasCredito.filter(n => n.idDocVenta === doc.id) : []; }
+        function ncEsParcial(n){ const d = db_docventa.find(x => x.id === n.idDocVenta); return !!d && d.estado !== 'anulada'; }
+        function ncReduccionCartera(doc, bruto, iva){
+            const rete = (doc.reteiva > 0 && doc.iva > 0) ? Math.round(doc.reteiva * iva / doc.iva) : 0;
+            return { rete, total: bruto + iva - rete };
+        }
+        function ncRecalcularEstado(doc){ doc.estado = doc.saldoPendiente <= 0 ? 'pagada' : (doc.saldoPendiente < doc.totalCobrar ? 'abonado_parcial' : 'pendiente'); }
+        function ncParcialAplicar(doc, r){
+            const exceso = Math.max(0, r - doc.saldoPendiente);
+            doc.totalCobrar = Math.max(0, doc.totalCobrar - r);
+            doc.saldoPendiente = Math.max(0, doc.saldoPendiente - r);
+            ncRecalcularEstado(doc);
+            return exceso;
+        }
+        function ncParcialRevertir(doc, r, exceso){
+            doc.totalCobrar += r;
+            doc.saldoPendiente = Math.min(doc.totalCobrar, doc.saldoPendiente + Math.max(0, r - (exceso || 0)));
+            ncRecalcularEstado(doc);
+        }
+        // Lo que aún se puede acreditar de la factura (sin contar la nota "excluirId", útil al editarla).
+        function ncRestante(doc, excluirId){
+            const otras = ncParcialesDe(doc).filter(x => x.id !== excluirId);
+            return { bruto: (doc.valorBruto || 0) - otras.reduce((s, x) => s + (x.valorBruto || 0), 0), iva: (doc.iva || 0) - otras.reduce((s, x) => s + (x.iva || 0), 0) };
+        }
+        function contNcCambioDoc(){
+            const b = document.getElementById('nc-bruto'), i = document.getElementById('nc-iva');
+            if(b) b.value = ''; if(i){ i.value = ''; i.dataset.manual = ''; }
+            contNcMostrarResumen(); contNcParcialResumen();
+        }
+        function contNcCambiarTipo(){
+            const parcial = document.getElementById('nc-tipo').value === 'parcial';
+            document.getElementById('nc-parcial-box').style.display = parcial ? 'flex' : 'none';
+            const btn = document.getElementById('nc-btn-generar'); if(btn) btn.textContent = parcial ? 'Generar Nota Crédito parcial' : 'Generar Nota Crédito y anular la factura';
+            contNcParcialResumen();
+        }
+        // El IVA se propone según el de la factura (se puede escribir otro).
+        function contNcParcialCalcIva(){
+            const doc = db_docventa.find(d => d.id === document.getElementById('nc-docventa').value);
+            const i = document.getElementById('nc-iva'); if(!doc || !i || i.dataset.manual === 'true') return;
+            const bruto = contNumeroDesdeInput(document.getElementById('nc-bruto'));
+            const v = doc.valorBruto > 0 ? Math.round(bruto * (doc.iva || 0) / doc.valorBruto) : 0;
+            i.value = v ? v.toLocaleString('es-CO') : '';
+        }
+        function contNcParcialResumen(){
+            const el = document.getElementById('nc-parcial-info'); if(!el) return;
+            if(document.getElementById('nc-tipo').value !== 'parcial'){ el.innerHTML = ''; return; }
+            const doc = db_docventa.find(d => d.id === document.getElementById('nc-docventa').value);
+            if(!doc){ el.innerHTML = 'Elige arriba la factura sobre la que se hace la Nota.'; return; }
+            const rest = ncRestante(doc);
+            const bruto = contNumeroDesdeInput(document.getElementById('nc-bruto')), iva = contNumeroDesdeInput(document.getElementById('nc-iva'));
+            let h = 'Aún se puede acreditar de ' + doc.numero + ': <strong>' + cotFormatoCop(rest.bruto) + '</strong> antes de IVA y <strong>' + cotFormatoCop(rest.iva) + '</strong> de IVA.';
+            if(bruto > 0){
+                const r = ncReduccionCartera(doc, bruto, iva);
+                h += '<br>Se acreditan <strong>' + cotFormatoCop(bruto + iva) + '</strong>' + (r.rete ? ' (menos ' + cotFormatoCop(r.rete) + ' de ReteIVA proporcional = <strong>' + cotFormatoCop(r.total) + '</strong> que baja la cartera)' : '') +
+                    '. Lo que el cliente debe en esta factura pasa de <strong>' + cotFormatoCop(doc.totalCobrar) + '</strong> a <strong>' + cotFormatoCop(Math.max(0, doc.totalCobrar - r.total)) + '</strong>; saldo pendiente: ' + cotFormatoCop(doc.saldoPendiente) + ' → <strong>' + cotFormatoCop(Math.max(0, doc.saldoPendiente - r.total)) + '</strong>.';
+                if(bruto > rest.bruto + 1 || iva > rest.iva + 1) h += '<br><span style="color:#c53030; font-weight:bold;">⚠ Supera lo que queda por acreditar de la factura.</span>';
+                else if(r.total > doc.saldoPendiente) h += '<br><span style="color:#b45309; font-weight:bold;">⚠ El cliente ya pagó ' + cotFormatoCop(r.total - doc.saldoPendiente) + ' de más con esta Nota: ese saldo a favor lo debes devolver o dejar como anticipo por aparte.</span>';
+            }
+            el.innerHTML = h;
+        }
+        async function ncNumeroNuevo(){
+            const campo = document.getElementById('nc-numero');
+            const esManual = campo.value.trim() && campo.dataset.auto !== 'true';
+            if(esManual){
+                const numero = campo.value.trim().toUpperCase();
+                if(db_notasCredito.some(x => x.numero === numero)){ alert('El número ' + numero + ' ya lo tiene otra Nota Crédito.'); return null; }
+                contActualizarContadorDesdeNumero('nc', numero);
+                return numero;
+            }
+            const k = await tacticalSiguienteNumero('nc');
+            if(k == null){ alert('No se pudo generar el número de la Nota Crédito. ¿Ya corriste supabase/migracion_notas_credito.sql en Supabase?'); return null; }
+            return 'NC-' + String(k).padStart(4, '0');
+        }
+        async function contGuardarNotaCreditoParcial(doc){
+            const motivo = document.getElementById('nc-motivo').value.trim();
+            if(!motivo){ alert('Escribe el motivo de la Nota (ej. descuento acordado, devolución de una parte del pedido).'); return; }
+            const fecha = contFechaComprobante('nc-fecha'); if(fecha === null) return;
+            const bruto = contNumeroDesdeInput(document.getElementById('nc-bruto')), iva = contNumeroDesdeInput(document.getElementById('nc-iva'));
+            if(!(bruto > 0)){ alert('Escribe el valor a acreditar antes de IVA.'); return; }
+            const rest = ncRestante(doc);
+            if(bruto > rest.bruto + 1){ alert('El valor antes de IVA (' + cotFormatoCop(bruto) + ') supera lo que queda por acreditar de ' + doc.numero + ' (' + cotFormatoCop(rest.bruto) + ').'); return; }
+            if(iva > rest.iva + 1){ alert('El IVA (' + cotFormatoCop(iva) + ') supera el IVA que queda por acreditar de ' + doc.numero + ' (' + cotFormatoCop(rest.iva) + ').'); return; }
+            const r = ncReduccionCartera(doc, bruto, iva);
+            if(r.total > doc.totalCobrar + 1){ alert('La Nota baja la cartera ' + cotFormatoCop(r.total) + ', más de lo que tiene por cobrar la factura (' + cotFormatoCop(doc.totalCobrar) + ').'); return; }
+            const cli = db_clientes.find(c => c.id === doc.idCli);
+            let aviso = '¿Generar Nota Crédito PARCIAL sobre ' + doc.numero + ' (' + (cli ? cli.empresa : 'cliente eliminado') + ') por ' + cotFormatoCop(bruto + iva) + ' (antes de IVA ' + cotFormatoCop(bruto) + ' + IVA ' + cotFormatoCop(iva) + ')?' +
+                '\n\nLa factura NO se anula: lo que el cliente debe baja ' + cotFormatoCop(r.total) + ' (saldo pendiente ' + cotFormatoCop(doc.saldoPendiente) + ' → ' + cotFormatoCop(Math.max(0, doc.saldoPendiente - r.total)) + ').';
+            if(r.total > doc.saldoPendiente) aviso += '\n\n⚠ El cliente ya pagó ' + cotFormatoCop(r.total - doc.saldoPendiente) + ' de más: ese saldo a favor lo debes devolver o dejar como anticipo por aparte.';
+            if(!confirm(aviso)) return;
+            const numero = await ncNumeroNuevo(); if(numero == null) return;
+            const nota = { id: crypto.randomUUID(), numero, fecha, idDocVenta: doc.id, numeroDoc: doc.numero, idCli: doc.idCli, motivo,
+                valorBruto: bruto, iva, totalDocumento: r.total, totalCobrar: r.total, cobradoPrevio: Math.max(0, r.total - doc.saldoPendiente) };
+            // Primero la Nota; la factura solo se ajusta si la Nota quedó guardada (nunca a medias).
+            const ok = await tacticalSyncNotaCredito(nota);
+            if(!ok){ alert('No se pudo guardar la Nota Crédito en Supabase, así que la factura NO se modificó. ¿Ya corriste supabase/migracion_notas_credito.sql?'); return; }
+            db_notasCredito.push(nota);
+            ncParcialAplicar(doc, r.total);
+            tacticalSyncDocVenta(doc);
+            document.getElementById('nc-docventa').value = ''; document.getElementById('nc-doc-filtro').value = '';
+            document.getElementById('nc-motivo').value = ''; document.getElementById('nc-tipo').value = 'total';
+            const campo = document.getElementById('nc-numero'); campo.value = ''; campo.dataset.auto = '';
+            document.getElementById('nc-fecha').value = contHoy();
+            contNcCambioDoc(); contNcCambiarTipo();
+            renderContabilidad();
+            contImprimirNotaCredito(nota.id);
         }
         async function contGuardarNotaCredito(){
             const doc = db_docventa.find(d => d.id === document.getElementById('nc-docventa').value);
-            if(!doc){ alert('Elige la factura o cuenta de cobro que quieres anular.'); return; }
+            if(!doc){ alert('Elige la factura o cuenta de cobro sobre la que haces la Nota.'); return; }
             if(doc.estado === 'anulada'){ alert('Ese documento ya está anulado.'); return; }
+            if(document.getElementById('nc-tipo').value === 'parcial') return contGuardarNotaCreditoParcial(doc);
+            if(ncParcialesDe(doc).length){ alert('Esta factura ya tiene Nota(s) Crédito parcial(es). Para el valor que queda, haz otra Nota PARCIAL por ese valor (arriba muestra cuánto queda por acreditar), o elimina primero las parciales si quieres anularla completa.'); return; }
             const motivo = document.getElementById('nc-motivo').value.trim();
             if(!motivo){ alert('Escribe el motivo de la anulación (ej. error en la facturación, el cliente canceló el pedido).'); return; }
             const fecha = contFechaComprobante('nc-fecha');
@@ -13038,7 +13216,10 @@
         async function eliminarNotaCredito(id){
             const nota = db_notasCredito.find(n => n.id === id);
             if(!nota) return;
-            if(!confirm(`¿Eliminar la Nota Crédito "${nota.numero}"?\n\nLa factura ${nota.numeroDoc || ''} se reactiva (vuelve a su saldo anterior) y la venta deja de restarse.\n\nEsta acción no se puede deshacer.`)) return;
+            const eraParcial = ncEsParcial(nota);
+            if(!confirm(eraParcial
+                ? `¿Eliminar la Nota Crédito PARCIAL "${nota.numero}"?\n\nLa factura ${nota.numeroDoc || ''} vuelve a deber ${cotFormatoCop(nota.totalCobrar)} más y la venta deja de restarse.\n\nEsta acción no se puede deshacer.`
+                : `¿Eliminar la Nota Crédito "${nota.numero}"?\n\nLa factura ${nota.numeroDoc || ''} se reactiva (vuelve a su saldo anterior) y la venta deja de restarse.\n\nEsta acción no se puede deshacer.`)) return;
             const ok = await tacticalEliminarNotaCreditoRemoto(id);
             if(!ok) return;
             db_notasCredito = db_notasCredito.filter(n => n.id !== id);
@@ -13046,6 +13227,9 @@
             if(doc && doc.estado === 'anulada'){
                 doc.saldoPendiente = Math.max(0, doc.totalCobrar - (nota.cobradoPrevio || 0));
                 doc.estado = doc.saldoPendiente <= 0 ? 'pagada' : (doc.saldoPendiente < doc.totalCobrar ? 'abonado_parcial' : 'pendiente');
+                tacticalSyncDocVenta(doc);
+            } else if(doc && eraParcial){
+                ncParcialRevertir(doc, nota.totalCobrar, nota.cobradoPrevio);
                 tacticalSyncDocVenta(doc);
             }
             renderContabilidad();
@@ -13065,7 +13249,27 @@
             if(!fecha){ alert('Elige la fecha de la Nota Crédito.'); return; }
             if(db_notasCredito.some(x => x.id !== id && x.numero === numero)){ alert('El número ' + numero + ' ya lo tiene otra Nota Crédito.'); return; }
             if(bruto <= 0){ alert('El valor antes de IVA debe ser mayor a 0.'); return; }
-            const anterior = { numero: n.numero, fecha: n.fecha, valorBruto: n.valorBruto, iva: n.iva, totalDocumento: n.totalDocumento, totalCobrar: n.totalCobrar };
+            const anterior = { numero: n.numero, fecha: n.fecha, valorBruto: n.valorBruto, iva: n.iva, totalDocumento: n.totalDocumento, totalCobrar: n.totalCobrar, cobradoPrevio: n.cobradoPrevio };
+            const docP = db_docventa.find(d => d.id === n.idDocVenta);
+            if(docP && docP.estado !== 'anulada'){
+                // Nota PARCIAL: al cambiar el valor, la factura recalcula lo que el cliente debe.
+                const rest = ncRestante(docP, n.id);
+                if(bruto > rest.bruto + 1){ alert('El valor antes de IVA supera lo que queda por acreditar de ' + docP.numero + ' (' + cotFormatoCop(rest.bruto) + ').'); return; }
+                if(iva > rest.iva + 1){ alert('El IVA supera el IVA que queda por acreditar de ' + docP.numero + ' (' + cotFormatoCop(rest.iva) + ').'); return; }
+                const foto = { totalCobrar: docP.totalCobrar, saldoPendiente: docP.saldoPendiente, estado: docP.estado };
+                ncParcialRevertir(docP, n.totalCobrar, n.cobradoPrevio);
+                const rr = ncReduccionCartera(docP, bruto, iva);
+                if(rr.total > docP.totalCobrar + 1){ Object.assign(docP, foto); alert('La Nota baja la cartera más de lo que tiene por cobrar la factura (' + cotFormatoCop(docP.totalCobrar) + ').'); return; }
+                const exceso = ncParcialAplicar(docP, rr.total);
+                n.numero = numero; n.fecha = fecha; n.valorBruto = bruto; n.iva = iva; n.totalDocumento = rr.total; n.totalCobrar = rr.total; n.cobradoPrevio = exceso;
+                const okP = await tacticalSyncNotaCredito(n);
+                if(!okP){ Object.assign(n, anterior); Object.assign(docP, foto); alert('No se pudo guardar el cambio en Supabase; la Nota Crédito y la factura quedaron como estaban.'); return; }
+                tacticalSyncDocVenta(docP);
+                if(numero !== anterior.numero) contActualizarContadorDesdeNumero('nc', numero);
+                ncEditando.delete(id);
+                renderContabilidad();
+                return;
+            }
             const diferencia = (n.totalCobrar || 0) - (n.totalDocumento || 0); // envío / ReteIVA que ya traía la factura, se conserva
             n.numero = numero; n.fecha = fecha; n.valorBruto = bruto; n.iva = iva; n.totalDocumento = bruto + iva; n.totalCobrar = n.totalDocumento + diferencia;
             const ok = await tacticalSyncNotaCredito(n);
@@ -13082,7 +13286,7 @@
                 if(ncEditando.has(n.id)){
                     const fmt = v => (v || 0).toLocaleString('es-CO');
                     return `<div class="data-card">
-                        <span class="tag" style="float:right; background:#d97706; color:#fff;">EDITANDO · ANULA ${n.numeroDoc || ''}</span>
+                        <span class="tag" style="float:right; background:#d97706; color:#fff;">EDITANDO · ${ncEsParcial(n) ? 'PARCIAL SOBRE' : 'ANULA'} ${n.numeroDoc || ''}</span>
                         <div class="card-title">${cli ? cli.empresa : 'Cliente eliminado'}</div>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
                             <div><label style="font-size:0.75rem; color:#4a5568;">N° de Nota</label><input type="text" id="nc-ed-numero-${n.id}" value="${n.numero}" style="text-transform:uppercase;"></div>
@@ -13090,7 +13294,7 @@
                             <div><label style="font-size:0.75rem; color:#4a5568;">Valor antes de IVA</label><input type="text" inputmode="numeric" id="nc-ed-bruto-${n.id}" value="${fmt(n.valorBruto)}" oninput="contFormatearMiles(this)"></div>
                             <div><label style="font-size:0.75rem; color:#4a5568;">IVA</label><input type="text" inputmode="numeric" id="nc-ed-iva-${n.id}" value="${fmt(n.iva)}" oninput="contFormatearMiles(this)"></div>
                         </div>
-                        <div style="font-size:0.78rem; color:#718096; margin-top:6px;">La factura ${n.numeroDoc || ''} sigue anulada; el nuevo valor solo cambia lo que esta nota resta en las ventas.</div>
+                        <div style="font-size:0.78rem; color:#718096; margin-top:6px;">${ncEsParcial(n) ? `Al cambiar el valor, la factura ${n.numeroDoc || ''} recalcula lo que el cliente debe y la nota resta ese valor en las ventas.` : `La factura ${n.numeroDoc || ''} sigue anulada; el nuevo valor solo cambia lo que esta nota resta en las ventas.`}</div>
                         <div class="action-row">
                             <button class="btn-action" style="background:var(--ganado); color:#fff;" onclick="ncGuardarEdicion('${n.id}')">${ticon('check',{color:'#fff'})}Guardar cambios</button>
                             <button class="btn-action" onclick="ncToggleEditar('${n.id}')">Cancelar</button>
@@ -13098,10 +13302,10 @@
                     </div>`;
                 }
                 return `<div class="data-card">
-                    <span class="tag" style="float:right; background:#718096; color:#fff;">ANULA ${n.numeroDoc || ''}</span>
-                    <div class="card-title">${n.numero} — ${cotFormatoCop(n.totalDocumento)}</div>
+                    <span class="tag" style="float:right; background:#718096; color:#fff;">${ncEsParcial(n) ? 'PARCIAL · ' : 'ANULA '}${n.numeroDoc || ''}</span>
+                    <div class="card-title">${n.numero} — ${cotFormatoCop(ncEsParcial(n) ? (n.valorBruto || 0) + (n.iva || 0) : n.totalDocumento)}</div>
                     <div class="card-subtitle">${cli ? cli.empresa : 'Cliente eliminado'} — ${n.fecha ? String(n.fecha).slice(0, 10) : '-'}</div>
-                    <div style="font-size:0.85rem; color:#4a5568;">${n.motivo || ''}${n.cobradoPrevio > 0 ? `<br><span style="color:#b45309;">⚠ Tenía ${cotFormatoCop(n.cobradoPrevio)} cobrados</span>` : ''}</div>
+                    <div style="font-size:0.85rem; color:#4a5568;">${n.motivo || ''}${ncEsParcial(n) ? `<br>Antes de IVA ${cotFormatoCop(n.valorBruto)} + IVA ${cotFormatoCop(n.iva)}${n.totalCobrar !== (n.valorBruto || 0) + (n.iva || 0) ? ` — baja la cartera ${cotFormatoCop(n.totalCobrar)} (ReteIVA proporcional)` : ''}${n.cobradoPrevio > 0 ? `<br><span style="color:#b45309;">⚠ El cliente quedó con ${cotFormatoCop(n.cobradoPrevio)} pagados de más (saldo a favor)</span>` : ''}` : (n.cobradoPrevio > 0 ? `<br><span style="color:#b45309;">⚠ Tenía ${cotFormatoCop(n.cobradoPrevio)} cobrados</span>` : '')}</div>
                     <div class="action-row">
                         <button class="btn-action" onclick="contImprimirNotaCredito('${n.id}')">${ticon('printer')}Imprimir</button>
                         <button class="btn-action" onclick="ncToggleEditar('${n.id}')">${ticon('edit')}Editar</button>
@@ -13133,8 +13337,10 @@
                 <tr><td>Valor Bruto</td><td style="text-align:right;">${cotFormatoCop(n.valorBruto)}</td></tr>
                 ${n.iva > 0 ? `<tr><td>IVA</td><td style="text-align:right;">${cotFormatoCop(n.iva)}</td></tr>` : ''}
               </table>
-              <div class="doc-total-box">TOTAL ACREDITADO: ${cotFormatoCop(n.totalDocumento)} COP</div>
-              <div class="doc-condiciones"><p>Esta Nota Crédito anula en su totalidad el documento <strong>${n.numeroDoc || ''}</strong>. El valor acreditado deja sin efecto el cobro de ese documento.</p></div>
+              <div class="doc-total-box">TOTAL ACREDITADO: ${cotFormatoCop(ncEsParcial(n) ? (n.valorBruto || 0) + (n.iva || 0) : n.totalDocumento)} COP</div>
+              <div class="doc-condiciones"><p>${ncEsParcial(n)
+                  ? `Esta Nota Crédito acredita <strong>parcialmente</strong> el documento <strong>${n.numeroDoc || ''}</strong>. El nuevo valor a cobrar de ese documento es <strong>${cotFormatoCop(doc ? doc.totalCobrar : 0)}</strong>.`
+                  : `Esta Nota Crédito anula en su totalidad el documento <strong>${n.numeroDoc || ''}</strong>. El valor acreditado deja sin efecto el cobro de ese documento.`}</p></div>
             `;
             document.getElementById('print-area').innerHTML = html;
             document.getElementById('print-area').style.display = 'block';
