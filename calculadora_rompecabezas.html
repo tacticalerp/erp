@@ -490,7 +490,7 @@ function claseFormatoDigital(ancho,alto){
 }
 function elegibleDigital(ancho,alto,gramaje,cantidadUnidades=1){
   if(gramaje>DIGITAL_GRAMAJE_MAX) return false;
-  if(cantidadUnidades>200) return false;
+  // Conde 2026-11-06: se quitó el tope de 200 unidades del digital; ahora la ruta (digital u offset) se elige solo por el costo más bajo.
   return claseFormatoDigital(ancho,alto)!==null;
 }
 function descuentoVolumenDigital(cantidadUnidades){
@@ -529,7 +529,7 @@ function costoImpresionDigital(nPaginas,caras,esColor,ancho,alto,cantidadUnidade
 // tamaño individual — eso baja los clics necesarios y por lo tanto el costo. Se prueban las
 // 3 clases de pliego digital y se toma la que dé el menor costo total (Conde 2026-07-24).
 function mejorImpresionDigitalMontaje(nPaginas,caras,esColor,ancho,alto,cantidadUnidades,gramaje){
-  if(gramaje>DIGITAL_GRAMAJE_MAX || cantidadUnidades>200) return null;
+  if(gramaje>DIGITAL_GRAMAJE_MAX) return null;   // sin tope de unidades (Conde 2026-11-06): gana el costo más bajo
   const margenCm=DIGITAL_PINZA_MM/10;
   let mejor=null;
   for(const clase of Object.keys(DIGITAL_FORMATOS_CM)){

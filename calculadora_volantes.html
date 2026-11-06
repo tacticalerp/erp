@@ -581,7 +581,7 @@ function claseFormatoDigital(ancho,alto){
 }
 function elegibleDigital(ancho,alto,gramaje,cantidadUnidades=1){
   if(gramaje>DIGITAL_GRAMAJE_MAX) return false;
-  if(cantidadUnidades>200) return false;
+  // Conde 2026-11-06: se quitó el tope de 200 unidades del digital; ahora la ruta (digital u offset) se elige solo por el costo más bajo.
   return claseFormatoDigital(ancho,alto)!==null;
 }
 function descuentoVolumenDigital(cantidadUnidades){
@@ -630,7 +630,7 @@ function claseFormatoDigitalIman(ancho,alto){
 }
 function elegibleDigitalIman(ancho,alto,gramaje,cantidadUnidades=1){
   if(gramaje>DIGITAL_GRAMAJE_MAX) return false;
-  if(cantidadUnidades>200) return false;
+  // Conde 2026-11-06: se quitó el tope de 200 unidades del digital; ahora la ruta (digital u offset) se elige solo por el costo más bajo.
   return claseFormatoDigitalIman(ancho,alto)!==null;
 }
 function costoImpresionDigitalIman(nPaginas,caras,esColor,ancho,alto,cantidadUnidades=1){
