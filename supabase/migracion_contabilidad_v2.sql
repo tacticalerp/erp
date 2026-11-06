@@ -32,7 +32,8 @@ begin
   insert into public.ot_contadores (anio, valor) values (v_anio, 0)
     on conflict (anio) do nothing;
   update public.ot_contadores set valor = valor + 1 where anio = v_anio returning valor into v_valor;
-  return 'OT-' || to_char(now(),'YY') || v_mes || '-' || lpad(v_valor::text, 2, '0');
+  -- ojo: lpad() recorta si el texto es más largo (lpad('248',2,'0') = '24'): de 100 en adelante se escribe completo (fix 2026-11-06)
+  return 'OT-' || to_char(now(),'YY') || v_mes || '-' || case when v_valor < 100 then lpad(v_valor::text, 2, '0') else v_valor::text end;
 end;
 $$;
 grant execute on function public.siguiente_ot() to authenticated;
