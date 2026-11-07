@@ -1051,6 +1051,15 @@
           .ins-fam > summary .ins-n{ margin-left:auto; font-weight:600; font-size:0.78rem; color:#4a5568; background:#edf2f7; border-radius:10px; padding:2px 9px; white-space:nowrap; }
           .ins-fam > summary .ins-sub{ font-weight:400; font-size:0.8rem; color:#718096; }
           .ins-fam-cuerpo{ padding:2px 12px 8px; }
+          .tq-tabla{ width:100%; border-collapse:collapse; font-size:0.88rem; }
+          .tq-tabla th{ text-align:left; font-size:0.72rem; text-transform:uppercase; letter-spacing:.4px; color:#718096; padding:6px 8px; border-bottom:2px solid #e2e8f0; }
+          .tq-tabla td{ padding:7px 8px; vertical-align:top; }
+          .tq-tabla tr.tq-z td{ background:#f4f6f9; }
+          .tq-tabla .tq-codigo{ font-size:0.72rem; color:#94a3b8; letter-spacing:.3px; white-space:nowrap; }
+          .tq-tabla .tq-pill{ display:inline-block; font-size:0.68rem; color:#475569; background:#e8edf3; border-radius:9px; padding:1px 8px; margin-left:4px; white-space:nowrap; }
+          .tq-tabla .tq-pill.tq-aviso{ background:#fef3c7; color:#92400e; }
+          .tq-tabla .tq-pill.tq-ok{ background:#dcfce7; color:#166534; }
+          .tq-tabla .tq-nota{ display:block; font-size:0.78rem; color:#92400e; margin-top:2px; }
           .ins-fam-cuerpo > .data-card{ box-shadow:none; }
           .comercial-vendedor-tab{ padding:7px 16px; border:1px solid #cbd5e0; background:#fff; color:#1a202c; cursor:pointer; font-weight:600; font-size:0.85rem; border-radius:5px; }
           .comercial-vendedor-tab.active{ background:var(--primary); border-color:var(--primary); color:#fff; }
@@ -2406,7 +2415,19 @@
                 </div>
                 <div id="ins-tabs" style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
                     <button type="button" class="comercial-vendedor-tab active" id="ins-tab-btn-precios" onclick="insCambiarTab('precios')">Precios</button>
+                    <button type="button" class="comercial-vendedor-tab" id="ins-tab-btn-troq" onclick="insCambiarTab('troq')">Troqueles</button>
                     <button type="button" class="comercial-vendedor-tab" id="ins-tab-btn-inv" onclick="insCambiarTab('inv')">Inventario <span style="font-weight:400; font-size:0.75rem; opacity:.75;">· próximamente</span></button>
+                </div>
+                <div id="ins-tab-troq" style="display:none;">
+                    <div class="data-card" style="margin-bottom:12px;">
+                        <div class="card-title">Catálogo de troqueles</div>
+                        <p style="color:#64748b; margin:8px 0 0;" id="troq-resumen"></p>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:10px;">
+                            <input type="text" id="troq-buscar" placeholder="Buscar por nombre, medida o código (ej: bolsa 33, CJB1-018, sobre)…" oninput="renderTroquelesInsumos()" style="flex:1; min-width:240px; padding:8px 10px; border:1px solid #cbd5e0; border-radius:6px;">
+                            <label style="display:flex; gap:6px; align-items:center; font-size:0.85rem; color:#4a5568; cursor:pointer;"><input type="checkbox" id="troq-solo-verificar" onchange="renderTroquelesInsumos()"> Solo los por verificar</label>
+                        </div>
+                    </div>
+                    <div id="troq-grupos"></div>
                 </div>
                 <div id="ins-tab-inv" style="display:none;">
                     <div class="data-card" style="border-style:dashed; border-left-style:dashed;">
@@ -2631,6 +2652,7 @@
     <script src="tactical-supabase.js?v=20261021a"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
     <script src="precios_tactical.js?v=20261107b"></script>
+    <script src="troqueles_tactical.js?v=20261107a"></script>
     <script src="precios_promocionales.js?v=20260919a"></script>
     <script>
         // NAVEGACIÓN SPA DEL HUB
@@ -6687,11 +6709,48 @@
         }
         function insFamToggle(el){ const k = el.getAttribute('data-fam'); if(!k) return; if(el.open) insFamAbiertas.add(k); else insFamAbiertas.delete(k); }
         function insCambiarTab(tab){
-          const p = document.getElementById('ins-tab-precios'), i = document.getElementById('ins-tab-inv');
-          if(p) p.style.display = tab === 'precios' ? '' : 'none';
-          if(i) i.style.display = tab === 'inv' ? '' : 'none';
-          const bp = document.getElementById('ins-tab-btn-precios'), bi = document.getElementById('ins-tab-btn-inv');
-          if(bp) bp.classList.toggle('active', tab === 'precios'); if(bi) bi.classList.toggle('active', tab === 'inv');
+          ['precios', 'troq', 'inv'].forEach(k => {
+            const p = document.getElementById('ins-tab-' + k); if(p) p.style.display = tab === k ? '' : 'none';
+            const b = document.getElementById('ins-tab-btn-' + k); if(b) b.classList.toggle('active', tab === k);
+          });
+          if(tab === 'troq') renderTroquelesInsumos();
+        }
+        /* ---- Insumos y precios > Troqueles (Conde 2026-11-07): catálogo completo de troqueles (troqueles_tactical.js), solo lectura.
+           Los marcados "por verificar" tienen dudas de lectura de la foto: se ven aquí pero NO están en ninguna calculadora. ---- */
+        const insTroqAbiertos = new Set();
+        function renderTroquelesInsumos(){
+          const cont = document.getElementById('troq-grupos'); if(!cont) return;
+          if(typeof TACTICAL_TROQUELES_CATALOGO === 'undefined'){ cont.innerHTML = '<div style="color:#a0aec0; font-style:italic;">No se pudo cargar el catálogo de troqueles.</div>'; return; }
+          const todos = TACTICAL_TROQUELES_CATALOGO;
+          const q = ((document.getElementById('troq-buscar') || {}).value || '').trim().toLowerCase();
+          const soloV = !!(document.getElementById('troq-solo-verificar') || {}).checked;
+          const nVer = todos.filter(x => x.estado === 'verificar').length, nCalc = todos.filter(x => x.enCalc).length;
+          const resumen = document.getElementById('troq-resumen');
+          if(resumen) resumen.innerHTML = '<strong>' + todos.length + '</strong> troqueles en total · <strong>' + nCalc + '</strong> ya se pueden elegir en una calculadora · <strong>' + nVer + '</strong> por verificar (tienen dudas de lectura, no entran a ninguna calculadora hasta que se confirmen). Las líneas Bolsillos, Sobres, Varios y Grafas todavía no tienen calculadora.';
+          const grupos = {};
+          todos.forEach(x => {
+            if(soloV && x.estado !== 'verificar') return;
+            if(q){
+              const plano = (x.nombre.replace(/<[^>]*>/g, '') + ' ' + x.id + ' ' + x.armada + ' ' + x.impreso + ' ' + x.obs + ' ' + x.grupo).toLowerCase();
+              if(plano.indexOf(q) < 0) return;
+            }
+            (grupos[x.grupo] = grupos[x.grupo] || []).push(x);
+          });
+          let html = '';
+          Object.keys(grupos).forEach(g => {
+            const lista = grupos[g], nv = lista.filter(x => x.estado === 'verificar').length;
+            const abierto = insTroqAbiertos.has(g) || q || soloV;
+            let filas = '', z = 0;
+            lista.forEach(x => {
+              const tags = (x.tags || []).map(tg => '<span class="tq-pill">' + tacticalTroquelEsc(tg) + '</span>').join('');
+              const est = x.estado === 'verificar' ? '<span class="tq-pill tq-aviso">Por verificar</span>' : (x.enCalc ? '<span class="tq-pill tq-ok">En calculadora</span>' : '<span class="tq-pill">Sin calculadora aún</span>');
+              filas += '<tr class="' + (z++ % 2 ? 'tq-z' : '') + '"><td>' + x.nombre + tags + (x.nota ? '<span class="tq-nota">' + tacticalTroquelEsc(x.nota) + '</span>' : '') + '</td>'
+                + '<td>' + tacticalTroquelEsc(x.armada) + '</td><td>' + tacticalTroquelEsc(x.impreso || '—') + '</td><td>' + tacticalTroquelEsc(x.obs) + '</td><td>' + est + '</td><td class="tq-codigo">' + tacticalTroquelEsc(x.id === 'SOBR-?' ? '(sin código)' : x.id) + '</td></tr>';
+            });
+            html += '<details class="ins-fam" data-troq="' + tacticalTroquelEsc(g) + '" ontoggle="if(this.open) insTroqAbiertos.add(this.dataset.troq); else insTroqAbiertos.delete(this.dataset.troq);"' + (abierto ? ' open' : '') + '><summary>' + tacticalTroquelEsc(g)
+              + '<span class="ins-n">' + lista.length + (nv ? ' · ' + nv + ' por verificar' : '') + '</span></summary><div class="ins-fam-cuerpo" style="overflow-x:auto;"><table class="tq-tabla"><tr><th>Nombre</th><th>Medida armada (cm)</th><th>Tamaño impreso (cm)</th><th>Observación</th><th>Estado</th><th>Código</th></tr>' + filas + '</table></div></details>';
+          });
+          cont.innerHTML = html || '<div style="color:#a0aec0; font-style:italic; padding:10px;">Ningún troquel coincide con la búsqueda.</div>';
         }
         function renderPanelPrecios(){
           const cont = document.getElementById('precios-grupos');

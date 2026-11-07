@@ -357,6 +357,7 @@
 <script src="tactical-supabase.js?v=20261021a"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
 <script src="precios_tactical.js?v=20261107b"></script>
+<script src="troqueles_tactical.js?v=20261107a"></script>
 <script>
 /* ============ CONSTANTES REUTILIZADAS DEL MOTOR DE CUADERNOS (ya validadas en el hub) ============ */
 // Conde 2026-08-06: "calibres de cote desde los 200 gramos y toda la gama de cartulinas".
@@ -421,6 +422,9 @@ const TROQUELES_CAJAS = [
   {id:"CJB1-21", ancho:15.5, alto:4,    largo:11,   anchoImpreso:23,   altoImpreso:20,   cavidades:3, nota:"3 cajas por golpe de troquel (montaje alterno 50x14cm)"},
   // CJB1-22 (3x7.5x16cm) excluido: la fuente (Tabla 1 troqueles.xlsx) no trae el dato de Tamaño Impreso.
 ];
+// Conde 2026-11-07: cajas de 2 piezas (base + tapa) de las fotos del cuaderno de troqueles (troqueles_tactical.js). Quedan pendientes por verificar: CJB1-004 y CJB2-002.
+if(typeof TACTICAL_TROQUELES_CAJAS_NUEVOS !== 'undefined') TROQUELES_CAJAS.push(...TACTICAL_TROQUELES_CAJAS_NUEVOS);
+const TROQUEL_CAJAS_AVISO_2PIEZAS = "Caja de 2 piezas (base + tapa): el tamaño impreso viene de las fotos del cuaderno de troqueles. Confirma que cubre la base y la tapa antes de cotizar.";
 
 /* ============ FUNCIONES DE MOTOR (copiadas 1:1 de motor_cotizacion/calculadora.html — Cuadernos) ============ */
 function piezasPorPliego(pa,pal,pw,ph){
@@ -751,9 +755,22 @@ function cotTextoConNegrilla(txt){
 
 function poblarTroqueles(){
   const sel = document.getElementById("in-troquel");
-  sel.innerHTML = TROQUELES_CAJAS.map(t =>
-    `<option value="${t.id}">${t.id} — anch ${t.ancho}cm, alt ${t.alto}cm, lar ${t.largo}cm${t.cavidades>1?' — x'+t.cavidades:''}</option>`
-  ).join("");
+  // Conde 2026-11-07: selector visual -- nombre real: ancho x alto en negrilla, largo en normal, prefijo gris a la derecha
+  tacticalTroquelPicker("in-troquel", TROQUELES_CAJAS.map(t => {
+    const dos = /^CJ[BD]2/.test(t.id), dura = /^CJD/.test(t.id);
+    const tags = [];
+    if(t.cavidades>1) tags.push(t.cavidades + ' cajas por golpe');
+    if(t.requiereMaquinaExterna) tags.push('Máquina externa');
+    if(dos) tags.push('2 piezas');
+    if(t.nota2) tags.push(t.nota2);
+    return {
+      id: t.id,
+      grupo: dos ? (dura ? 'Cajas duras · 2 piezas' : 'Cajas blandas · 2 piezas') : 'Cajas blandas · 1 pieza',
+      nombre: `<b>${dura ? 'Caja dura' : 'Caja blanda'} ${tacticalTroquelNum(t.ancho)} x ${tacticalTroquelNum(t.alto)}</b> x ${tacticalTroquelNum(t.largo)}`,
+      tags: tags,
+      titulo: `Ancho ${t.ancho} cm, alto ${t.alto} cm, largo ${t.largo} cm. Montaje de impresión ${t.anchoImpreso}x${t.altoImpreso} cm.`
+    };
+  }));
   onCambioTroquel();
 }
 function poblarSustratos(){
@@ -765,6 +782,7 @@ function poblarSustratos(){
   sel.value = "Propalcote__200";
 }
 function onCambioTroquel(){
+  if(typeof tacticalTroquelPickerSync === 'function') tacticalTroquelPickerSync('in-troquel');
   const id = document.getElementById("in-troquel").value;
   const t = TROQUELES_CAJAS.find(x=>x.id===id);
   let hint = `Caja armada ${t.ancho}x${t.alto}x${t.largo}cm — montaje de impresión ${t.anchoImpreso}x${t.altoImpreso}cm`;
@@ -774,6 +792,9 @@ function onCambioTroquel(){
   if(t.requiereMaquinaExterna){
     alerta.style.display = "block";
     alerta.innerText = "⚠️ " + t.nota;
+  } else if(t.aviso){
+    alerta.style.display = "block";
+    alerta.innerText = "⚠️ " + TROQUEL_CAJAS_AVISO_2PIEZAS + (t.nota2 ? " (" + t.nota2 + ")" : "");
   } else {
     alerta.style.display = "none";
   }

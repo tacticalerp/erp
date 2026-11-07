@@ -832,9 +832,14 @@ function cotTextoConNegrilla(txt){
 
 function poblarTroqueles(){
   const sel = document.getElementById("in-troquel");
-  sel.innerHTML = TROQUELES_ROMPECABEZAS.map(t =>
-    `<option value="${t.id}">${t.id} — ${t.fichas} fichas — ${t.ancho}x${t.alto}cm</option>`
-  ).join("");
+  // Conde 2026-11-07: selector visual -- "Rompecabezas de N fichas" en negrilla, medida en gris, grupos Barrio / Campo
+  tacticalTroquelPicker("in-troquel", TROQUELES_ROMPECABEZAS.map(t => ({
+    id: t.id,
+    grupo: t.grupo===1 ? 'Barrio · menos de 70 fichas' : 'Campo · 70 fichas o más',
+    nombre: `<b>Rompecabezas de ${t.fichas} fichas</b> <span style="color:#94a3b8; font-size:.82em;">${tacticalTroquelNum(t.ancho)} x ${tacticalTroquelNum(t.alto)} cm</span>`,
+    tags: (t.marcoOpcional ? ['Admite marco'] : []).concat(t.marcoFabrica ? ['Marco de fábrica'] : []),
+    titulo: `${t.fichas} fichas, ${t.ancho}x${t.alto} cm`
+  })));
   onCambioTroquel();
 }
 function poblarSustratos(){
@@ -846,6 +851,7 @@ function poblarSustratos(){
   sel.value = "Cartulina C14__225";
 }
 function onCambioTroquel(){
+  if(typeof tacticalTroquelPickerSync === 'function') tacticalTroquelPickerSync('in-troquel');
   const id = document.getElementById("in-troquel").value;
   const t = TROQUELES_ROMPECABEZAS.find(x=>x.id===id);
   document.getElementById("fila-marco").style.display = t.marcoOpcional ? "flex" : "none";
