@@ -938,7 +938,7 @@
                 <div class="hub-card active-card" onclick="showView('precios')">
                     <div>
                         <div class="card-header">
-                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>Panel de Precios</h3>
+                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>Insumos y precios</h3>
                             <span class="badge badge-active">Beta</span>
                         </div>
                     </div>
@@ -1043,6 +1043,15 @@
           /* Conde 2026-10-16: número de cotización (OT) pequeño bajo el producto en las tablas de Comercial. */
         .comercial-ot { font-size: 0.68rem; color: #718096; font-weight: 600; letter-spacing: 0.02em; margin-top: 1px; }
         .comercial-subtitulo{ background:#4a5568; color:#fff; font-weight:700; padding:4px 10px; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.03em; }
+          .ins-fam{ margin-bottom:10px; border:1px solid #cbd5e0; border-radius:8px; background:#fff; }
+          .ins-fam > summary{ cursor:pointer; padding:11px 14px; font-weight:700; color:#1a202c; display:flex; align-items:center; gap:10px; list-style:none; }
+          .ins-fam > summary::-webkit-details-marker{ display:none; }
+          .ins-fam > summary::before{ content:'▸'; color:#718096; transition:transform .15s; }
+          .ins-fam[open] > summary::before{ transform:rotate(90deg); }
+          .ins-fam > summary .ins-n{ margin-left:auto; font-weight:600; font-size:0.78rem; color:#4a5568; background:#edf2f7; border-radius:10px; padding:2px 9px; white-space:nowrap; }
+          .ins-fam > summary .ins-sub{ font-weight:400; font-size:0.8rem; color:#718096; }
+          .ins-fam-cuerpo{ padding:2px 12px 8px; }
+          .ins-fam-cuerpo > .data-card{ box-shadow:none; }
           .comercial-vendedor-tab{ padding:7px 16px; border:1px solid #cbd5e0; background:#fff; color:#1a202c; cursor:pointer; font-weight:600; font-size:0.85rem; border-radius:5px; }
           .comercial-vendedor-tab.active{ background:var(--primary); border-color:var(--primary); color:#fff; }
           /* Conde 2026-08-28: "un poco mas de contraste entre filas" -- la franja par (#f8fafc)
@@ -2391,12 +2400,29 @@
         <div id="view-precios" class="app-view">
             <div style="padding:10px;">
                 <div class="data-card" style="margin-bottom:16px;">
-                    <div class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>Panel de Precios</div>
-                    <p style="color:#64748b; margin:8px 0 0;">Estos precios alimentan 7 herramientas de cotización (el hub y 6 calculadoras: Bolsas, Cajas, Carpetas, Cubo Rubik, Rompecabezas y Volantes). Más abajo, aparte, está el tarifario completo de marcación de Promocionales (Tampografía, Screen, Sublimación, DTF, etc. — proveedores Promos y SIMA). Producto Libre no usa precios de catálogo. Cambia un valor y presiona "Guardar cambios" — se aplica de inmediato en todas, sin tocar código.</p>
+                    <div class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>Insumos y precios</div>
+                    <p style="color:#64748b; margin:8px 0 0;">Los precios están agrupados por tipo de insumo: abre el grupo que necesites (papeles, impresión, acabados, costos generales, recomendaciones y el tarifario de marcación de Promocionales). Alimentan el hub y las calculadoras de Bolsas, Cajas, Carpetas, Cubo Rubik, Rompecabezas y Volantes. Pronto se sumará el Inventario. Producto Libre no usa precios de catálogo. Cambia un valor y presiona "Guardar cambios" — se aplica de inmediato en todas, sin tocar código.</p>
                     <p id="precios-ultima-actualizacion" style="color:#94a3b8; font-size:0.85em; margin:6px 0 0;"></p>
                 </div>
+                <div id="ins-tabs" style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
+                    <button type="button" class="comercial-vendedor-tab active" id="ins-tab-btn-precios" onclick="insCambiarTab('precios')">Precios</button>
+                    <button type="button" class="comercial-vendedor-tab" id="ins-tab-btn-inv" onclick="insCambiarTab('inv')">Inventario <span style="font-weight:400; font-size:0.75rem; opacity:.75;">· próximamente</span></button>
+                </div>
+                <div id="ins-tab-inv" style="display:none;">
+                    <div class="data-card" style="border-style:dashed; border-left-style:dashed;">
+                        <div class="card-title">Inventario de insumos — próximamente</div>
+                        <p style="color:#64748b; margin:8px 0 0;">Aquí se registrará lo que entra y lo que sale de cada insumo (papeles, cartón, planchas, bolsas de empaque…) y el saldo se calculará solo. Cuando un insumo se esté acabando, el sistema avisará "pedir pronto" para que no falte en un trabajo.</p>
+                        <ul style="color:#64748b; margin:10px 0 0 18px; line-height:1.7;">
+                            <li>Entradas y salidas se anotan a mano, con fecha y motivo.</li>
+                            <li>El saldo de cada insumo se calcula automáticamente.</li>
+                            <li>Alerta de "pedir pronto" cuando el saldo baja del mínimo que definas.</li>
+                        </ul>
+                        <p style="color:#94a3b8; font-size:0.85rem; margin:10px 0 0;">Mientras tanto, la pestaña <strong>Precios</strong> sigue funcionando igual que antes.</p>
+                    </div>
+                </div>
+                <div id="ins-tab-precios">
                 <div id="precios-grupos"></div>
-                <div class="data-card" style="margin-bottom:14px;">
+                <details class="ins-fam" data-fam="Recomendaciones de producción" ontoggle="insFamToggle(this)"><summary>Recomendaciones de producción <span class="ins-sub">— los avisos amarillos de las calculadoras</span></summary><div class="ins-fam-cuerpo"><div class="data-card" style="margin-bottom:14px;">
                     <div class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Recomendaciones de Producción</div>
                     <p style="color:#94a3b8; font-size:0.85rem; margin:6px 0 12px;">Edita el texto de una recomendación existente (queda en su recuadro amarillo original, solo cambia la redacción), o agrega una nueva para avisar de una falla que detectaste. Las nuevas se muestran SIEMPRE en esa línea de producto, sin condición.</p>
                     <div id="precios-recomendaciones-lista"></div>
@@ -2410,21 +2436,22 @@
                         <div class="form-group" style="margin:0; flex:1; min-width:220px;"><label style="font-size:0.75rem;">Texto de la recomendación</label><input id="rec-nueva-texto" type="text" placeholder="Ej: Revisar que el troquel no tenga rebaba antes de correr producción" style="width:100%; box-sizing:border-box; padding:7px; border:1px solid #cbd5e0; border-radius:4px;"></div>
                         <button class="btn-add" onclick="agregarRecomendacionCustom()">+ Agregar</button>
                     </div>
-                </div>
-                <div class="data-card" style="margin-bottom:14px;">
+                </div></div></details>
+                <details class="ins-fam" data-fam="Tarifario de marcación de Promocionales" ontoggle="insFamToggle(this)"><summary>Tarifario de marcación de Promocionales <span class="ins-sub">— Tampografía, Screen, Sublimación, DTF…</span></summary><div class="ins-fam-cuerpo"><div class="data-card" style="margin-bottom:14px;">
                     <div class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>Promocionales — Tarifario de Marcación (Promos / SIMA)</div>
                     <p style="color:#94a3b8; font-size:0.85rem; margin:6px 0 0;">Cada técnica está colapsada por defecto — ábrela para editar. "Mínima" es el mínimo cobrado por el proveedor sin importar cantidad; el resto son precios por unidad, por tramo de cantidad.</p>
                     <div id="precios-promo-grupos" style="margin-top:10px;"></div>
-                </div>
-                <div class="data-card" style="margin-bottom:14px;">
+                </div></div></details>
+                <details class="ins-fam" data-fam="Mantenimiento de fotos (Storage)" ontoggle="insFamToggle(this)"><summary>Mantenimiento de fotos (Storage) <span class="ins-sub">— limpieza de fotos antiguas</span></summary><div class="ins-fam-cuerpo"><div class="data-card" style="margin-bottom:14px;">
                     <div class="card-title">🧹 Mantenimiento de Storage (fotos)</div>
                     <p style="color:#94a3b8; font-size:0.85rem; margin:6px 0 0;">Borra SOLO la foto de fichas de Kanban ya entregadas y pedidos B2C de Rompecabezas ya aprobados, con más de 4 meses -- el resto del registro (cliente, producto, precio, fecha, OT) no se toca. Nunca borra fotos de la Fototeca. Esto ya corre solo una vez al día cuando entras como administrador; este botón es solo para verlo pasar en el momento.</p>
                     <button class="btn-action" style="margin-top:10px;" onclick="manualLimpiezaFotos(this)">🧹 Ejecutar limpieza ahora</button>
-                </div>
+                </div></div></details>
                 <div style="display:flex; gap:10px; margin:20px 0; position:sticky; bottom:10px; background:#f1f5f9; padding:14px; border-radius:8px; border:1px solid #e2e8f0; z-index:5;">
                     <button class="btn-submit" onclick="guardarPanelPrecios()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>Guardar cambios (recarga la página)</button>
                     <button class="btn-action" onclick="restaurarTodoPanelPrecios()">↩️ Restaurar TODO a valores de fábrica</button>
                 </div>
+                </div><!-- /ins-tab-precios -->
             </div>
         </div>
 
@@ -2832,8 +2859,8 @@
                 if (typeof kanbanRefrescar === 'function') kanbanRefrescar(true); // trae lo que cambió mientras no mirabas
             } else if (viewId === 'precios') {
                 navContainer.style.display = 'block';
-                mainTitle.innerText = "PANEL DE PRECIOS";
-                subTitle.innerText = "Fuente única de precios para las 8 herramientas (2026)";
+                mainTitle.innerText = "INSUMOS Y PRECIOS";
+                subTitle.innerText = "Precios de papeles, impresión, acabados y más — fuente única para las 8 herramientas (2026)";
                 if (typeof renderPanelPrecios === 'function') renderPanelPrecios();
                 if (typeof renderPanelRecomendaciones === 'function') renderPanelRecomendaciones();
             } else if (viewId === 'corte') {
@@ -6642,6 +6669,30 @@
           renderPanelRecomendaciones();
         }
 
+        /* ---- INSUMOS Y PRECIOS (Conde 2026-11-07): el Panel de Precios pasa a llamarse así; los precios se agrupan por tipo de insumo ---- */
+        const INS_FAMILIAS = [
+          {k:'papeles',   t:'Papeles, cartulinas y cartón', s:'— sustratos, cartón corrugado, imanes'},
+          {k:'impresion', t:'Impresión', s:'— digital y litografía (offset)'},
+          {k:'acabados',  t:'Acabados', s:'— plastificado, colaminado y los que agregues'},
+          {k:'costos',    t:'Costos generales y márgenes', s:'— diseño, escudo, tolerancia de merma'},
+          {k:'otros',     t:'Otros', s:''},
+        ];
+        const insFamAbiertas = new Set();
+        function insFamiliaDe(g){
+          if(/^Papel|Cartón|Imanes/i.test(g)) return 'papeles';
+          if(/^Impresión/i.test(g)) return 'impresion';
+          if(/^Acabados/i.test(g)) return 'acabados';
+          if(/^Costos/i.test(g)) return 'costos';
+          return 'otros';
+        }
+        function insFamToggle(el){ const k = el.getAttribute('data-fam'); if(!k) return; if(el.open) insFamAbiertas.add(k); else insFamAbiertas.delete(k); }
+        function insCambiarTab(tab){
+          const p = document.getElementById('ins-tab-precios'), i = document.getElementById('ins-tab-inv');
+          if(p) p.style.display = tab === 'precios' ? '' : 'none';
+          if(i) i.style.display = tab === 'inv' ? '' : 'none';
+          const bp = document.getElementById('ins-tab-btn-precios'), bi = document.getElementById('ins-tab-btn-inv');
+          if(bp) bp.classList.toggle('active', tab === 'precios'); if(bi) bi.classList.toggle('active', tab === 'inv');
+        }
         function renderPanelPrecios(){
           const cont = document.getElementById('precios-grupos');
           if(!cont) return;
@@ -6653,7 +6704,9 @@
             : 'Aún no se ha guardado ningún cambio — se están usando los valores base.';
 
           let html = '';
+          const famsPrecios = {};
           PRECIOS_CAMPOS_PANEL.forEach(campo => {
+            html = '';
             html += `<div class="data-card" style="margin-bottom:14px;"><div class="card-title">${campo.grupo}</div><div style="overflow-x:auto; margin-top:10px;"><table style="width:100%; border-collapse:collapse;">`;
 
             if(campo.tipo === 'sustratos'){
@@ -6706,6 +6759,15 @@
             }
 
             html += (campo.tipo === 'sustratos' || campo.customAcabados) ? `</div>` : `</table></div></div>`;
+            const fk = insFamiliaDe(campo.grupo);
+            (famsPrecios[fk] = famsPrecios[fk] || []).push(html);
+          });
+          html = '';
+          INS_FAMILIAS.forEach(f => {
+            const trozos = famsPrecios[f.k]; if(!trozos) return;
+            const cuerpo = trozos.join('');
+            const n = (cuerpo.match(/class="precio-input"/g) || []).length;
+            html += `<details class="ins-fam" data-fam="${f.k}" ontoggle="insFamToggle(this)"${insFamAbiertas.has(f.k) ? ' open' : ''}><summary>${f.t} <span class="ins-sub">${f.s}</span><span class="ins-n">${n} precio${n===1?'':'s'}</span></summary><div class="ins-fam-cuerpo">${cuerpo}</div></details>`;
           });
           cont.innerHTML = html;
           renderPanelPreciosPromo();
