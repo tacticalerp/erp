@@ -387,7 +387,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="tactical-supabase.js?v=20261021a"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
-<script src="precios_tactical.js?v=20261107a"></script>
+<script src="precios_tactical.js?v=20261107b"></script>
 <script>
 /* ============ CONSTANTES REUTILIZADAS DEL MOTOR DE CUADERNOS (ya validadas) ============ */
 const SUSTRATOS = tacticalSeleccionarSustratos([
@@ -877,9 +877,13 @@ function cotTextoConNegrilla(txt){
 
 function poblarTroqueles(){
   const sel = document.getElementById("in-troquel");
-  sel.innerHTML = TROQUELES_BOLSAS.map(t =>
-    `<option value="${t.id}">${t.id} — anch ${t.ancho}cm, alt ${t.alto}cm, fon ${t.profundo}cm — ${t.por2?'Por 2':'Por 1'}</option>`
-  ).join("");
+  // Conde 2026-11-07: selector visual -- nombre real en negrilla (ancho x alto), fondo en normal, prefijo gris a la derecha
+  tacticalTroquelPicker("in-troquel", TROQUELES_BOLSAS.map(t => ({
+    id: t.id,
+    nombre: `<b>Bolsa ${tacticalTroquelNum(t.ancho)} x ${tacticalTroquelNum(t.alto)}</b> x ${tacticalTroquelNum(t.profundo)}`,
+    tags: [t.por2 ? 'Por 2' : 'Una pieza'].concat(t.nota && t.nota.length <= 22 && t.nota !== 'Una sola pieza' ? [t.nota] : []),
+    titulo: `Ancho ${t.ancho} cm, alto ${t.alto} cm, fondo ${t.profundo} cm. Tamaño impreso ${t.anchoImpreso}x${t.altoImpreso} cm.${t.nota ? ' ' + t.nota : ''}`
+  })));
   onCambioTroquel();
 }
 function poblarSustratos(){
@@ -891,6 +895,7 @@ function poblarSustratos(){
   sel.value = "Propalcote__150";
 }
 function onCambioTroquel(){
+  if(typeof tacticalTroquelPickerSync === 'function') tacticalTroquelPickerSync('in-troquel');
   const id = document.getElementById("in-troquel").value;
   const t = TROQUELES_BOLSAS.find(x=>x.id===id);
   document.getElementById("hint-troquel").innerText =
@@ -905,6 +910,7 @@ function onCambioTroquelNuevo(){
   // se desactiva y en su lugar se activa el tamaño personalizado a imprimir. Papel,
   // tintas y agarradera siguen activos igual, no dependen del troquel.
   document.getElementById("in-troquel").disabled = esNuevo;
+  if(typeof tacticalTroquelPickerSync === 'function') tacticalTroquelPickerSync('in-troquel');
   document.getElementById("fila-troquelPersonalizado").style.display = esNuevo ? "flex" : "none";
   document.getElementById("fila-troquelPersonalizadoBolsa").style.display = esNuevo ? "flex" : "none";
   if(esNuevo){

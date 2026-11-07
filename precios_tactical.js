@@ -1412,3 +1412,105 @@ function tacticalBannerDuplicarHtml(ot, antes, ahora){
 function tacticalParamsConDuplicado(p){
   return window.tacticalDuplicadaDe ? Object.assign({}, p, { duplicadaDe: window.tacticalDuplicadaDe }) : p;
 }
+
+/* =====================================================================================
+   SELECTOR DE TROQUEL (Conde 2026-11-07)
+   Reemplaza el <select> simple de troqueles ("BOLS-001 — anch 33cm, alt 25cm, fon 13cm — Por 2")
+   por una lista visual: el NOMBRE real del producto en negrilla, el prefijo (BOLS-001) pequeño y gris
+   a la derecha, filas en cebra, encabezados por grupo, etiquetas grises (Por 2, Admite marco...) y buscador.
+   El <select> original se conserva oculto (sigue siendo la fuente del valor: select.value, disabled y su
+   onchange), así el resto de cada calculadora no cambia. Tras asignar select.value por código, llamar a
+   tacticalTroquelPickerSync(selectId) para refrescar lo que se ve.
+   items: [{id, nombre (HTML: <b>..</b> para lo importante), grupo?, tags?:[texto], titulo?}]
+   ===================================================================================== */
+function tacticalTroquelNum(n){ return String(n).replace('.', ','); }
+function tacticalTroquelEsc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+(function(){
+  const reg = {};   // selectId -> {items, wrap}
+  function inyectarEstilos(){
+    if(document.getElementById('tq-estilos')) return;
+    const st = document.createElement('style'); st.id = 'tq-estilos';
+    st.textContent = `
+      .tq-pick{ position:relative; width:100%; }
+      .tq-btn{ width:100%; box-sizing:border-box; display:flex; align-items:center; gap:10px; text-align:left; padding:9px 12px; border:1px solid #cbd5e0; border-radius:6px; background:#fff; cursor:pointer; font:inherit; color:#1a202c; min-height:40px; }
+      .tq-btn:hover{ border-color:#94a3b8; }
+      .tq-btn[disabled]{ opacity:.55; cursor:default; }
+      .tq-btn .tq-nom{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .tq-btn .tq-cod, .tq-it .tq-cod{ font-size:.72rem; color:#94a3b8; letter-spacing:.3px; white-space:nowrap; }
+      .tq-btn .tq-flecha{ color:#718096; font-size:.7rem; }
+      .tq-panel{ display:none; position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:9000; background:#fff; border:1px solid #cbd5e0; border-radius:8px; box-shadow:0 10px 28px rgba(0,0,0,.18); overflow:hidden; }
+      .tq-pick.tq-abierto .tq-panel{ display:block; }
+      .tq-buscar{ width:100%; box-sizing:border-box; border:0; border-bottom:1px solid #e2e8f0; padding:10px 12px; font:inherit; outline:none; }
+      .tq-lista{ max-height:340px; overflow-y:auto; }
+      .tq-gr{ background:#e2e8f0; color:#334155; font-size:.74rem; font-weight:700; letter-spacing:.4px; text-transform:uppercase; padding:6px 12px; position:sticky; top:0; }
+      .tq-it{ display:flex; align-items:center; gap:10px; padding:8px 12px; cursor:pointer; }
+      .tq-it.tq-z{ background:#f4f6f9; }
+      .tq-it:hover{ background:#fde8e8; }
+      .tq-it.tq-sel{ box-shadow:inset 3px 0 0 #cc0000; }
+      .tq-it .tq-nom{ flex:1; min-width:0; color:#1a202c; }
+      .tq-it .tq-nom b, .tq-btn .tq-nom b{ font-weight:700; }
+      .tq-tags{ display:flex; gap:4px; flex-wrap:wrap; justify-content:flex-end; }
+      .tq-tag{ font-size:.68rem; color:#475569; background:#e8edf3; border-radius:9px; padding:1px 8px; white-space:nowrap; }
+      .tq-vacio{ padding:14px; color:#94a3b8; font-style:italic; }
+    `;
+    document.head.appendChild(st);
+  }
+  function cerrarTodos(salvo){ Object.keys(reg).forEach(function(k){ const w = reg[k].wrap; if(w !== salvo) w.classList.remove('tq-abierto'); }); }
+  function pintarLista(selectId, filtro){
+    const r = reg[selectId], sel = document.getElementById(selectId);
+    const lista = r.wrap.querySelector('.tq-lista'); const f = (filtro || '').trim().toLowerCase();
+    let html = '', z = 0, grupoActual = null;
+    r.items.forEach(function(it){
+      const plano = (it.nombre.replace(/<[^>]*>/g, '') + ' ' + it.id + ' ' + (it.tags || []).join(' ') + ' ' + (it.grupo || '')).toLowerCase();
+      if(f && plano.indexOf(f) < 0) return;
+      if(it.grupo && it.grupo !== grupoActual){ html += '<div class="tq-gr">' + tacticalTroquelEsc(it.grupo) + '</div>'; grupoActual = it.grupo; z = 0; }
+      const tags = (it.tags || []).map(function(t){ return '<span class="tq-tag">' + tacticalTroquelEsc(t) + '</span>'; }).join('');
+      html += '<div class="tq-it' + (z % 2 ? ' tq-z' : '') + (sel.value === it.id ? ' tq-sel' : '') + '" data-id="' + tacticalTroquelEsc(it.id) + '" title="' + tacticalTroquelEsc(it.titulo || '') + '">'
+        + '<span class="tq-nom">' + it.nombre + '</span><span class="tq-tags">' + tags + '</span><span class="tq-cod">' + tacticalTroquelEsc(it.id) + '</span></div>';
+      z++;
+    });
+    lista.innerHTML = html || '<div class="tq-vacio">Ningún troquel coincide con la búsqueda.</div>';
+  }
+  window.tacticalTroquelPickerSync = function(selectId){
+    const r = reg[selectId]; if(!r) return;
+    const sel = document.getElementById(selectId); if(!sel) return;
+    const it = r.items.find(function(x){ return x.id === sel.value; });
+    const btn = r.wrap.querySelector('.tq-btn');
+    btn.querySelector('.tq-nom').innerHTML = it ? it.nombre : '<span style="color:#94a3b8;">Elige un troquel…</span>';
+    btn.querySelector('.tq-cod').textContent = it ? it.id : '';
+    btn.disabled = !!sel.disabled;
+    if(sel.disabled) r.wrap.classList.remove('tq-abierto');
+  };
+  window.tacticalTroquelPicker = function(selectId, items){
+    inyectarEstilos();
+    const sel = document.getElementById(selectId); if(!sel) return;
+    // el select original: se llena con las mismas opciones (texto plano) y se oculta
+    sel.innerHTML = items.map(function(it){ return '<option value="' + tacticalTroquelEsc(it.id) + '">' + tacticalTroquelEsc(it.id + ' — ' + it.nombre.replace(/<[^>]*>/g, '')) + '</option>'; }).join('');
+    sel.style.display = 'none';
+    if(reg[selectId] && reg[selectId].wrap.parentNode) reg[selectId].wrap.parentNode.removeChild(reg[selectId].wrap);
+    const wrap = document.createElement('div'); wrap.className = 'tq-pick';
+    wrap.innerHTML = '<button type="button" class="tq-btn"><span class="tq-nom"></span><span class="tq-cod"></span><span class="tq-flecha">▼</span></button>'
+      + '<div class="tq-panel"><input type="text" class="tq-buscar" placeholder="Buscar troquel (nombre, medida o código)…" autocomplete="off"><div class="tq-lista"></div></div>';
+    sel.parentNode.insertBefore(wrap, sel.nextSibling);
+    reg[selectId] = {items: items, wrap: wrap};
+    const btn = wrap.querySelector('.tq-btn'), buscar = wrap.querySelector('.tq-buscar'), lista = wrap.querySelector('.tq-lista');
+    function elegir(id){
+      sel.value = id; wrap.classList.remove('tq-abierto'); window.tacticalTroquelPickerSync(selectId);
+      sel.dispatchEvent(new Event('change', {bubbles:true}));
+    }
+    btn.addEventListener('click', function(){
+      if(sel.disabled) return;
+      const abrir = !wrap.classList.contains('tq-abierto'); cerrarTodos(wrap);
+      wrap.classList.toggle('tq-abierto', abrir);
+      if(abrir){ buscar.value = ''; pintarLista(selectId, ''); buscar.focus(); const s = lista.querySelector('.tq-sel'); if(s) lista.scrollTop = Math.max(0, s.offsetTop - 80); }
+    });
+    buscar.addEventListener('input', function(){ pintarLista(selectId, buscar.value); });
+    buscar.addEventListener('keydown', function(e){
+      if(e.key === 'Escape'){ wrap.classList.remove('tq-abierto'); btn.focus(); }
+      if(e.key === 'Enter'){ e.preventDefault(); const p = lista.querySelector('.tq-it'); if(p) elegir(p.dataset.id); }
+    });
+    lista.addEventListener('click', function(e){ const it = e.target.closest('.tq-it'); if(it) elegir(it.dataset.id); });
+    window.tacticalTroquelPickerSync(selectId);
+  };
+  document.addEventListener('click', function(e){ if(!e.target.closest || !e.target.closest('.tq-pick')) cerrarTodos(null); });
+})();
