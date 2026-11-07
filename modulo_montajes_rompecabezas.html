@@ -94,7 +94,7 @@
     }
     #tactical-login-card{ background:#fff; border-radius:10px; padding:32px 30px; width:100%; max-width:340px; box-shadow:0 20px 50px rgba(0,0,0,0.4); }
     #tactical-login-card h2{ margin:0 0 4px; color:#1a202c; font-size:1.3rem; }
-    #tactical-login-card p{ margin:0 0 20px; color:#718096; font-size:0.85rem; }
+    #tactical-login-card p{ margin:0 0 20px; color:#5f6e84; font-size:0.85rem; }
     #tactical-login-card label{ display:block; font-size:0.8rem; color:#4a5568; margin-bottom:4px; font-weight:600; }
     #tactical-login-card input{ width:100%; box-sizing:border-box; padding:10px; border:1px solid #cbd5e0; border-radius:6px; font-size:0.95rem; margin-bottom:14px; }
     #tactical-login-card button{ width:100%; background:#cc0000; color:#fff; border:none; border-radius:6px; padding:11px; font-weight:700; font-size:0.95rem; cursor:pointer; }
@@ -303,7 +303,7 @@ function tacticalIrHub(vista){
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="tactical-supabase.js?v=20261021a"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
-<script src="precios_tactical.js?v=20261107c"></script>
+<script src="precios_tactical.js?v=20261107d"></script>
 <script src="template_svg_data.js?v=7"></script>
 <script>
 /* =====================  CATÁLOGOS  ===================== */
@@ -1375,7 +1375,7 @@ const MONTAJES_ROLES_PERMITIDOS = ['administrador', 'comercial', 'diseno', 'prod
 window.tacticalOnLogin = async function(){
   const rolActual = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol;
   if(!MONTAJES_ROLES_PERMITIDOS.includes(rolActual)){
-    alert('No tienes permiso para entrar a este módulo.');
+    (window.alertBloqueante||alert)('No tienes permiso para entrar a este módulo.');
     window.location.href = 'TACTICAL_ERP_HUB.html';
     return;
   }

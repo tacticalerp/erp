@@ -22,14 +22,14 @@
   .hub-card.disabled-card { opacity:0.6; cursor:not-allowed; background:#f8fafc; border-top-color:#cbd5e0; }
   .hub-card.disabled-card:hover { transform:none; border-color:#cbd5e0; box-shadow:none; }
   .hub-card .card-title svg { width:22px; height:22px; color:var(--primary); margin-right:8px; }
-  .hub-card.disabled-card .card-title svg { color:#a0aec0; }
+  .hub-card.disabled-card .card-title svg { color:#64748b; }
   .card-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; gap:8px; }
   .card-title { font-size:1.25rem; font-weight:bold; color:var(--dark); margin:0; }
   .badge { padding:4px 8px; border-radius:4px; font-size:0.75rem; font-weight:bold; color:white; text-transform:uppercase; white-space:nowrap; }
   .badge-active { background:var(--primary); }
   .badge-dev { background:var(--secondary); }
   .card-footer { font-size:0.88rem; font-weight:bold; color:var(--primary); display:flex; align-items:center; gap:5px; }
-  .disabled-card .card-footer { color:#718096; }
+  .disabled-card .card-footer { color:#5f6e84; }
   #sinAcceso { display:none; color:#fca5a5; font-weight:700; padding:0 25px 25px; }
 </style>
 </head>
@@ -109,7 +109,7 @@
       <button class="nav-btn-hub" style="background:#475569" onclick="abrirCarpeta('plotter')">Abrir carpeta del plotter</button>
       <span id="cfgMsg" style="font-size:0.85rem;font-weight:bold;"></span>
     </div>
-    <div id="estacionInfo" style="font-size:0.8rem;color:#718096;margin-top:8px;"></div>
+    <div id="estacionInfo" style="font-size:0.8rem;color:#5f6e84;margin-top:8px;"></div>
   </div>
 </div>
 </div>
@@ -118,7 +118,7 @@
 <script src="tactical-supabase.js?v=20261021a"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
 <script src="tactical-estacion.js?v=20261017b"></script>
-<script src="precios_tactical.js?v=20261107c"></script>
+<script src="precios_tactical.js?v=20261107d"></script>
 <script>
 // Cada tarjeta declara en data-roles quién la ve (misma matriz de roles del Hub). Si el rol no ve ninguna, vuelve al Hub.
 window.tacticalOnLogin = async function(){

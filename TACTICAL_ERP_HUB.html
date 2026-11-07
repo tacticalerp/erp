@@ -133,7 +133,7 @@
         .pj-ficha { background: #fff; border: 2px solid; border-radius: 10px; margin-bottom: 8px; overflow: hidden; }
         .pj-ficha-cab { display: flex; align-items: center; gap: 10px; padding: 8px 12px; flex-wrap: wrap; }
         .pj-ficha-cuerpo { padding: 0 14px 12px; font-size: 0.86rem; }
-        .pj-lb { font-size: 0.7rem; color: #a0aec0; margin: 8px 0 1px; }
+        .pj-lb { font-size: 0.7rem; color:#64748b; margin: 8px 0 1px; }
         .pj-cuenta { font-size: 0.78rem; font-weight: 700; padding: 2px 10px; border-radius: 999px; white-space: nowrap; }
         .pj-mini { font-size: 0.78rem; padding: 3px 9px; border: 1px solid #cbd5e0; background: #fff; border-radius: 6px; cursor: pointer; }
         #view-tareas td { display: flex !important; align-items: center; padding: 0 !important; border: none !important; width: auto; }
@@ -177,7 +177,7 @@
         #view-tareas .task-origin-txt, #view-tareas .task-entrega-txt {
           white-space: nowrap; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: #f7fafc;
         }
-        #view-tareas .task-origin-txt { color: #718096; }
+        #view-tareas .task-origin-txt { color:#5f6e84; }
         /* Detrás del ▶: Impresión/Notas, motivo del retraso (ya cubierto arriba) y las flechas/borrar.
            !important necesario en las 3 -- "#view-tareas td{display:flex!important}" de arriba
            (que sí necesita !important para ganarle al bloque genérico de @media móvil) aplica a
@@ -209,7 +209,7 @@
         .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; color: white; text-transform: uppercase; }
         .badge-active { background: var(--primary); }
         .badge-dev { background: var(--secondary); }
-        .card-desc { font-size: 0.9rem; color: #718096; line-height: 1.4; margin-bottom: 15px; }
+        .card-desc { font-size: 0.9rem; color:#5f6e84; line-height: 1.4; margin-bottom: 15px; }
         .card-footer { font-size: 0.88rem; font-weight: bold; color: var(--primary); display: flex; align-items: center; gap: 5px; }
 
         /* ESTILOS COMUNES, FORMULARIOS Y TABLAS */
@@ -278,7 +278,7 @@
            especificidad + !important para poder pintarle un borde rojo grueso encima cuando está
            Urgente, en vez de intentar bordear un <td> (esas quedan con "border:none!important"). */
         #view-tareas tr.tarea-urgente { background: #fff5f5 !important; border: 2px solid var(--peligro) !important; }
-        .task-fecha-limite { display: block; font-size: 0.75rem; padding: 2px 4px; margin-top: 3px; width: auto; height: auto; color: #718096; }
+        .task-fecha-limite { display: block; font-size: 0.75rem; padding: 2px 4px; margin-top: 3px; width: auto; height: auto; color:#5f6e84; }
         .badge-escape { background: #fff5f5; color: var(--primary); border: 1px solid #feb2b2; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; display: inline-block; margin-top: 4px; }
         .badge-supplier { background: #f3e8ff; color: var(--externo); border: 1px solid #d6bcfa; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; display: inline-block; margin-top: 4px; }
 
@@ -326,6 +326,8 @@
         .input-manual { display: none; margin-top: 4px; font-size: 0.85rem !important; padding: 6px !important; border-color: var(--primary); }
 
         .dash-title { margin: 0 0 15px 0; color: var(--dark); border-bottom: 2px solid #cbd5e0; padding-bottom: 5px; font-size: 1.1rem; }
+        /* Conde 2026-11-07 (auditoría): este título estaba oscuro sobre fondo oscuro (invisible) en Reprocesos */
+        .history-section > .dash-title { color: #e2e8f0; border-bottom-color: #4a5568; }
         .sub-dash-section { background: white; padding: 12px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #e2e8f0; }
         .metric-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95rem; }
         .metric-total { font-size: 1.4rem; font-weight: bold; color: var(--primary); background: white; padding: 10px; border-radius: 4px; border: 1px solid #cbd5e0; text-align: center; }
@@ -391,16 +393,16 @@
         .kb-lb-info { text-align: center; color: #fff; margin-top: 12px; }
         .kb-lb-t { font-size: 1.35rem; font-weight: 800; }
         .kb-lb-d { font-size: 0.95rem; color: #e2e8f0; margin-top: 2px; }
-        .kb-lb-c { font-size: 0.78rem; color: #94a3b8; margin-top: 6px; }
+        .kb-lb-c { font-size: 0.78rem; color:#64748b; margin-top: 6px; }
         .kb-lb-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.16); border: none; color: #fff; width: 46px; height: 64px; font-size: 38px; line-height: 1; border-radius: 8px; cursor: pointer; padding: 0; }
         .kb-lb-izq { left: 10px; } .kb-lb-der { right: 10px; }
         .kb-lb-cerrar { position: absolute; top: 14px; right: 18px; background: rgba(255,255,255,0.16); border: none; color: #fff; width: 38px; height: 38px; border-radius: 50%; font-size: 24px; line-height: 1; cursor: pointer; padding: 0; }
         .kanban-fotos-grid { display:flex; flex-wrap:wrap; gap:10px; margin-top:6px; }
         .kanban-foto-item { position:relative; width:74px; }
         .kanban-foto-item img { width:74px; height:74px; object-fit:cover; border-radius:6px; border:1px solid #e2e8f0; display:block; }
-        .kanban-foto-etiqueta { font-size:0.65rem; text-align:center; color:#718096; margin-top:2px; word-break:break-word; line-height:1.2; }
+        .kanban-foto-etiqueta { font-size:0.65rem; text-align:center; color:#5f6e84; margin-top:2px; word-break:break-word; line-height:1.2; }
         .kanban-foto-item .kanban-foto-del { position:absolute; top:-7px; right:-7px; background:var(--peligro); color:#fff; border:none; border-radius:50%; width:19px; height:19px; font-size:12px; line-height:1; cursor:pointer; padding:0; }
-        .fototeca-paste-zone { min-height:130px; border:2px dashed #cbd5e0; border-radius:8px; display:flex; align-items:center; justify-content:center; text-align:center; padding:10px; cursor:pointer; background:#f8fafc; color:#94a3b8; font-size:0.82rem; outline:none; }
+        .fototeca-paste-zone { min-height:130px; border:2px dashed #cbd5e0; border-radius:8px; display:flex; align-items:center; justify-content:center; text-align:center; padding:10px; cursor:pointer; background:#f8fafc; color:#64748b; font-size:0.82rem; outline:none; }
         .fototeca-paste-zone:focus { border-color:var(--primary); background:#fff5f5; }
         .fototeca-paste-zone img { max-width:100%; max-height:160px; border-radius:6px; }
         /* Conde 2026-10-09: cada columna lleva su propio color (tinte medio sobre el gris de siempre) y las
@@ -432,13 +434,13 @@
         .kanban-card.drag-over-ficha { border-top:4px solid var(--info); }
         .kanban-card.drag-over-ficha-abajo { border-bottom:4px solid var(--info); }
         .kanban-card-title { font-weight:bold; font-size:0.9rem; color:var(--dark); margin-bottom:3px; }
-        .kanban-card-meta { font-size:0.76rem; color:#718096; margin-bottom:6px; }
+        .kanban-card-meta { font-size:0.76rem; color:#5f6e84; margin-bottom:6px; }
         .kanban-due { display:inline-block; padding:2px 7px; border-radius:10px; font-size:0.72rem; font-weight:bold; color:white; margin-bottom:6px; }
         .kanban-due-ok { background:var(--listo); } .kanban-due-pronto { background:var(--proceso); } .kanban-due-vencido { background:var(--peligro); }
         .kanban-checklist { margin:4px 0; font-size:0.8rem; }
         .kanban-checklist-item { display:flex; align-items:flex-start; gap:6px; margin-bottom:3px; }
         .kanban-checklist-item input{ margin-top:2px; }
-        .kanban-riel-label { font-size:0.68rem; text-transform:uppercase; color:#a0aec0; font-weight:bold; margin:6px 0 2px; }
+        .kanban-riel-label { font-size:0.68rem; text-transform:uppercase; color:#64748b; font-weight:bold; margin:6px 0 2px; }
         .kanban-card-actions { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
         .kanban-card-actions .btn-action { flex:0 0 auto; }
         /* Botones de mover ficha (▲ ▼ ◀ ▶): mini, para que no estorben en la tarjeta */
@@ -587,7 +589,7 @@
             #view-tareas .badge-delay { font-size: 9px; padding: 1px 5px; }
             #view-tareas .tactical-dictado-btn { display: none !important; }
             #view-tareas .emp-chip { font-size: 9.5px; padding: 1px 5px; }
-            #view-tareas .task-espec { font-size: 10.5px; color: #718096; }
+            #view-tareas .task-espec { font-size: 10.5px; color:#5f6e84; }
             #view-tareas .task-origin-txt, #view-tareas .task-entrega-txt { font-size: 9.5px; }
             #view-tareas .btn-action { padding: 2px 6px !important; font-size: 11px !important; }
 
@@ -751,7 +753,7 @@
         }
         #tactical-login-card{ background:#fff; border-radius:10px; padding:32px 30px; width:100%; max-width:340px; box-shadow:0 20px 50px rgba(0,0,0,0.4); }
         #tactical-login-card h2{ margin:0 0 4px; color:#1a202c; font-size:1.3rem; }
-        #tactical-login-card p{ margin:0 0 20px; color:#718096; font-size:0.85rem; }
+        #tactical-login-card p{ margin:0 0 20px; color:#5f6e84; font-size:0.85rem; }
         #tactical-login-card label{ display:block; font-size:0.8rem; color:#4a5568; margin-bottom:4px; font-weight:600; }
         #tactical-login-card input{ width:100%; box-sizing:border-box; padding:10px; border:1px solid #cbd5e0; border-radius:6px; font-size:0.95rem; margin-bottom:14px; }
         #tactical-login-card button{ width:100%; background:#cc0000; color:#fff; border:none; border-radius:6px; padding:11px; font-weight:700; font-size:0.95rem; cursor:pointer; }
@@ -795,13 +797,13 @@
         <div id="view-hub" class="app-view active-view">
             <div style="padding: 25px 20px 0 20px; text-align: center;">
                 <h3 style="margin: 0; font-size: 1.4rem; color: #e8eaed;">Centro de Control de Operaciones</h3>
-                <p style="color: #a0aec0; margin-top: 6px; font-size: 0.95rem;">Seleccione el módulo en el que desea trabajar hoy:</p>
+                <p style="color:#a0aec0; margin-top: 6px; font-size: 0.95rem;">Seleccione el módulo en el que desea trabajar hoy:</p>
             </div>
 
             <div id="hub-respaldo-box" style="margin: 15px 20px 0 20px; background: var(--light-gray); border: 1px solid #cbd5e0; border-radius: 6px; padding: 12px 15px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                 <span style="font-weight:bold; color:var(--dark);"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>Copia de Seguridad (descarga un respaldo de todos los datos reales guardados en Supabase):</span>
                 <button class="btn-action" onclick="contExportarRespaldo()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="6 9 12 15 18 9"></polyline></svg>Exportar todo (backup)</button>
-                <span id="respaldo-nota" style="font-size:0.82rem; color:#718096;"></span>
+                <span id="respaldo-nota" style="font-size:0.82rem; color:#5f6e84;"></span>
             </div>
 
             <div class="hub-grid">
@@ -996,24 +998,7 @@
                     <div class="card-footer">Por construir</div>
                 </div>
 
-                <!-- MÓDULO 13: INSUMOS Y TROQUELES -- Conde 2026-08-28: "coloca una nueva ficha de
-                     insumos y troqueles y luego trabajaremos en ella". Placeholder sin vista propia
-                     todavía -- deshabilitado (mismo estilo .disabled-card que Mantenimiento de
-                     Equipos), no navega a ningún lado hasta que se construya. Ver análisis ya hecho
-                     en la memoria del proyecto (project_modulo_insumos_analisis.md): 2 secciones --
-                     Insumos y Materiales (entradas/salidas manuales, sin egreso automático) +
-                     Troqueles y Herramientas (catálogo editable, ya se encontraron 3 catálogos
-                     hardcodeados distintos -- Rompecabezas/Carpetas/Cajas -- que habría que
-                     centralizar y conectar). -->
-                <div class="hub-card disabled-card" title="Todavía no está construido">
-                    <div>
-                        <div class="card-header">
-                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>Insumos y Troqueles</h3>
-                            <span class="badge badge-dev">Próximamente</span>
-                        </div>
-                    </div>
-                    <div class="card-footer">Por construir</div>
-                </div>
+<!-- (Conde 2026-11-07) La tarjeta "Insumos y Troqueles" se quitó: ahora vive en Insumos y precios > Troqueles. -->
             </div>
         </div>
 
@@ -1041,21 +1026,21 @@
           .tabla-comercial select:hover, .tabla-comercial select:focus{ border-color:#cbd5e0; background:#fff; border-radius:3px; }
           .comercial-titulo-seccion{ background:#cc0000; color:#fff; font-weight:800; padding:6px 10px; font-size:0.85rem; margin:16px 0 0; border-radius:4px 4px 0 0; }
           /* Conde 2026-10-16: número de cotización (OT) pequeño bajo el producto en las tablas de Comercial. */
-        .comercial-ot { font-size: 0.68rem; color: #718096; font-weight: 600; letter-spacing: 0.02em; margin-top: 1px; }
+        .comercial-ot { font-size: 0.68rem; color:#5f6e84; font-weight: 600; letter-spacing: 0.02em; margin-top: 1px; }
         .comercial-subtitulo{ background:#4a5568; color:#fff; font-weight:700; padding:4px 10px; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.03em; }
           .ins-fam{ margin-bottom:10px; border:1px solid #cbd5e0; border-radius:8px; background:#fff; }
           .ins-fam > summary{ cursor:pointer; padding:11px 14px; font-weight:700; color:#1a202c; display:flex; align-items:center; gap:10px; list-style:none; }
           .ins-fam > summary::-webkit-details-marker{ display:none; }
-          .ins-fam > summary::before{ content:'▸'; color:#718096; transition:transform .15s; }
+          .ins-fam > summary::before{ content:'▸'; color:#5f6e84; transition:transform .15s; }
           .ins-fam[open] > summary::before{ transform:rotate(90deg); }
           .ins-fam > summary .ins-n{ margin-left:auto; font-weight:600; font-size:0.78rem; color:#4a5568; background:#edf2f7; border-radius:10px; padding:2px 9px; white-space:nowrap; }
-          .ins-fam > summary .ins-sub{ font-weight:400; font-size:0.8rem; color:#718096; }
+          .ins-fam > summary .ins-sub{ font-weight:400; font-size:0.8rem; color:#5f6e84; }
           .ins-fam-cuerpo{ padding:2px 12px 8px; }
           .tq-tabla{ width:100%; border-collapse:collapse; font-size:0.88rem; }
-          .tq-tabla th{ text-align:left; font-size:0.72rem; text-transform:uppercase; letter-spacing:.4px; color:#718096; padding:6px 8px; border-bottom:2px solid #e2e8f0; }
+          .tq-tabla th{ text-align:left; font-size:0.72rem; text-transform:uppercase; letter-spacing:.4px; color:#5f6e84; padding:6px 8px; border-bottom:2px solid #e2e8f0; }
           .tq-tabla td{ padding:7px 8px; vertical-align:top; }
           .tq-tabla tr.tq-z td{ background:#f4f6f9; }
-          .tq-tabla .tq-codigo{ font-size:0.72rem; color:#94a3b8; letter-spacing:.3px; white-space:nowrap; }
+          .tq-tabla .tq-codigo{ font-size:0.72rem; color:#64748b; letter-spacing:.3px; white-space:nowrap; }
           .tq-tabla .tq-pill{ display:inline-block; font-size:0.68rem; color:#475569; background:#e8edf3; border-radius:9px; padding:1px 8px; margin-left:4px; white-space:nowrap; }
           .tq-tabla .tq-pill.tq-aviso{ background:#fef3c7; color:#92400e; }
           .tq-tabla .tq-pill.tq-ok{ background:#dcfce7; color:#166534; }
@@ -1082,7 +1067,7 @@
           .cm-tag{ padding:2px 9px; border-radius:12px; font-size:0.72rem; font-weight:700; color:#fff; display:inline-block; }
           .cm-panel{ padding:12px 14px 14px 28px; font-size:0.8rem; color:#1a202c; border-bottom:1px solid #cbd5e0; }
           .cm-panel a{ color:#2563eb; }
-          .cm-lb{ font-size:0.68rem; color:#718096; font-weight:700; text-transform:uppercase; margin-bottom:3px; }
+          .cm-lb{ font-size:0.68rem; color:#5f6e84; font-weight:700; text-transform:uppercase; margin-bottom:3px; }
           .cm-ib{ position:relative; width:30px; height:28px; padding:0; display:inline-flex; align-items:center; justify-content:center; border-radius:4px; background:#edf2f7; cursor:pointer; }
           .cm-ib:hover{ background:#e2e8f0; }
           .cm-ib::after{ content:attr(data-tip); position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); background:#1a202c; color:#fff; font-size:0.7rem; font-weight:400; padding:4px 8px; border-radius:4px; white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .12s; z-index:20; }
@@ -1105,7 +1090,7 @@
               <button type="button" class="comercial-vendedor-tab" id="cm-modo-cli" onclick="comercialCambiarModo('cli')">Clientes</button>
             </div>
             <div id="comercial-modo-seg-cont">
-            <p style="color:#718096; font-size:0.85rem; margin:0 0 12px;">Vista compacta por vendedor -- Cliente/Producto/Fecha se llenan solos desde el CRM/Kanban/B2C; "Pendiente" y "Observaciones" se editan a mano (clic y escribe).</p>
+            <p style="color:#a0aec0; font-size:0.85rem; margin:0 0 12px;">Vista compacta por vendedor -- Cliente/Producto/Fecha se llenan solos desde el CRM/Kanban/B2C; "Pendiente" y "Observaciones" se editan a mano (clic y escribe).</p>
             <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px;">
               <div id="comercial-tabs" style="display:flex; gap:6px;"></div>
               <input type="text" id="comercial-buscar" placeholder="Buscar en todo el historial de este vendedor (cliente, OT, producto)..." oninput="renderComercial()" style="flex:1; min-width:220px; padding:7px 10px; border:1px solid #cbd5e0; border-radius:5px; font-size:0.85rem;">
@@ -1160,7 +1145,7 @@
             </div>
             </div>
             <div id="comercial-modo-cli-cont" style="display:none;">
-              <p style="color:#718096; font-size:0.85rem; margin:0 0 12px;">Directorio de clientes: búscalos, mira sus datos y cotizaciones, edítalos o registra uno nuevo. <span style="white-space:nowrap;">Eliminar un cliente: solo administrador.</span></p>
+              <p style="color:#5f6e84; font-size:0.85rem; margin:0 0 12px;">Directorio de clientes: búscalos, mira sus datos y cotizaciones, edítalos o registra uno nuevo. <span style="white-space:nowrap;">Eliminar un cliente: solo administrador.</span></p>
               <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px;">
                 <input type="text" id="search-cli" placeholder="🔍 Buscar por Empresa, Contacto, Correo o WhatsApp..." style="margin-bottom:12px; width:100%; box-sizing:border-box; padding:10px; border:1px solid #cbd5e0; border-radius:4px; font-size:0.95rem;" oninput="renderClientes()">
                 <button class="btn-action" onclick="comercialAbrirNuevoCliente()" style="white-space:nowrap;">+ Nuevo Cliente</button>
@@ -1302,7 +1287,7 @@
                     </div>
                     <div id="personal" class="accordion-content">
                         <h3 style="margin-top:0; color: var(--dark);">Personal disponible para asignar tareas y reprocesos</h3>
-                        <p style="font-size:0.85rem; color:#718096; margin-top:-8px;">Marca en qué áreas puede recibir tareas cada persona. Este mismo listado alimenta el selector "Responsable del Error" de Control de Reprocesos.</p>
+                        <p style="font-size:0.85rem; color:#5f6e84; margin-top:-8px;">Marca en qué áreas puede recibir tareas cada persona. Este mismo listado alimenta el selector "Responsable del Error" de Control de Reprocesos.</p>
                         <div class="table-responsive">
                             <table id="table-personal">
                                 <thead><tr><th>Nombre</th><th>Diseño</th><th>Producción</th><th>Comercial</th><th>Administrativa</th><th>Gerencia</th><th></th></tr></thead>
@@ -1463,7 +1448,7 @@
         <div id="view-calculadoras" class="app-view">
             <div style="padding: 25px 20px 0 20px; text-align: center;">
                 <h3 style="margin: 0; font-size: 1.4rem; color: #e8eaed;">Calculadora de Costos</h3>
-                <p style="color: #a0aec0; margin-top: 6px; font-size: 0.95rem;">Elige el producto que quieres cotizar:</p>
+                <p style="color:#a0aec0; margin-top: 6px; font-size: 0.95rem;">Elige el producto que quieres cotizar:</p>
             </div>
             <div class="hub-grid" style="padding: 20px;">
                 <div class="hub-card active-card" onclick="showView('cotizador')">
@@ -1762,12 +1747,12 @@
                         <span>Radar de hoy <span id="radar-conteo" style="display:none; margin-left:6px; background:var(--peligro); color:#fff; font-size:0.72rem; padding:1px 8px; border-radius:10px;"></span></span><span class="arrow" id="arrow-rep-radar">►</span>
                     </div>
                     <div id="rep-radar" class="accordion-content">
-                        <p style="color:#718096; font-size:0.9rem; margin:0 0 14px;">Cruces de CRM, Contabilidad y Reprocesos, traducidos a frases simples con una acción sugerida — no hace falta saber de contabilidad para leerlo.</p>
-                        <div style="font-size:0.8rem; color:#a0aec0; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">Esta semana <button type="button" class="btn-action" style="text-transform:none; font-size:0.72rem; padding:2px 8px;" onclick="radarQuitarTodos('urgente')">Quitar todos</button></div>
+                        <p style="color:#5f6e84; font-size:0.9rem; margin:0 0 14px;">Cruces de CRM, Contabilidad y Reprocesos, traducidos a frases simples con una acción sugerida — no hace falta saber de contabilidad para leerlo.</p>
+                        <div style="font-size:0.8rem; color:#64748b; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">Esta semana <button type="button" class="btn-action" style="text-transform:none; font-size:0.72rem; padding:2px 8px;" onclick="radarQuitarTodos('urgente')">Quitar todos</button></div>
                         <div id="radar-urgente" style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;"></div>
-                        <div style="font-size:0.8rem; color:#a0aec0; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">Para tener en cuenta <button type="button" class="btn-action" style="text-transform:none; font-size:0.72rem; padding:2px 8px;" onclick="radarQuitarTodos('info')">Quitar todos</button></div>
+                        <div style="font-size:0.8rem; color:#64748b; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">Para tener en cuenta <button type="button" class="btn-action" style="text-transform:none; font-size:0.72rem; padding:2px 8px;" onclick="radarQuitarTodos('info')">Quitar todos</button></div>
                         <div id="radar-informativo" style="display:flex; flex-direction:column; gap:10px;"></div>
-                        <div id="radar-quitados" style="display:none; margin-top:12px; font-size:0.78rem; color:#718096;"></div>
+                        <div id="radar-quitados" style="display:none; margin-top:12px; font-size:0.78rem; color:#5f6e84;"></div>
                     </div>
                 </div>
 
@@ -1829,7 +1814,7 @@
                             </div>
                             <div class="data-card">
                                 <div class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>Ventas por Cliente (en el período elegido)</div>
-                                <p style="font-size:0.78rem; color:#94a3b8; margin:2px 0 6px;">Ranking por monto -- "Ver compras" desglosa qué compró y en qué mes.</p>
+                                <p style="font-size:0.78rem; color:#64748b; margin:2px 0 6px;">Ranking por monto -- "Ver compras" desglosa qué compró y en qué mes.</p>
                                 <div id="rep-ventas-cliente" style="font-size:0.9rem; line-height:1.6; margin-top:8px; max-height:260px; overflow-y:auto;"></div>
                             </div>
                             <div class="data-card">
@@ -1845,7 +1830,7 @@
                         <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>Comparativos con otros años <span class="rep-resumen" id="rep-res-comp"></span></span><span class="arrow" id="arrow-rep-historico">►</span>
                     </div>
                     <div id="rep-historico" class="accordion-content">
-                        <p style="font-size:0.85rem; color:#718096; margin-top:0;">Ventas y estados financieros de años anteriores que subiste, comparados con lo que el ERP ya factura en vivo este año.</p>
+                        <p style="font-size:0.85rem; color:#5f6e84; margin-top:0;">Ventas y estados financieros de años anteriores que subiste, comparados con lo que el ERP ya factura en vivo este año.</p>
                         <div id="th-sin-datos" style="display:none; padding:12px; background:#fff3cd; border-left:4px solid #f0d98c; border-radius:4px; font-size:0.88rem; margin-bottom:12px;">Todavía no hay datos históricos cargados -- corre <code>migracion_historico_financiero.sql</code> en el SQL Editor de Supabase y refresca esta página.</div>
                         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:10px; background:var(--light-gray); border-radius:6px; border:1px solid #cbd5e0; margin-bottom:14px;">
                             <span style="font-size:0.85rem; font-weight:bold; color:#4a5568;">Ver desde</span>
@@ -1876,7 +1861,7 @@
                                         <select id="th-periodo-mes-hasta" onchange="renderTendenciaHistorica()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;"></select>
                                     </div>
                                 </div>
-                                <p style="font-size:0.78rem; color:#94a3b8; margin:2px 0 6px;">Suma acumulada del rango de meses elegido (ej. Enero a Agosto), comparada año contra año -- el mes en curso usa la venta ya facturada en vivo si hay más que en el histórico.</p>
+                                <p style="font-size:0.78rem; color:#64748b; margin:2px 0 6px;">Suma acumulada del rango de meses elegido (ej. Enero a Agosto), comparada año contra año -- el mes en curso usa la venta ya facturada en vivo si hay más que en el histórico.</p>
                                 <div style="position:relative; height:260px; margin-top:10px;"><canvas id="th-chart-periodo"></canvas></div>
                                 <div id="th-periodo-resumen" style="margin-top:12px; font-size:0.88rem;"></div>
                             </div>
@@ -1887,7 +1872,7 @@
                             </div>
                             <div class="data-card" style="grid-column:1/-1;">
                                 <div class="card-title">Ingresos por año -- canal Personalizado (Rompecabezas B2C / Cuenta de Cobro)</div>
-                                <p style="font-size:0.78rem; color:#94a3b8; margin:2px 0 6px;">Sin factura SIIGO, por eso vive aparte del canal formal de arriba. Varios años solo tienen datos parciales (ver el detalle al pasar el mouse).</p>
+                                <p style="font-size:0.78rem; color:#64748b; margin:2px 0 6px;">Sin factura SIIGO, por eso vive aparte del canal formal de arriba. Varios años solo tienen datos parciales (ver el detalle al pasar el mouse).</p>
                                 <div style="position:relative; height:260px; margin-top:10px;"><canvas id="th-chart-personalizado"></canvas></div>
                             </div>
                             <div class="data-card">
@@ -1906,12 +1891,12 @@
                                         <select id="th-cliente-periodo" onchange="renderThClientesHistoricos()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;"></select>
                                     </div>
                                 </div>
-                                <p style="font-size:0.78rem; color:#94a3b8; margin:2px 0 6px;">Venta de cada cliente en el período, sin IVA (subtotal del reporte "Ventas por cliente" de SIIGO), de mayor a menor. Debajo de cada cliente se ve lo que compró en los otros años. Los que ya están registrados en el CRM salen marcados -- útil para ver cuáles clientes grandes de antes siguen comprando hoy. El total puede no cuadrar centavo a centavo contra "Ventas Facturadas" del Tablero -- son reportes distintos de SIIGO.</p>
+                                <p style="font-size:0.78rem; color:#64748b; margin:2px 0 6px;">Venta de cada cliente en el período, sin IVA (subtotal del reporte "Ventas por cliente" de SIIGO), de mayor a menor. Debajo de cada cliente se ve lo que compró en los otros años. Los que ya están registrados en el CRM salen marcados -- útil para ver cuáles clientes grandes de antes siguen comprando hoy. El total puede no cuadrar centavo a centavo contra "Ventas Facturadas" del Tablero -- son reportes distintos de SIIGO.</p>
                                 <div id="th-clientes-resumen" style="font-size:0.85rem; font-weight:bold; color:#4a5568; margin-bottom:4px;"></div>
                                 <div id="th-clientes-lista" style="font-size:0.88rem; line-height:1.7; max-height:480px; overflow-y:auto;"></div>
                             </div>
                         </div>
-                        <p style="font-size:0.78rem; color:#94a3b8; margin-top:10px;">El desglose por línea de producto (Cuadernos, Rompecabezas, Volantes...) solo existe desde agosto de 2026, cuando el ERP se migró a Supabase -- antes de eso los cuadros de Conde/Fany solo llevaban el total facturado, sin separar por producto. "Ventas por Producto" en Ventas y Comercial (abajo) sí tiene ese desglose, pero solo desde ago-2026.</p>
+                        <p style="font-size:0.78rem; color:#64748b; margin-top:10px;">El desglose por línea de producto (Cuadernos, Rompecabezas, Volantes...) solo existe desde agosto de 2026, cuando el ERP se migró a Supabase -- antes de eso los cuadros de Conde/Fany solo llevaban el total facturado, sin separar por producto. "Ventas por Producto" en Ventas y Comercial (abajo) sí tiene ese desglose, pero solo desde ago-2026.</p>
                     </div>
                 </div>
 
@@ -1924,7 +1909,7 @@
                         <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M19.4 7.5V5a2 2 0 0 0-2-2h-3a2.5 2.5 0 1 0-5 0h-3a2 2 0 0 0-2 2v3a2.5 2.5 0 1 1 0 5v3a2 2 0 0 0 2 2h3a2.5 2.5 0 1 1 5 0h3a2 2 0 0 0 2-2v-2.5a2.5 2.5 0 1 0 0-5z"></path></svg>Rompecabezas personalizados <span class="rep-resumen" id="rep-res-rp"></span></span><span class="arrow" id="arrow-rep-rompe-pers">►</span>
                     </div>
                     <div id="rep-rompe-pers" class="accordion-content">
-                        <p style="font-size:0.85rem; color:#718096; margin-top:0;">Ventas mes a mes del canal Personalizado (Norely y Yasmid): rompecabezas B2C y otros ingresos sin factura, año contra año.</p>
+                        <p style="font-size:0.85rem; color:#5f6e84; margin-top:0;">Ventas mes a mes del canal Personalizado (Norely y Yasmid): rompecabezas B2C y otros ingresos sin factura, año contra año.</p>
                         <!-- Conde 2026-10-21: "la información de rompecabezas personalizados de ventas la pueda ver en Radar y Reportes donde la pueda seleccionar por mes". -->
                         <div class="data-card" style="margin-bottom:14px;">
                             <div class="card-title" style="font-size:1rem;">Ver un mes (pedidos B2C aprobados)</div>
@@ -1959,7 +1944,7 @@
                             </div>
                             <div class="data-card" style="grid-column:1/-1;">
                                 <div class="card-title">Detalle mes a mes</div>
-                                <p style="font-size:0.78rem; color:#94a3b8; margin:2px 0 6px;">"—" = sin dato cargado (puede ser un mes sin ventas o un mes que todavía no tenemos). Los meses con * salen de los pedidos B2C aprobados en el ERP, no del cuadro histórico.</p>
+                                <p style="font-size:0.78rem; color:#64748b; margin:2px 0 6px;">"—" = sin dato cargado (puede ser un mes sin ventas o un mes que todavía no tenemos). Los meses con * salen de los pedidos B2C aprobados en el ERP, no del cuadro histórico.</p>
                                 <div id="rp-tabla" style="overflow-x:auto;"></div>
                             </div>
                         </div>
@@ -2025,7 +2010,7 @@
                             <span id="cont-tablero-periodo-etiqueta" style="font-weight:bold; min-width:180px; text-align:center; display:inline-block;"></span>
                             <button class="btn-action" onclick="contTableroNavegar(1)" title="Mes siguiente">▶</button>
                             <button class="btn-action" id="cont-tablero-btn-hoy" onclick="contTableroMesActual()" style="display:none;">Volver al mes actual</button>
-                            <span style="font-size:0.8rem; color:#718096; flex-basis:100%;">Ventas facturadas, ingresos, gastos y utilidad son del mes elegido. Cartera vencida y punto de equilibrio son siempre al día de hoy.</span>
+                            <span style="font-size:0.8rem; color:#5f6e84; flex-basis:100%;">Ventas facturadas, ingresos, gastos y utilidad son del mes elegido. Cartera vencida y punto de equilibrio son siempre al día de hoy.</span>
                         </div>
                         <div class="dash-grid" id="cont-tablero-kpis"></div>
                         <div class="card-grid" style="margin-top:15px;">
@@ -2039,7 +2024,7 @@
                             </div>
                             <div class="data-card">
                                 <div class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>Ventas ganadas por línea (todas, ingreso total)</div>
-                                <p style="font-size:0.78rem; color:#94a3b8; margin:2px 0 6px;">Sin desglose de costo (solo Cuadernos lo tiene) — esto es ingreso, no margen.</p>
+                                <p style="font-size:0.78rem; color:#64748b; margin:2px 0 6px;">Sin desglose de costo (solo Cuadernos lo tiene) — esto es ingreso, no margen.</p>
                                 <div id="cont-ventas-por-linea" style="font-size:0.9rem; line-height:1.6; margin-top:4px;"></div>
                             </div>
                         </div>
@@ -2084,7 +2069,7 @@
                         <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>Datos de facturación de clientes <span class="rep-resumen" id="cont-cli-resumen"></span></span><span class="arrow" id="arrow-cont-clientes">►</span>
                     </div>
                     <div id="cont-clientes" class="accordion-content">
-                        <p style="font-size:0.85rem; color:#718096; margin-top:0;">Tipo de cliente (Corporativo = factura electrónica, Personalizado = cuenta de cobro) e identificación (NIT / CC). Se guarda solo al cambiar el dato. Los clientes nuevos se registran en Comercial → Clientes.</p>
+                        <p style="font-size:0.85rem; color:#5f6e84; margin-top:0;">Tipo de cliente (Corporativo = factura electrónica, Personalizado = cuenta de cobro) e identificación (NIT / CC). Se guarda solo al cambiar el dato. Los clientes nuevos se registran en Comercial → Clientes.</p>
                         <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:10px;">
                             <input type="text" id="cont-cli-buscar" placeholder="Buscar cliente, NIT o correo..." oninput="contRenderClientesFacturacion()" style="flex:1; min-width:220px; padding:7px 10px; border:1px solid #cbd5e0; border-radius:5px;">
                             <label style="font-weight:normal; display:flex; align-items:center; gap:6px; margin:0;"><input type="checkbox" id="cont-cli-faltantes" onchange="contRenderClientesFacturacion()" style="width:auto;"> Solo los que les falta el tipo o el NIT</label>
@@ -2116,7 +2101,7 @@
                         <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>Prefacturas pendientes (negocios ganados sin facturar)</span><span class="arrow" id="arrow-cont-prefacturas">►</span>
                     </div>
                     <div id="cont-prefacturas" class="accordion-content">
-                        <p style="font-size:0.85rem; color:#718096; margin-top:0;">Al marcar "Ganado" en el CRM ya NO se genera un Documento de Venta automático -- queda aquí, pendiente. Selecciona una o varias (del MISMO cliente, para juntarlas en una sola factura) y presiona el botón de abajo: el formulario de "Documentos de Venta" queda prellenado, listo para revisar y guardar con el número real.</p>
+                        <p style="font-size:0.85rem; color:#5f6e84; margin-top:0;">Al marcar "Ganado" en el CRM ya NO se genera un Documento de Venta automático -- queda aquí, pendiente. Selecciona una o varias (del MISMO cliente, para juntarlas en una sola factura) y presiona el botón de abajo: el formulario de "Documentos de Venta" queda prellenado, listo para revisar y guardar con el número real.</p>
                         <div id="lista-prefacturas" class="card-grid"></div>
                         <button class="btn-submit" style="margin-top:10px;" onclick="generarDocVentaDesdePrefacturasSeleccionadas()">Generar Documento de Venta con las seleccionadas</button>
                     </div>
@@ -2127,7 +2112,7 @@
                         <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>Documentos de Venta (Factura ref. / Cuenta de Cobro)</span><span class="arrow" id="arrow-cont-docventa">►</span>
                     </div>
                     <div id="cont-docventa" class="accordion-content">
-                        <p style="font-size:0.85rem; color:#718096; margin-top:0;">Se llena solo al generar desde una prefactura (arriba), o rellénelo a mano para ventas que no vienen de una cotización/oportunidad.</p>
+                        <p style="font-size:0.85rem; color:#5f6e84; margin-top:0;">Se llena solo al generar desde una prefactura (arriba), o rellénelo a mano para ventas que no vienen de una cotización/oportunidad.</p>
                         <div class="form-grid">
                             <div class="form-group"><label>Cliente:</label>
                                 <input type="text" id="doc-cliente-filtro" placeholder="Escribe para buscar..." oninput="tacticalFiltrarSelectClientes('doc-cliente-filtro','doc-cliente',true)" style="margin-bottom:4px;">
@@ -2140,7 +2125,7 @@
                                 </select>
                             </div>
                             <div class="form-group"><label>N° de Documento:</label><input type="text" id="doc-numero" placeholder="Ej: FV-0001 / CC-0001" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase(); this.dataset.auto=''"></div>
-                            <div class="form-group"><label>Fecha del documento:</label><input type="date" id="doc-fecha"><span style="font-size:0.78rem; color:#718096;">Se puede fechar en el mes pasado (facturas que llegan tarde, cierre de mes).</span></div>
+                            <div class="form-group"><label>Fecha del documento:</label><input type="date" id="doc-fecha"><span style="font-size:0.78rem; color:#5f6e84;">Se puede fechar en el mes pasado (facturas que llegan tarde, cierre de mes).</span></div>
                             <div class="form-group"><label>Valor Envío (no es ingreso, pass-through transportadora):</label><input type="text" inputmode="numeric" id="doc-valorEnvio" value="0" oninput="contFormatearMiles(this); contRenderAnticiposDoc()"></div>
                             <div class="form-group">
                                 <label>Condición de Pago:</label>
@@ -2168,7 +2153,7 @@
                         </table></div>
                         <button class="btn-add-item" type="button" onclick="contAgregarItemDoc()">+ Agregar ítem</button>
                         <div class="metric-total" id="doc-valorBruto-total" style="margin-top:10px;">Valor Bruto Total: $0</div>
-                        <div class="metric-total" id="doc-iva-total" style="margin-top:4px; color:#718096; font-weight:normal;">IVA total (suma de los ítems): $0</div>
+                        <div class="metric-total" id="doc-iva-total" style="margin-top:4px; color:#5f6e84; font-weight:normal;">IVA total (suma de los ítems): $0</div>
                         <div class="metric-total" id="doc-reteiva-total" style="margin-top:4px; color:var(--primary); font-weight:bold; display:none;"></div>
                         <!-- Conde 2026-10-23: anticipos del cliente (ingresos sin factura) que se cruzan automáticamente con esta factura. -->
                         <div id="doc-anticipos-box" style="display:none; margin-top:12px; padding:12px; background:#eafaf0; border:1px solid #b7e4c7; border-left:4px solid #059669; border-radius:6px;">
@@ -2191,7 +2176,7 @@
                         <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="9" y1="15" x2="15" y2="15"></line></svg>Notas Crédito (anular facturas)</span><span class="arrow" id="arrow-cont-notacredito">►</span>
                     </div>
                     <div id="cont-notacredito" class="accordion-content">
-                        <p style="font-size:0.85rem; color:#718096; margin-top:0;"><strong>Anulación total:</strong> el documento queda "anulada", sale de la cartera por cobrar y la venta se resta en el mes de la Nota. <strong>Nota parcial:</strong> acreditas solo una parte (valor antes de IVA + IVA); la factura sigue viva y lo que el cliente debe baja ese valor. En ambos casos, si te equivocas, eliminar la Nota lo revierte.</p>
+                        <p style="font-size:0.85rem; color:#5f6e84; margin-top:0;"><strong>Anulación total:</strong> el documento queda "anulada", sale de la cartera por cobrar y la venta se resta en el mes de la Nota. <strong>Nota parcial:</strong> acreditas solo una parte (valor antes de IVA + IVA); la factura sigue viva y lo que el cliente debe baja ese valor. En ambos casos, si te equivocas, eliminar la Nota lo revierte.</p>
                         <div class="form-grid">
                             <div class="form-group" style="flex-basis:100%;"><label>Factura / Cuenta de cobro a anular:</label>
                                 <input type="text" id="nc-doc-filtro" placeholder="Escribe el número o el cliente para buscar..." oninput="contNcLlenarSelect()" style="margin-bottom:4px;">
@@ -2228,7 +2213,7 @@
                                 <input type="text" id="ing-cliente-filtro" placeholder="Escribe para buscar..." oninput="tacticalFiltrarSelectClientes('ing-cliente-filtro','ing-cliente',true)" style="margin-bottom:4px;">
                                 <select id="ing-cliente"></select></div>
                             <div class="form-group"><label>N° de Comprobante:</label><input type="text" id="ing-numero" placeholder="Ej: IN-0001" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase(); this.dataset.auto=''"></div>
-                            <div class="form-group"><label>Fecha del comprobante:</label><input type="date" id="ing-fecha"><span style="font-size:0.78rem; color:#718096;">Se puede fechar en el mes pasado (abonos que caen tarde, cierre de mes).</span></div>
+                            <div class="form-group"><label>Fecha del comprobante:</label><input type="date" id="ing-fecha"><span style="font-size:0.78rem; color:#5f6e84;">Se puede fechar en el mes pasado (abonos que caen tarde, cierre de mes).</span></div>
                             <div class="form-group"><label>Valor Recibido:</label><input type="text" inputmode="numeric" id="ing-valor" value="0" oninput="contFormatearMiles(this)"></div>
                             <div class="form-group">
                                 <label>Medio de Pago:</label>
@@ -2270,7 +2255,7 @@
                         </table></div>
                         <button class="btn-add-item" type="button" onclick="contAgregarItemCxp()">+ Agregar ítem</button>
                         <div class="metric-total" id="cxp-monto-total" style="margin-top:10px;">Monto Total: $0</div>
-                        <div class="metric-total" id="cxp-iva-total" style="margin-top:4px; color:#718096; font-weight:normal;">IVA total (suma de los ítems): $0</div>
+                        <div class="metric-total" id="cxp-iva-total" style="margin-top:4px; color:#5f6e84; font-weight:normal;">IVA total (suma de los ítems): $0</div>
                         <div style="display:flex; gap:8px; margin-top:12px;">
                             <button class="btn-submit" id="cxp-btn-guardar" style="margin-top:0; flex:1;" onclick="contGuardarCxp()">+ Registrar Cuenta por Pagar</button>
                             <button class="btn-action" id="cxp-btn-cancelar-edicion" style="display:none;" onclick="cancelarEdicionCxp()">Cancelar edición</button>
@@ -2285,9 +2270,9 @@
                     </div>
                     <div id="cont-egreso" class="accordion-content">
                         <div class="form-grid">
-                            <div class="form-group" style="flex-basis:100%;"><label>Cuenta(s) por Pagar a pagar (opcional — Ctrl/Cmd+clic para elegir varias del MISMO proveedor):</label><select id="egr-cxp" multiple size="5" onchange="contAutocompletarEgresoDesdeCxp()"></select><span style="font-size:0.78rem; color:#718096;">Anticipos a proveedores o pagos que no vienen de una factura ya registrada: deja este campo sin marcar y llena beneficiario, monto y concepto.</span></div>
+                            <div class="form-group" style="flex-basis:100%;"><label>Cuenta(s) por Pagar a pagar (opcional — Ctrl/Cmd+clic para elegir varias del MISMO proveedor):</label><select id="egr-cxp" multiple size="5" onchange="contAutocompletarEgresoDesdeCxp()"></select><span style="font-size:0.78rem; color:#5f6e84;">Anticipos a proveedores o pagos que no vienen de una factura ya registrada: deja este campo sin marcar y llena beneficiario, monto y concepto.</span></div>
                             <div class="form-group"><label>N° de Comprobante:</label><input type="text" id="egr-numero" placeholder="Ej: EG-0001" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase(); this.dataset.auto=''"></div>
-                            <div class="form-group"><label>Fecha del comprobante:</label><input type="date" id="egr-fecha"><span style="font-size:0.78rem; color:#718096;">Se puede fechar en el mes pasado (pagos que caen tarde, cierre de mes).</span></div>
+                            <div class="form-group"><label>Fecha del comprobante:</label><input type="date" id="egr-fecha"><span style="font-size:0.78rem; color:#5f6e84;">Se puede fechar en el mes pasado (pagos que caen tarde, cierre de mes).</span></div>
                             <div class="form-group"><label>Beneficiario:</label><input type="text" id="egr-beneficiario" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
                             <div class="form-group"><label>Concepto:</label><input type="text" id="egr-concepto" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
                             <div class="form-group"><label>Monto:</label><input type="text" inputmode="numeric" id="egr-monto" value="0" oninput="contFormatearMiles(this)"></div>
@@ -2346,7 +2331,7 @@
                         <option value="promocionales"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="20 12 20 22 4 22 4 12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path></svg>Promocionales</option>
                         <option value="manual"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>Otro/Maquila</option>
                     </select>
-                    <span id="kb-actualizado" style="font-size:0.74rem; color:#94a3b8; white-space:nowrap;" title="El Kanban se actualiza solo cada 45 segundos con los cambios de los demás"></span>
+                    <span id="kb-actualizado" style="font-size:0.74rem; color:#64748b; white-space:nowrap;" title="El Kanban se actualiza solo cada 45 segundos con los cambios de los demás"></span>
                     <button class="btn-action kb-btn-refrescar" type="button" onclick="kanbanRefrescar(true)" title="Traer ahora los cambios de los demás" style="padding:6px 9px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin:0;"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg></button>
                     <div class="kb-plantillas-wrap" style="position:relative;">
                         <button class="btn-action" onclick="toggleMenuPlantillas()" id="kb-btn-plantillas"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>Nueva Ficha ▾</button>
@@ -2397,7 +2382,7 @@
 
                 <div class="kanban-scroll-row">
                     <button type="button" class="kanban-scroll-btn" onclick="kanbanScrollBoard(-1)" title="Ver columnas a la izquierda">◀</button>
-                    <span class="kb-scroll-ayuda" style="font-size:0.8rem; color:#718096;">Usa las flechas para moverte entre columnas sin bajar hasta la barra</span>
+                    <span class="kb-scroll-ayuda" style="font-size:0.8rem; color:#a0aec0;">Usa las flechas para moverte entre columnas sin bajar hasta la barra</span>
                     <button type="button" class="kanban-scroll-btn" onclick="kanbanScrollBoard(1)" title="Ver columnas a la derecha">▶</button>
                 </div>
                 <div class="kanban-board" id="kanban-board"></div>
@@ -2410,7 +2395,7 @@
                 <div class="data-card" style="margin-bottom:16px;">
                     <div class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>Insumos y precios</div>
                     <p style="color:#64748b; margin:8px 0 0;">Los precios están agrupados por tipo de insumo: abre el grupo que necesites (papeles, impresión, acabados, costos generales, recomendaciones y el tarifario de marcación de Promocionales). Alimentan el hub y las calculadoras de Bolsas, Cajas, Carpetas, Cubo Rubik, Rompecabezas y Volantes. Pronto se sumará el Inventario. Producto Libre no usa precios de catálogo. Cambia un valor y presiona "Guardar cambios" — se aplica de inmediato en todas, sin tocar código.</p>
-                    <p id="precios-ultima-actualizacion" style="color:#94a3b8; font-size:0.85em; margin:6px 0 0;"></p>
+                    <p id="precios-ultima-actualizacion" style="color:#64748b; font-size:0.85em; margin:6px 0 0;"></p>
                 </div>
                 <div id="ins-tabs" style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
                     <button type="button" class="comercial-vendedor-tab active" id="ins-tab-btn-precios" onclick="insCambiarTab('precios')">Precios</button>
@@ -2437,14 +2422,14 @@
                             <li>El saldo de cada insumo se calcula automáticamente.</li>
                             <li>Alerta de "pedir pronto" cuando el saldo baja del mínimo que definas.</li>
                         </ul>
-                        <p style="color:#94a3b8; font-size:0.85rem; margin:10px 0 0;">Mientras tanto, la pestaña <strong>Precios</strong> sigue funcionando igual que antes.</p>
+                        <p style="color:#64748b; font-size:0.85rem; margin:10px 0 0;">Mientras tanto, la pestaña <strong>Precios</strong> sigue funcionando igual que antes.</p>
                     </div>
                 </div>
                 <div id="ins-tab-precios">
                 <div id="precios-grupos"></div>
                 <details class="ins-fam" data-fam="Recomendaciones de producción" ontoggle="insFamToggle(this)"><summary>Recomendaciones de producción <span class="ins-sub">— los avisos amarillos de las calculadoras</span></summary><div class="ins-fam-cuerpo"><div class="data-card" style="margin-bottom:14px;">
                     <div class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Recomendaciones de Producción</div>
-                    <p style="color:#94a3b8; font-size:0.85rem; margin:6px 0 12px;">Edita el texto de una recomendación existente (queda en su recuadro amarillo original, solo cambia la redacción), o agrega una nueva para avisar de una falla que detectaste. Las nuevas se muestran SIEMPRE en esa línea de producto, sin condición.</p>
+                    <p style="color:#64748b; font-size:0.85rem; margin:6px 0 12px;">Edita el texto de una recomendación existente (queda en su recuadro amarillo original, solo cambia la redacción), o agrega una nueva para avisar de una falla que detectaste. Las nuevas se muestran SIEMPRE en esa línea de producto, sin condición.</p>
                     <div id="precios-recomendaciones-lista"></div>
                     <div style="display:flex; justify-content:flex-end; margin-top:8px;">
                         <button class="btn-submit" onclick="guardarRecomendacionesOverride()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>Guardar cambios de texto</button>
@@ -2459,12 +2444,12 @@
                 </div></div></details>
                 <details class="ins-fam" data-fam="Tarifario de marcación de Promocionales" ontoggle="insFamToggle(this)"><summary>Tarifario de marcación de Promocionales <span class="ins-sub">— Tampografía, Screen, Sublimación, DTF…</span></summary><div class="ins-fam-cuerpo"><div class="data-card" style="margin-bottom:14px;">
                     <div class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>Promocionales — Tarifario de Marcación (Promos / SIMA)</div>
-                    <p style="color:#94a3b8; font-size:0.85rem; margin:6px 0 0;">Cada técnica está colapsada por defecto — ábrela para editar. "Mínima" es el mínimo cobrado por el proveedor sin importar cantidad; el resto son precios por unidad, por tramo de cantidad.</p>
+                    <p style="color:#64748b; font-size:0.85rem; margin:6px 0 0;">Cada técnica está colapsada por defecto — ábrela para editar. "Mínima" es el mínimo cobrado por el proveedor sin importar cantidad; el resto son precios por unidad, por tramo de cantidad.</p>
                     <div id="precios-promo-grupos" style="margin-top:10px;"></div>
                 </div></div></details>
                 <details class="ins-fam" data-fam="Mantenimiento de fotos (Storage)" ontoggle="insFamToggle(this)"><summary>Mantenimiento de fotos (Storage) <span class="ins-sub">— limpieza de fotos antiguas</span></summary><div class="ins-fam-cuerpo"><div class="data-card" style="margin-bottom:14px;">
                     <div class="card-title">🧹 Mantenimiento de Storage (fotos)</div>
-                    <p style="color:#94a3b8; font-size:0.85rem; margin:6px 0 0;">Borra SOLO la foto de fichas de Kanban ya entregadas y pedidos B2C de Rompecabezas ya aprobados, con más de 4 meses -- el resto del registro (cliente, producto, precio, fecha, OT) no se toca. Nunca borra fotos de la Fototeca. Esto ya corre solo una vez al día cuando entras como administrador; este botón es solo para verlo pasar en el momento.</p>
+                    <p style="color:#64748b; font-size:0.85rem; margin:6px 0 0;">Borra SOLO la foto de fichas de Kanban ya entregadas y pedidos B2C de Rompecabezas ya aprobados, con más de 4 meses -- el resto del registro (cliente, producto, precio, fecha, OT) no se toca. Nunca borra fotos de la Fototeca. Esto ya corre solo una vez al día cuando entras como administrador; este botón es solo para verlo pasar en el momento.</p>
                     <button class="btn-action" style="margin-top:10px;" onclick="manualLimpiezaFotos(this)">🧹 Ejecutar limpieza ahora</button>
                 </div></div></details>
                 <div style="display:flex; gap:10px; margin:20px 0; position:sticky; bottom:10px; background:#f1f5f9; padding:14px; border-radius:8px; border:1px solid #e2e8f0; z-index:5;">
@@ -2516,7 +2501,7 @@
                             <div class="form-group"><label>Margen del borde de la lámina (cm):</label><input type="text" inputmode="decimal" id="corte-mg" value="0" oninput="corteCalcular()"></div>
                         </div>
                         <div class="checkbox-row" style="margin-bottom:6px;"><input type="checkbox" id="corte-rot" checked onchange="corteCalcular()"><label for="corte-rot" style="font-weight:normal; margin:0;">Puedo girar la pieza 90° (desmarca si el material tiene veta o dibujo que debe ir en un solo sentido)</label></div>
-                        <p class="corte-intro" style="font-size:0.78rem; color:#94a3b8; margin:6px 0 0;">Las láminas de la lista son medidas de ejemplo -- si la tuya es distinta, elige "Otra medida..." y escribe el ancho y el largo.</p>
+                        <p class="corte-intro" style="font-size:0.78rem; color:#64748b; margin:6px 0 0;">Las láminas de la lista son medidas de ejemplo -- si la tuya es distinta, elige "Otra medida..." y escribe el ancho y el largo.</p>
                     </div>
                 </div>
 
@@ -2547,12 +2532,12 @@
                         <button class="btn-action" onclick="botwaGuardarConfig()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>Guardar</button>
                         <button class="btn-submit" style="width:auto;" onclick="botwaCargarPedidos()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>Buscar pedidos nuevos</button>
                     </div>
-                    <p id="botwa-estado" style="font-size:0.85em; color:#94a3b8; margin-top:8px;"></p>
+                    <p id="botwa-estado" style="font-size:0.85em; color:#64748b; margin-top:8px;"></p>
                 </div>
                 <div class="data-card" id="botwa-interruptor" style="margin-bottom:16px;">
                     <div class="card-title">Interruptor del bot</div>
                     <p id="botwa-interruptor-txt" style="margin:8px 0 0; color:#64748b;">Estado: sin consultar.</p>
-                    <p style="margin:6px 0 0; font-size:0.82rem; color:#94a3b8;">Apagado, el bot deja de contestar a TODOS los clientes al instante; lo que escriban queda como lead aquí en el Hub para que una persona los atienda.</p>
+                    <p style="margin:6px 0 0; font-size:0.82rem; color:#64748b;">Apagado, el bot deja de contestar a TODOS los clientes al instante; lo que escriban queda como lead aquí en el Hub para que una persona los atienda.</p>
                     <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
                         <button class="btn-action" onclick="botwaConsultarInterruptor()">Consultar estado</button>
                         <button class="btn-action" id="botwa-btn-interruptor" style="display:none;" onclick="botwaAlternarInterruptor()"></button>
@@ -2585,7 +2570,7 @@
                         <button class="btn-action" onclick="galeriaBotGuardarConfig()">Guardar</button>
                         <button class="btn-submit" style="width:auto;" onclick="galeriaBotCargar()">Buscar fotos</button>
                     </div>
-                    <p id="galeriabot-estado" style="font-size:0.85em; color:#94a3b8; margin-top:8px;"></p>
+                    <p id="galeriabot-estado" style="font-size:0.85em; color:#64748b; margin-top:8px;"></p>
                 </div>
                 <div id="galeriabot-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px;"></div>
             </div>
@@ -2632,10 +2617,10 @@
                         <label><input type="checkbox" id="seg-estado-pendiente" checked> Mandó foto / confirmó pero no pagó (bot, pendiente)</label>
                     </div>
                     <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
-                        <button class="btn-submit" style="width:auto;" onclick="segmentosBuscar()">${ticon('search')}Buscar</button>
+                        <button class="btn-submit" style="width:auto;" onclick="segmentosBuscar()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>Buscar</button>
                         <button class="btn-action" onclick="segmentosCopiarNumeros()">Copiar números</button>
                     </div>
-                    <p id="seg-estado" style="font-size:0.85em; color:#94a3b8; margin-top:8px;"></p>
+                    <p id="seg-estado" style="font-size:0.85em; color:#64748b; margin-top:8px;"></p>
                 </div>
                 <div id="seg-resultados"></div>
             </div>
@@ -2650,7 +2635,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="tactical-supabase.js?v=20261021a"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
-    <script src="precios_tactical.js?v=20261107c"></script>
+    <script src="precios_tactical.js?v=20261107d"></script>
     <script src="troqueles_tactical.js?v=20261107a"></script>
     <script src="precios_promocionales.js?v=20260919a"></script>
     <script>
@@ -3072,7 +3057,7 @@
                 h += `<div class="pj-ficha" style="border-color:${p.color}">
                     <div class="pj-ficha-cab">
                         <span style="font-weight:700; font-size:1rem; flex:1; min-width:140px;">${proyEsc(p.nombre)}</span>
-                        <span style="font-size:0.78rem; color:#718096;">${proyFechaTxt(p.fechaInicio)} → ${proyFechaTxt(p.fechaFin)}</span>
+                        <span style="font-size:0.78rem; color:#5f6e84;">${proyFechaTxt(p.fechaInicio)} → ${proyFechaTxt(p.fechaFin)}</span>
                         ${cu ? `<span class="pj-cuenta" style="background:${cu.bg}; color:${cu.fg};">${cu.txt}</span>` : ''}
                         <button class="pj-mini" onclick="proyectoDetalleAbierto=!proyectoDetalleAbierto; proyectosRender();">${proyectoDetalleAbierto ? 'Ocultar detalles ▲' : 'Ver detalles ▼'}</button>
                         <button class="pj-mini" onclick="proyectoAbrirForm('${p.id}')" title="Editar proyecto">${ticon('edit',{size:13,noMargin:true})}</button>
@@ -3083,7 +3068,7 @@
                             <div><div class="pj-lb">Sí se hace</div><div>${proyEsc(p.siHace)||'—'}</div></div>
                             <div><div class="pj-lb">No se hace</div><div>${proyEsc(p.noHace)||'—'}</div></div>
                         </div>
-                        <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:#718096; margin:12px 0 4px;"><span>Avance</span><span>${hechas} de ${total} tareas · ${pc}%</span></div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:#5f6e84; margin:12px 0 4px;"><span>Avance</span><span>${hechas} de ${total} tareas · ${pc}%</span></div>
                         <div style="height:6px; background:#edf2f7; border-radius:3px; overflow:hidden;"><div style="height:100%; width:${pc}%; background:${p.color};"></div></div>
                     </div>` : ''}
                 </div>`;
@@ -3163,7 +3148,7 @@
                     <td>${p.nombre}</td>
                     ${PERSONAL_AREAS.map(a => `<td style="text-align:center;"><input type="checkbox" ${(p.areas||[]).includes(a.clave)?'checked':''} onchange="personalToggleArea('${p.id}','${a.clave}',this.checked)"></td>`).join('')}
                     <td style="text-align:center;"><button class="btn-action btn-del-row" onclick="personalEliminar('${p.id}')" title="Eliminar">${ticon('trash')}</button></td>
-                </tr>`).join('') || '<tr><td colspan="6" style="text-align:center; color:#a0aec0; font-style:italic;">Sin personal registrado.</td></tr>';
+                </tr>`).join('') || '<tr><td colspan="6" style="text-align:center; color:#64748b; font-style:italic;">Sin personal registrado.</td></tr>';
         }
         function personalAgregar(){
             if(!tacticalRequiereAdministrador()) return;
@@ -3971,7 +3956,7 @@
                 tbody.innerHTML += `
                     <tr>
                         <td><strong>${inc.ot}</strong>${badgeEscape}${badgeProveedor}</td>
-                        <td><strong>${inc.responsable}</strong><br><span style="color:#718096; font-size:0.85rem;">${inc.origen} ➔ ${inc.deteccion}</span></td>
+                        <td><strong>${inc.responsable}</strong><br><span style="color:#5f6e84; font-size:0.85rem;">${inc.origen} ➔ ${inc.deteccion}</span></td>
                         <td>${htmlDesglose}</td>
                         <td style="font-weight:bold; color:var(--primary); font-size:1.05rem;">$${inc.costoTotal.toLocaleString()}</td>
                         <td><span style="font-size:0.85rem; font-style:italic;">"${inc.observaciones}"</span></td>
@@ -4195,7 +4180,7 @@
                 const editando = clientesEditando.has(c.id);
                 const editSectionHtml = editando ? `
                     <div style="margin-top:10px; border:1px solid #cbd5e0; border-radius:6px; padding:10px; background:#fbfcfd;">
-                        <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.03em; color:#a0aec0; font-weight:bold; margin-bottom:6px;">${ticon('edit',{noMargin:true})} Editar cliente</div>
+                        <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.03em; color:#64748b; font-weight:bold; margin-bottom:6px;">${ticon('edit',{noMargin:true})} Editar cliente</div>
                         <div style="margin-bottom:6px;"><label style="font-size:0.72rem; color:#4a5568; display:block; margin-bottom:2px;">Empresa</label>
                             <input type="text" id="cli-edit-empresa-${c.id}" value="${(c.empresa||'').replace(/"/g,'&quot;')}" style="width:100%; box-sizing:border-box; font-size:0.85rem; padding:6px; border:1px solid #cbd5e0; border-radius:4px;"></div>
                         <div style="margin-bottom:6px;"><label style="font-size:0.72rem; color:#4a5568; display:block; margin-bottom:2px;">Contacto</label>
@@ -4257,10 +4242,10 @@
                         <span class="tag ${tags_clase[g]}">${etiquetas[g]}</span>
                         <span class="cli-grupo-cuenta">${grupos[g].length} cliente${grupos[g].length === 1 ? '' : 's'}</span>
                     </button>
-                    <div class="cli-grupo-cuerpo card-grid">${grupos[g].join('') || '<p style="color:#a0aec0; grid-column:1/-1; margin:4px 0;">Sin clientes en este grupo.</p>'}</div>
+                    <div class="cli-grupo-cuerpo card-grid">${grupos[g].join('') || '<p style="color:#64748b; grid-column:1/-1; margin:4px 0;">Sin clientes en este grupo.</p>'}</div>
                 </div>`;
             }).join('');
-            if(filtrados.length === 0) container.innerHTML = '<p style="color:#718096; grid-column: 1/-1;">No hay clientes que coincidan.</p>';
+            if(filtrados.length === 0) container.innerHTML = '<p style="color:#5f6e84; grid-column: 1/-1;">No hay clientes que coincidan.</p>';
         }
         // Grupo de un cliente: su clasificación; cualquier valor desconocido o vacío cuenta como "nuevo".
         function clienteGrupoDe(c){ return ['nuevo', 'recurrente', 'ocasional', 'vip'].includes(c.clase) ? c.clase : 'nuevo'; }
@@ -4384,7 +4369,7 @@
             lista.innerHTML = opp.lineas.map((l,i) => `
                 <label style="display:flex; align-items:center; gap:8px; background:white; border:1px solid #f0d98c; border-radius:4px; padding:6px 10px; cursor:pointer;">
                     <input type="checkbox" class="chk-linea-ganado" data-idx="${i}" checked>
-                    <span>${cotTextoConNegrilla(l.desc)} <span style="color:#a0aec0;">— ${cotFormatoCop(l.monto||0)}</span></span>
+                    <span>${cotTextoConNegrilla(l.desc)} <span style="color:#64748b;">— ${cotFormatoCop(l.monto||0)}</span></span>
                 </label>`).join('');
             tacticalMostrarModalFlotante('modal-seleccion-lineas-ganado');
         }
@@ -4884,7 +4869,7 @@
                           <div style="font-weight:bold;">${clave}</div>
                           <div style="color:#4a5568; line-height:1.25;">Máquina: <strong>${maquinaTxt}</strong>${conteoTxt} — Papel: <strong>${dl.sustrato.nombre} ${dl.sustrato.gramaje}gr</strong> — Pliegos: <strong>${dl.detalleMaterial.nPliegos}</strong></div>
                         </div>
-                        ${pc ? `<div style="flex-shrink:0; display:flex; gap:8px; align-items:center;"><div style="color:#a0aec0; text-align:center;">Corte del pliego</div>${tacticalDibujarPlanoCorteSVG(pc,85)}<div style="color:#4a5568; max-width:150px; line-height:1.2;">${tacticalPlanoCorteTexto(pc)}</div></div>` : ''}
+                        ${pc ? `<div style="flex-shrink:0; display:flex; gap:8px; align-items:center;"><div style="color:#64748b; text-align:center;">Corte del pliego</div>${tacticalDibujarPlanoCorteSVG(pc,85)}<div style="color:#4a5568; max-width:150px; line-height:1.2;">${tacticalPlanoCorteTexto(pc)}</div></div>` : ''}
                       </div>
                       ${planoImp ? `
                       <div style="display:flex; gap:9px; align-items:center; margin-top:4px; padding-top:4px; border-top:1px dotted #e2e8f0;">
@@ -4918,7 +4903,7 @@
                   </div>` : '';
                 return `
                   <div style="border:1px solid #d7dee5; border-radius:3px; padding:4px 9px; margin-bottom:6px; break-inside:avoid; font-size:${TACTICAL_OP_FONT_SIZE};">
-                    <div style="font-weight:bold;">${linea.desc||''} <span style="font-weight:normal; color:#718096;">(${pFresco.cantidad||linea.cantidad||'-'} u.)</span></div>
+                    <div style="font-weight:bold;">${linea.desc||''} <span style="font-weight:normal; color:#5f6e84;">(${pFresco.cantidad||linea.cantidad||'-'} u.)</span></div>
                     <div style="color:#4a5568;">Tapa: <strong>${nombresTapaOP[pFresco.tapaTipo]||pFresco.tapaTipo||'-'}</strong> — Encuadernación: <strong>${pFresco.encuadernacionTipo||'-'}${pFresco.anilladoDosSecciones?' (2 secciones)':''}</strong></div>
                     ${tacticalAnilloBloqueOP(pFresco, TACTICAL_OP_FONT_SIZE)}
                     ${subBloques}
@@ -4949,10 +4934,10 @@
               <div style="border:1px solid #d7dee5; border-radius:3px; padding:4px 9px; margin-bottom:6px; break-inside:avoid; font-size:${TACTICAL_OP_FONT_SIZE};">
                 <div style="display:flex; gap:9px; align-items:center;">
                   <div style="flex:1; min-width:0;">
-                    <div style="font-weight:bold;">${linea.desc||''} <span style="font-weight:normal; color:#718096;">(${linea.cantidad||'-'} u.)</span></div>
+                    <div style="font-weight:bold;">${linea.desc||''} <span style="font-weight:normal; color:#5f6e84;">(${linea.cantidad||'-'} u.)</span></div>
                     <div style="color:#4a5568;">${linea.maquina?`Máquina: <strong>${linea.maquina}</strong> — `:''}${linea.material?`Material: <strong>${linea.material}</strong> — `:''}${linea.nPliegos?`Pliegos: <strong>${linea.nPliegos}</strong>`:''}</div>
                   </div>
-                  ${planosHtml || '<div style="color:#a0aec0;">Sin plano de corte guardado para esta línea (cotización anterior a esta función, o proviene de una comparativa).</div>'}
+                  ${planosHtml || '<div style="color:#64748b;">Sin plano de corte guardado para esta línea (cotización anterior a esta función, o proviene de una comparativa).</div>'}
                 </div>
                 ${recsHtmlLinea}
               </div>`;
@@ -4987,13 +4972,13 @@
             <div style="background:#fff; border-radius:10px; max-width:820px; width:100%; max-height:92vh; display:flex; flex-direction:column; box-shadow:0 12px 40px rgba(0,0,0,0.35); font-family:'Segoe UI', Tahoma, sans-serif;">
               <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px; border-bottom:1px solid #e2e8f0; flex-shrink:0;">
                 <div style="font-weight:800; font-size:1.05rem; color:#1a202c;">${ticon('factory')}Orden de Producción ${f.ot||''}</div>
-                <button type="button" id="op-preview-cerrar" title="Cerrar (guarda las notas)" style="background:none; border:none; font-size:1.3rem; cursor:pointer; color:#718096; line-height:1;">${ticon('x')}</button>
+                <button type="button" id="op-preview-cerrar" title="Cerrar (guarda las notas)" style="background:none; border:none; font-size:1.3rem; cursor:pointer; color:#5f6e84; line-height:1;">${ticon('x')}</button>
               </div>
               <div style="overflow-y:auto; padding:16px 18px; flex:1;">
                 <label style="display:block; font-weight:700; font-size:0.85rem; color:#4a5568; margin-bottom:4px;">${ticon('fileText')}Notas manuales de producción</label>
-                <div style="font-size:0.78rem; color:#a0aec0; margin-bottom:6px;">Se ve resaltado al imprimir y queda guardado en la ficha -- puedes volver a abrir esta OP y seguir editándolo.</div>
+                <div style="font-size:0.78rem; color:#64748b; margin-bottom:6px;">Se ve resaltado al imprimir y queda guardado en la ficha -- puedes volver a abrir esta OP y seguir editándolo.</div>
                 <textarea id="op-preview-notas" class="tactical-campo-dictado" rows="3" placeholder="Ej: para esta corrida usar el troquel viejo porque el nuevo está en mantenimiento..." style="width:100%; box-sizing:border-box; font-size:0.88rem; padding:8px; border:1.5px solid #cbd5e0; border-radius:6px; font-family:inherit; margin-bottom:14px;"></textarea>
-                <div style="font-size:0.78rem; color:#a0aec0; margin-bottom:6px;">${ticon('edit')}Los datos de abajo (calculados en automático) también se pueden tocar y corregir a mano -- solo para esta impresión, no queda guardado en el sistema.</div>
+                <div style="font-size:0.78rem; color:#64748b; margin-bottom:6px;">${ticon('edit')}Los datos de abajo (calculados en automático) también se pueden tocar y corregir a mano -- solo para esta impresión, no queda guardado en el sistema.</div>
                 <div id="op-preview-auto" contenteditable="true" style="border:1px dashed #cbd5e0; border-radius:6px; padding:8px; outline:none;"></div>
               </div>
               <div style="padding:14px 18px; border-top:1px solid #e2e8f0; flex-shrink:0;">
@@ -5336,7 +5321,7 @@
         function renderBotwaLista(){
           const cont = document.getElementById('botwa-lista');
           if(!cont) return;
-          if(botwaPedidos.length===0){ cont.innerHTML = '<p style="color:#94a3b8;">Sin pedidos pendientes por revisar. Usa "Buscar pedidos nuevos".</p>'; return; }
+          if(botwaPedidos.length===0){ cont.innerHTML = '<p style="color:#a0aec0;">Sin pedidos pendientes por revisar. Usa "Buscar pedidos nuevos".</p>'; return; }
           cont.innerHTML = botwaPedidos.map(p=>{
             if(p.tipo === 'lead_asesor'){
               const cantidadTxt = p.cantidadAprox ? ` (~${p.cantidadAprox} unidades)` : '';
@@ -5362,7 +5347,7 @@
               <p style="margin:4px 0; font-size:0.9em;">${medioTxt}</p>
               ${p.frase ? `<p style="margin:4px 0; font-size:0.9em;">Frase: <b>«${p.frase}»</b> — tipografía ${p.tipografia}</p>` : ''}
               <p style="margin:4px 0; font-weight:bold;">${totalTxt}</p>
-              <div id="botwa-img-${p.id}" style="margin-top:8px; font-size:0.8em; color:#94a3b8;">Cargando comprobante...</div>
+              <div id="botwa-img-${p.id}" style="margin-top:8px; font-size:0.8em; color:#64748b;">Cargando comprobante...</div>
               <div style="display:flex; gap:8px; margin-top:10px;">
                 <button class="btn-submit" style="width:auto;" onclick="botwaAprobar('${p.id}')">${ticon('check')}Ya verifiqué el pago — Aprobar</button>
               </div>
@@ -5474,17 +5459,17 @@
           const url = botwaUrlBase(), key = botwaKey();
           const cont = document.getElementById('botwa-pausados-lista');
           if(!url || !key){ document.getElementById('botwa-estado').innerText = 'Falta configurar la URL y la clave del bot (arriba) y presionar Guardar.'; return; }
-          cont.innerHTML = '<p style="color:#94a3b8;">Buscando...</p>';
+          cont.innerHTML = '<p style="color:#64748b;">Buscando...</p>';
           try{
             const res = await fetch(url + '/api/sesiones-pausadas', { headers: { 'x-api-key': key } });
             if(!res.ok) throw new Error('HTTP '+res.status);
             const pausados = await res.json();
-            if(pausados.length===0){ cont.innerHTML = '<p style="color:#94a3b8;">Ningún cliente con el bot en pausa ahora mismo.</p>'; return; }
+            if(pausados.length===0){ cont.innerHTML = '<p style="color:#64748b;">Ningún cliente con el bot en pausa ahora mismo.</p>'; return; }
             cont.innerHTML = pausados.map(s => `
               <div class="data-card">
                 <div class="card-title">${s.nombre || 'Sin nombre'}</div>
                 <p style="margin:4px 0; font-size:0.9em; color:#64748b;">${s.phone}</p>
-                <p style="margin:4px 0; font-size:0.8em; color:#94a3b8;">En pausa desde ${s.pausadoDesde ? new Date(s.pausadoDesde).toLocaleString('es-CO') : '—'}</p>
+                <p style="margin:4px 0; font-size:0.8em; color:#64748b;">En pausa desde ${s.pausadoDesde ? new Date(s.pausadoDesde).toLocaleString('es-CO') : '—'}</p>
                 <button class="btn-action" onclick="botwaReactivarBot('${s.phone}')">Reactivar bot</button>
               </div>`).join('');
           }catch(e){
@@ -5524,13 +5509,13 @@
             if(!res.ok) throw new Error('HTTP '+res.status);
             const fotos = await res.json();
             estado.innerText = `${fotos.length} archivo(s).`;
-            if(fotos.length===0){ cont.innerHTML = '<p style="color:#94a3b8;">Sin archivos (o ya pasaron los 30 días de retención).</p>'; return; }
+            if(fotos.length===0){ cont.innerHTML = '<p style="color:#64748b;">Sin archivos (o ya pasaron los 30 días de retención).</p>'; return; }
             cont.innerHTML = fotos.map(f => `
               <div class="data-card">
-                <div id="galeriabot-img-${f.archivo}" style="min-height:120px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:0.8em;">Cargando...</div>
+                <div id="galeriabot-img-${f.archivo}" style="min-height:120px; display:flex; align-items:center; justify-content:center; color:#64748b; font-size:0.8em;">Cargando...</div>
                 <p style="margin:8px 0 0; font-weight:bold; font-size:0.9em;">${f.nombre || 'Sin nombre'}</p>
                 <p style="margin:2px 0; font-size:0.85em; color:#64748b;">${f.celular || ''}</p>
-                <p style="margin:2px 0; font-size:0.75em; color:#94a3b8;">${f.creado ? new Date(f.creado).toLocaleString('es-CO') : ''}</p>
+                <p style="margin:2px 0; font-size:0.75em; color:#64748b;">${f.creado ? new Date(f.creado).toLocaleString('es-CO') : ''}</p>
               </div>`).join('');
             fotos.forEach(f => galeriaBotCargarImagen(f.archivo));
           }catch(e){
@@ -5636,7 +5621,7 @@
         }
         function renderSegmentosResultados(){
           const cont = document.getElementById('seg-resultados');
-          if(segResultados.length===0){ cont.innerHTML = '<p style="color:#94a3b8;">Sin resultados -- ajusta los filtros y busca de nuevo.</p>'; return; }
+          if(segResultados.length===0){ cont.innerHTML = '<p style="color:#64748b;">Sin resultados -- ajusta los filtros y busca de nuevo.</p>'; return; }
           cont.innerHTML = `<table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
             <thead><tr style="text-align:left; border-bottom:2px solid #e2e8f0;"><th style="padding:6px;">Nombre</th><th style="padding:6px;">Teléfono</th><th style="padding:6px;">Qué compró</th><th style="padding:6px;">Estado</th><th style="padding:6px;">Fecha</th></tr></thead>
             <tbody>${segResultados.map(r => `<tr style="border-bottom:1px solid #f1f5f9;">
@@ -6134,11 +6119,11 @@
           // Conde 2026-10-09: en Postventa la ficha YA se entregó al cliente -- nunca debe decir "vencida"; dice "Entregado".
           const dueHtml = f.columna === 'postventa'
             ? `<span class="kanban-due kanban-due-ok"${f.fechaEntrega ? ` title="Fecha de entrega prevista: ${kanbanFormatearFecha(f.fechaEntrega)}"` : ''}>${ticon('check')}Entregado</span><br>`
-            : (f.fechaEntrega ? `${kanbanBadgeEntrega(f.fechaEntrega)}<br>` : '<span style="font-size:0.72rem; color:#a0aec0;">Sin fecha de entrega</span><br>');
+            : (f.fechaEntrega ? `${kanbanBadgeEntrega(f.fechaEntrega)}<br>` : '<span style="font-size:0.72rem; color:#64748b;">Sin fecha de entrega</span><br>');
           // Conde 2026-08-20: fecha de aprobación (cuándo se creó la ficha, que es justo el momento
           // en que se marcó Ganado o se aprobó el pedido) junto a la de entrega.
           const fechaAprobacionTxt = f.fechaCreacion ? new Date(f.fechaCreacion).toLocaleDateString('es-CO', {day:'numeric', month:'short', year:'numeric'}) : null;
-          const aprobacionHtml = fechaAprobacionTxt ? `<span style="font-size:0.72rem; color:#718096;">${ticon('check')}Aprobado: ${fechaAprobacionTxt}</span><br>` : '';
+          const aprobacionHtml = fechaAprobacionTxt ? `<span style="font-size:0.72rem; color:#5f6e84;">${ticon('check')}Aprobado: ${fechaAprobacionTxt}</span><br>` : '';
           const expandida = kanbanExpandidas.has(f.id);
           const lineasUnicas = [...new Set((f.lineas||[]).map(l=>l.linea))];
           const dotsHtml = lineasUnicas.map(ln => `<span class="kb-linea-dot" style="background:${KANBAN_COLOR_LINEA[ln]||'#718096'};" title="${NOMBRES_LINEA_PRODUCTO[ln]||ln}"></span>`).join('');
@@ -6166,7 +6151,7 @@
           const cabeceraHtml = `
             ${fotosLin.length>=2 ? kanbanCarruselInlineHtml(f, fotosLin) : fotoHtml}
             ${f.urgente?'<div style="font-size:0.85rem; font-weight:900; color:#fff; background:var(--peligro); padding:4px 8px; border-radius:4px; margin-bottom:5px; display:inline-block;">🚨 URGENTE</div>':''}
-            <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.03em; color:#a0aec0; font-weight:bold;">${dotsHtml}${ticon('fileText')}Descripción</div>
+            <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.03em; color:#64748b; font-weight:bold;">${dotsHtml}${ticon('fileText')}Descripción</div>
             <div class="kanban-card-title" ${tituloEsLargo?'onclick="event.stopPropagation(); this.classList.toggle(\'expandido\')"':''}>${tituloHtml}</div>
             <div class="kanban-card-meta kb-sel">${ticon('user')}${kanbanClienteYComercialHtml(f)}${f.ot?` — <span class="kb-sel kb-sel-ot" title="Un clic selecciona la OT completa para copiarla (Ctrl+C)">${f.ot}</span>`:''}${f.origen==='manual'?' — Servicio Express':''}</div>
             ${f.entrega?`<div class="kanban-card-meta">${ticon('truck')}Entrega: ${f.entrega}</div>`:''}
@@ -6196,7 +6181,7 @@
             else { clsCompacto='kanban-due-ok'; txtCompacto=`${dias}d`; }
             dueCompactoHtml = `<span class="kanban-due ${clsCompacto}" style="font-size:0.68rem; padding:1px 6px;">${ticon('calendar')}${txtCompacto}</span>`;
           } else {
-            dueCompactoHtml = '<span style="font-size:0.68rem; color:#a0aec0;">Sin fecha</span>';
+            dueCompactoHtml = '<span style="font-size:0.68rem; color:#64748b;">Sin fecha</span>';
           }
           // Conde 2026-08-25: "cuando hay mas de 1 producto aprobado, en la vista resumida quiero
           // ver las primeras palabras de cada producto" -- antes solo se veía un punto de color por
@@ -6239,7 +6224,7 @@
             const bloqueado = c.riel==='gate' && !(rielAOk && rielBOk);
             return `<div class="kanban-checklist-item">
               <input type="checkbox" ${c.hecho?'checked':''} ${bloqueado?'disabled':''} onchange="toggleChecklistItem('${f.id}',${i})">
-              <span style="${c.hecho?'text-decoration:line-through; color:#a0aec0;':''}">${c.texto}${bloqueado?` ${ticon('lock')}(esperando Taco+Carátula)`:''}</span>
+              <span style="${c.hecho?'text-decoration:line-through; color:#64748b;':''}">${c.texto}${bloqueado?` ${ticon('lock')}(esperando Taco+Carátula)`:''}</span>
             </div>`;
           }).join('');
           // Imágenes de referencia para producción (portada, insertos, cuadrícula, etc.) -- pensado
@@ -6253,7 +6238,7 @@
             </div>`).join('');
           const fotosSectionHtml = `
             <div style="margin-top:10px;">
-              <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.03em; color:#a0aec0; font-weight:bold;">${ticon('camera')}Imágenes de referencia (portada, insertos, cuadrícula, etc.)</div>
+              <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.03em; color:#64748b; font-weight:bold;">${ticon('camera')}Imágenes de referencia (portada, insertos, cuadrícula, etc.)</div>
               <div class="kanban-fotos-grid">${fotosGaleriaHtml}</div>
               <div style="display:flex; gap:6px; margin-top:6px;">
                 <input type="text" id="kb-foto-etiqueta-${f.id}" placeholder="Ej: Portada, Inserto, Cuadrícula..." style="flex:1; font-size:0.8rem; padding:6px; border:1px solid #cbd5e0; border-radius:4px;">
@@ -6265,7 +6250,7 @@
           const editando = kanbanEditando.has(f.id);
           const editSectionHtml = editando ? `
             <div style="margin-top:10px; border:1px solid #cbd5e0; border-radius:6px; padding:10px; background:#fbfcfd;">
-              <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.03em; color:#a0aec0; font-weight:bold; margin-bottom:6px;">${ticon('edit')}Editar ficha</div>
+              <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.03em; color:#64748b; font-weight:bold; margin-bottom:6px;">${ticon('edit')}Editar ficha</div>
               <div style="margin-bottom:6px;"><label style="font-size:0.72rem; color:#4a5568; display:block; margin-bottom:2px;">Título</label>
                 <input type="text" id="kb-edit-titulo-${f.id}" value="${(f.titulo||'').replace(/"/g,'&quot;')}" style="width:100%; box-sizing:border-box; font-size:0.85rem; padding:6px; border:1px solid #cbd5e0; border-radius:4px;"></div>
               <div style="margin-bottom:6px;"><label style="font-size:0.72rem; color:#4a5568; display:block; margin-bottom:2px;">Fecha de entrega</label>
@@ -6284,7 +6269,7 @@
               ${cabeceraHtml}
               <div style="font-size:0.72rem; color:var(--info); font-weight:bold;">▲ Ocultar detalle</div>
             </div>
-            ${checklist.length ? `<div class="kanban-checklist" style="margin-top:8px;">${checklistHtml}<div style="font-size:0.7rem; color:#a0aec0; margin-top:2px;">${hechos}/${checklist.length} completado</div></div>` : ''}
+            ${checklist.length ? `<div class="kanban-checklist" style="margin-top:8px;">${checklistHtml}<div style="font-size:0.7rem; color:#64748b; margin-top:2px;">${hechos}/${checklist.length} completado</div></div>` : ''}
             <div class="kb-ico-fila">
               ${f.origen==='b2c' ? plotterBotonHtml(f) : ''}
               ${f.origen!=='b2c' ? `<button type="button" class="kb-ico kb-ico-azul kb-tip-izq" data-tip="Ver Orden de Producción" aria-label="Ver Orden de Producción" onclick="verOrdenProduccionFicha('${f.id}')">${ticon('factory',{noMargin:true,size:15})}<span class="kb-ico-txt">OP</span></button>` : ''}
@@ -6380,7 +6365,7 @@
               fichas = [...fichas].sort((a,b)=>(b.ot||'').localeCompare(a.ot||'')).slice(0,15);
               notaOcultas = `<div style="text-align:center; padding:8px 0;"><button class="btn-action" style="font-size:0.72rem; padding:5px 10px;" onclick="kanbanColumnasExpandidas.add('${col}'); renderKanban();">Ver las ${totalReal} fichas ▾</button></div>`;
             }
-            const cardsHtml = (fichas.length ? fichas.map(renderFichaKanbanHtml).join('') : '<div style="color:#a0aec0; font-size:0.8rem; padding:10px 0;">Sin fichas.</div>') + notaOcultas;
+            const cardsHtml = (fichas.length ? fichas.map(renderFichaKanbanHtml).join('') : '<div style="color:rgba(255,255,255,.85); font-size:0.8rem; padding:10px 0;">Sin fichas.</div>') + notaOcultas;
             return `<div class="kanban-col" data-columna="${col}" style="--kb-col-bg:${KANBAN_COLUMNA_COLOR[col].bg};" ondragover="kanbanDragOver(event)" ondragleave="kanbanDragLeave(event)" ondrop="kanbanDrop(event,'${col}')">
               <div class="kanban-col-header"><span>${KANBAN_COLUMNA_ICONO[col]||''} ${KANBAN_COLUMNA_NOMBRE[col]}</span><span class="kanban-col-count">${totalReal}</span></div>
               <div class="kanban-col-cards">${cardsHtml}</div>
@@ -6441,7 +6426,7 @@
           let h = `<div style="margin-top:12px; padding-top:12px; border-top:1px solid #e2e8f0;">
             <div style="font-weight:600; color:#4a5568; margin-bottom:8px;">Papeles agregados por ti</div>`;
           if(db_sustratos_custom.length === 0){
-            h += `<div style="color:#a0aec0; font-style:italic; margin-bottom:10px;">Todavía no has agregado ningún papel nuevo.</div>`;
+            h += `<div style="color:#64748b; font-style:italic; margin-bottom:10px;">Todavía no has agregado ningún papel nuevo.</div>`;
           } else {
             h += `<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; margin-bottom:10px;">
               <tr style="text-align:left; border-bottom:2px solid #e2e8f0;">
@@ -6524,7 +6509,7 @@
           let h = `<div style="margin-top:12px; padding-top:12px; border-top:1px solid #e2e8f0;">
             <div style="font-weight:600; color:#4a5568; margin-bottom:8px;">Acabados agregados por ti (se cobran por m²)</div>`;
           if(db_acabados_custom.length === 0){
-            h += `<div style="color:#a0aec0; font-style:italic; margin-bottom:10px;">Todavía no has agregado ningún acabado nuevo.</div>`;
+            h += `<div style="color:#64748b; font-style:italic; margin-bottom:10px;">Todavía no has agregado ningún acabado nuevo.</div>`;
           } else {
             h += `<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; margin-bottom:10px;">
               <tr style="text-align:left; border-bottom:2px solid #e2e8f0;">
@@ -6631,7 +6616,7 @@
             }
             const valorActual = overrides[rec.id] || rec.original;
             html += `<div style="margin-bottom:8px; padding:8px; background:#f8fafc; border-radius:6px; border:1px solid #e2e8f0;">
-              <div style="font-size:0.75rem; color:#718096; margin-bottom:3px;">${rec.condicion}</div>
+              <div style="font-size:0.75rem; color:#5f6e84; margin-bottom:3px;">${rec.condicion}</div>
               <textarea class="recomendacion-input tactical-campo-dictado" data-id="${rec.id}" rows="2" style="width:100%; box-sizing:border-box; font-size:0.85rem; padding:6px; border:1px solid #cbd5e0; border-radius:4px; font-family:inherit;">${valorActual}</textarea>
             </div>`;
           });
@@ -6646,11 +6631,11 @@
           let htmlCustom = custom.map(c => {
             const label = (RECOMENDACIONES_CALCULADORAS_SELECT.find(x=>x.clave===c.calculadora)||{}).label || c.calculadora;
             return `<div style="margin-bottom:8px; padding:8px; background:#f8fafc; border-radius:6px; border:1px solid #e2e8f0; display:flex; justify-content:space-between; gap:8px; align-items:flex-start;">
-              <div><div style="font-size:0.75rem; color:#718096;">${label} — siempre se muestra</div><div style="font-size:0.85rem;">${c.texto}</div></div>
+              <div><div style="font-size:0.75rem; color:#5f6e84;">${label} — siempre se muestra</div><div style="font-size:0.85rem;">${c.texto}</div></div>
               <button class="btn-action btn-del-row" onclick="eliminarRecomendacionCustom('${c.id}')">${ticon('x')}</button>
             </div>`;
           }).join('');
-          document.getElementById('precios-recomendaciones-custom-lista').innerHTML = htmlCustom || '<span style="color:#a0aec0; font-style:italic;">Todavía no has agregado ninguna.</span>';
+          document.getElementById('precios-recomendaciones-custom-lista').innerHTML = htmlCustom || '<span style="color:#64748b; font-style:italic;">Todavía no has agregado ninguna.</span>';
 
           const selCalc = document.getElementById('rec-nueva-calculadora');
           if(selCalc && !selCalc.dataset.poblado){
@@ -6719,7 +6704,7 @@
         const insTroqAbiertos = new Set();
         function renderTroquelesInsumos(){
           const cont = document.getElementById('troq-grupos'); if(!cont) return;
-          if(typeof TACTICAL_TROQUELES_CATALOGO === 'undefined'){ cont.innerHTML = '<div style="color:#a0aec0; font-style:italic;">No se pudo cargar el catálogo de troqueles.</div>'; return; }
+          if(typeof TACTICAL_TROQUELES_CATALOGO === 'undefined'){ cont.innerHTML = '<div style="color:#64748b; font-style:italic;">No se pudo cargar el catálogo de troqueles.</div>'; return; }
           const todos = TACTICAL_TROQUELES_CATALOGO;
           const q = ((document.getElementById('troq-buscar') || {}).value || '').trim().toLowerCase();
           const soloV = !!(document.getElementById('troq-solo-verificar') || {}).checked;
@@ -6749,7 +6734,7 @@
             html += '<details class="ins-fam" data-troq="' + tacticalTroquelEsc(g) + '" ontoggle="if(this.open) insTroqAbiertos.add(this.dataset.troq); else insTroqAbiertos.delete(this.dataset.troq);"' + (abierto ? ' open' : '') + '><summary>' + tacticalTroquelEsc(g)
               + '<span class="ins-n">' + lista.length + (nv ? ' · ' + nv + ' por verificar' : '') + '</span></summary><div class="ins-fam-cuerpo" style="overflow-x:auto;"><table class="tq-tabla"><tr><th>Nombre</th><th>Medida armada (cm)</th><th>Tamaño impreso (cm)</th><th>Observación</th><th>Estado</th><th>Código</th></tr>' + filas + '</table></div></details>';
           });
-          cont.innerHTML = html || '<div style="color:#a0aec0; font-style:italic; padding:10px;">Ningún troquel coincide con la búsqueda.</div>';
+          cont.innerHTML = html || '<div style="color:#64748b; font-style:italic; padding:10px;">Ningún troquel coincide con la búsqueda.</div>';
         }
         function renderPanelPrecios(){
           const cont = document.getElementById('precios-grupos');
@@ -6912,7 +6897,7 @@
             });
             html += `</details>`;
           });
-          cont.innerHTML = html || '<span style="color:#a0aec0; font-style:italic;">No se pudo cargar el tarifario de Promocionales.</span>';
+          cont.innerHTML = html || '<span style="color:#64748b; font-style:italic;">No se pudo cargar el tarifario de Promocionales.</span>';
         }
 
         async function guardarPanelPrecios(){
@@ -6949,7 +6934,7 @@
 
           await Promise.all([tacticalGuardarPreciosOverride(ov), tacticalGuardarPreciosPromoOverride(ovPromo)]);
 
-          alert('Precios guardados y compartidos con el resto del equipo. La página se va a recargar para aplicarlos aquí — las demás herramientas los toman la próxima vez que alguien inicie sesión.');
+          alertBloqueante('Precios guardados y compartidos con el resto del equipo. La página se va a recargar para aplicarlos aquí — las demás herramientas los toman la próxima vez que alguien inicie sesión.');
           location.reload();
         }
 
@@ -6974,7 +6959,7 @@
           localStorage.removeItem('tactical_precios_override_meta_v1');
           localStorage.removeItem('tactical_precios_promo_override_v1');
           await Promise.all([tacticalGuardarPreciosOverride({}), tacticalGuardarPreciosPromoOverride({})]);
-          alert('Precios restaurados a valores de fábrica para todo el equipo. La página se va a recargar.');
+          alertBloqueante('Precios restaurados a valores de fábrica para todo el equipo. La página se va a recargar.');
           location.reload();
         }
 
@@ -7053,7 +7038,7 @@
         // cotizaciones se refiere" -- lista, para el desplegable de "Ventas Ganadas"/"Valor Ganado",
         // cada cotización ganada que compone la suma: fecha de cierre, cliente, OT y descripción.
         function contDetalleVentasGanadasHtml(cierres){
-            if(!cierres.length) return '<div style="color:#a0aec0; font-style:italic;">Sin ventas ganadas en este período.</div>';
+            if(!cierres.length) return '<div style="color:#64748b; font-style:italic;">Sin ventas ganadas en este período.</div>';
             return [...cierres].sort((a,b) => (fechaDeRegistro(b)||0) - (fechaDeRegistro(a)||0)).map(h => {
                 const fecha = fechaDeRegistro(h);
                 const fechaTxt = fecha ? fecha.toLocaleDateString('es-CO') : '-';
@@ -7065,7 +7050,7 @@
         // repite el nombre en cada línea) -- fecha con mes+año, descripción y monto de cada compra.
         const TACTICAL_MESES_LARGOS = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
         function contDetalleComprasClienteHtml(compras){
-            if(!compras || !compras.length) return '<div style="color:#a0aec0; font-style:italic;">Sin compras en este período.</div>';
+            if(!compras || !compras.length) return '<div style="color:#64748b; font-style:italic;">Sin compras en este período.</div>';
             return [...compras].sort((a,b) => (fechaDeRegistro(b)||0) - (fechaDeRegistro(a)||0)).map(g => {
                 const fecha = fechaDeRegistro(g);
                 const fechaTxt = fecha ? `${TACTICAL_MESES_LARGOS[fecha.getMonth()]} ${fecha.getFullYear()}` : '-';
@@ -7249,7 +7234,7 @@
             ${bloquesOpciones}
             <div class="doc-section-title">Condiciones Comerciales</div>
             <div class="doc-condiciones"><ul>${CONDICIONES_COMERCIALES_DEFAULT.map(c=>`<li>${c}</li>`).join('')}</ul></div>
-            ${opp.vendedor ? `<div style="font-size:0.74rem; color:#718096; margin-top:10px;">Cotización elaborada por: <strong>${opp.vendedor}</strong>${(typeof VENDEDORES!=='undefined' && VENDEDORES[opp.vendedor] && VENDEDORES[opp.vendedor].telefono) ? ' — Cel: '+VENDEDORES[opp.vendedor].telefono : ''}</div>` : ''}
+            ${opp.vendedor ? `<div style="font-size:0.74rem; color:#5f6e84; margin-top:10px;">Cotización elaborada por: <strong>${opp.vendedor}</strong>${(typeof VENDEDORES!=='undefined' && VENDEDORES[opp.vendedor] && VENDEDORES[opp.vendedor].telefono) ? ' — Cel: '+VENDEDORES[opp.vendedor].telefono : ''}</div>` : ''}
           `;
           document.getElementById('print-area').innerHTML = html;
           document.getElementById('print-area').style.display = 'block';
@@ -7337,7 +7322,7 @@
             <div class="doc-condiciones"><ul>${CONDICIONES_COMERCIALES_DEFAULT.map(c=>`<li>${c}</li>`).join('')}</ul></div>
             <div class="doc-section-title" style="margin-top:10px;">Observaciones</div>
             <div style="border:1px dashed #a0aec0; border-radius:4px; min-height:60px; margin-top:4px;"></div>
-            ${datos.vendedor ? `<div style="font-size:0.74rem; color:#718096; margin-top:10px;">Cotización elaborada por: <strong>${datos.vendedor}</strong>${(typeof VENDEDORES!=='undefined' && VENDEDORES[datos.vendedor] && VENDEDORES[datos.vendedor].telefono) ? ' — Cel: '+VENDEDORES[datos.vendedor].telefono : ''}</div>` : ''}
+            ${datos.vendedor ? `<div style="font-size:0.74rem; color:#5f6e84; margin-top:10px;">Cotización elaborada por: <strong>${datos.vendedor}</strong>${(typeof VENDEDORES!=='undefined' && VENDEDORES[datos.vendedor] && VENDEDORES[datos.vendedor].telefono) ? ' — Cel: '+VENDEDORES[datos.vendedor].telefono : ''}</div>` : ''}
           `;
           document.getElementById('print-area').innerHTML = html;
           document.getElementById('print-area').style.display = 'block';
@@ -8229,7 +8214,7 @@
           cotInicializado = true;
 
           const selVendedor = document.getElementById('cot-vendedor');
-          Object.keys(VENDEDORES).forEach(v => { const opt=document.createElement('option'); opt.value=v; opt.textContent=v; selVendedor.appendChild(opt); });
+          tacticalIniciarSelectorVendedor('cot-vendedor');
           document.getElementById('cot-condicionesComerciales').value = CONDICIONES_COMERCIALES_DEFAULT.join('\n');
 
           document.getElementById("cot-lineaCaratula").innerHTML = cotLineaCardHtml("cotcaratula", {
@@ -8392,11 +8377,11 @@
             filas += `<tr><td>IVA (19%)</td><td style="text-align:right;">${cotFormatoCop(r.ivaTotal)}</td></tr>`;
             filas += `<tr style="font-weight:bold;"><td>Precio final total (con IVA)</td><td style="text-align:right;">${cotFormatoCop(r.precioFinalTotal)}</td></tr>`;
           } else {
-            filas += `<tr style="color:#718096; font-size:0.8rem;"><td colspan="2">Cliente Personalizado (Cuenta de Cobro): no se calcula IVA.</td></tr>`;
+            filas += `<tr style="color:#5f6e84; font-size:0.8rem;"><td colspan="2">Cliente Personalizado (Cuenta de Cobro): no se calcula IVA.</td></tr>`;
             filas += `<tr style="font-weight:bold;"><td>Precio final total</td><td style="text-align:right;">${cotFormatoCop(r.precioFinalTotal)}</td></tr>`;
           }
           filas += `<tr style="font-weight:bold; color:var(--ganado); border-top:2px solid var(--ganado);"><td>Ganancia total del pedido (utilidad+comisión, sin IVA)</td><td style="text-align:right;">${cotFormatoCop(r.gananciaTotal)}</td></tr>`;
-          filas += `<tr style="color:#718096; font-size:0.85rem;"><td style="padding-left:12px;">↳ Ganancia por unidad</td><td style="text-align:right;">${cotFormatoCop(r.gananciaUnitaria)}</td></tr>`;
+          filas += `<tr style="color:#5f6e84; font-size:0.85rem;"><td style="padding-left:12px;">↳ Ganancia por unidad</td><td style="text-align:right;">${cotFormatoCop(r.gananciaUnitaria)}</td></tr>`;
           filas += `</table>`;
           document.getElementById("cot-resultado-contenido").innerHTML = filas;
         }
@@ -8523,7 +8508,7 @@
             // anexar una línea nueva al mismo pedido sin rehacer las demás.
             return `<div style="display:flex; gap:6px; margin-bottom:6px;">
               <button type="button" ${editable?`onclick="tacticalElegirLineaMulti('${id}',${idx})"`:'disabled'} style="flex:1; display:flex; justify-content:space-between; align-items:center; gap:10px; text-align:left; padding:10px 12px; border:1px solid #cbd5e0; border-radius:6px; background:${editable?'#fff':'#f1f5f9'}; cursor:${editable?'pointer':'not-allowed'}; font-size:0.85rem; color:${editable?'#1a202c':'#718096'};">
-                <span>${cotTextoConNegrilla(l.desc||'(sin descripción)')}<br><span style="font-size:0.72rem; color:#718096;">${l.cantidad||'-'} u. · ${cotFormatoCop(l.monto)} con IVA</span></span>
+                <span>${cotTextoConNegrilla(l.desc||'(sin descripción)')}<br><span style="font-size:0.72rem; color:#5f6e84;">${l.cantidad||'-'} u. · ${cotFormatoCop(l.monto)} con IVA</span></span>
                 <span style="flex-shrink:0; font-weight:700; color:${editable?'#d97706':'#a0aec0'};">${editable?ticon('edit',{size:14,noMargin:true}):''}</span>
               </button>
               <button type="button" onclick="tacticalFormLineaPedido('${id}',${idx})" title="Ajustar descripción, cantidad y precio a mano" style="flex-shrink:0; padding:0 10px; border:1px solid #d97706; background:#fff; color:#d97706; border-radius:6px; font-weight:700; font-size:0.78rem; cursor:pointer;">Ajustar precio</button>
@@ -8532,7 +8517,7 @@
           overlay.innerHTML = `
             <div style="background:#fff; border-radius:10px; padding:22px; max-width:440px; width:100%; max-height:80vh; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.35); font-family:'Segoe UI', Tahoma, sans-serif;">
               <div style="font-weight:800; font-size:1.02rem; color:#1a202c; margin-bottom:4px;">¿Cuál producto de este pedido quieres editar?</div>
-              <div style="font-size:0.78rem; color:#718096; margin-bottom:14px;">Toca un producto para reabrirlo en su calculadora (crea una versión nueva de ESE producto). Con "Ajustar precio" cambias descripción, cantidad o precio a mano, y con "+ Agregar otro producto" anexas uno nuevo; en ambos casos se crea una cotización nueva con el mismo número y letra de versión (-B, -C...) y la original queda intacta. Las líneas en gris son de antes de que se guardara el detalle por producto: solo se pueden ajustar a mano.</div>
+              <div style="font-size:0.78rem; color:#5f6e84; margin-bottom:14px;">Toca un producto para reabrirlo en su calculadora (crea una versión nueva de ESE producto). Con "Ajustar precio" cambias descripción, cantidad o precio a mano, y con "+ Agregar otro producto" anexas uno nuevo; en ambos casos se crea una cotización nueva con el mismo número y letra de versión (-B, -C...) y la original queda intacta. Las líneas en gris son de antes de que se guardara el detalle por producto: solo se pueden ajustar a mano.</div>
               ${filasHtml}
               <button type="button" onclick="document.getElementById('tactical-edicion-multi-overlay').remove();" style="width:100%; margin-top:6px; padding:9px; border:1px solid #cbd5e0; background:#fff; color:#4a5568; border-radius:6px; font-weight:700; cursor:pointer;">Cancelar</button>
             </div>`;
@@ -8888,7 +8873,7 @@
           if(!el) return;
           const colores = COT_MOCKUP_COLORES.map(c => `<option value="${c[0]}" ${c[0]===cotLogoCliente.color?'selected':''}>${c[1]}</option>`).join('');
           if(!cotLogoCliente.url){
-            el.innerHTML = '<span style="font-size:0.8rem; color:#a0aec0;">Sin logo -- la cotización sale sin mockup.</span>';
+            el.innerHTML = '<span style="font-size:0.8rem; color:#64748b;">Sin logo -- la cotización sale sin mockup.</span>';
             return;
           }
           const lp = document.getElementById('cot-lineaProducto'), enc = document.getElementById('cot-encuadernacionTipo'), tp = document.getElementById('cot-tapaTipo');
@@ -8993,7 +8978,7 @@
         function cotMockupPdfHtml(listaParams){
           const p = (listaParams || []).find(x => x && x.logoUrl);
           if(!p) return '';
-          return `<div style="text-align:center; flex-shrink:0;">${cotMockupCuadernoHtml(p, 96)}<div style="font-size:0.56rem; color:#718096; max-width:125px; margin:2px auto 0; line-height:1.15;">Imagen ilustrativa. El diseño final se define con el cliente.</div></div>`;
+          return `<div style="text-align:center; flex-shrink:0;">${cotMockupCuadernoHtml(p, 96)}<div style="font-size:0.56rem; color:#5f6e84; max-width:125px; margin:2px auto 0; line-height:1.15;">Imagen ilustrativa. El diseño final se define con el cliente.</div></div>`;
         }
 
         function cotDescripcionProducto(p){
@@ -9079,6 +9064,7 @@
           const tipo = document.getElementById('cot-cli-tipo').value;
           const identificacion = document.getElementById('cot-cli-identificacion').value.trim();
           const vendedor = document.getElementById('cot-vendedor').value;
+          if(!tacticalExigirVendedor('cot-vendedor')) return;
           if(!empresa && !encargado){ alert("Ingresa al menos el Cliente o el Encargado antes de generar el PDF."); return; }
 
           // Buscar o crear cliente en el CRM
@@ -9242,6 +9228,7 @@
           const tipo = document.getElementById('cot-cli-tipo').value;
           const identificacion = document.getElementById('cot-cli-identificacion').value.trim();
           const vendedor = document.getElementById('cot-vendedor').value;
+          if(!tacticalExigirVendedor('cot-vendedor')) return;
           if(!empresa && !encargado){ alert("Ingresa al menos el Cliente o el Encargado antes de agregar al pedido."); return; }
 
           let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toUpperCase()===(empresa||'CLIENTE PARTICULAR') && c.nombre.toUpperCase()===(encargado||'SIN CONTACTO DIRECTO')));
@@ -9400,6 +9387,7 @@
           const tipo = document.getElementById('cot-cli-tipo').value;
           const identificacion = document.getElementById('cot-cli-identificacion').value.trim();
           const vendedor = document.getElementById('cot-vendedor').value;
+          if(!tacticalExigirVendedor('cot-vendedor')) return;
           if(!empresa && !encargado){ alert("Ingresa al menos el Cliente o el Encargado antes de agregar la opción."); return; }
 
           let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toUpperCase()===(empresa||'CLIENTE PARTICULAR') && c.nombre.toUpperCase()===(encargado||'SIN CONTACTO DIRECTO')));
@@ -9490,7 +9478,7 @@
             <div class="doc-section-title">Condiciones Comerciales</div>
             <div class="doc-condiciones">${condicionesHtml}</div>
             ${observaciones ? `<div class="doc-section-title">Observaciones</div><div class="doc-condiciones">${observaciones}</div>` : ''}
-            ${comp.vendedor ? `<div style="font-size:0.74rem; color:#718096; margin-top:10px;">Cotización elaborada por: <strong>${comp.vendedor}</strong>${(typeof VENDEDORES!=='undefined' && VENDEDORES[comp.vendedor] && VENDEDORES[comp.vendedor].telefono) ? ' — Cel: '+VENDEDORES[comp.vendedor].telefono : ''}</div>` : ''}
+            ${comp.vendedor ? `<div style="font-size:0.74rem; color:#5f6e84; margin-top:10px;">Cotización elaborada por: <strong>${comp.vendedor}</strong>${(typeof VENDEDORES!=='undefined' && VENDEDORES[comp.vendedor] && VENDEDORES[comp.vendedor].telefono) ? ' — Cel: '+VENDEDORES[comp.vendedor].telefono : ''}</div>` : ''}
           `;
           document.getElementById('print-area').innerHTML = html;
           document.getElementById('print-area').style.display = 'block';
@@ -9557,7 +9545,7 @@
             </div>
             <div class="doc-section-title" style="margin-top:10px;">Observaciones</div>
             <div style="border:1px dashed #a0aec0; border-radius:4px; min-height:60px; margin-top:4px; padding:${cot.observaciones?'8px':'0'};">${cot.observaciones ? `<p style="margin:0;">${cot.observaciones}</p>` : ''}</div>
-            ${cot.vendedor ? `<div style="font-size:0.74rem; color:#718096; margin-top:10px;">Cotización elaborada por: <strong>${cot.vendedor}</strong>${(typeof VENDEDORES!=='undefined' && VENDEDORES[cot.vendedor] && VENDEDORES[cot.vendedor].telefono) ? ' — Cel: '+VENDEDORES[cot.vendedor].telefono : ''}</div>` : ''}
+            ${cot.vendedor ? `<div style="font-size:0.74rem; color:#5f6e84; margin-top:10px;">Cotización elaborada por: <strong>${cot.vendedor}</strong>${(typeof VENDEDORES!=='undefined' && VENDEDORES[cot.vendedor] && VENDEDORES[cot.vendedor].telefono) ? ' — Cel: '+VENDEDORES[cot.vendedor].telefono : ''}</div>` : ''}
           `;
           document.getElementById('print-area').innerHTML = html;
           document.getElementById('print-area').style.display = 'block';
@@ -9608,7 +9596,7 @@
                     <div style="color:#4a5568; line-height:1.25;"><strong>${impresionTxt}</strong></div>
                     <div style="color:#4a5568; line-height:1.25;">Corte: <strong>${tamanoCorte}</strong> — Acabados: <strong>${acabadosTxt}</strong></div>
                   </div>
-                  ${pc ? `<div style="flex-shrink:0; display:flex; gap:8px; align-items:center;"><div style="color:#a0aec0; text-align:center;">Corte del pliego</div>${tacticalDibujarPlanoCorteSVG(pc,85)}<div style="color:#4a5568; max-width:150px; line-height:1.2;">${tacticalPlanoCorteTexto(pc)}</div></div>` : ''}
+                  ${pc ? `<div style="flex-shrink:0; display:flex; gap:8px; align-items:center;"><div style="color:#64748b; text-align:center;">Corte del pliego</div>${tacticalDibujarPlanoCorteSVG(pc,85)}<div style="color:#4a5568; max-width:150px; line-height:1.2;">${tacticalPlanoCorteTexto(pc)}</div></div>` : ''}
                 </div>
                 ${planoImp ? `
                 <div style="display:flex; gap:9px; align-items:center; margin-top:4px; padding-top:4px; border-top:1px dotted #e2e8f0;">
@@ -10103,13 +10091,13 @@
           cuerpo.innerHTML = filas.length ? filas.map(f => {
             const fTxt = f.fecha instanceof Date && !isNaN(f.fecha) ? f.fecha.toLocaleDateString('es-CO', {day:'numeric', month:'short'}) : '-';
             return `<tr style="border-bottom:1px solid #edf2f7;">
-              <td style="padding:8px 10px; vertical-align:top; min-width:130px;"><div style="font-weight:600; color:#1a202c;">${resumenCotEsc(f.cliente)}</div><div style="font-size:0.72rem; color:#718096;">${fTxt}${f.ot?' · '+resumenCotEsc(f.ot):''}</div></td>
+              <td style="padding:8px 10px; vertical-align:top; min-width:130px;"><div style="font-weight:600; color:#1a202c;">${resumenCotEsc(f.cliente)}</div><div style="font-size:0.72rem; color:#5f6e84;">${fTxt}${f.ot?' · '+resumenCotEsc(f.ot):''}</div></td>
               <td style="padding:8px 10px; vertical-align:top; color:#2d3748; font-size:0.82rem;">${resumenCotEsc(f.producto)}</td>
               <td style="padding:8px 10px; vertical-align:top; text-align:right; white-space:nowrap;">${f.cantidad!=null?Number(f.cantidad).toLocaleString('es-CO'):'-'}</td>
               <td style="padding:8px 10px; vertical-align:top; text-align:right; white-space:nowrap; font-weight:700;" title="${f.aprox?'Aproximado: calculado desde el monto total':''}">${f.unitario!=null?(f.aprox?'≈ ':'')+cotFormatoCop(f.unitario):'-'}</td>
               <td style="padding:8px 10px; vertical-align:top; text-align:center;"><span title="${RESUMEN_COT_TITULOS[f.estado]}" style="display:inline-block; width:12px; height:12px; border-radius:50%; background:${RESUMEN_COT_COLORES[f.estado]};"></span></td>
             </tr>`;
-          }).join('') : '<tr><td colspan="5" style="padding:24px; text-align:center; color:#718096;">No hay cotizaciones con estos filtros.</td></tr>';
+          }).join('') : '<tr><td colspan="5" style="padding:24px; text-align:center; color:#5f6e84;">No hay cotizaciones con estos filtros.</td></tr>';
           const cnt = document.getElementById('resumen-cot-conteo');
           if(cnt) cnt.textContent = filas.length + (filas.length===1 ? ' cotización' : ' cotizaciones');
         }
@@ -10120,7 +10108,7 @@
         }
         async function resumenCotCambiarMes(){
           const cuerpo = document.getElementById('resumen-cot-cuerpo');
-          if(cuerpo) cuerpo.innerHTML = '<tr><td colspan="5" style="padding:24px; text-align:center; color:#718096;">Cargando...</td></tr>';
+          if(cuerpo) cuerpo.innerHTML = '<tr><td colspan="5" style="padding:24px; text-align:center; color:#5f6e84;">Cargando...</td></tr>';
           await resumenCotCargarMes(document.getElementById('resumen-cot-mes').value);
           resumenCotPintar();
         }
@@ -10183,7 +10171,7 @@
                   <tbody id="resumen-cot-cuerpo"></tbody>
                 </table>
               </div>
-              <div id="resumen-cot-conteo" style="margin-top:8px; font-size:0.78rem; color:#718096;"></div>
+              <div id="resumen-cot-conteo" style="margin-top:8px; font-size:0.78rem; color:#5f6e84;"></div>
             </div>`;
           document.body.appendChild(overlay);
           overlay.addEventListener('mousedown', e => { if(e.target===overlay) overlay.remove(); });
@@ -10296,24 +10284,24 @@
             : `<div style="line-height:1.5;">${cotTextoConNegrilla((o && o.desc) || (ficha && ficha.titulo) || '')}</div>`;
           let extra = '';
           if(fk){
-            extra += `<div style="margin-top:8px; display:flex; align-items:center; gap:6px;">${ticon('factory',{size:14,color:'#4a5568',noMargin:true})}<span style="color:#718096;">En Kanban:</span> <strong>${KANBAN_COLUMNA_NOMBRE[fk.columna] || fk.columna}</strong>${fk.fechaEntrega ? ' · entrega ' + kanbanFormatearFecha(fk.fechaEntrega) : ''}</div>`;
+            extra += `<div style="margin-top:8px; display:flex; align-items:center; gap:6px;">${ticon('factory',{size:14,color:'#4a5568',noMargin:true})}<span style="color:#5f6e84;">En Kanban:</span> <strong>${KANBAN_COLUMNA_NOMBRE[fk.columna] || fk.columna}</strong>${fk.fechaEntrega ? ' · entrega ' + kanbanFormatearFecha(fk.fechaEntrega) : ''}</div>`;
           }
-          if(base.vendedor) extra += `<div style="margin-top:8px;"><span style="color:#718096;">Comercial:</span> ${esc(base.vendedor)}</div>`;
+          if(base.vendedor) extra += `<div style="margin-top:8px;"><span style="color:#5f6e84;">Comercial:</span> ${esc(base.vendedor)}</div>`;
           if(o && o.estado === 'perdido' && o.motivo) extra += `<div style="margin-top:8px; color:#e53e3e;">Motivo de pérdida: ${esc(o.motivo)}</div>`;
-          if(o && o.etapa && o.seguimientoFecha) extra += `<div style="margin-top:8px; display:flex; align-items:center; gap:6px;">${ticon('clock',{size:14,color:'#64748b',noMargin:true})}<span style="color:#718096;">Seguimiento programado:</span> ${tacticalFormatoDiaMes(o.seguimientoFecha)}</div>`;
+          if(o && o.etapa && o.seguimientoFecha) extra += `<div style="margin-top:8px; display:flex; align-items:center; gap:6px;">${ticon('clock',{size:14,color:'#64748b',noMargin:true})}<span style="color:#5f6e84;">Seguimiento programado:</span> ${tacticalFormatoDiaMes(o.seguimientoFecha)}</div>`;
           const vers = comercialVersiones(o);
           const versHtml = vers.length > 1
-            ? vers.map(v => `<span style="display:inline-block; margin:0 6px 2px 0;${v.id === o.id ? ' font-weight:700;' : ''}">${esc(v.ot)}${v.id === o.id ? ' (esta)' : ''} <span style="color:#718096;">· ${v.etapa ? 'activa' : (v.estado === 'ganado' ? 'ganada' : 'perdida')}</span></span>`).join('')
-            : '<span style="color:#718096;">Sin versiones adicionales</span>';
+            ? vers.map(v => `<span style="display:inline-block; margin:0 6px 2px 0;${v.id === o.id ? ' font-weight:700;' : ''}">${esc(v.ot)}${v.id === o.id ? ' (esta)' : ''} <span style="color:#5f6e84;">· ${v.etapa ? 'activa' : (v.estado === 'ganado' ? 'ganada' : 'perdida')}</span></span>`).join('')
+            : '<span style="color:#5f6e84;">Sin versiones adicionales</span>';
           const nCot = base.idCli ? [...db_opps, ...db_historial_cierres].filter(x => x.idCli === base.idCli).length : 0;
           const digitos = cli ? String(cli.wp || '').replace(/\D/g, '') : '';
           const wa = digitos ? 'https://wa.me/' + (digitos.length === 10 ? '57' + digitos : digitos) : '';
           const tarjetaCli = cli
             ? `<div style="font-weight:700; display:flex; align-items:center; gap:6px;">${ticon('user',{size:14,color:'#4a5568',noMargin:true})}${esc(cli.nombre || cli.empresa)}</div>
-               <div style="margin-top:5px; display:flex; align-items:center; gap:6px;">${ticon('phone',{size:14,color:'#4a5568',noMargin:true})}${wa ? `<a href="${wa}" target="_blank" rel="noopener" title="Abrir WhatsApp">${esc(cli.wp)}</a>` : '<span style="color:#718096;">sin teléfono</span>'}</div>
-               <div style="margin-top:4px; display:flex; align-items:center; gap:6px;">${ticon('mail',{size:14,color:'#4a5568',noMargin:true})}${cli.correo ? `<a href="mailto:${esc(cli.correo)}">${esc(cli.correo)}</a>` : '<span style="color:#718096;">sin correo</span>'}</div>
-               <div style="margin-top:6px; font-size:0.72rem; color:#718096;">${nCot} ${nCot === 1 ? 'cotización' : 'cotizaciones'} con este cliente</div>`
-            : '<span style="color:#718096;">Cliente no encontrado en el directorio.</span>';
+               <div style="margin-top:5px; display:flex; align-items:center; gap:6px;">${ticon('phone',{size:14,color:'#4a5568',noMargin:true})}${wa ? `<a href="${wa}" target="_blank" rel="noopener" title="Abrir WhatsApp">${esc(cli.wp)}</a>` : '<span style="color:#5f6e84;">sin teléfono</span>'}</div>
+               <div style="margin-top:4px; display:flex; align-items:center; gap:6px;">${ticon('mail',{size:14,color:'#4a5568',noMargin:true})}${cli.correo ? `<a href="mailto:${esc(cli.correo)}">${esc(cli.correo)}</a>` : '<span style="color:#5f6e84;">sin correo</span>'}</div>
+               <div style="margin-top:6px; font-size:0.72rem; color:#5f6e84;">${nCot} ${nCot === 1 ? 'cotización' : 'cotizaciones'} con este cliente</div>`
+            : '<span style="color:#5f6e84;">Cliente no encontrado en el directorio.</span>';
           const acc = [];
           if(o){
             const otSeguro = (o.ot || '').replace(/'/g, '');
@@ -10327,7 +10315,7 @@
             acc.push(comercialBtnIcono('refresh', '#2563eb', 'Cambiar de comercial', `buscadorCambiarVendedor('${o.id}')`));
             if(comercialEsAdmin()) acc.push(comercialBtnIcono('trash', '#e53e3e', 'Eliminar (solo administrador)', `eliminarCotizacionRegistro('${o.id}')`, ' margin-left:auto;'));
           } else {
-            acc.push('<span style="color:#718096;">Ficha creada a mano: no tiene cotización asociada.</span>');
+            acc.push('<span style="color:#5f6e84;">Ficha creada a mano: no tiene cotización asociada.</span>');
           }
           return `<tr class="cm-panel-fila"><td colspan="${colspan}"><div class="cm-panel">
             <div style="display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:14px;">
@@ -10393,7 +10381,7 @@
               <td>${fechaEntrega}</td>
               <td><input type="text" value="${(p.observacionesComercial||'').replace(/"/g,'&quot;')}" onchange="comercialGuardarB2C('${p.id}','observaciones',this.value)"></td>
             </tr>`;
-          }).join('') : '<tr><td colspan="4" style="text-align:center; color:#a0aec0;">Sin pedidos personalizados pendientes.</td></tr>';
+          }).join('') : '<tr><td colspan="4" style="text-align:center; color:#64748b;">Sin pedidos personalizados pendientes.</td></tr>';
 
           // ---- Corporativo / Productos aprobados: fichas del Kanban de este vendedor, sin B2C, sin
           // las ya entregadas (Postventa) -- así nunca crece sin límite con lo ya entregado.
@@ -10416,7 +10404,7 @@
             <td>${f.fechaEntrega ? kanbanFormatearFecha(f.fechaEntrega) : '-'}</td>
             <td><input type="text" value="${(f.responsable||'').replace(/"/g,'&quot;')}" onchange="comercialGuardarNotaFicha('${f.id}',this.value)"></td>
           </tr>` + (abierta ? comercialPanelHtml(quote, f, 5) : '');
-          }).join('') : '<tr><td colspan="5" style="text-align:center; color:#a0aec0;">Sin productos en producción.</td></tr>';
+          }).join('') : '<tr><td colspan="5" style="text-align:center; color:#64748b;">Sin productos en producción.</td></tr>';
 
           // ---- Corporativo / Cotizaciones creadas: por defecto los negocios ACTIVOS del Embudo (igual que antes);
           // Conde 2026-11-07: selector Activas / Ganadas / Perdidas / Todas -- las cerradas salen de db_historial_cierres.
@@ -10450,7 +10438,7 @@
               : `<span class="cm-tag" style="background:${o.estado==='ganado' ? '#48bb78' : '#e53e3e'};">${o.estado==='ganado' ? 'Ganada' : 'Perdida'}</span>`;
             const celdaObs = activa
               ? `<input type="text" value="${(o.seguimiento||'').replace(/"/g,'&quot;')}" placeholder="Ej: llamé el 28, volver a llamar el 2 de sept." onchange="comercialGuardarSeguimiento('${o.id}',this.value)">`
-              : `<span style="color:#718096;">${resumenCotEsc(o.seguimiento || '')}</span>`;
+              : `<span style="color:#5f6e84;">${resumenCotEsc(o.seguimiento || '')}</span>`;
             const celdaAcc = activa
               ? `<button onclick="comercialAbrirSeguimientoFecha('${o.id}')" title="Programar seguimiento" style="background:#64748b; border:none; border-radius:50%; width:22px; height:22px; padding:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; margin-right:4px;">${ticon('clock',{color:'#fff',noMargin:true,size:13})}</button>
                 <button onclick="comercialConfirmarPerdido('${o.id}')" title="Marcar cancelada" style="background:#dc2626; border:none; border-radius:50%; width:22px; height:22px; padding:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; margin-right:4px;">${ticon('x',{color:'#fff',noMargin:true,size:13})}</button>
@@ -10465,7 +10453,7 @@
               <td>${celdaObs}</td>
               <td style="text-align:center; white-space:nowrap;">${celdaAcc}</td>
             </tr>` + (abierta ? comercialPanelHtml(o, null, 7) : '');
-          }).join('') : `<tr><td colspan="7" style="text-align:center; color:#a0aec0;">${vacioCm}</td></tr>`;
+          }).join('') : `<tr><td colspan="7" style="text-align:center; color:#64748b;">${vacioCm}</td></tr>`;
 
           // ---- Recordatorios de seguimiento (Conde 2026-08-28): "se active un recordatorio el dia
           // estipulado" -- se activa ese día Y se queda activo (marcado como atrasado) si no se
@@ -10595,8 +10583,8 @@
             info += radarCardHtml('var(--info)', 'Dato', `El gasto en <strong>${gastoSubio.categoria}</strong> este mes va ${gastoSubio.pct}% más alto que el mismo período del mes pasado (${cotFormatoCop(gastoSubio.actual)} vs ${cotFormatoCop(gastoSubio.anterior)}).`, 'Ver Contabilidad', `showView('contabilidad')`);
           }
 
-          urgenteEl.innerHTML = urgente || '<p style="color:#a0aec0; font-style:italic;">Todo tranquilo por ahora -- no hay nada urgente que atender.</p>';
-          infoEl.innerHTML = info || '<p style="color:#a0aec0; font-style:italic;">Todavía no hay suficientes datos para mostrar algo aquí.</p>';
+          urgenteEl.innerHTML = urgente || '<p style="color:#64748b; font-style:italic;">Todo tranquilo por ahora -- no hay nada urgente que atender.</p>';
+          infoEl.innerHTML = info || '<p style="color:#64748b; font-style:italic;">Todavía no hay suficientes datos para mostrar algo aquí.</p>';
           const nQuitados = Object.keys(radarQuitados()).length;
           const quitadosEl = document.getElementById('radar-quitados');
           if(quitadosEl){ quitadosEl.style.display = nQuitados ? 'block' : 'none'; quitadosEl.innerHTML = nQuitados ? `${nQuitados} aviso${nQuitados === 1 ? '' : 's'} quitado${nQuitados === 1 ? '' : 's'} · <a href="#" onclick="radarRestaurar(); return false;">Restaurar</a>` : ''; }
@@ -10739,7 +10727,7 @@
                 const margen = (r.utilidadNeta != null && r.ingresos > 0) ? (r.utilidadNeta / r.ingresos * 100) : null;
                 const colorUtil = r.utilidadNeta == null ? '' : (r.utilidadNeta < 0 ? 'color:#dc2626;' : 'color:#16a34a;');
                 return `<tr style="border-bottom:1px solid #edf2f7; text-align:right;"><td style="padding:6px 8px; text-align:left; font-weight:700;">${r.anio}</td><td style="padding:6px 8px;">${fmt(r.ingresos)}</td><td style="padding:6px 8px;">${fmt(r.costoVentas)}</td><td style="padding:6px 8px;">${fmt(r.gastosAdmin)}</td><td style="padding:6px 8px; font-weight:700; ${colorUtil}">${fmt(r.utilidadNeta)}</td><td style="padding:6px 8px;">${margen == null ? '<span style="color:#cbd5e0;">—</span>' : margen.toFixed(1) + '%'}</td></tr>`;
-              }).join('')}</tbody></table>` : '<span style="color:#a0aec0; font-style:italic;">Sin datos para este rango y fuente.</span>';
+              }).join('')}</tbody></table>` : '<span style="color:#64748b; font-style:italic;">Sin datos para este rango y fuente.</span>';
           }
 
           if (typeof Chart === 'undefined') return; // CDN bloqueado o sin internet -- KPIs y clientes igual se ven
@@ -10796,7 +10784,7 @@
               const deltaTxt = delta == null ? '' : ` <span style="color:${delta >= 0 ? '#16a34a' : '#dc2626'}; font-weight:bold;">(${delta >= 0 ? '+' : ''}${Math.round(delta)}% vs ${filasPeriodo[i - 1].anio})</span>`;
               filas += `<div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid #edf2f7;"><span>${TH_MESES[mesPerDesde - 1]}-${TH_MESES[mesPerHasta - 1]} ${f.anio}</span><span><strong>${cotFormatoCop(total)}</strong>${deltaTxt}</span></div>`;
             });
-            resumenPeriodoEl.innerHTML = filas || '<span style="color:#a0aec0;">Sin datos para este rango de meses.</span>';
+            resumenPeriodoEl.innerHTML = filas || '<span style="color:#64748b;">Sin datos para este rango de meses.</span>';
           }
 
           const ctxAnual = document.getElementById('th-chart-anual');
@@ -10888,7 +10876,7 @@
             selPeriodo.dataset.poblado = '1';
           }
           if (!db_historicoVentasCliente.length) {
-            cont.innerHTML = '<span style="color:#a0aec0; font-style:italic;">Sin datos de clientes históricos cargados todavía -- corre migracion_historico_ventas_cliente.sql.</span>';
+            cont.innerHTML = '<span style="color:#64748b; font-style:italic;">Sin datos de clientes históricos cargados todavía -- corre migracion_historico_ventas_cliente.sql.</span>';
             return;
           }
           const periodo = selPeriodo ? selPeriodo.value : db_historicoVentasCliente[0].periodoEtiqueta;
@@ -10906,12 +10894,12 @@
           cont.innerHTML = filas.map(({ r, rank: idx0 }) => {
             const idx = idx0 - 1;
             const otros = (porClave[claveCliente(r)] || []).filter(o => o.periodoEtiqueta !== periodo).sort((a, b) => orden.indexOf(a.periodoEtiqueta) - orden.indexOf(b.periodoEtiqueta));
-            const otrosHtml = otros.length ? `<div style="font-size:0.76rem; color:#718096; line-height:1.4; padding-left:18px;">${otros.map(o => `${o.periodoEtiqueta}: ${cotFormatoCop(o.valor)}`).join(' · ')}</div>` : '';
+            const otrosHtml = otros.length ? `<div style="font-size:0.76rem; color:#5f6e84; line-height:1.4; padding-left:18px;">${otros.map(o => `${o.periodoEtiqueta}: ${cotFormatoCop(o.valor)}`).join(' · ')}</div>` : '';
             const pct = totalPeriodo > 0 ? (r.valor / totalPeriodo * 100) : 0;
             const cli = thBuscarClienteCrm(r.nombreCliente);
             const badge = cli ? `<span style="font-size:0.75rem; background:var(--ganado); color:#fff; padding:1px 7px; border-radius:10px; margin-left:6px;" title="Ya es cliente en el CRM -- compras acumuladas (LTV) actuales">${ticon('check',{noMargin:true,color:'#fff'})}Cliente activo (LTV ${cotFormatoCop(cli.ltv||0)})</span>` : '';
-            return `<div style="padding:3px 0; border-bottom:1px solid #edf2f7;">${idx+1}. ${r.nombreCliente}${r.nit ? ` <span style="color:#a0aec0; font-size:0.78rem;">(${r.nit})</span>` : ''}: <strong>${cotFormatoCop(r.valor)}</strong>${r.numFacturas ? ` — ${r.numFacturas} factura(s)` : ''} <span style="color:#a0aec0; font-size:0.78rem;">(${pct.toFixed(1)}%)</span>${badge}${otrosHtml}</div>`;
-          }).join('') || '<span style="color:#a0aec0; font-style:italic;">Ningún cliente coincide con la búsqueda.</span>';
+            return `<div style="padding:3px 0; border-bottom:1px solid #edf2f7;">${idx+1}. ${r.nombreCliente}${r.nit ? ` <span style="color:#64748b; font-size:0.78rem;">(${r.nit})</span>` : ''}: <strong>${cotFormatoCop(r.valor)}</strong>${r.numFacturas ? ` — ${r.numFacturas} factura(s)` : ''} <span style="color:#64748b; font-size:0.78rem;">(${pct.toFixed(1)}%)</span>${badge}${otrosHtml}</div>`;
+          }).join('') || '<span style="color:#64748b; font-style:italic;">Ningún cliente coincide con la búsqueda.</span>';
         }
         /* ============ CALCULADORA DE CORTE ============
            Conde 2026-10-09: herramienta aparte (inspirada en la calculadora de corte de Copel, pero SIN el
@@ -11031,7 +11019,7 @@
           const mg = corteNum(document.getElementById('corte-mg').value), rot = document.getElementById('corte-rot').checked;
           const svgBox = document.getElementById('corte-svg'), kpis = document.getElementById('corte-kpis'), chips = document.getElementById('corte-chips'), nota = document.getElementById('corte-nota');
           corteUltimo = null;
-          if(!(W > 0 && H > 0 && w > 0 && h > 0)){ svgBox.innerHTML = '<p style="color:#94a3b8; margin:6px;">Escribe las medidas de la lámina y de la pieza.</p>'; kpis.innerHTML = ''; chips.innerHTML = ''; nota.textContent = ''; return; }
+          if(!(W > 0 && H > 0 && w > 0 && h > 0)){ svgBox.innerHTML = '<p style="color:#64748b; margin:6px;">Escribe las medidas de la lámina y de la pieza.</p>'; kpis.innerHTML = ''; chips.innerHTML = ''; nota.textContent = ''; return; }
           const uw = W - 2 * mg, uh = H - 2 * mg;
           if(uw <= 0 || uh <= 0){ svgBox.innerHTML = '<p style="color:#c53030; margin:6px;">El margen es mayor que la lámina.</p>'; kpis.innerHTML = ''; chips.innerHTML = ''; return; }
           const S = 10, Wm = Math.round(uw * S), Hm = Math.round(uh * S), wm = Math.round(w * S), hm = Math.round(h * S);
@@ -11199,7 +11187,7 @@
           }).join('');
           document.getElementById('rp-mes-tabla').innerHTML = peds.length
             ? '<table style="width:100%; border-collapse:collapse; font-size:0.82rem;"><thead><tr style="background:#f7fafc; color:#4a5568; text-align:left;"><th style="padding:6px 8px;">Aprobado</th><th style="padding:6px 8px;">Cliente</th><th style="padding:6px 8px;">Comercial</th><th style="padding:6px 8px;">Productos</th><th style="padding:6px 8px; text-align:right;">Unid.</th><th style="padding:6px 8px; text-align:right;">Total</th></tr></thead><tbody>' + filas + '</tbody></table>'
-            : '<p style="color:#a0aec0; font-size:0.85rem; margin:4px 0;">No hay pedidos B2C aprobados en este mes' + (filtro ? ' para ' + filtro : '') + '.</p>';
+            : '<p style="color:#64748b; font-size:0.85rem; margin:4px 0;">No hay pedidos B2C aprobados en este mes' + (filtro ? ' para ' + filtro : '') + '.</p>';
         }
 
         function renderRompecabezasPersonalizados(){
@@ -11540,7 +11528,7 @@
           const ticketProm = ganadas.length===0?0:Math.round(valorGanado/ganadas.length);
           document.getElementById('rep-comercial-kpis').innerHTML = `
             <div class="kpi-box"><div class="kpi-label">Cotizaciones Generadas</div><div class="kpi-value">${totalCot}</div></div>
-            <div class="kpi-box" style="border-color:var(--info);"><div class="kpi-label">Dinero en Seguimiento</div><div class="kpi-value">${cotFormatoCop(oppsF.reduce((s,o)=>s+(o.monto||0),0))}</div><div style="font-size:0.8rem; color:#718096;">${oppsF.length} negocio${oppsF.length===1?'':'s'} abierto${oppsF.length===1?'':'s'}</div></div>
+            <div class="kpi-box" style="border-color:var(--info);"><div class="kpi-label">Dinero en Seguimiento</div><div class="kpi-value">${cotFormatoCop(oppsF.reduce((s,o)=>s+(o.monto||0),0))}</div><div style="font-size:0.8rem; color:#5f6e84;">${oppsF.length} negocio${oppsF.length===1?'':'s'} abierto${oppsF.length===1?'':'s'}</div></div>
             <div class="kpi-box" style="border-color:var(--ganado);"><div class="kpi-label">Tasa de Cierre</div><div class="kpi-value" style="color:var(--ganado);">${tasaCierre}%</div></div>
             <div class="kpi-box" style="border-color:var(--primary);"><div class="kpi-label">Valor Ganado</div><div class="kpi-value" style="color:var(--primary);">${cotFormatoCop(valorGanado)}</div>${ganadas.length?`<div style="font-size:0.8rem; color:#64748b; margin-top:3px;">≈ ${cotFormatoCop(Math.round(valorGanadoNeto))} sin IVA (neto)</div>`:''}<span style="font-size:0.78rem; color:var(--primary); cursor:pointer; text-decoration:underline;" onclick="const d=this.nextElementSibling; const abrir=d.style.display==='none'; d.style.display=abrir?'block':'none'; this.textContent=abrir?'Ocultar detalle ▴':'¿De dónde viene esto? ▾';">¿De dónde viene esto? ▾</span><div style="display:none; margin-top:6px; text-align:left; max-height:220px; overflow-y:auto; font-size:0.78rem; color:#4a5568;">${contDetalleVentasGanadasHtml(ganadas)}</div></div>
             <div class="kpi-box"><div class="kpi-label">Ticket Promedio (Ganado)</div><div class="kpi-value">${cotFormatoCop(ticketProm)}</div></div>
@@ -11550,7 +11538,7 @@
           repRenderGraficosComercial(todasCotizaciones, ganadas, inicio, fin);
           const clientesEnFiltro = new Set(todasCotizaciones.map(c=>c.idCli));
           const topCli = [...db_clientes].filter(c=>!filtroVendedor && !filtroLinea ? true : clientesEnFiltro.has(c.id)).sort((a,b)=>b.ltv-a.ltv).slice(0,5);
-          document.getElementById('rep-top-clientes').innerHTML = topCli.length ? topCli.map(c=>`• ${c.empresa}: <strong>${cotFormatoCop(c.ltv)}</strong>`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin datos en este período.</span>';
+          document.getElementById('rep-top-clientes').innerHTML = topCli.length ? topCli.map(c=>`• ${c.empresa}: <strong>${cotFormatoCop(c.ltv)}</strong>`).join('<br>') : '<span style="color:#64748b; font-style:italic;">Sin datos en este período.</span>';
 
           // Pedidos multi-producto (linea:'multi') traen un array "lineas" -- se desglosa cada
           // producto por separado en vez de contar el pedido completo como una sola línea "multi".
@@ -11562,11 +11550,11 @@
               const l=c.linea||'otro'; porLinea[l]=(porLinea[l]||0)+(c.cantidad||0);
             }
           });
-          document.getElementById('rep-lineas').innerHTML = Object.keys(porLinea).length ? Object.keys(porLinea).map(l=>`• ${NOMBRES_LINEA_PRODUCTO[l]||l}: <strong>${porLinea[l]} unidades</strong>`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin cotizaciones en este período.</span>';
+          document.getElementById('rep-lineas').innerHTML = Object.keys(porLinea).length ? Object.keys(porLinea).map(l=>`• ${NOMBRES_LINEA_PRODUCTO[l]||l}: <strong>${porLinea[l]} unidades</strong>`).join('<br>') : '<span style="color:#64748b; font-style:italic;">Sin cotizaciones en este período.</span>';
 
           const motivos = {};
           perdidas.forEach(p=>{ motivos[p.motivo]=(motivos[p.motivo]||0)+1; });
-          document.getElementById('rep-motivos').innerHTML = Object.keys(motivos).length ? Object.keys(motivos).map(m=>`• ${m}: <strong>${motivos[m]}</strong>`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin negocios perdidos en este período.</span>';
+          document.getElementById('rep-motivos').innerHTML = Object.keys(motivos).length ? Object.keys(motivos).map(m=>`• ${m}: <strong>${motivos[m]}</strong>`).join('<br>') : '<span style="color:#64748b; font-style:italic;">Sin negocios perdidos en este período.</span>';
 
           // Conde 2026-08-20: "consolidado de ventas por cliente y por producto" -- a diferencia del
           // Top Clientes de arriba (que es LTV histórico, sin importar el período elegido), esto usa
@@ -11592,7 +11580,7 @@
                   <span style="font-size:0.78rem; color:var(--primary); cursor:pointer; text-decoration:underline; margin-left:6px;" onclick="const d=this.nextElementSibling; const abrir=d.style.display==='none'; d.style.display=abrir?'block':'none'; this.textContent=abrir?'Ocultar ▴':'Ver compras ▾';">Ver compras ▾</span>
                   <div style="display:none; margin-top:4px; padding-left:12px; font-size:0.82rem; color:#4a5568;">${contDetalleComprasClienteHtml(f.compras)}</div>
                 </div>`).join('')
-            : '<span style="color:#a0aec0; font-style:italic;">Sin ventas ganadas en este período.</span>';
+            : '<span style="color:#64748b; font-style:italic;">Sin ventas ganadas en este período.</span>';
 
           // Ventas en $ por producto: un pedido multi-producto (lineas:[...]) solo trae UN monto total
           // para todo el pedido, no desglosado por cada línea que lo compone -- por eso se agrupa
@@ -11608,7 +11596,7 @@
             .sort((a,b)=>ventasPorProducto[b]-ventasPorProducto[a])
             .map(l=>`• ${NOMBRES_LINEA_PRODUCTO[l]||l}: <strong>${cotFormatoCop(ventasPorProducto[l])}</strong>`).join('<br>');
           if(ventasMultiProducto>0) htmlVentasProducto += `${htmlVentasProducto?'<br>':''}• Multi-producto (varias líneas en un pedido): <strong>${cotFormatoCop(ventasMultiProducto)}</strong>`;
-          document.getElementById('rep-ventas-producto').innerHTML = htmlVentasProducto || '<span style="color:#a0aec0; font-style:italic;">Sin ventas ganadas en este período.</span>';
+          document.getElementById('rep-ventas-producto').innerHTML = htmlVentasProducto || '<span style="color:#64748b; font-style:italic;">Sin ventas ganadas en este período.</span>';
 
           // Producción: consumo de papel — detalle rico de Cuadernos (multi-línea)...
           const consumoPapel = {};
@@ -11629,7 +11617,7 @@
             if(c.linea==='cuadernos' || !c.material || !c.nPliegos) return;
             consumoPapel[c.material] = (consumoPapel[c.material]||0) + c.nPliegos;
           });
-          document.getElementById('rep-consumo-papel').innerHTML = Object.keys(consumoPapel).length ? Object.keys(consumoPapel).sort((a,b)=>consumoPapel[b]-consumoPapel[a]).map(k=>`• ${k}: <strong>${consumoPapel[k]} pliegos</strong>`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin cotizaciones todavía.</span>';
+          document.getElementById('rep-consumo-papel').innerHTML = Object.keys(consumoPapel).length ? Object.keys(consumoPapel).sort((a,b)=>consumoPapel[b]-consumoPapel[a]).map(k=>`• ${k}: <strong>${consumoPapel[k]} pliegos</strong>`).join('<br>') : '<span style="color:#64748b; font-style:italic;">Sin cotizaciones todavía.</span>';
 
           const usoMaquinas = {};
           db_cotizaciones.forEach(c=>{
@@ -11650,7 +11638,7 @@
             const nombre = COT_NOMBRE_MAQUINA[c.maquina] || c.maquina;
             usoMaquinas[nombre] = (usoMaquinas[nombre]||0)+1;
           });
-          document.getElementById('rep-maquinas').innerHTML = Object.keys(usoMaquinas).length ? Object.keys(usoMaquinas).sort((a,b)=>usoMaquinas[b]-usoMaquinas[a]).map(k=>`• ${k}: <strong>${usoMaquinas[k]} líneas de impresión</strong>`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin cotizaciones todavía.</span>';
+          document.getElementById('rep-maquinas').innerHTML = Object.keys(usoMaquinas).length ? Object.keys(usoMaquinas).sort((a,b)=>usoMaquinas[b]-usoMaquinas[a]).map(k=>`• ${k}: <strong>${usoMaquinas[k]} líneas de impresión</strong>`).join('<br>') : '<span style="color:#64748b; font-style:italic;">Sin cotizaciones todavía.</span>';
 
           // Calidad
           const totalPerdidoReprocesos = db_reprocesos.reduce((s,i)=>s+i.costoTotal,0);
@@ -11975,7 +11963,7 @@
                         <div style="font-size:0.85rem; margin-top:4px;">Monto: <strong>${cotFormatoCop(p.monto)}</strong> — ${new Date(p.fecha).toLocaleDateString('es-CO')}</div>
                     </div>
                     <button class="btn-action" style="color:var(--peligro); border-color:var(--peligro); flex-shrink:0;" onclick="eliminarPrefactura('${p.id}')" title="Eliminar (no genera ningún documento)">${ticon('trash',{noMargin:true})}</button>
-                </div>`).join('') : '<p style="color:#718096;">No hay negocios ganados pendientes de facturar.</p>';
+                </div>`).join('') : '<p style="color:#5f6e84;">No hay negocios ganados pendientes de facturar.</p>';
         }
         function eliminarPrefactura(id){
             if(!confirm('¿Eliminar esta prefactura? No se generará ningún Documento de Venta a partir de ella.')) return;
@@ -12195,7 +12183,7 @@
         function contCrucesHtml(doc){
             const cr = contCrucesDeDoc(doc.id); if(!cr.length) return '';
             const total = cr.reduce((s, i) => s + i.valor, 0);
-            return 'Anticipos cruzados: <strong style="color:#059669;">' + cotFormatoCop(total) + '</strong> <span style="font-size:0.78rem; color:#718096;">(' +
+            return 'Anticipos cruzados: <strong style="color:#059669;">' + cotFormatoCop(total) + '</strong> <span style="font-size:0.78rem; color:#5f6e84;">(' +
                 cr.map(i => i.numero + ' ' + cotFormatoCop(i.valor) + ' <a href="#" onclick="contDescruzarClick(\'' + i.id + '\'); return false;" title="Deshacer este cruce">deshacer</a>').join(' · ') + ')</span><br>';
         }
         function contBotonCruzarHtml(doc){
@@ -12268,7 +12256,7 @@
                 let granTotal = 0, html = '', csv = [['Cliente', 'N° documento', 'Fecha', 'Tipo', 'Descripción', 'Total con IVA']];
                 clientes.forEach(c => {
                     const lista = contOrdenar(porCli[c]); const sub = lista.reduce((s, d) => s + valInf(d), 0); granTotal += sub;
-                    html += '<tr style="background:#edf2f7;"><td colspan="4" style="padding:7px 8px; font-weight:700;">' + esc(c) + ' <span style="font-weight:400; color:#718096;">(' + lista.length + ' documento' + (lista.length === 1 ? '' : 's') + ')</span></td><td style="padding:7px 8px; text-align:right; font-weight:700;">' + cotFormatoCop(sub) + '</td></tr>';
+                    html += '<tr style="background:#edf2f7;"><td colspan="4" style="padding:7px 8px; font-weight:700;">' + esc(c) + ' <span style="font-weight:400; color:#5f6e84;">(' + lista.length + ' documento' + (lista.length === 1 ? '' : 's') + ')</span></td><td style="padding:7px 8px; text-align:right; font-weight:700;">' + cotFormatoCop(sub) + '</td></tr>';
                     lista.forEach(d => {
                         const desc = String(d.descripcion || '').slice(0, 80);
                         html += '<tr style="border-bottom:1px solid #edf2f7;"><td style="padding:5px 8px 5px 22px;">' + esc(d.numero) + '</td><td style="padding:5px 8px;">' + contF10(d.fecha) + '</td><td style="padding:5px 8px;">' + CONT_INF_TIPOS[d.tipoDoc] + '</td><td style="padding:5px 8px; color:#4a5568;">' + esc(desc) + '</td><td style="padding:5px 8px; text-align:right;">' + cotFormatoCop(valInf(d)) + '</td></tr>';
@@ -12278,9 +12266,9 @@
                 });
                 csv.push(['TOTAL FACTURADO', '', '', '', '', Math.round(granTotal)]);
                 cont.innerHTML = docs.length
-                    ? '<div style="margin:6px 0 10px; font-size:0.9rem;"><strong>' + clientes.length + '</strong> cliente(s) · <strong>' + docs.length + '</strong> documento(s) · Total facturado con IVA: <strong style="color:var(--primary);">' + cotFormatoCop(granTotal) + '</strong>' + (anulados ? ' <span style="color:#718096;">(' + anulados + ' anulado(s) por Nota Crédito no se cuentan)</span>' : '') + '</div>' +
+                    ? '<div style="margin:6px 0 10px; font-size:0.9rem;"><strong>' + clientes.length + '</strong> cliente(s) · <strong>' + docs.length + '</strong> documento(s) · Total facturado con IVA: <strong style="color:var(--primary);">' + cotFormatoCop(granTotal) + '</strong>' + (anulados ? ' <span style="color:#5f6e84;">(' + anulados + ' anulado(s) por Nota Crédito no se cuentan)</span>' : '') + '</div>' +
                       '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:0.85rem;"><thead><tr style="background:#f7fafc; color:#4a5568; text-align:left;"><th style="padding:6px 8px;">N°</th><th style="padding:6px 8px;">Fecha</th><th style="padding:6px 8px;">Tipo</th><th style="padding:6px 8px;">Descripción</th><th style="padding:6px 8px; text-align:right;">Total con IVA</th></tr></thead><tbody>' + html + '</tbody><tfoot><tr style="border-top:2px solid #4a5568; font-weight:800;"><td colspan="4" style="padding:8px;">TOTAL FACTURADO</td><td style="padding:8px; text-align:right;">' + cotFormatoCop(granTotal) + '</td></tr></tfoot></table></div>'
-                    : '<p style="color:#a0aec0;">No hay facturas ni cuentas de cobro en este rango.</p>';
+                    : '<p style="color:#64748b;">No hay facturas ni cuentas de cobro en este rango.</p>';
                 contInformeUltimo = { nombre: 'facturado_por_cliente_' + desde + '_a_' + hasta, filas: csv };
                 return;
             }
@@ -12297,11 +12285,11 @@
             sel.sort((a, b) => a.fecha.localeCompare(b.fecha) || contClaveNumero(a.numero)[0].localeCompare(contClaveNumero(b.numero)[0]) || contClaveNumero(a.numero)[1] - contClaveNumero(b.numero)[1]);
             if(!contOrdenAsc) sel.reverse();
             const totales = {}; sel.forEach(f => { totales[f.tipo] = (totales[f.tipo] || 0) + f.valor; });
-            const cuerpo = sel.map(f => '<tr style="border-bottom:1px solid #edf2f7;"><td style="padding:5px 8px; white-space:nowrap;">' + f.fecha + '</td><td style="padding:5px 8px;">' + CONT_INF_TIPOS[f.tipo] + '</td><td style="padding:5px 8px;">' + esc(f.numero) + '</td><td style="padding:5px 8px;">' + esc(f.tercero) + '</td><td style="padding:5px 8px; color:#4a5568;">' + esc(String(f.detalle).slice(0, 90)) + '</td><td style="padding:5px 8px; text-align:right;">' + cotFormatoCop(f.valor) + '</td><td style="padding:5px 8px; color:#718096;">' + esc(f.estado) + '</td></tr>').join('');
+            const cuerpo = sel.map(f => '<tr style="border-bottom:1px solid #edf2f7;"><td style="padding:5px 8px; white-space:nowrap;">' + f.fecha + '</td><td style="padding:5px 8px;">' + CONT_INF_TIPOS[f.tipo] + '</td><td style="padding:5px 8px;">' + esc(f.numero) + '</td><td style="padding:5px 8px;">' + esc(f.tercero) + '</td><td style="padding:5px 8px; color:#4a5568;">' + esc(String(f.detalle).slice(0, 90)) + '</td><td style="padding:5px 8px; text-align:right;">' + cotFormatoCop(f.valor) + '</td><td style="padding:5px 8px; color:#5f6e84;">' + esc(f.estado) + '</td></tr>').join('');
             cont.innerHTML = sel.length
-                ? '<div style="margin:6px 0 10px; font-size:0.85rem; line-height:1.7;"><strong>' + sel.length + '</strong> documento(s). ' + Object.keys(totales).map(t => CONT_INF_TIPOS[t] + ': <strong>' + cotFormatoCop(totales[t]) + '</strong>').join(' · ') + '<br><span style="color:#718096;">Las notas crédito van en negativo. Facturas y cuentas de cobro con IVA (+ envío).</span></div>' +
+                ? '<div style="margin:6px 0 10px; font-size:0.85rem; line-height:1.7;"><strong>' + sel.length + '</strong> documento(s). ' + Object.keys(totales).map(t => CONT_INF_TIPOS[t] + ': <strong>' + cotFormatoCop(totales[t]) + '</strong>').join(' · ') + '<br><span style="color:#5f6e84;">Las notas crédito van en negativo. Facturas y cuentas de cobro con IVA (+ envío).</span></div>' +
                   '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:0.83rem;"><thead><tr style="background:#f7fafc; color:#4a5568; text-align:left;"><th style="padding:6px 8px;">Fecha</th><th style="padding:6px 8px;">Tipo</th><th style="padding:6px 8px;">N°</th><th style="padding:6px 8px;">Cliente / proveedor</th><th style="padding:6px 8px;">Detalle</th><th style="padding:6px 8px; text-align:right;">Valor</th><th style="padding:6px 8px;">Estado</th></tr></thead><tbody>' + cuerpo + '</tbody></table></div>'
-                : '<p style="color:#a0aec0;">No hay documentos con esos filtros en el rango.</p>';
+                : '<p style="color:#64748b;">No hay documentos con esos filtros en el rango.</p>';
             contInformeUltimo = { nombre: 'documentos_' + desde + '_a_' + hasta, filas: [['Fecha', 'Tipo', 'N°', 'Cliente / proveedor', 'Detalle', 'Valor', 'Estado']].concat(sel.map(f => [f.fecha, CONT_INF_TIPOS[f.tipo], f.numero, f.tercero, f.detalle, Math.round(f.valor), f.estado])) };
         }
         /* Conde 2026-11-06: "un informe de anticipo por cliente para saber cómo cruzarlos con las facturas".
@@ -12334,13 +12322,13 @@
                     '<span style="font-size:0.86rem;">Anticipos sin cruzar: <strong style="color:#059669;">' + cotFormatoCop(totalAnt) + '</strong> · Facturas con saldo: <strong style="color:var(--primary);">' + cotFormatoCop(totalSaldo) + '</strong>' +
                     (cruzable > 0 ? ' · Se pueden cruzar: <strong>' + cotFormatoCop(cruzable) + '</strong>' : '') + '</span></div>' +
                     '<div style="overflow-x:auto; margin-top:6px;"><table style="width:100%; border-collapse:collapse; font-size:0.83rem;"><thead><tr style="background:#f0fff4; color:#276749; text-align:left;"><th style="padding:5px 8px;">Anticipo</th><th style="padding:5px 8px;">Fecha</th><th style="padding:5px 8px;">Detalle</th><th style="padding:5px 8px; text-align:right;">Valor</th><th style="padding:5px 8px;">Sugerencia</th></tr></thead><tbody>' +
-                    ants.map(a => '<tr style="border-bottom:1px solid #edf2f7;"><td style="padding:4px 8px;">' + esc(a.numero) + '</td><td style="padding:4px 8px; white-space:nowrap;">' + fecha(a.fecha) + '</td><td style="padding:4px 8px; color:#4a5568;">' + esc(String(a.concepto || '').slice(0, 90)) + (a.medioPago ? ' <span style="color:#a0aec0;">· ' + esc(a.medioPago) + '</span>' : '') + '</td><td style="padding:4px 8px; text-align:right; font-weight:600;">' + cotFormatoCop(a.valor) + '</td><td style="padding:4px 8px; color:#2b6cb0;">' + esc(sug(a)) + '</td></tr>').join('') +
+                    ants.map(a => '<tr style="border-bottom:1px solid #edf2f7;"><td style="padding:4px 8px;">' + esc(a.numero) + '</td><td style="padding:4px 8px; white-space:nowrap;">' + fecha(a.fecha) + '</td><td style="padding:4px 8px; color:#4a5568;">' + esc(String(a.concepto || '').slice(0, 90)) + (a.medioPago ? ' <span style="color:#64748b;">· ' + esc(a.medioPago) + '</span>' : '') + '</td><td style="padding:4px 8px; text-align:right; font-weight:600;">' + cotFormatoCop(a.valor) + '</td><td style="padding:4px 8px; color:#2b6cb0;">' + esc(sug(a)) + '</td></tr>').join('') +
                     '</tbody></table></div>' +
                     (facts.length
                         ? '<div style="overflow-x:auto; margin-top:8px;"><table style="width:100%; border-collapse:collapse; font-size:0.83rem;"><thead><tr style="background:#ebf8ff; color:#2c5282; text-align:left;"><th style="padding:5px 8px;">Factura / cuenta de cobro con saldo</th><th style="padding:5px 8px;">Fecha</th><th style="padding:5px 8px;">Vence</th><th style="padding:5px 8px; text-align:right;">Total a cobrar</th><th style="padding:5px 8px; text-align:right;">Saldo</th><th style="padding:5px 8px;"></th></tr></thead><tbody>' +
                           facts.map(d => '<tr style="border-bottom:1px solid #edf2f7;"><td style="padding:4px 8px;">' + esc(d.numero) + '</td><td style="padding:4px 8px; white-space:nowrap;">' + fecha(d.fecha) + '</td><td style="padding:4px 8px; white-space:nowrap;">' + (d.fechaVencimiento ? fecha(d.fechaVencimiento) : '-') + '</td><td style="padding:4px 8px; text-align:right;">' + cotFormatoCop(d.totalCobrar) + '</td><td style="padding:4px 8px; text-align:right; font-weight:600;">' + cotFormatoCop(d.saldoPendiente) + '</td><td style="padding:4px 8px; text-align:right;"><button type="button" class="btn-action" style="color:#059669; border-color:#059669; padding:3px 10px;" onclick="contModalCruzarAnticipos(' + "'" + d.id + "'" + ')">Cruzar</button></td></tr>').join('') +
                           '</tbody></table></div>'
-                        : '<div style="margin-top:8px; font-size:0.83rem; color:#718096;">' + (id === '__sin' ? 'Estos ingresos no tienen cliente: asígnales uno editando el comprobante.' : 'Este cliente no tiene facturas con saldo pendiente: el anticipo queda a favor para su próxima factura.') + '</div>') +
+                        : '<div style="margin-top:8px; font-size:0.83rem; color:#5f6e84;">' + (id === '__sin' ? 'Estos ingresos no tienen cliente: asígnales uno editando el comprobante.' : 'Este cliente no tiene facturas con saldo pendiente: el anticipo queda a favor para su próxima factura.') + '</div>') +
                     '</div>';
                 ants.forEach(a => csv.push([nombre, 'Anticipo', a.numero, contF10(a.fecha), Math.round(a.valor), a.concepto || '', sug(a)]));
                 facts.forEach(d => csv.push([nombre, 'Factura con saldo', d.numero, contF10(d.fecha), Math.round(d.saldoPendiente), 'Total a cobrar ' + Math.round(d.totalCobrar), '']));
@@ -12348,8 +12336,8 @@
             });
             csv.push(['TOTAL ANTICIPOS SIN CRUZAR', '', '', '', Math.round(granAnt), '', '']);
             cont.innerHTML = ids.length
-                ? '<div style="margin:6px 0 10px; font-size:0.9rem;"><strong>' + ids.length + '</strong> cliente(s) con anticipos sin cruzar · Total anticipos: <strong style="color:#059669;">' + cotFormatoCop(granAnt) + '</strong> · Cruzable contra facturas pendientes: <strong>' + cotFormatoCop(granCruzable) + '</strong><br><span style="font-size:0.8rem; color:#718096;">Muestra el estado de hoy (no depende de las fechas). Un anticipo es un Comprobante de Ingreso sin factura. Con "Cruzar" eliges cuáles se aplican a cada factura.</span></div>' + html
-                : '<p style="color:#a0aec0;">No hay anticipos sin cruzar: todos los ingresos ya están aplicados a una factura.</p>';
+                ? '<div style="margin:6px 0 10px; font-size:0.9rem;"><strong>' + ids.length + '</strong> cliente(s) con anticipos sin cruzar · Total anticipos: <strong style="color:#059669;">' + cotFormatoCop(granAnt) + '</strong> · Cruzable contra facturas pendientes: <strong>' + cotFormatoCop(granCruzable) + '</strong><br><span style="font-size:0.8rem; color:#5f6e84;">Muestra el estado de hoy (no depende de las fechas). Un anticipo es un Comprobante de Ingreso sin factura. Con "Cruzar" eliges cuáles se aplican a cada factura.</span></div>' + html
+                : '<p style="color:#64748b;">No hay anticipos sin cruzar: todos los ingresos ya están aplicados a una factura.</p>';
             contInformeUltimo = { nombre: 'anticipos_por_cliente_' + contHoy(), filas: csv };
         }
         function contInformeDescargar(){
@@ -12585,18 +12573,18 @@
                             Total a cobrar: <strong>${cotFormatoCop(doc.totalCobrar)}</strong><br>
                             Saldo pendiente: <strong style="color:var(--primary);">${cotFormatoCop(doc.saldoPendiente)}</strong><br>
                             ${contCrucesHtml(doc)}
-                            ${ncParcialesDe(doc).length ? `Notas crédito parciales: <strong style="color:#c53030;">-${cotFormatoCop(ncParcialesDe(doc).reduce((s, x) => s + (x.totalCobrar || 0), 0))}</strong> <span style="font-size:0.78rem; color:#718096;">(${ncParcialesDe(doc).map(x => x.numero).join(' · ')})</span><br>` : ''}
+                            ${ncParcialesDe(doc).length ? `Notas crédito parciales: <strong style="color:#c53030;">-${cotFormatoCop(ncParcialesDe(doc).reduce((s, x) => s + (x.totalCobrar || 0), 0))}</strong> <span style="font-size:0.78rem; color:#5f6e84;">(${ncParcialesDe(doc).map(x => x.numero).join(' · ')})</span><br>` : ''}
                             Vencimiento: <strong>${doc.fechaVencimiento||'-'}</strong>
                         </div>
                         <div class="action-row">
                             ${contBotonCruzarHtml(doc)}
                             ${doc.tipoDoc==='cuenta_cobro'?`<button class="btn-stage btn-avanzar" style="flex:none; padding:8px 14px;" onclick="contImprimirCuentaCobro('${doc.id}')">🖨️ Imprimir</button>`:''}
                             <button class="btn-action" onclick="editarDocVenta('${doc.id}')">✏️ Editar</button><button class="btn-action" style="color:var(--peligro); border-color:var(--peligro);" onclick="eliminarDocVenta('${doc.id}')">🗑️ Eliminar</button>
-                            ${doc.estado==='pagada'?'<span style="font-size:0.78rem; color:#718096; margin-left:6px;">🔓 Pagado — editar con cuidado</span>':''}
+                            ${doc.estado==='pagada'?'<span style="font-size:0.78rem; color:#5f6e84; margin-left:6px;">🔓 Pagado — editar con cuidado</span>':''}
                         </div>
                     </div>`;
             });
-            if(db_docventa.length===0) container.innerHTML = '<p style="color:#718096; grid-column: 1/-1;">No hay documentos de venta todavía.</p>';
+            if(db_docventa.length===0) container.innerHTML = '<p style="color:#5f6e84; grid-column: 1/-1;">No hay documentos de venta todavía.</p>';
 
             const selIngreso = document.getElementById('ing-docventa');
             if(selIngreso){
@@ -12813,7 +12801,7 @@
                         </div>
                     </div>`;
             });
-            if(db_ingresos.length===0) container.innerHTML = '<p style="color:#718096; grid-column: 1/-1;">No hay comprobantes de ingreso todavía.</p>';
+            if(db_ingresos.length===0) container.innerHTML = '<p style="color:#5f6e84; grid-column: 1/-1;">No hay comprobantes de ingreso todavía.</p>';
         }
 
         /* ---- CUENTAS POR PAGAR (CxP) ---- */
@@ -12936,11 +12924,11 @@
                         <div style="font-size:0.9rem;">Monto factura: <strong>${cotFormatoCop(c.monto)}</strong>${c.iva?` (incl. IVA ${cotFormatoCop(c.iva)})`:''}<br>Saldo pendiente: <strong style="color:var(--primary);">${cotFormatoCop(c.saldoPendiente)}</strong> — Vence: <strong>${c.fechaVencimiento||'-'}</strong></div>
                         <div class="action-row">
                             <button class="btn-action" onclick="editarCxp('${c.id}')">✏️ Editar</button><button class="btn-action" style="color:var(--peligro); border-color:var(--peligro);" onclick="eliminarCxp('${c.id}')">🗑️ Eliminar</button>
-                            ${c.estado==='pagado'?'<span style="font-size:0.78rem; color:#718096; margin-left:6px;">🔓 Pagada — editar con cuidado</span>':''}
+                            ${c.estado==='pagado'?'<span style="font-size:0.78rem; color:#5f6e84; margin-left:6px;">🔓 Pagada — editar con cuidado</span>':''}
                         </div>
                     </div>`;
             });
-            if(db_cxp.length===0) container.innerHTML = '<p style="color:#718096; grid-column: 1/-1;">No hay cuentas por pagar registradas.</p>';
+            if(db_cxp.length===0) container.innerHTML = '<p style="color:#5f6e84; grid-column: 1/-1;">No hay cuentas por pagar registradas.</p>';
 
             const selEgreso = document.getElementById('egr-cxp');
             if(selEgreso){
@@ -13132,7 +13120,7 @@
                         </div>
                     </div>`;
             });
-            if(db_egresos.length===0) container.innerHTML = '<p style="color:#718096; grid-column: 1/-1;">No hay comprobantes de egreso todavía.</p>';
+            if(db_egresos.length===0) container.innerHTML = '<p style="color:#5f6e84; grid-column: 1/-1;">No hay comprobantes de egreso todavía.</p>';
         }
 
         /* ---- CARTERA CxC / CxP (grillas) ---- */
@@ -13164,7 +13152,7 @@
                     filas += `<tr style="background:#f1f5f9; font-weight:bold;"><td colspan="3">Total ${nombreCli}</td><td colspan="3">${cotFormatoCop(totalCliente)}</td></tr>`;
                 });
                 if(pendientesCxc.length) filas += `<tr style="background:#e2e8f0; font-weight:bold; font-size:1.02em;"><td colspan="3">TOTAL GENERAL</td><td colspan="3">${cotFormatoCop(totalGeneralCxc)}</td></tr>`;
-                tbodyCxc.innerHTML = filas || '<tr><td colspan="6" style="color:#718096;">Sin cartera por cobrar pendiente.</td></tr>';
+                tbodyCxc.innerHTML = filas || '<tr><td colspan="6" style="color:#5f6e84;">Sin cartera por cobrar pendiente.</td></tr>';
             }
             const tbodyCxp = document.getElementById('cont-tabla-cxp');
             if(tbodyCxp){
@@ -13188,7 +13176,7 @@
                     filas += `<tr style="background:#f1f5f9; font-weight:bold;"><td colspan="3">Total ${prov}</td><td colspan="3">${cotFormatoCop(totalProveedor)}</td></tr>`;
                 });
                 if(pendientes.length) filas += `<tr style="background:#e2e8f0; font-weight:bold; font-size:1.02em;"><td colspan="3">TOTAL GENERAL</td><td colspan="3">${cotFormatoCop(totalGeneral)}</td></tr>`;
-                tbodyCxp.innerHTML = filas || '<tr><td colspan="6" style="color:#718096;">Sin cartera por pagar pendiente.</td></tr>';
+                tbodyCxp.innerHTML = filas || '<tr><td colspan="6" style="color:#5f6e84;">Sin cartera por pagar pendiente.</td></tr>';
             }
         }
 
@@ -13228,14 +13216,14 @@
         // debajo de "Ventas Facturadas (mes)" / "Ingresos Cobrados (mes, caja)" en el Tablero
         // Financiero, con cada Documento de Venta / Comprobante de Ingreso que compone esa suma.
         function contDetalleDocVentaHtml(docs){
-            if(!docs.length) return '<div style="color:#a0aec0; font-style:italic;">Sin documentos de venta en este período.</div>';
+            if(!docs.length) return '<div style="color:#64748b; font-style:italic;">Sin documentos de venta en este período.</div>';
             return docs.map(d => {
                 const cli = db_clientes.find(c => c.id === d.idCli);
                 return `<div style="padding:3px 0; border-bottom:1px solid #edf2f7;">${d.fecha||'-'} — <strong>${d.numero}</strong> — ${cli?cli.empresa:'Cliente eliminado'}: ${cotFormatoCop(d.totalDocumento)}</div>`;
             }).join('');
         }
         function contDetalleIngresosHtml(ingresos){
-            if(!ingresos.length) return '<div style="color:#a0aec0; font-style:italic;">Sin ingresos cobrados en este período.</div>';
+            if(!ingresos.length) return '<div style="color:#64748b; font-style:italic;">Sin ingresos cobrados en este período.</div>';
             return ingresos.map(i => {
                 const cli = db_clientes.find(c => c.id === i.idCli);
                 return `<div style="padding:3px 0; border-bottom:1px solid #edf2f7;">${i.fecha||'-'} — <strong>${i.numero}</strong> — ${cli?cli.empresa:(i.concepto||'Sin cliente')}: ${cotFormatoCop(i.valor)}</div>`;
@@ -13345,16 +13333,16 @@
             const porClienteCobro = {};
             db_ingresos.forEach(i => { porClienteCobro[i.idCli] = (porClienteCobro[i.idCli]||0) + i.valor; });
             const topClientesCobro = Object.keys(porClienteCobro).map(idCli => ({cli: db_clientes.find(c=>c.id===idCli), total: porClienteCobro[idCli]})).filter(x=>x.cli).sort((a,b)=>b.total-a.total).slice(0,5);
-            document.getElementById('cont-mejor-cliente').innerHTML = topClientesCobro.length ? topClientesCobro.map(x=>`• ${x.cli.empresa}: <strong>${cotFormatoCop(x.total)}</strong>`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin cobros registrados todavía.</span>';
+            document.getElementById('cont-mejor-cliente').innerHTML = topClientesCobro.length ? topClientesCobro.map(x=>`• ${x.cli.empresa}: <strong>${cotFormatoCop(x.total)}</strong>`).join('<br>') : '<span style="color:#64748b; font-style:italic;">Sin cobros registrados todavía.</span>';
 
             const nombresLinea = {escolar:"Cuaderno Escolar", cuaderno_anillado:"Cuaderno Anillado", agenda_ejecutiva:"Agenda Ejecutiva", libretas:"Libretas"};
             const rankingLinea = Object.keys(margenPorLinea).sort((a,b)=>margenPorLinea[b]-margenPorLinea[a]);
-            document.getElementById('cont-producto-rentable').innerHTML = rankingLinea.length ? rankingLinea.map(l=>`• ${nombresLinea[l]||l}: <strong>${cotFormatoCop(margenPorLinea[l])}</strong> margen acumulado`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin negocios ganados con cotización todavía.</span>';
+            document.getElementById('cont-producto-rentable').innerHTML = rankingLinea.length ? rankingLinea.map(l=>`• ${nombresLinea[l]||l}: <strong>${cotFormatoCop(margenPorLinea[l])}</strong> margen acumulado`).join('<br>') : '<span style="color:#64748b; font-style:italic;">Sin negocios ganados con cotización todavía.</span>';
 
             // ventasPorLinea ya se calculó más arriba (se reutiliza aquí para el ranking; también
             // sirve para ponderar el margen del punto de equilibrio por la mezcla real de ventas).
             const rankingVentas = Object.keys(ventasPorLinea).sort((a,b)=>ventasPorLinea[b]-ventasPorLinea[a]);
-            document.getElementById('cont-ventas-por-linea').innerHTML = rankingVentas.length ? rankingVentas.map(l=>`• ${NOMBRES_LINEA_PRODUCTO[l]||l}: <strong>${cotFormatoCop(ventasPorLinea[l])}</strong>`).join('<br>') : '<span style="color:#a0aec0; font-style:italic;">Sin negocios ganados todavía.</span>';
+            document.getElementById('cont-ventas-por-linea').innerHTML = rankingVentas.length ? rankingVentas.map(l=>`• ${NOMBRES_LINEA_PRODUCTO[l]||l}: <strong>${cotFormatoCop(ventasPorLinea[l])}</strong>`).join('<br>') : '<span style="color:#64748b; font-style:italic;">Sin negocios ganados todavía.</span>';
         }
 
         /* ---- NOTAS CRÉDITO (anulan una factura / cuenta de cobro completa) ----
@@ -13632,7 +13620,7 @@
                             <div><label style="font-size:0.75rem; color:#4a5568;">Valor antes de IVA</label><input type="text" inputmode="numeric" id="nc-ed-bruto-${n.id}" value="${fmt(n.valorBruto)}" oninput="contFormatearMiles(this)"></div>
                             <div><label style="font-size:0.75rem; color:#4a5568;">IVA</label><input type="text" inputmode="numeric" id="nc-ed-iva-${n.id}" value="${fmt(n.iva)}" oninput="contFormatearMiles(this)"></div>
                         </div>
-                        <div style="font-size:0.78rem; color:#718096; margin-top:6px;">${ncEsParcial(n) ? `Al cambiar el valor, la factura ${n.numeroDoc || ''} recalcula lo que el cliente debe y la nota resta ese valor en las ventas.` : `La factura ${n.numeroDoc || ''} sigue anulada; el nuevo valor solo cambia lo que esta nota resta en las ventas.`}</div>
+                        <div style="font-size:0.78rem; color:#5f6e84; margin-top:6px;">${ncEsParcial(n) ? `Al cambiar el valor, la factura ${n.numeroDoc || ''} recalcula lo que el cliente debe y la nota resta ese valor en las ventas.` : `La factura ${n.numeroDoc || ''} sigue anulada; el nuevo valor solo cambia lo que esta nota resta en las ventas.`}</div>
                         <div class="action-row">
                             <button class="btn-action" style="background:var(--ganado); color:#fff;" onclick="ncGuardarEdicion('${n.id}')">${ticon('check',{color:'#fff'})}Guardar cambios</button>
                             <button class="btn-action" onclick="ncToggleEditar('${n.id}')">Cancelar</button>
@@ -13650,7 +13638,7 @@
                         <button class="btn-action" style="color:var(--peligro); border-color:var(--peligro);" onclick="eliminarNotaCredito('${n.id}')">${ticon('trash')}Eliminar</button>
                     </div>
                 </div>`;
-            }).join('') || '<p style="color:#718096; grid-column: 1/-1;">No hay Notas Crédito todavía.</p>';
+            }).join('') || '<p style="color:#5f6e84; grid-column: 1/-1;">No hay Notas Crédito todavía.</p>';
         }
         function contImprimirNotaCredito(id){
             const n = db_notasCredito.find(x => x.id === id);
@@ -13695,9 +13683,9 @@
             let lista = db_clientes.filter(c => (!q || [c.empresa, c.nombre, c.identificacion, c.correo].join(' ').toLowerCase().includes(q)) && (!soloFalt || falta(c)));
             lista.sort((a, b) => String(a.empresa).localeCompare(String(b.empresa), 'es'));
             contActualizarResumenFacturacion();
-            if(!lista.length){ cont.innerHTML = '<p style="color:#a0aec0;">No hay clientes con ese filtro.</p>'; return; }
+            if(!lista.length){ cont.innerHTML = '<p style="color:#64748b;">No hay clientes con ese filtro.</p>'; return; }
             const filas = lista.slice(0, 300).map(c => `<tr style="border-bottom:1px solid #edf2f7;${falta(c) ? ' background:#fffbeb;' : ''}">
-                <td style="padding:5px 8px;"><strong>${esc(c.empresa)}</strong><br><span style="font-size:0.78rem; color:#718096;">${esc(c.nombre || '')}</span></td>
+                <td style="padding:5px 8px;"><strong>${esc(c.empresa)}</strong><br><span style="font-size:0.78rem; color:#5f6e84;">${esc(c.nombre || '')}</span></td>
                 <td style="padding:5px 8px; font-size:0.82rem; color:#4a5568;">${esc(c.correo || '—')}</td>
                 <td style="padding:5px 8px;"><select onchange="contGuardarClienteFact('${c.id}','tipo',this.value)" style="padding:5px; border:1px solid #cbd5e0; border-radius:4px;">
                     <option value="" ${!c.tipo ? 'selected' : ''}>-- Sin definir --</option>
@@ -13706,7 +13694,7 @@
                 <td style="padding:5px 8px;"><input type="text" value="${esc(c.identificacion || '')}" placeholder="NIT / CC" onchange="contGuardarClienteFact('${c.id}','identificacion',this.value)" style="width:100%; box-sizing:border-box; padding:5px 7px; border:1px solid #cbd5e0; border-radius:4px;"></td>
             </tr>`).join('');
             cont.innerHTML = '<table style="width:100%; border-collapse:collapse; font-size:0.88rem;"><thead><tr style="background:#f7fafc; color:#4a5568; text-align:left;"><th style="padding:6px 8px;">Cliente</th><th style="padding:6px 8px;">Correo</th><th style="padding:6px 8px;">Tipo</th><th style="padding:6px 8px;">Identificación (NIT / CC)</th></tr></thead><tbody>' + filas + '</tbody></table>' +
-                (lista.length > 300 ? '<p style="font-size:0.8rem; color:#718096;">Se muestran los primeros 300: usa el buscador para encontrar los demás.</p>' : '');
+                (lista.length > 300 ? '<p style="font-size:0.8rem; color:#5f6e84;">Se muestran los primeros 300: usa el buscador para encontrar los demás.</p>' : '');
         }
         function contActualizarResumenFacturacion(){
             const el = document.getElementById('cont-cli-resumen'); if(!el) return;

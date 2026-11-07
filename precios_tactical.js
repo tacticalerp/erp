@@ -57,7 +57,7 @@ function tacticalPedirFechaFlotante(titulo){
       <div style="background:#fff; border-radius:10px; padding:24px; max-width:360px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,0.35); text-align:center; font-family:'Segoe UI', Tahoma, sans-serif;">
         <div style="font-size:2rem; margin-bottom:4px;">📅</div>
         <div style="font-weight:800; font-size:1.05rem; color:#1a202c; margin-bottom:4px;">${titulo}</div>
-        <div style="font-size:0.85rem; color:#718096; margin-bottom:16px;">Dato obligatorio — sin fecha no se genera el documento.</div>
+        <div style="font-size:0.85rem; color:#5f6e84; margin-bottom:16px;">Dato obligatorio — sin fecha no se genera el documento.</div>
         <input type="date" id="tactical-fecha-flotante-input" style="width:100%; box-sizing:border-box; font-size:1.1rem; padding:10px; border:2px solid #cbd5e0; border-radius:6px; margin-bottom:6px;">
         <div id="tactical-fecha-flotante-error" style="color:#c0392b; font-size:0.8rem; min-height:1.2em; margin-bottom:10px;"></div>
         <div style="display:flex; gap:8px;">
@@ -85,7 +85,9 @@ function tacticalPedirFechaFlotante(titulo){
 // Cuadernos y no a la pantalla de inicio. Es "salir y entrar" en un clic. Un pedido de varios
 // productos en curso NO se pierde: vive en localStorage y se restaura solo al recargar.
 function tacticalNuevaCotizacion(hashDestino){
-  if(!confirm('¿Empezar una cotización nueva? Se borra lo que tengas en pantalla (cliente, producto y resultado). Lo que ya guardaste en el CRM no se toca, y un pedido de varios productos en curso tampoco.')) return;
+  const _okNueva = confirm('¿Empezar una cotización nueva? Se borra lo que tengas en pantalla (cliente, producto y resultado). Lo que ya guardaste en el CRM no se toca, y un pedido de varios productos en curso tampoco.');
+  if(!_okNueva) return;
+  if(typeof tacticalMarcarGuardado === 'function') tacticalMarcarGuardado();   // ya lo confirmó: no volver a preguntar al recargar
   // hashDestino: en el Hub se pasa 'cotizador' para que al recargar vuelva al cotizador de
   // Cuadernos (irAVistaDesdeHash lo lee) -- las 8 calculadoras standalone no pasan nada y quedan
   // en su misma página sin ?ot=.
@@ -116,7 +118,7 @@ function tacticalConfirmarFlotante(opts){
       <div style="background:#fff; border-radius:10px; padding:24px; max-width:380px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,0.35); text-align:center; font-family:'Segoe UI', Tahoma, sans-serif;">
         <div style="display:flex; justify-content:center; margin-bottom:10px; color:${opts.color};">${ticon(opts.icono, {size:42, noMargin:true})}</div>
         <div style="font-weight:800; font-size:1.05rem; color:#1a202c; margin-bottom:6px;">${opts.titulo}</div>
-        <div style="font-size:0.85rem; color:#718096; margin-bottom:18px;">${opts.mensaje||''}</div>
+        <div style="font-size:0.85rem; color:#5f6e84; margin-bottom:18px;">${opts.mensaje||''}</div>
         <div style="display:flex; gap:8px;">
           <button type="button" id="tactical-confirmar-flotante-no" style="flex:1; padding:10px; border:1px solid #cbd5e0; background:#fff; color:#4a5568; border-radius:6px; font-weight:700; cursor:pointer;">Cancelar</button>
           <button type="button" id="tactical-confirmar-flotante-si" style="flex:1; padding:10px; border:none; background:${opts.color}; color:#fff; border-radius:6px; font-weight:700; cursor:pointer;">${opts.textoBoton||'Confirmar'}</button>
@@ -551,7 +553,7 @@ function tacticalPdfTablaProductosHtml(lineas, opts){
     if(dosFilas) html += `<tr><td colspan="${nCols - (hayFoto ? 1 : 0)}" style="font-size:0.72rem; line-height:1.3; color:#4a5568; border-top:none; padding-top:0;">${neg(det)}${det && video ? '<br>' : ''}${video}</td></tr>`;
     return html;
   }).join('');
-  const nota = aplicaIva ? '<div style="font-size:0.66rem; color:#718096; margin:0 0 3px;">Unitario y subtotal sin IVA.</div>' : '';
+  const nota = aplicaIva ? '<div style="font-size:0.66rem; color:#5f6e84; margin:0 0 3px;">Unitario y subtotal sin IVA.</div>' : '';
   return nota + `<table class="doc-table" style="table-layout:fixed;"><colgroup>${anchos.map(a => `<col style="width:${a}%;">`).join('')}</colgroup>${cabecera}${filas}</table>`;
 }
 
@@ -1291,6 +1293,7 @@ function tacticalAnunciarCotizacionGuardada(ok, ot, cliente, total, extra, etiqu
     alert('⚠️ ' + que + ' ' + (ot || '') + ' NO se pudo guardar en el CRM (revisa tu conexión a internet).\n\nVuelve a presionar Guardar para intentarlo de nuevo.');
     return;
   }
+  if(typeof tacticalMarcarGuardado === 'function') tacticalMarcarGuardado();
   const monto = (typeof total === 'number' && isFinite(total)) ? '\nTotal: $' + Math.round(total).toLocaleString('es-CO') : '';
   alert('✅ ' + que + ' guardada — ' + (ot || '') + '\nCliente: ' + (cliente || '') + monto + (extra ? '\n\n' + extra : ''));
 }
@@ -1433,8 +1436,8 @@ function tacticalTroquelEsc(s){ return String(s == null ? '' : s).replace(/[&<>"
       .tq-btn:hover{ border-color:#94a3b8; }
       .tq-btn[disabled]{ opacity:.55; cursor:default; }
       .tq-btn .tq-nom{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-      .tq-btn .tq-cod, .tq-it .tq-cod{ font-size:.72rem; color:#94a3b8; letter-spacing:.3px; white-space:nowrap; }
-      .tq-btn .tq-flecha{ color:#718096; font-size:.7rem; }
+      .tq-btn .tq-cod, .tq-it .tq-cod{ font-size:.72rem; color:#64748b; letter-spacing:.3px; white-space:nowrap; }
+      .tq-btn .tq-flecha{ color:#5f6e84; font-size:.7rem; }
       .tq-panel{ display:none; position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:9000; background:#fff; border:1px solid #cbd5e0; border-radius:8px; box-shadow:0 10px 28px rgba(0,0,0,.18); overflow:hidden; }
       .tq-pick.tq-abierto .tq-panel{ display:block; }
       .tq-buscar{ width:100%; box-sizing:border-box; border:0; border-bottom:1px solid #e2e8f0; padding:10px 12px; font:inherit; outline:none; }
@@ -1448,7 +1451,7 @@ function tacticalTroquelEsc(s){ return String(s == null ? '' : s).replace(/[&<>"
       .tq-it .tq-nom b, .tq-btn .tq-nom b{ font-weight:700; }
       .tq-tags{ display:flex; gap:4px; flex-wrap:wrap; justify-content:flex-end; }
       .tq-tag{ font-size:.68rem; color:#475569; background:#e8edf3; border-radius:9px; padding:1px 8px; white-space:nowrap; }
-      .tq-vacio{ padding:14px; color:#94a3b8; font-style:italic; }
+      .tq-vacio{ padding:14px; color:#64748b; font-style:italic; }
     `;
     document.head.appendChild(st);
   }
@@ -1473,7 +1476,7 @@ function tacticalTroquelEsc(s){ return String(s == null ? '' : s).replace(/[&<>"
     const sel = document.getElementById(selectId); if(!sel) return;
     const it = r.items.find(function(x){ return x.id === sel.value; });
     const btn = r.wrap.querySelector('.tq-btn');
-    btn.querySelector('.tq-nom').innerHTML = it ? it.nombre : '<span style="color:#94a3b8;">Elige un troquel…</span>';
+    btn.querySelector('.tq-nom').innerHTML = it ? it.nombre : '<span style="color:#64748b;">Elige un troquel…</span>';
     btn.querySelector('.tq-cod').textContent = it ? it.id : '';
     btn.disabled = !!sel.disabled;
     if(sel.disabled) r.wrap.classList.remove('tq-abierto');
@@ -1511,3 +1514,119 @@ function tacticalTroquelEsc(s){ return String(s == null ? '' : s).replace(/[&<>"
   };
   document.addEventListener('click', function(e){ if(!e.target.closest || !e.target.closest('.tq-pick')) cerrarTodos(null); });
 })();
+
+/* =====================================================================================
+   MEJORAS DE USABILIDAD COMPARTIDAS (Conde 2026-11-07, auditoría de usabilidad)
+   1) Avisos NO bloqueantes: window.alert() ahora muestra un aviso flotante arriba (rojo = error, verde = listo, azul = info)
+      que se cierra solo; los largos (como "Cotización guardada") esperan a que los cierres. confirm() sigue siendo nativo.
+      window.alertBloqueante() = el alert nativo, solo para los casos donde el aviso debe verse ANTES de cambiar de página.
+   2) Aviso al salir con una cotización sin guardar (beforeunload).
+   3) tacticalDescTroquel(): descripción para el cliente con la medida/nombre real, sin el código del troquel (BOLS-001...).
+   4) Selector de vendedor sin vendedor por defecto + validación (tacticalExigirVendedor).
+   ===================================================================================== */
+(function(){
+  const nativo = window.alert.bind(window);
+  window.alertBloqueante = nativo;
+  let cont = null;
+  function contenedor(){
+    if(cont && cont.isConnected) return cont;
+    cont = document.createElement('div'); cont.id = 'tactical-toasts';
+    cont.style.cssText = 'position:fixed; top:14px; left:50%; transform:translateX(-50%); z-index:100000; display:flex; flex-direction:column; gap:8px; width:min(560px, calc(100vw - 24px)); pointer-events:none;';
+    (document.body || document.documentElement).appendChild(cont);
+    return cont;
+  }
+  function tipoDe(msg){
+    if(/^\s*(⚠|❌|🚫)|no se pudo|no se encontr|no puede|no tienes|no hay |debe |escribe|ingresa|elige|selecciona|primero|solo (el )?administrador|solo administrador|falta|error|inv[aá]lid|ya existe|bloque[oó]|sin permiso|no coincide|no existe/i.test(msg)) return 'error';
+    if(/^\s*(✅|✔)|guardad[oa]|agregad[oa]|actualizad[oa]|copiad[oa]|creado|listo|enviad[oa]|registrad[oa]|restaurad[oa]/i.test(msg)) return 'ok';
+    return 'info';
+  }
+  window.tacticalAviso = function(msg, tipo){
+    msg = String(msg == null ? '' : msg);
+    tipo = tipo || tipoDe(msg);
+    const col = {error:['#fef2f2','#dc2626','#7f1d1d'], ok:['#f0fdf4','#16a34a','#14532d'], info:['#eff6ff','#2563eb','#1e3a8a']}[tipo] || ['#eff6ff','#2563eb','#1e3a8a'];
+    const c = contenedor();
+    while(c.children.length >= 4) c.removeChild(c.firstChild);
+    const t = document.createElement('div');
+    t.setAttribute('role', tipo === 'error' ? 'alert' : 'status');
+    t.style.cssText = 'pointer-events:auto; background:' + col[0] + '; border:1px solid ' + col[1] + '; border-left:5px solid ' + col[1] + '; color:' + col[2] + '; border-radius:8px; padding:11px 36px 11px 14px; box-shadow:0 8px 24px rgba(0,0,0,.28); font:600 0.92rem/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; white-space:pre-line; position:relative; cursor:pointer;';
+    t.textContent = msg;
+    const x = document.createElement('span'); x.textContent = '×'; x.setAttribute('aria-label', 'Cerrar');
+    x.style.cssText = 'position:absolute; top:6px; right:11px; font-size:1.3rem; line-height:1; opacity:.6;';
+    t.appendChild(x);
+    function quitar(){ if(t.parentNode) t.parentNode.removeChild(t); }
+    t.addEventListener('click', quitar);
+    c.appendChild(t);
+    if(tipo === 'ok' && /guardad[oa]/i.test(msg) && typeof window.tacticalMarcarGuardado === 'function') window.tacticalMarcarGuardado();
+    const largo = msg.length > 180 || msg.split('\n').length >= 3;
+    if(!largo) setTimeout(quitar, tipo === 'error' ? 9000 : tipo === 'ok' ? 6000 : 7000);
+  };
+  window.alert = function(m){ window.tacticalAviso(m); };
+})();
+
+/* ---- Aviso al salir con una cotización sin guardar ---- */
+(function(){
+  let sucio = false;
+  const esCalculadora = /calculadora_[a-z_]+\.html/i.test(location.pathname);
+  function cuenta(el){
+    if(!el || !el.closest) return false;
+    if(el.closest('#tactical-login-overlay, .tq-pick, [data-sin-aviso]')) return false;
+    if(el.type === 'search' || /^(search|buscar|filtro)/i.test(el.id || '') || /^(buscar|🔍)/i.test(el.placeholder || '')) return false;
+    if(esCalculadora) return true;
+    return !!el.closest('#view-cotizador');   // en el Hub solo cuenta el cotizador de Cuadernos
+  }
+  function marcar(e){ if(e.isTrusted && cuenta(e.target)) sucio = true; }
+  document.addEventListener('input', marcar, true);
+  document.addEventListener('change', marcar, true);
+  window.tacticalMarcarGuardado = function(){ sucio = false; };
+  window.addEventListener('beforeunload', function(e){ if(sucio){ e.preventDefault(); e.returnValue = ''; return ''; } });
+})();
+
+/* ---- Descripción para el cliente: nombre/medida real, no el código del troquel ---- */
+function tacticalDescTroquel(linea, t){
+  if(!t) return '';
+  const n = v => String(v).replace('.', ',');
+  if(linea === 'bolsas' || linea === 'cajas'){
+    const c = t.profundo != null ? t.profundo : t.largo;
+    if(t.ancho == null || t.alto == null) return '';
+    return ' de ' + n(t.ancho) + ' x ' + n(t.alto) + (c != null ? ' x ' + n(c) : '') + ' cm';
+  }
+  if(linea === 'carpetas'){
+    if(!t.bolsillos) return '';
+    return ' con ' + t.bolsillos + ' bolsillo' + (t.bolsillos > 1 ? 's' : '') + ' de ' + n(t.profundidadBolsillo) + ' cm';
+  }
+  if(linea === 'rompecabezas'){
+    if(!t.fichas) return '';
+    return ' de ' + t.fichas + ' fichas';
+  }
+  return '';
+}
+
+/* ---- Vendedor: sin vendedor por defecto; si quien entró es uno de la lista, se preselecciona ---- */
+function tacticalIniciarSelectorVendedor(selectId){
+  const s = document.getElementById(selectId); if(!s) return;
+  s.innerHTML = '<option value="">— Elige vendedor —</option>' + Object.keys(VENDEDORES).map(v => '<option value="' + v + '">' + v + '</option>').join('');
+  let n = 0;
+  const t = setInterval(function(){
+    n++;
+    const p = window.tacticalUsuarioPerfil;
+    if(p && p.nombre){
+      clearInterval(t);
+      if(!s.value){
+        const nom = String(p.nombre).toLowerCase();
+        const k = Object.keys(VENDEDORES).find(v => nom.indexOf(v.toLowerCase()) >= 0 || v.toLowerCase().indexOf(nom) >= 0);
+        if(k) s.value = k;
+      }
+    } else if(n > 60) clearInterval(t);
+  }, 500);
+}
+function tacticalExigirVendedor(selectId){
+  const s = document.getElementById(selectId);
+  if(s && !s.value){
+    tacticalAviso('Elige el vendedor a cargo antes de guardar.', 'error');
+    s.style.outline = '2px solid #dc2626';
+    try{ s.scrollIntoView({block:'center'}); s.focus(); }catch(e){}
+    s.addEventListener('change', function(){ s.style.outline = ''; }, {once:true});
+    return false;
+  }
+  return true;
+}

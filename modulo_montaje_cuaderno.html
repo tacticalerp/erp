@@ -83,7 +83,7 @@
   .slot.sobre{background:#dbeafe;border-color:var(--azul);}
   .slot .t{font-weight:800;font-size:12.5px;color:var(--azul);line-height:1.2;}
   .slot .s{font-size:11px;color:var(--muted);}
-  .slot .vista{flex:1;min-height:110px;background:#f1f5f9;border-radius:4px;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#94a3b8;font-size:12px;text-align:center;padding:4px;}
+  .slot .vista{flex:1;min-height:110px;background:#f1f5f9;border-radius:4px;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#64748b;font-size:12px;text-align:center;padding:4px;}
   .slot .vista img{max-width:100%;max-height:150px;object-fit:contain;}
   .slot .acc{display:flex;gap:4px;flex-wrap:wrap;}
   .slot .aviso{font-size:11px;color:var(--warn);font-weight:600;}
@@ -333,7 +333,7 @@
 <script src="tactical-bot.js?v=20260904a"></script>
 <script src="tactical-estacion.js?v=20261017b"></script>
 <script src="jpeg_cmyk.js?v=20261019a"></script>
-<script src="precios_tactical.js?v=20261107c"></script>
+<script src="precios_tactical.js?v=20261107d"></script>
 <script>
 if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
@@ -2150,7 +2150,7 @@ async function pdfAJpgs(doc, base, ppp, msg){
 window.tacticalOnLogin = async function(){
   const rol = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol;
   if(!ROLES_PERMITIDOS.includes(rol)){
-    alert('No tienes permiso para entrar a este módulo.');
+    (window.alertBloqueante||alert)('No tienes permiso para entrar a este módulo.');
     location.href = 'TACTICAL_ERP_HUB.html';
     return;
   }

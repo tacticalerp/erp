@@ -113,7 +113,7 @@
     }
     #tactical-login-card{ background:#fff; border-radius:10px; padding:32px 30px; width:100%; max-width:340px; box-shadow:0 20px 50px rgba(0,0,0,0.4); }
     #tactical-login-card h2{ margin:0 0 4px; color:#1a202c; font-size:1.3rem; }
-    #tactical-login-card p{ margin:0 0 20px; color:#718096; font-size:0.85rem; }
+    #tactical-login-card p{ margin:0 0 20px; color:#5f6e84; font-size:0.85rem; }
     #tactical-login-card label{ display:block; font-size:0.8rem; color:#4a5568; margin-bottom:4px; font-weight:600; }
     #tactical-login-card input{ width:100%; box-sizing:border-box; padding:10px; border:1px solid #cbd5e0; border-radius:6px; font-size:0.95rem; margin-bottom:14px; }
     #tactical-login-card button{ width:100%; background:#cc0000; color:#fff; border:none; border-radius:6px; padding:11px; font-weight:700; font-size:0.95rem; cursor:pointer; }
@@ -332,7 +332,7 @@
       </div>
       <div class="campo" style="margin-top:10px;">
         <label>Foto personalizada para esta cotización (opcional -- reemplaza la de la Fototeca, solo para este pedido):</label>
-        <div id="fotoPersonal-zona" tabindex="0" style="min-height:60px; border:2px dashed #cbd5e0; border-radius:6px; display:flex; align-items:center; justify-content:center; text-align:center; padding:8px; cursor:pointer; background:#f8fafc; color:#94a3b8; font-size:0.78rem;" onpaste="fotoPersonalPegar(event)" onclick="document.getElementById('fotoPersonal-input').click()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>Clic aquí y pega (Ctrl+V) o sube un archivo</div>
+        <div id="fotoPersonal-zona" tabindex="0" style="min-height:60px; border:2px dashed #cbd5e0; border-radius:6px; display:flex; align-items:center; justify-content:center; text-align:center; padding:8px; cursor:pointer; background:#f8fafc; color:#64748b; font-size:0.78rem;" onpaste="fotoPersonalPegar(event)" onclick="document.getElementById('fotoPersonal-input').click()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>Clic aquí y pega (Ctrl+V) o sube un archivo</div>
         <input type="file" accept="image/*" id="fotoPersonal-input" style="display:none;" onchange="fotoPersonalArchivo(this)">
       </div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
@@ -355,7 +355,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="tactical-supabase.js?v=20261021a"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
-<script src="precios_tactical.js?v=20261107c"></script>
+<script src="precios_tactical.js?v=20261107d"></script>
 <script src="troqueles_tactical.js?v=20261107a"></script>
 <script>
 /* ============ CONSTANTES REUTILIZADAS DEL MOTOR DE CUADERNOS (ya validadas en el hub) ============ */
@@ -885,7 +885,7 @@ function calcular(){
     // de cero saca su propio número -- se replica el mismo criterio acá.
     ultimoOT = null;
     const campoDescCli = document.getElementById("in-descCliente");
-    campoDescCli.value = `${p.cantidad} Cajas ${r.troquel.id}`;
+    campoDescCli.value = `${p.cantidad} Cajas${tacticalDescTroquel("cajas",r.troquel)}`;
     campoDescCli.style.height = 'auto'; campoDescCli.style.height = (campoDescCli.scrollHeight+2)+'px';
     document.getElementById("cot-ot-nota").style.display = "none";
   } catch(err){
@@ -1141,7 +1141,7 @@ function imprimirPDFCliente(datos){
     <div class="doc-condiciones"><ul>${leerCondicionesComerciales().map(c=>`<li>${c}</li>`).join('')}</ul></div>
     <div class="doc-section-title" style="margin-top:10px;">Observaciones</div>
     <div style="border:1px dashed #a0aec0; border-radius:4px; min-height:60px; margin-top:4px;"></div>
-    ${datos.vendedor ? `<div style="font-size:0.74rem; color:#718096; margin-top:10px;">Cotización elaborada por: <strong>${datos.vendedor}</strong>${(typeof VENDEDORES!=='undefined' && VENDEDORES[datos.vendedor] && VENDEDORES[datos.vendedor].telefono) ? ' — Cel: '+VENDEDORES[datos.vendedor].telefono : ''}</div>` : ''}
+    ${datos.vendedor ? `<div style="font-size:0.74rem; color:#5f6e84; margin-top:10px;">Cotización elaborada por: <strong>${datos.vendedor}</strong>${(typeof VENDEDORES!=='undefined' && VENDEDORES[datos.vendedor] && VENDEDORES[datos.vendedor].telefono) ? ' — Cel: '+VENDEDORES[datos.vendedor].telefono : ''}</div>` : ''}
   `;
   document.getElementById('print-area').innerHTML = html;
   document.getElementById('print-area').style.display = 'block';
@@ -1212,6 +1212,7 @@ async function guardarCotizacionClick(){
   const tipo = document.getElementById('in-cli-tipo').value;
   const identificacion = document.getElementById('in-cli-identificacion').value.trim();
   const vendedor = document.getElementById('in-vendedor').value;
+  if(!tacticalExigirVendedor('in-vendedor')) return;
   if(!empresa && !encargado){ alert("Ingresa al menos el Cliente o el Encargado antes de guardar."); return; }
 
   let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
@@ -1235,7 +1236,7 @@ async function guardarCotizacionClick(){
     if(!ultimoOT) ultimoOT = await siguienteOT();
     ot = ultimoOT;
   }
-  const desc = tacticalTituloCorto(`${ultimoParams.cantidad} Cajas ${ultimoResultado.troquel.id}`, document.getElementById("in-descCliente").value);
+  const desc = tacticalTituloCorto(`${ultimoParams.cantidad} Cajas${tacticalDescTroquel("cajas",ultimoResultado.troquel)}`, document.getElementById("in-descCliente").value);
   let maquina = 'otro', material = null, nPliegos = null, planoCorte = null;
   if(ultimoResultado.detalleImpresion){
     if(ultimoResultado.detalleImpresion.via === 'digital') maquina = 'digital';
@@ -1317,7 +1318,7 @@ function cargarCotizacionGuardada(cot){
 
   calcular();
   if(ultimoResultado){
-    const corto = `${p.cantidad} Cajas ${ultimoResultado.troquel.id}`;
+    const corto = `${p.cantidad} Cajas${tacticalDescTroquel("cajas",ultimoResultado.troquel)}`;
     if(cot.desc && cot.desc.startsWith(corto+' — ')){
       const campoDescCli2 = document.getElementById('in-descCliente');
       campoDescCli2.value = cot.desc.slice(corto.length+3);
@@ -1457,6 +1458,7 @@ async function iniciarOAgregarPedido(){
   const tipo = document.getElementById('in-cli-tipo').value;
   const identificacion = document.getElementById('in-cli-identificacion').value.trim();
   const vendedor = document.getElementById('in-vendedor').value;
+  if(!tacticalExigirVendedor('in-vendedor')) return;
   if(!empresa && !encargado){ alert("Ingresa al menos el Cliente o el Encargado antes de agregar al pedido."); return; }
 
   let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
@@ -1482,7 +1484,7 @@ async function iniciarOAgregarPedido(){
     pd = { ot: await siguienteOT(), idCli: cli.id, nombreCli: tacticalNombreCliente(cli), vendedor, lineas: [], creado: new Date().toISOString(), aplicaIva: ultimoResultado.aplicaIva };
   }
 
-  const desc = tacticalTituloCorto(`${ultimoParams.cantidad} Cajas ${ultimoResultado.troquel.id}`, document.getElementById("in-descCliente").value);
+  const desc = tacticalTituloCorto(`${ultimoParams.cantidad} Cajas${tacticalDescTroquel("cajas",ultimoResultado.troquel)}`, document.getElementById("in-descCliente").value);
   let maquina = 'otro', material = null, nPliegos = null, planoCorte = null;
   if(ultimoResultado.detalleImpresion){
     if(ultimoResultado.detalleImpresion.via === 'digital') maquina = 'digital';
@@ -1630,6 +1632,7 @@ async function agregarOpcionComparacion(){
   const tipo = document.getElementById('in-cli-tipo').value;
   const identificacion = document.getElementById('in-cli-identificacion').value.trim();
   const vendedor = document.getElementById('in-vendedor').value;
+  if(!tacticalExigirVendedor('in-vendedor')) return;
   if(!empresa && !encargado){ alert("Ingresa al menos el Cliente o el Encargado antes de agregar la opción."); return; }
 
   let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
@@ -1654,7 +1657,7 @@ async function agregarOpcionComparacion(){
     comp = { ot: await siguienteOT(), idCli: cli.id, nombreCli: tacticalNombreCliente(cli), vendedor, opciones: [], creado: new Date().toISOString() };
   }
 
-  const titulo = tacticalTituloCorto(`${ultimoParams.cantidad} Cajas ${ultimoResultado.troquel.id}`, document.getElementById("in-descCliente").value);
+  const titulo = tacticalTituloCorto(`${ultimoParams.cantidad} Cajas${tacticalDescTroquel("cajas",ultimoResultado.troquel)}`, document.getElementById("in-descCliente").value);
   comp.opciones.push({ titulo, params: {cantidad: ultimoParams.cantidad}, resultado: {precioVentaUnitario: ultimoResultado.precioVentaUnitario, precioVentaTotal: ultimoResultado.precioVentaTotal, aplicaIva: ultimoResultado.aplicaIva, ivaTotal: ultimoResultado.ivaTotal, precioFinalTotal: ultimoResultado.precioFinalTotal}, fotoUrl: fotoParaCotizacion('cajas'), videoUrl: videoParaCotizacion('cajas') });
   fotoPersonalReiniciar();
   window.tacticalComparacionBorradorCache = comp; tacticalGuardarComparacionBorrador(comp);
@@ -1713,7 +1716,7 @@ function generarPDFComparativo(){
     <div class="doc-condiciones"><ul>${leerCondicionesComerciales().map(c=>`<li>${c}</li>`).join('')}</ul></div>
     <div class="doc-section-title" style="margin-top:10px;">Observaciones</div>
     <div style="border:1px dashed #a0aec0; border-radius:4px; min-height:60px; margin-top:4px;"></div>
-    ${comp.vendedor ? `<div style="font-size:0.74rem; color:#718096; margin-top:10px;">Cotización elaborada por: <strong>${comp.vendedor}</strong>${(typeof VENDEDORES!=='undefined' && VENDEDORES[comp.vendedor] && VENDEDORES[comp.vendedor].telefono) ? ' — Cel: '+VENDEDORES[comp.vendedor].telefono : ''}</div>` : ''}
+    ${comp.vendedor ? `<div style="font-size:0.74rem; color:#5f6e84; margin-top:10px;">Cotización elaborada por: <strong>${comp.vendedor}</strong>${(typeof VENDEDORES!=='undefined' && VENDEDORES[comp.vendedor] && VENDEDORES[comp.vendedor].telefono) ? ' — Cel: '+VENDEDORES[comp.vendedor].telefono : ''}</div>` : ''}
   `;
   document.getElementById('print-area').innerHTML = html;
   document.getElementById('print-area').style.display = 'block';
@@ -1738,7 +1741,7 @@ function cancelarPedido(){
 poblarSustratos();
 poblarTroqueles();
 refrescarDatalistClientes();
-Object.keys(VENDEDORES).forEach(v => { const opt=document.createElement('option'); opt.value=v; opt.textContent=v; document.getElementById('in-vendedor').appendChild(opt); });
+tacticalIniciarSelectorVendedor('in-vendedor');
 onCambioTroquelNuevo();
 refrescarBannerPedido();
 refrescarBannerComparacion();

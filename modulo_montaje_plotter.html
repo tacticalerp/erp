@@ -165,7 +165,7 @@
 <script src="tactical-bot.js?v=20260904a"></script>
 <script src="tactical-estacion.js?v=20261017b"></script>
 <script src="jpeg_cmyk.js?v=20261019b"></script>
-<script src="precios_tactical.js?v=20261107c"></script>
+<script src="precios_tactical.js?v=20261107d"></script>
 <script src="rompecabezas_catalogo.js?v=20261103a"></script>
 <script>
 if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -719,7 +719,7 @@ async function generarJPG(){
 /* ======================= INICIO ======================= */
 window.tacticalOnLogin = async function(){
   const rol = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol;
-  if(!ROLES_PERMITIDOS.includes(rol)){ alert('No tienes permiso para entrar a este módulo.'); location.href = 'TACTICAL_ERP_HUB.html'; return; }
+  if(!ROLES_PERMITIDOS.includes(rol)){ (window.alertBloqueante||alert)('No tienes permiso para entrar a este módulo.'); location.href = 'TACTICAL_ERP_HUB.html'; return; }
   await Promise.all([cargarSobrantes(), cargarPlantillaRemota(), cargarCola()]); planificar();
 };
 async function mostrarRutaEstacion(){
