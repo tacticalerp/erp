@@ -886,18 +886,7 @@
                     <div class="card-footer">Abrir módulo ➔</div>
                 </div>
 
-                <!-- MÓDULO 5: CRM -->
-                <div class="hub-card active-card" onclick="showView('crm')">
-                    <div>
-                        <div class="card-header">
-                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>CRM & Clientes B2B</h3>
-                            <span class="badge badge-active">Activo</span>
-                        </div>
-                    </div>
-                    <div class="card-footer">Ingresar al Módulo ➔</div>
-                </div>
-
-                <!-- MÓDULO 5B: SEGMENTOS DE CLIENTES -- Conde 2026-10-01: filtrar compradores por
+                                <!-- MÓDULO 5B: SEGMENTOS DE CLIENTES -- Conde 2026-10-01: filtrar compradores por
                      línea/tamaño/fecha/estado para armar listas de campañas (ej. navideñas). -->
 
                 <!-- MÓDULO 6: RADAR Y REPORTES (Conde 2026-08-28: unificados en una sola herramienta
@@ -1433,70 +1422,26 @@
         </div>
 
         <!-- VISTA 3: CRM & CLIENTES B2B -->
-        <div id="view-crm" class="app-view">
-            <div style="padding:10px;">
-                <!-- Conde 2026-08-28: "el embudo se simplificó en Comercial, que es donde realmente se
-                     revisarán los datos" -- se quitó la sección "Embudo de Negocios Activos" (tarjetas +
-                     formulario de crear). El formulario se mudó a Comercial como ventana flotante (ver
-                     comercialAbrirCrearNegocio en renderComercial). Estos 2 paneles quedan acá sueltos
-                     (no dentro de ningún accordion) porque intentarMarcarGanado los necesita mostrar
-                     encima de la vista CRM en los 2 casos particulares que todavía no son ventana
-                     flotante de verdad: cotización comparativa y pedido multi-producto. El caso de
-                     "Perdido" ya es 100% flotante (ver tacticalPedirMotivoPerdidaFlotante) y no necesita
-                     ninguno de estos 2. -->
-                <div id="modal-eleccion-opcion" style="display:none; background:#f3ecfb; border:1px solid #b794f4; padding:15px; border-radius:6px; margin-bottom:14px;">
-                    <label style="font-weight:bold; color:#553c9a; display:block; margin-bottom:8px;">🆚 Esta es una cotización comparativa — ¿cuál opción eligió el cliente?</label>
-                    <div id="lista-opciones-eleccion" style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;"></div>
-                    <input type="hidden" id="opp-id-eleccion">
-                </div>
-
-                <div id="modal-seleccion-lineas-ganado" style="display:none; background:#fff8e1; border:1px solid #f0d98c; padding:15px; border-radius:6px; margin-bottom:14px;">
-                    <label style="font-weight:bold; color:#7a5b00; display:block; margin-bottom:8px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>Este pedido tiene varios productos — ¿cuáles aprobó el cliente? (desmarca los que NO)</label>
-                    <div id="lista-lineas-seleccion-ganado" style="display:flex; flex-direction:column; gap:4px; margin-bottom:10px;"></div>
-                    <input type="hidden" id="opp-id-seleccion-lineas">
-                    <div><button class="btn-submit" style="width:auto; background:var(--ganado);" onclick="confirmarSeleccionLineasGanado()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>Continuar con lo seleccionado</button></div>
-                </div>
-
-                <div class="accordion-item">
-                    <div class="accordion-header active" onclick="toggleSection('buscadorCot'); renderBuscadorCotizaciones();" id="head-buscadorCot">
-                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>1. Todas las Cotizaciones (Buscador)</span><span class="arrow" id="arrow-buscadorCot">▼</span>
-                    </div>
-                    <div id="buscadorCot" class="accordion-content active">
-                        <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:8px;">
-                            <select id="crm-periodo-tipo" onchange="crmCambiarTipo(this.value)" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;">
-                                <option value="mensual">Mensual</option>
-                                <option value="trimestral">Trimestral</option>
-                                <option value="semestral">Semestral</option>
-                                <option value="anual">Anual</option>
-                            </select>
-                            <button class="btn-action" onclick="crmNavegar(-1)">◀</button>
-                            <span id="crm-periodo-etiqueta" style="font-weight:bold; min-width:160px; text-align:center;"></span>
-                            <button class="btn-action" onclick="crmNavegar(1)">▶</button>
-                        </div>
-                        <div id="buscador-nota-periodo" style="font-size:0.82rem; color:#64748b; margin-bottom:8px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>Mostrando solo el período elegido arriba — escribe algo para buscar en todo el histórico. (La Inteligencia de Ventas ahora está en Radar y Reportes.)</div>
-                        <input type="text" id="search-cotizaciones" class="search-input" placeholder="🔍 Buscar por cliente, OT o producto..." style="margin-bottom:12px; width:100%; box-sizing:border-box; padding:10px; border:1px solid #cbd5e0; border-radius:4px; font-size:0.95rem;" oninput="renderBuscadorCotizaciones()">
-                        <div class="table-responsive">
-                            <table>
-                                <thead><tr><th>OT</th><th>Fecha</th><th>Cliente</th><th>Producto(s)</th><th>Valor</th><th>Estado</th><th></th></tr></thead>
-                                <tbody id="tabla-buscador-cotizaciones"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                                <div class="accordion-item">
-                    <div class="accordion-header" onclick="toggleSection('directorio')" id="head-directorio">
-                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>2. Directorio de Clientes B2B (ahora en Comercial)</span><span class="arrow" id="arrow-directorio">►</span>
-                    </div>
-                    <div id="directorio" class="accordion-content">
-                        <p style="font-size:0.9rem; color:#4a5568; margin:0 0 10px;">El directorio de clientes (alta, búsqueda, editar) ahora está en <strong>Comercial → Clientes</strong>.</p>
-                        <button class="btn-action" onclick="showView('comercial'); comercialCambiarModo('cli');">Abrir Clientes en Comercial</button>
-                    </div>
-                </div>
+        <!-- Conde 2026-11-07 (fase 2 de retirar el CRM): las 2 ventanas de aprobación (cotización comparativa / pedido de varios productos) ahora son ventanas
+                 flotantes de verdad: se abren sobre cualquier pantalla, así aprobar desde Comercial ya no lleva al CRM. -->
+        <div id="modal-eleccion-opcion" style="display:none; position:fixed; inset:0; background:rgba(26,32,44,0.6); z-index:99999; align-items:center; justify-content:center; padding:20px;">
+            <div style="background:#f3ecfb; border:1px solid #b794f4; padding:20px; border-radius:10px; max-width:560px; width:100%; max-height:90vh; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.35);">
+                <label style="font-weight:bold; color:#553c9a; display:block; margin-bottom:10px;">Esta es una cotización comparativa — ¿cuál opción eligió el cliente?</label>
+                <div id="lista-opciones-eleccion" style="display:flex; flex-direction:column; gap:6px; margin-bottom:12px;"></div>
+                <input type="hidden" id="opp-id-eleccion">
+                <button type="button" class="btn-action" onclick="document.getElementById('modal-eleccion-opcion').style.display='none'">Cancelar</button>
             </div>
         </div>
-
-        <!-- VISTA 4a: CALCULADORA DE COSTOS (sub-hub de cotizadores por producto) -->
+        <div id="modal-seleccion-lineas-ganado" style="display:none; position:fixed; inset:0; background:rgba(26,32,44,0.6); z-index:99999; align-items:center; justify-content:center; padding:20px;">
+            <div style="background:#fff8e1; border:1px solid #f0d98c; padding:20px; border-radius:10px; max-width:620px; width:100%; max-height:90vh; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.35);">
+                <label style="font-weight:bold; color:#7a5b00; display:block; margin-bottom:10px;">Este pedido tiene varios productos — ¿cuáles aprobó el cliente? (desmarca los que NO)</label>
+                <div id="lista-lineas-seleccion-ganado" style="display:flex; flex-direction:column; gap:4px; margin-bottom:12px;"></div>
+                <input type="hidden" id="opp-id-seleccion-lineas">
+                <div style="display:flex; gap:8px; align-items:center;"><button class="btn-submit" style="width:auto; background:var(--ganado);" onclick="confirmarSeleccionLineasGanado()">Continuar con lo seleccionado</button>
+                <button type="button" class="btn-action" onclick="document.getElementById('modal-seleccion-lineas-ganado').style.display='none'">Cancelar</button></div>
+            </div>
+        </div>
+                <!-- VISTA 4a: CALCULADORA DE COSTOS (sub-hub de cotizadores por producto) -->
         <div id="view-calculadoras" class="app-view">
             <div style="padding: 25px 20px 0 20px; text-align: center;">
                 <h3 style="margin: 0; font-size: 1.4rem; color: #e8eaed;">Calculadora de Costos</h3>
@@ -2116,6 +2061,21 @@
                     </div>
                 </div>
 
+                <!-- Conde 2026-11-07 (fase 3 de retirar el CRM): tipo de cliente (factura / cuenta de cobro) e identificación, que Contabilidad editaba en el directorio del CRM. -->
+                <div class="accordion-item">
+                    <div class="accordion-header" id="head-cont-clientes" onclick="toggleSection('cont-clientes')">
+                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>Datos de facturación de clientes <span class="rep-resumen" id="cont-cli-resumen"></span></span><span class="arrow" id="arrow-cont-clientes">►</span>
+                    </div>
+                    <div id="cont-clientes" class="accordion-content">
+                        <p style="font-size:0.85rem; color:#718096; margin-top:0;">Tipo de cliente (Corporativo = factura electrónica, Personalizado = cuenta de cobro) e identificación (NIT / CC). Se guarda solo al cambiar el dato. Los clientes nuevos se registran en Comercial → Clientes.</p>
+                        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:10px;">
+                            <input type="text" id="cont-cli-buscar" placeholder="Buscar cliente, NIT o correo..." oninput="contRenderClientesFacturacion()" style="flex:1; min-width:220px; padding:7px 10px; border:1px solid #cbd5e0; border-radius:5px;">
+                            <label style="font-weight:normal; display:flex; align-items:center; gap:6px; margin:0;"><input type="checkbox" id="cont-cli-faltantes" onchange="contRenderClientesFacturacion()" style="width:auto;"> Solo los que les falta el tipo o el NIT</label>
+                        </div>
+                        <div class="table-responsive" id="cont-cli-lista"></div>
+                    </div>
+                </div>
+
                 <div class="accordion-item">
                     <div class="accordion-header" id="head-cont-cartera" onclick="toggleSection('cont-cartera')">
                         <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>Cartera — CxC / CxP</span><span class="arrow" id="arrow-cont-cartera">►</span>
@@ -2660,7 +2620,6 @@
         // usa este showView() ni tiene todavía su propio login por rol -- pendiente, no cubierto
         // por este cambio.
         const TACTICAL_ROLES_POR_VISTA = {
-            crm: ['administrador', 'comercial', 'contabilidad'],
             segmentos: ['administrador', 'comercial'],
             calculadoras: ['administrador', 'comercial'],
             cotizador: ['administrador', 'comercial'],
@@ -2672,7 +2631,7 @@
             fototeca: ['administrador', 'diseno', 'comercial'],
             botwa: ['administrador', 'comercial'],
             galeriabot: ['administrador', 'comercial', 'diseno'],
-            comercial: ['administrador', 'comercial', 'contabilidad'],   // contabilidad: solo la pestaña Clientes (ver comercialAplicarModo)
+            comercial: ['administrador', 'comercial'],
         };
         function tacticalAccesoPermitido(viewId){
             const rolesPermitidos = TACTICAL_ROLES_POR_VISTA[viewId];
@@ -2783,6 +2742,7 @@
         window.addEventListener('hashchange', irAVistaDesdeHash);
 
         function showView(viewId) {
+            if(viewId === 'crm') viewId = 'comercial';   // Conde 2026-11-07: el módulo CRM se retiró (cotizaciones y Clientes viven en Comercial)
             if(!tacticalAccesoPermitido(viewId)) return;
             document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active-view'));
             document.getElementById('view-' + viewId).classList.add('active-view');
@@ -2839,12 +2799,6 @@
                 if (typeof reprocesoLlenarOTDatalist === 'function') reprocesoLlenarOTDatalist();
                 actualizarFormularioReceta();
                 renderAllReprocesos();
-            } else if (viewId === 'crm') {
-                navContainer.style.display = 'block';
-                mainTitle.innerText = "CRM & CLIENTES B2B";
-                subTitle.innerText = "Directorio de Clientes y Buscador de cotizaciones (2026)";
-                renderClientes();
-                if (typeof renderBuscadorCotizaciones === 'function') renderBuscadorCotizaciones();
             } else if (viewId === 'calculadoras') {
                 navContainer.style.display = 'block';
                 mainTitle.innerText = "CALCULADORA DE COSTOS";
@@ -4093,9 +4047,6 @@
           await tacticalPedidoBorradorCargar(); cotRefrescarBannerPedido();
           await tacticalComparacionBorradorCargar(); cotRefrescarBannerComparacion();
           // Si ya se está viendo CRM/Kanban justo cuando termina de cargar, refresca:
-          if(document.getElementById('view-crm') && document.getElementById('view-crm').classList.contains('active-view')){
-            renderClientes();
-          }
           if(document.getElementById('view-comercial') && document.getElementById('view-comercial').classList.contains('active-view') && typeof renderComercial === 'function'){
             renderComercial();
           }
@@ -4357,6 +4308,12 @@
             if(typeof renderComercial === 'function') renderComercial();
         }
 
+        // Muestra una ventana flotante (overlay fixed): se pasa al <body> para que ninguna vista oculta la tape.
+        function tacticalMostrarModalFlotante(id){
+            const m = document.getElementById(id); if(!m) return;
+            if(m.parentElement !== document.body) document.body.appendChild(m);
+            m.style.display = 'flex';
+        }
         function intentarMarcarGanado(idOpp){
             const opp = db_opps.find(o => o.id === idOpp);
             if(opp && opp.opcionesComparativa && opp.opcionesComparativa.length > 1){
@@ -4381,8 +4338,7 @@
                     <input type="checkbox" class="chk-linea-ganado" data-idx="${i}" checked>
                     <span>${cotTextoConNegrilla(l.desc)} <span style="color:#a0aec0;">— ${cotFormatoCop(l.monto||0)}</span></span>
                 </label>`).join('');
-            document.getElementById('modal-seleccion-lineas-ganado').style.display = 'block';
-            document.getElementById('modal-seleccion-lineas-ganado').scrollIntoView();
+            tacticalMostrarModalFlotante('modal-seleccion-lineas-ganado');
         }
         function confirmarSeleccionLineasGanado(){
             const idOpp = document.getElementById('opp-id-seleccion-lineas').value;
@@ -4435,8 +4391,7 @@
                 <button type="button" class="btn-submit" style="text-align:left; background:white; color:#553c9a; border:1px solid #b794f4;" onclick="confirmarEleccionOpcion(${i})">
                     <strong>Opción ${i+1}:</strong> ${op.titulo} — ${cotFormatoCop(op.resultado.precioFinalTotal)}
                 </button>`).join('');
-            document.getElementById('modal-eleccion-opcion').style.display = 'block';
-            document.getElementById('modal-eleccion-opcion').scrollIntoView();
+            tacticalMostrarModalFlotante('modal-eleccion-opcion');
         }
         function confirmarEleccionOpcion(idx){
             const idOpp = document.getElementById('opp-id-eleccion').value;
@@ -6962,9 +6917,6 @@
         function fechaEnRango(fecha, inicio, fin){
           return fecha instanceof Date && !isNaN(fecha) && fecha>=inicio && fecha<fin;
         }
-        let crmPeriodoTipo = 'mensual', crmPeriodoOffset = 0;
-        function crmCambiarTipo(v){ crmPeriodoTipo = v; crmPeriodoOffset = 0; renderBuscadorCotizaciones(); }
-        function crmNavegar(dir){ crmPeriodoOffset += dir; renderBuscadorCotizaciones(); }
 
         // Conde 2026-09-10: el neto real de la empresa NO incluye IVA (es plata de la DIAN, no
         // nuestra). opp.monto guarda el precio CON IVA (precioFinalTotal); la excepción son los
@@ -7006,60 +6958,8 @@
         // ---- BUSCADOR DE COTIZACIONES (Conde 2026-08-06): todas las cotizaciones de las 8
         // calculadoras, activas o cerradas, en un solo lugar buscable — antes solo se veían en el
         // embudo (activas) o dispersas, sin forma de encontrar una cotización cerrada rápido.
-        function renderBuscadorCotizaciones(){
-          { const pr = periodoRango(crmPeriodoTipo, crmPeriodoOffset);
-            const el = document.getElementById('crm-periodo-etiqueta'); if(el) el.textContent = pr.etiqueta;
-            const st = document.getElementById('crm-periodo-tipo'); if(st) st.value = crmPeriodoTipo; }
-          const texto = ((document.getElementById('search-cotizaciones')||{}).value || '').toLowerCase();
-          const activos = db_opps.map(o => ({...o, estadoTxt: (tags_etapa[o.etapa]||{}).lbl || o.etapa}));
-          const cerrados = db_historial_cierres.map(o => ({...o, estadoTxt: o.estado==='ganado' ? '✅ Ganada' : '❌ Perdida'}));
-          let todas = [...activos, ...cerrados].sort((a,b) => (fechaDeRegistro(b)||0) - (fechaDeRegistro(a)||0));
-          if(texto){
-            todas = todas.filter(o =>
-              (o.nombreCli||'').toLowerCase().includes(texto) ||
-              (o.ot||'').toLowerCase().includes(texto) ||
-              (o.desc||'').toLowerCase().includes(texto)
-            );
-          } else {
-            // Sin texto de búsqueda: se limita al período activo (si no, la tabla crece sin fin con
-            // los meses) -- en cuanto escribes algo, busca en TODO el histórico sin importar el período.
-            const {inicio, fin} = periodoRango(crmPeriodoTipo, crmPeriodoOffset);
-            todas = todas.filter(o => fechaEnRango(fechaDeRegistro(o), inicio, fin));
-          }
-          const tbody = document.getElementById('tabla-buscador-cotizaciones');
-          if(!tbody) return;
-          const notaPeriodo = document.getElementById('buscador-nota-periodo');
-          if(notaPeriodo) notaPeriodo.style.display = texto ? 'none' : 'block';
-          tbody.innerHTML = todas.length ? todas.map(o => {
-            const fecha = fechaDeRegistro(o);
-            const fechaTxt = fecha ? fecha.toLocaleDateString('es-CO', {year:'numeric', month:'short', day:'numeric'}) : '-';
-            // Conde 2026-08-24: "quiero ver el nombre del cliente, el monto y quiza unos 40
-            // caracteres del producto... eso seria la informacion antes de desplegar todo" -- en
-            // móvil, las celdas "cot-td-titulo" (Cliente con la flecha, Valor, Producto recortado a
-            // 40 caracteres) quedan siempre visibles -- OT/fecha/estado/acciones pasan a
-            // "cot-td-detalle", oculto salvo "cot-expandida" (ver CSS de #buscadorCot en el
-            // @media(max-width:768px) de arriba). Mismas 7 celdas de siempre, en el mismo orden que
-            // el <thead> (para no desalinear la tabla en escritorio), solo con clases nuevas.
-            return `<tr>
-              <td class="cot-td-detalle">${o.ot||'-'}</td>
-              <td class="cot-td-detalle">${fechaTxt}</td>
-              <td class="cot-td-titulo"><button type="button" class="cot-toggle" onclick="tacticalToggleFilaCot(this)">▶</button> ${o.nombreCli}</td>
-              <td class="cot-td-titulo" style="max-width:280px; font-size:0.85rem; color:#4a5568;" title="${o.desc}">${cotTextoConNegrilla(tacticalTruncar(o.desc, 40))}</td>
-              <td class="cot-td-titulo">${cotFormatoCop(o.monto)}</td>
-              <td class="cot-td-detalle">${o.estadoTxt||'-'}</td>
-              <td class="cot-td-detalle">
-                <div style="display:flex; gap:4px;">
-                  <button class="btn-action" style="padding:5px 8px;" onclick="verPDFCotizacionGuardada('${o.id}')" title="Ver PDF">${ticon('printer')}</button>
-                  ${((o.linea==='cuadernos' || o.linea==='manual' || LINEA_A_CALCULADORA_ARCHIVO[o.linea]) && !(o.opcionesComparativa && o.opcionesComparativa.length>1)) ? `<button class="btn-action" style="padding:5px 8px; color:#059669; border-color:#059669;" onclick="tacticalAbrirDuplicado('${o.id}','${o.linea}','${(o.ot||'').replace(/'/g,'')}')" title="Duplicar: crea una cotización NUEVA (número nuevo) con estos mismos datos; la original no se modifica">${ticon('copy')}</button>` : ''}
-                  ${(o.etapa && (o.linea==='cuadernos' || LINEA_A_CALCULADORA_ARCHIVO[o.linea])) ? `<button class="btn-action" style="padding:5px 8px; color:#d97706; border-color:#d97706;" onclick="tacticalAbrirEdicionCotizacion('${o.id}','${o.linea}','${o.ot||''}')" title="Ver el desglose y crear una nueva versión con cambios, sin borrar esta">✏️</button>` : ''}
-                  ${(o.etapa && o.linea==='multi' && Array.isArray(o.lineas) && o.lineas.length) ? `<button class="btn-action" style="padding:5px 8px; color:#d97706; border-color:#d97706;" onclick="tacticalAbrirEdicionMulti('${o.id}')" title="Elegir cuál de los productos de este pedido editar">✏️</button>` : ''}
-                  <button class="btn-action" style="padding:5px 8px; color:#2563eb; border-color:#2563eb;" onclick="buscadorCambiarVendedor('${o.id}')" title="Cambiar de comercial">${ticon('refresh')}</button>
-                  <button class="btn-action" style="padding:5px 8px; color:var(--peligro); border-color:var(--peligro);" onclick="eliminarCotizacionRegistro('${o.id}')" title="Eliminar">${ticon('trash')}</button>
-                </div>
-              </td>
-            </tr>`;
-          }).join('') : '<tr><td colspan="7" style="text-align:center; color:#a0aec0; padding:20px;">Sin cotizaciones que coincidan.</td></tr>';
-        }
+        // Conde 2026-11-07: el buscador "Todas las cotizaciones" del CRM se retiró; ahora todo está en Comercial (renderComercial). Se deja vacía porque otras funciones la llaman.
+        function renderBuscadorCotizaciones(){ if(typeof renderComercial === 'function') renderComercial(); }
         // Conde 2026-08-28: botón de cambio (↻) en Todas las Cotizaciones -- funciona tanto para
         // negocios activos (db_opps, corrige directo) como ya cerrados (db_historial_cierres, el
         // vendedor vive dentro del snapshot -- ver tacticalCorregirVendedorHistorial).
@@ -9543,8 +9443,6 @@
           document.getElementById('print-area').style.display = 'block';
           tacticalImprimirConTitulo(`${cot.cliente.empresa||'Cliente'} - ${cot.ot||''}`);
 
-          // Refrescar CRM si esta visible
-          if(document.getElementById('view-crm').classList.contains('active-view')){ renderClientes(); }
           if(typeof renderComercial === 'function') renderComercial();
         }
 
@@ -9960,10 +9858,7 @@
            El directorio de clientes del CRM vive ahora en Comercial (pestaña "Clientes"). Contabilidad solo ve esa pestaña. Eliminar cliente: solo administrador. */
         let comercialModo = 'seg';
         function comercialAplicarModo(){
-          const rol = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol;
-          const soloClientes = rol === 'contabilidad';
-          if(soloClientes) comercialModo = 'cli';
-          const barra = document.getElementById('comercial-modo-barra'); if(barra) barra.style.display = soloClientes ? 'none' : 'flex';
+          const barra = document.getElementById('comercial-modo-barra'); if(barra) barra.style.display = 'flex';
           const sec = document.getElementById('comercial-modo-seg-cont'), cli = document.getElementById('comercial-modo-cli-cont');
           if(sec) sec.style.display = comercialModo === 'seg' ? '' : 'none';
           if(cli) cli.style.display = comercialModo === 'cli' ? '' : 'none';
@@ -10283,6 +10178,7 @@
           if(fk){
             extra += `<div style="margin-top:8px; display:flex; align-items:center; gap:6px;">${ticon('factory',{size:14,color:'#4a5568',noMargin:true})}<span style="color:#718096;">En Kanban:</span> <strong>${KANBAN_COLUMNA_NOMBRE[fk.columna] || fk.columna}</strong>${fk.fechaEntrega ? ' · entrega ' + kanbanFormatearFecha(fk.fechaEntrega) : ''}</div>`;
           }
+          if(base.vendedor) extra += `<div style="margin-top:8px;"><span style="color:#718096;">Comercial:</span> ${esc(base.vendedor)}</div>`;
           if(o && o.estado === 'perdido' && o.motivo) extra += `<div style="margin-top:8px; color:#e53e3e;">Motivo de pérdida: ${esc(o.motivo)}</div>`;
           if(o && o.etapa && o.seguimientoFecha) extra += `<div style="margin-top:8px; display:flex; align-items:center; gap:6px;">${ticon('clock',{size:14,color:'#64748b',noMargin:true})}<span style="color:#718096;">Seguimiento programado:</span> ${tacticalFormatoDiaMes(o.seguimientoFecha)}</div>`;
           const vers = comercialVersiones(o);
@@ -10326,7 +10222,7 @@
           if(!tabsCont) return;
           comercialAplicarModo();
           if(comercialModo === 'cli') return;   // en la pestaña Clientes no se pinta el seguimiento
-          tabsCont.innerHTML = comercialVendedores().map(v =>
+          tabsCont.innerHTML = [...comercialVendedores(), 'Todos'].map(v =>
             `<button class="comercial-vendedor-tab ${v===comercialVendedorActivo?'active':''}" onclick="comercialCambiarVendedor('${v.replace(/'/g,"\\'")}')">${v}</button>`
           ).join('');
 
@@ -10382,7 +10278,8 @@
           // ---- Corporativo / Productos aprobados: fichas del Kanban de este vendedor, sin B2C, sin
           // las ya entregadas (Postventa) -- así nunca crece sin límite con lo ya entregado.
           // Conde 2026-11-07: columna Valor (de la cotización ganada) y fila expandible.
-          let aprobados = db_kanban.filter(f => f.origen!=='b2c' && f.columna!=='postventa' && f.vendedor===comercialVendedorActivo);
+          const verTodos = comercialVendedorActivo === 'Todos';
+          let aprobados = db_kanban.filter(f => f.origen!=='b2c' && f.columna!=='postventa' && (verTodos || f.vendedor===comercialVendedorActivo));
           if(buscar){
             aprobados = aprobados.filter(f => (f.nombreCli||'').toLowerCase().includes(buscar) || (f.titulo||'').toLowerCase().includes(buscar) || (f.ot||'').toLowerCase().includes(buscar));
           }
@@ -10404,8 +10301,8 @@
           // ---- Corporativo / Cotizaciones creadas: por defecto los negocios ACTIVOS del Embudo (igual que antes);
           // Conde 2026-11-07: selector Activas / Ganadas / Perdidas / Todas -- las cerradas salen de db_historial_cierres.
           const vend = comercialVendedorActivo;
-          const activosV = db_opps.filter(o => o.vendedor===vend);
-          const cerradosV = db_historial_cierres.filter(o => o.vendedor===vend);
+          const activosV = db_opps.filter(o => verTodos || o.vendedor===vend);
+          const cerradosV = db_historial_cierres.filter(o => verTodos || o.vendedor===vend);
           let cotizaciones = comercialFiltroEstado==='act' ? activosV
             : comercialFiltroEstado==='gan' ? cerradosV.filter(o => o.estado==='ganado')
             : comercialFiltroEstado==='per' ? cerradosV.filter(o => o.estado==='perdido')
@@ -10491,12 +10388,7 @@
             color: '#16a34a', textoBoton: 'Sí, aprobar', icono: 'check',
           });
           if(!ok) return;
-          // intentarMarcarGanado puede necesitar mostrar el panel de "varios productos" o "elegir
-          // opción" -- esos 2 casos particulares (cotización comparativa, pedido multi-producto)
-          // todavía viven como paneles fijos adentro de la vista CRM, así que hay que estar parado
-          // ahí para que se vean. El caso normal (un solo producto) y el cierre Perdido de abajo ya
-          // son 100% ventana flotante y no necesitan esto -- ver abrirModalPerdida.
-          showView('crm');
+          // Conde 2026-11-07: los 2 casos particulares (cotización comparativa, pedido multi-producto) ya son ventanas flotantes; no hace falta ir al CRM.
           intentarMarcarGanado(idOpp);
         }
         async function comercialConfirmarPerdido(idOpp){
@@ -13674,6 +13566,39 @@
         }
 
         /* ---- ORQUESTADOR DEL MÓDULO ---- */
+        function contRenderClientesFacturacion(){
+            const cont = document.getElementById('cont-cli-lista'); if(!cont) return;
+            const esc = resumenCotEsc;
+            const q = ((document.getElementById('cont-cli-buscar') || {}).value || '').toLowerCase().trim();
+            const soloFalt = !!(document.getElementById('cont-cli-faltantes') || {}).checked;
+            const falta = c => !c.tipo || !String(c.identificacion || '').trim();
+            let lista = db_clientes.filter(c => (!q || [c.empresa, c.nombre, c.identificacion, c.correo].join(' ').toLowerCase().includes(q)) && (!soloFalt || falta(c)));
+            lista.sort((a, b) => String(a.empresa).localeCompare(String(b.empresa), 'es'));
+            contActualizarResumenFacturacion();
+            if(!lista.length){ cont.innerHTML = '<p style="color:#a0aec0;">No hay clientes con ese filtro.</p>'; return; }
+            const filas = lista.slice(0, 300).map(c => `<tr style="border-bottom:1px solid #edf2f7;${falta(c) ? ' background:#fffbeb;' : ''}">
+                <td style="padding:5px 8px;"><strong>${esc(c.empresa)}</strong><br><span style="font-size:0.78rem; color:#718096;">${esc(c.nombre || '')}</span></td>
+                <td style="padding:5px 8px; font-size:0.82rem; color:#4a5568;">${esc(c.correo || '—')}</td>
+                <td style="padding:5px 8px;"><select onchange="contGuardarClienteFact('${c.id}','tipo',this.value)" style="padding:5px; border:1px solid #cbd5e0; border-radius:4px;">
+                    <option value="" ${!c.tipo ? 'selected' : ''}>-- Sin definir --</option>
+                    <option value="corporativo" ${c.tipo === 'corporativo' ? 'selected' : ''}>Corporativo (factura)</option>
+                    <option value="personalizado" ${c.tipo === 'personalizado' ? 'selected' : ''}>Personalizado (cuenta de cobro)</option></select></td>
+                <td style="padding:5px 8px;"><input type="text" value="${esc(c.identificacion || '')}" placeholder="NIT / CC" onchange="contGuardarClienteFact('${c.id}','identificacion',this.value)" style="width:100%; box-sizing:border-box; padding:5px 7px; border:1px solid #cbd5e0; border-radius:4px;"></td>
+            </tr>`).join('');
+            cont.innerHTML = '<table style="width:100%; border-collapse:collapse; font-size:0.88rem;"><thead><tr style="background:#f7fafc; color:#4a5568; text-align:left;"><th style="padding:6px 8px;">Cliente</th><th style="padding:6px 8px;">Correo</th><th style="padding:6px 8px;">Tipo</th><th style="padding:6px 8px;">Identificación (NIT / CC)</th></tr></thead><tbody>' + filas + '</tbody></table>' +
+                (lista.length > 300 ? '<p style="font-size:0.8rem; color:#718096;">Se muestran los primeros 300: usa el buscador para encontrar los demás.</p>' : '');
+        }
+        function contActualizarResumenFacturacion(){
+            const el = document.getElementById('cont-cli-resumen'); if(!el) return;
+            const n = db_clientes.filter(c => !c.tipo || !String(c.identificacion || '').trim()).length;
+            el.textContent = n ? n + ' cliente' + (n === 1 ? '' : 's') + ' sin tipo o NIT' : 'todos completos';
+        }
+        function contGuardarClienteFact(id, campo, valor){
+            const c = db_clientes.find(x => x.id === id); if(!c) return;
+            if(campo === 'tipo') c.tipo = valor; else c.identificacion = String(valor || '').trim();
+            tacticalSyncClientes(db_clientes);
+            contActualizarResumenFacturacion();
+        }
         function renderContabilidad(){
             ['egr-fecha','ing-fecha','doc-fecha','nc-fecha'].forEach(id => { const el = document.getElementById(id); if(el && !el.value) el.value = contHoy(); });
             contLlenarSelectClienteDoc();
@@ -13683,6 +13608,7 @@
             renderPrefacturas();
             renderDocVenta();
             contRenderAnticiposDoc();
+            if(typeof contRenderClientesFacturacion === 'function') contRenderClientesFacturacion();
             contPintarOrdenBtn();
             if(document.getElementById('cont-informes') && document.getElementById('cont-informes').classList.contains('active')) contInformeRender();
             contNcLlenarSelect();
