@@ -221,7 +221,7 @@
       </div>
     </details>
 
-    <details class="acc">
+    <details class="acc" style="display:none">
       <summary><span class="t">Aprobación por WhatsApp</span><span class="res" id="rWa"></span></summary>
       <div class="acc-cuerpo">
         <div class="grid">
@@ -275,7 +275,7 @@
     <button class="btn gris" title="Abre un archivo .montaje.json guardado antes" onclick="document.getElementById('fProyecto').click()">Abrir proyecto</button>
     <input type="file" id="fProyecto" accept=".json,.montaje" style="display:none" onchange="abrirProyecto(this.files[0]); this.value=''">
     <button class="btn verde" onclick="guardarNube()">Guardar en la nube</button>
-    <button class="btn" style="background:#25d366;border-bottom:3px solid #128c7e;display:inline-flex;align-items:center;gap:6px;" onclick="enviarWaCliente()"><svg viewBox="0 0 24 24" width="18" height="18" fill="#fff"><path id="waIcoUi"></path></svg>Enviar al cliente por WhatsApp</button>
+
   </div>
   <div id="msgGuardar" style="font-size:12.5px;font-weight:700;margin-bottom:8px;"></div>
   <details class="acc" id="estacionBox" style="margin-bottom:10px;">
@@ -1328,7 +1328,10 @@ function disenarLayout(){
   const margen = 100, gapIn = 200;
   const altoCab = 90, altoTitulo = 150, bajoPieza = 150, sepGrupo = 110;
   const grupos = agruparSlots();
-  const pw = Math.floor(Math.min(700, 1000*S.ancho/S.alto));
+  // la pieza usa casi todo el ancho del lienzo (el cliente tiene que ver el detalle del diseño): hasta ~1000 px con 2 por fila, tope de alto 1500 px
+  const nMaxFila = Math.max(1, ...grupos.map(g=>g.slots.length));
+  const maxPW = Math.floor((LW - 2*margen - gapIn*(nMaxFila-1))/nMaxFila);
+  const pw = Math.floor(Math.min(maxPW, 1500*S.ancho/S.alto));
   const ph = Math.round(pw * S.alto / S.ancho);
   // Calendario: una sola escala para todo (la base se ve del tamaño real frente a las hojas) y tope de alto del lienzo
   let kCal = 0;
@@ -1342,7 +1345,7 @@ function disenarLayout(){
     if(S.modo==='general'){
       const dms = g.slots.map(dimsSlot);
       const mw = Math.max(...dms.map(d=>d.w)), mh = Math.max(...dms.map(d=>d.h));
-      g.k = Math.min(700/mw, 900/mh, 75);          // px por cm (todas las caras de una pieza a la misma escala)
+      g.k = Math.min((LW - 2*margen - gapIn*(g.slots.length-1))/(g.slots.length*mw), 1500/mh);          // px por cm (todas las caras de una pieza a la misma escala); casi todo el ancho del lienzo
       g.cw = mw*g.k; g.ch = mh*g.k;
     } else if(kCal){
       const dms = g.slots.map(dimsSlot);
@@ -1619,7 +1622,7 @@ function dibujarMontaje(){
 
   // --- pie: cliente, cantidad y tamaño grandes; el resto en un recuadro más pequeño al lado ---
   const fy = L.alto - 400;
-  const bx = LW - 960, bw = 850, bh = 245;     // recuadro de datos a la derecha; los textos grandes ocupan el centro; el botón de WhatsApp, la izquierda
+  const bx = LW - 960, bw = 850, bh = 245;     // recuadro de datos a la derecha; los textos grandes ocupan el resto, desde el margen izquierdo
   cx.textAlign = 'left'; cx.fillStyle = '#111827'; cx.font = 'bold 46px Arial, sans-serif';
   const recorta = (t, maxW)=>{ while(cx.measureText(t).width > maxW && t.length > 8) t = t.slice(0,-2); return t; };
   const general = S.modo==='general';
@@ -1628,12 +1631,12 @@ function dibujarMontaje(){
     ? ['Cliente: '+(S.cliente||''), unica ? 'Cantidad: '+(unica.cantidad||'') : 'Piezas: '+S.piezas.length, unica ? 'Tamaño: '+fmtCm(parseFloat(unica.alto)||0)+' x '+fmtCm(parseFloat(unica.ancho)||0)+' cm' : '']
     : ['Cliente: '+(S.cliente||''), 'Cantidad: '+(S.cantidad ? S.cantidad+(esCal()?' calendarios':' cuadernos') : ''), (esCal()?'Hoja: ':'Tamaño: ')+fmtCm(S.alto)+' x '+fmtCm(S.ancho)+' cm'];
   // el cliente puede ser largo: se parte en 2 líneas para no quedar debajo del recuadro de datos (a la derecha)
-  const anchoG = Math.max(300, bx - 680 - 30);
+  const xG = L.margen, anchoG = Math.max(300, bx - xG - 40);
   const lineasCli = envolverTexto(cx, grandes[0], anchoG, 2).map(t=>recorta(t, anchoG));
   const base = fy + 70 - (lineasCli.length > 1 ? 24 : 0);
-  lineasCli.forEach((t,j)=>cx.fillText(t, 680, base + j*54));
+  lineasCli.forEach((t,j)=>cx.fillText(t, xG, base + j*54));
   const yRes = base + (lineasCli.length-1)*54;
-  grandes.slice(1).forEach((t,i)=>{ if(t) cx.fillText(recorta(t, anchoG), 680, yRes + 68*(i+1)); });
+  grandes.slice(1).forEach((t,i)=>{ if(t) cx.fillText(recorta(t, anchoG), xG, yRes + 68*(i+1)); });
   // recuadro de datos del trabajo
   cx.fillStyle = '#f8fafc'; cx.strokeStyle = '#cbd5e1'; cx.lineWidth = 2;
   cx.beginPath(); cx.roundRect ? cx.roundRect(bx, fy, bw, bh, 14) : cx.rect(bx, fy, bw, bh); cx.fill(); cx.stroke();
@@ -1661,23 +1664,7 @@ function dibujarMontaje(){
   cx.fillStyle = '#374151'; cx.font = '27px Arial, sans-serif';
   izq.forEach((t,i)=>cx.fillText(recorta(t, 380), bx+24, fy+88+i*38));
   der.forEach((t,i)=>{ if(t) cx.fillText(recorta(t, 410), bx+420, fy+88+i*38); });
-  // botón de aprobación por WhatsApp (en el PDF es un enlace que abre el chat con el comercial)
-  WA_RECT = null;
-  const wa = waLinkAprobar();
-  if(wa){
-    const rx = L.margen, ry = fy+20, rw = 510, rh = 140;
-    // botón con los colores de WhatsApp: verde #25D366, base #128C7E y el icono oficial en blanco
-    cx.fillStyle = '#128c7e'; cx.beginPath(); cx.roundRect ? cx.roundRect(rx, ry+7, rw, rh, 24) : cx.rect(rx, ry+7, rw, rh); cx.fill();
-    cx.fillStyle = '#25d366'; cx.beginPath(); cx.roundRect ? cx.roundRect(rx, ry, rw, rh, 24) : cx.rect(rx, ry, rw, rh); cx.fill();
-    try{ cx.save(); cx.translate(rx+26, ry+(rh-86)/2); cx.scale(86/24, 86/24); cx.fillStyle = '#fff'; cx.fill(new Path2D(WA_ICONO_PATH)); cx.restore(); } catch(e){}
-    cx.fillStyle = '#fff'; cx.textAlign = 'left'; cx.font = 'bold 32px Arial, sans-serif';
-    cx.fillText('APROBAR MONTAJE', rx+134, ry+66); cx.font = '30px Arial, sans-serif'; cx.fillText('por WhatsApp', rx+134, ry+106);
-    cx.fillStyle = '#475569'; cx.font = '23px Arial, sans-serif';
-    const lineasWa = envolverTexto(cx, 'Toca el botón y escríbele a '+(S.nomCom||'tu asesor'), rw, 3);
-    lineasWa.forEach((t,j)=>cx.fillText(t, rx, ry+rh+42+j*30));
-    cx.font = 'bold 25px Arial, sans-serif'; cx.fillStyle = '#128c7e'; cx.fillText(waNumeroVisible(S.waCom), rx, ry+rh+42+lineasWa.length*30+6);
-    WA_RECT = { x:rx, y:ry, w:rw, h:rh, url: wa };
-  }
+  WA_RECT = null;      // el botón «Aprobar por WhatsApp» ya no se dibuja en el montaje (Conde 2026-11-07: no se usa)
   // esquina roja
   cx.fillStyle='#6b1f24'; cx.beginPath(); cx.moveTo(LW-420,L.alto); cx.lineTo(LW-290,L.alto-100); cx.lineTo(LW,L.alto-100); cx.lineTo(LW,L.alto); cx.closePath(); cx.fill();
 }
