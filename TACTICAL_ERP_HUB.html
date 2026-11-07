@@ -1093,6 +1093,11 @@
         </style>
         <div id="view-comercial" class="app-view">
           <div style="padding:15px; max-width:1100px; margin:0 auto;">
+            <div id="comercial-modo-barra" style="display:flex; gap:6px; margin-bottom:12px;">
+              <button type="button" class="comercial-vendedor-tab active" id="cm-modo-seg" onclick="comercialCambiarModo('seg')">Seguimiento</button>
+              <button type="button" class="comercial-vendedor-tab" id="cm-modo-cli" onclick="comercialCambiarModo('cli')">Clientes</button>
+            </div>
+            <div id="comercial-modo-seg-cont">
             <p style="color:#718096; font-size:0.85rem; margin:0 0 12px;">Vista compacta por vendedor -- Cliente/Producto/Fecha se llenan solos desde el CRM/Kanban/B2C; "Pendiente" y "Observaciones" se editan a mano (clic y escribe).</p>
             <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px;">
               <div id="comercial-tabs" style="display:flex; gap:6px;"></div>
@@ -1100,6 +1105,7 @@
               <!-- Conde 2026-08-28: "deja crear negocio manual en comercial, que sea un botón que abra
                    una ventana flotante" -- reemplaza el formulario siempre visible que tenía CRM antes
                    (ver comercialAbrirCrearNegocio más abajo). -->
+              <button class="btn-action" onclick="comercialAbrirNuevoCliente()" style="white-space:nowrap;">+ Nuevo Cliente</button>
               <button class="btn-action" onclick="comercialAbrirCrearNegocio()" style="white-space:nowrap;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Nuevo Negocio</button>
               <!-- Conde 2026-10-03: "anexalo en un boton adicional de comercial" -- lista de precios
                    de referencia con las cotizaciones del mes (ver comercialAbrirResumenCotizaciones). -->
@@ -1143,6 +1149,48 @@
                   <thead><tr><th style="width:15%;">Cliente</th><th style="width:22%;">Producto</th><th style="width:10%; text-align:right;">Valor</th><th style="width:8%;">Cotizada</th><th style="width:13%;">Etapa</th><th>Observaciones</th><th style="width:92px;"></th></tr></thead>
                   <tbody id="comercial-cotizaciones"></tbody>
                 </table></div></div>
+              </div>
+            </div>
+            </div>
+            <div id="comercial-modo-cli-cont" style="display:none;">
+              <p style="color:#718096; font-size:0.85rem; margin:0 0 12px;">Directorio de clientes: búscalos, mira sus datos y cotizaciones, edítalos o registra uno nuevo. <span style="white-space:nowrap;">Eliminar un cliente: solo administrador.</span></p>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px;">
+                <input type="text" id="search-cli" placeholder="🔍 Buscar por Empresa, Contacto, Correo o WhatsApp..." style="margin-bottom:12px; width:100%; box-sizing:border-box; padding:10px; border:1px solid #cbd5e0; border-radius:4px; font-size:0.95rem;" oninput="renderClientes()">
+                <button class="btn-action" onclick="comercialAbrirNuevoCliente()" style="white-space:nowrap;">+ Nuevo Cliente</button>
+              </div>
+              <div class="card-grid" id="lista-clientes"></div>
+            </div>
+            <!-- Conde 2026-11-07: "Nuevo cliente" como ventana flotante (antes era el formulario fijo del Directorio del CRM). -->
+            <div id="modal-nuevo-cliente" style="display:none; position:fixed; inset:0; background:rgba(26,32,44,0.6); z-index:99999; align-items:center; justify-content:center; padding:20px;">
+              <div style="background:#fff; border-radius:10px; padding:22px; max-width:680px; width:100%; max-height:90vh; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.35);">
+                <div style="font-weight:800; font-size:1.05rem; color:#1a202c; margin-bottom:12px;">+ Nuevo cliente</div>
+                <div class="form-grid">
+                            <div class="form-group"><label>Nombre de la Empresa / Cliente:</label><input type="text" id="cli-empresa" list="cot-clientes-datalist" placeholder="Ej: GRÁFICAS JP S.A.S." style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
+                            <div class="form-group"><label>Contacto Principal (Persona):</label><input type="text" id="cli-nombre" placeholder="Ej: JUAN PÉREZ" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
+                            <div class="form-group"><label>WhatsApp de Negocios:</label><input type="text" id="cli-wp" placeholder="Ej: 3001234567"></div>
+                            <div class="form-group"><label>Correo Electrónico:</label><input type="text" id="cli-correo" placeholder="Ej: compras@graficasjp.com"></div>
+                            <div class="form-group">
+                                <label>Clasificación Comercial:</label>
+                                <select id="cli-clase">
+                                    <option value="nuevo">Nuevo</option>
+                                    <option value="ocasional">Ocasional</option>
+                                    <option value="recurrente">Recurrente</option>
+                                    <option value="vip">VIP (Top 20%)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Tipo de Cliente (para Contabilidad):</label>
+                                <select id="cli-tipo">
+                                    <option value="">-- Sin definir --</option>
+                                    <option value="corporativo">Corporativo (Factura electrónica)</option>
+                                    <option value="personalizado">Personalizado (Cuenta de Cobro)</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label>Identificación (NIT / CC):</label><input type="text" id="cli-identificacion" placeholder="Ej: 900.123.456-7"></div>
+                            <div class="form-group" style="display:flex; align-items:flex-end;">
+                                <button class="btn-submit" onclick="guardarCliente()">Registrar cliente</button> <button type="button" class="btn-action" onclick="comercialCerrarNuevoCliente()" style="margin-left:8px;">Cancelar</button>
+                            </div>
+                        </div>
               </div>
             </div>
           </div>
@@ -1438,39 +1486,11 @@
 
                                 <div class="accordion-item">
                     <div class="accordion-header" onclick="toggleSection('directorio')" id="head-directorio">
-                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>2. Directorio de Clientes B2B</span><span class="arrow" id="arrow-directorio">►</span>
+                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>2. Directorio de Clientes B2B (ahora en Comercial)</span><span class="arrow" id="arrow-directorio">►</span>
                     </div>
                     <div id="directorio" class="accordion-content">
-                        <div class="form-grid">
-                            <div class="form-group"><label>Nombre de la Empresa / Cliente:</label><input type="text" id="cli-empresa" list="cot-clientes-datalist" placeholder="Ej: GRÁFICAS JP S.A.S." style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
-                            <div class="form-group"><label>Contacto Principal (Persona):</label><input type="text" id="cli-nombre" placeholder="Ej: JUAN PÉREZ" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
-                            <div class="form-group"><label>WhatsApp de Negocios:</label><input type="text" id="cli-wp" placeholder="Ej: 3001234567"></div>
-                            <div class="form-group"><label>Correo Electrónico:</label><input type="text" id="cli-correo" placeholder="Ej: compras@graficasjp.com"></div>
-                            <div class="form-group">
-                                <label>Clasificación Comercial:</label>
-                                <select id="cli-clase">
-                                    <option value="nuevo">Nuevo</option>
-                                    <option value="ocasional">Ocasional</option>
-                                    <option value="recurrente">Recurrente</option>
-                                    <option value="vip">VIP (Top 20%)</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Tipo de Cliente (para Contabilidad):</label>
-                                <select id="cli-tipo">
-                                    <option value="">-- Sin definir --</option>
-                                    <option value="corporativo">Corporativo (Factura electrónica)</option>
-                                    <option value="personalizado">Personalizado (Cuenta de Cobro)</option>
-                                </select>
-                            </div>
-                            <div class="form-group"><label>Identificación (NIT / CC):</label><input type="text" id="cli-identificacion" placeholder="Ej: 900.123.456-7"></div>
-                            <div class="form-group" style="display:flex; align-items:flex-end;">
-                                <button class="btn-submit" onclick="guardarCliente()">+ Registrar Cliente B2B</button>
-                            </div>
-                        </div>
-
-                        <input type="text" id="search-cli" placeholder="🔍 Buscar por Empresa, Contacto, Correo o WhatsApp..." style="margin-bottom:12px; width:100%; box-sizing:border-box; padding:10px; border:1px solid #cbd5e0; border-radius:4px; font-size:0.95rem;" oninput="renderClientes()">
-                        <div class="card-grid" id="lista-clientes"></div>
+                        <p style="font-size:0.9rem; color:#4a5568; margin:0 0 10px;">El directorio de clientes (alta, búsqueda, editar) ahora está en <strong>Comercial → Clientes</strong>.</p>
+                        <button class="btn-action" onclick="showView('comercial'); comercialCambiarModo('cli');">Abrir Clientes en Comercial</button>
                     </div>
                 </div>
             </div>
@@ -2652,7 +2672,7 @@
             fototeca: ['administrador', 'diseno', 'comercial'],
             botwa: ['administrador', 'comercial'],
             galeriabot: ['administrador', 'comercial', 'diseno'],
-            comercial: ['administrador', 'comercial'],
+            comercial: ['administrador', 'comercial', 'contabilidad'],   // contabilidad: solo la pestaña Clientes (ver comercialAplicarModo)
         };
         function tacticalAccesoPermitido(viewId){
             const rolesPermitidos = TACTICAL_ROLES_POR_VISTA[viewId];
@@ -2778,7 +2798,7 @@
             } else if (viewId === 'comercial') {
                 navContainer.style.display = 'block';
                 mainTitle.innerText = "COMERCIAL";
-                subTitle.innerText = "Tablero compacto por vendedor (2026)";
+                subTitle.innerText = "Seguimiento por vendedor y directorio de Clientes (2026)";
                 if (typeof renderComercial === 'function') renderComercial();
             } else if (viewId === 'tareas') {
                 navContainer.style.display = 'block';
@@ -4076,6 +4096,9 @@
           if(document.getElementById('view-crm') && document.getElementById('view-crm').classList.contains('active-view')){
             renderClientes();
           }
+          if(document.getElementById('view-comercial') && document.getElementById('view-comercial').classList.contains('active-view') && typeof renderComercial === 'function'){
+            renderComercial();
+          }
           if(typeof renderKanban === 'function' && document.getElementById('view-kanban') && document.getElementById('view-kanban').classList.contains('active-view')){
             renderKanban();
           }
@@ -4140,6 +4163,7 @@
             document.getElementById('cli-wp').value = ''; document.getElementById('cli-correo').value = '';
             document.getElementById('cli-tipo').value = ''; document.getElementById('cli-identificacion').value = '';
             renderClientes();
+            if(typeof comercialCerrarNuevoCliente === 'function') comercialCerrarNuevoCliente();
         }
 
         function renderClientes() {
@@ -4201,7 +4225,7 @@
                             <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
                                 <span class="tag ${tags_clase[clienteGrupoDe(c)]}">${clienteGrupoDe(c).toUpperCase()}</span>
                                 <button onclick="toggleEditarCliente('${c.id}')" title="Editar cliente" style="background:none; border:none; color:var(--secondary); cursor:pointer; padding:2px 4px; display:flex; align-items:center;">${ticon('edit',{noMargin:true})}</button>
-                                <button onclick="eliminarCliente('${c.id}')" title="Eliminar cliente" style="background:none; border:none; color:var(--peligro); cursor:pointer; padding:2px 4px; display:flex; align-items:center;">${ticon('trash',{noMargin:true})}</button>
+                                ${comercialEsAdmin() ? `<button onclick="eliminarCliente('${c.id}')" title="Eliminar cliente" style="background:none; border:none; color:var(--peligro); cursor:pointer; padding:2px 4px; display:flex; align-items:center;">${ticon('trash',{noMargin:true})}</button>` : ''}
                                 <button class="card-flecha-toggle" onclick="tacticalToggleCardDetalle(this)">▶</button>
                             </div>
                         </div>
@@ -4283,6 +4307,7 @@
         }
 
         function eliminarCliente(id){
+          if(!comercialEsAdmin()){ alert('Solo el administrador puede eliminar clientes.'); return; }
             if(!tacticalRequiereAdministrador()) return;
             const c = db_clientes.find(x=>x.id===id); if(!c) return;
             const asociados = db_opps.filter(o=>o.idCli===id).length + db_historial_cierres.filter(h=>h.idCli===id).length;
@@ -9669,7 +9694,8 @@
         }
         function radarIrACliente(idCli){
           const cli = db_clientes.find(c=>c.id===idCli);
-          showView('crm');
+          comercialModo = 'cli';
+          showView('comercial');
           const buscador = document.getElementById('search-cli');
           if(buscador && cli){ buscador.value = cli.empresa; renderClientes(); }
         }
@@ -9930,6 +9956,29 @@
         function comercialVendedores(){ return [...new Set([...Object.keys(VENDEDORES), ...(typeof VENDEDORES_ROMPECABEZAS !== 'undefined' ? VENDEDORES_ROMPECABEZAS : [])])]; }
         let comercialVendedorActivo = Object.keys(VENDEDORES)[0];
         function comercialCambiarVendedor(v){ comercialVendedorActivo = v; renderComercial(); }
+        /* ---- COMERCIAL > CLIENTES (Conde 2026-11-07, fase 1 de retirar el módulo CRM) ----
+           El directorio de clientes del CRM vive ahora en Comercial (pestaña "Clientes"). Contabilidad solo ve esa pestaña. Eliminar cliente: solo administrador. */
+        let comercialModo = 'seg';
+        function comercialAplicarModo(){
+          const rol = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol;
+          const soloClientes = rol === 'contabilidad';
+          if(soloClientes) comercialModo = 'cli';
+          const barra = document.getElementById('comercial-modo-barra'); if(barra) barra.style.display = soloClientes ? 'none' : 'flex';
+          const sec = document.getElementById('comercial-modo-seg-cont'), cli = document.getElementById('comercial-modo-cli-cont');
+          if(sec) sec.style.display = comercialModo === 'seg' ? '' : 'none';
+          if(cli) cli.style.display = comercialModo === 'cli' ? '' : 'none';
+          const bs = document.getElementById('cm-modo-seg'), bc = document.getElementById('cm-modo-cli');
+          if(bs) bs.classList.toggle('active', comercialModo === 'seg'); if(bc) bc.classList.toggle('active', comercialModo === 'cli');
+          if(comercialModo === 'cli' && typeof renderClientes === 'function') renderClientes();
+        }
+        function comercialCambiarModo(m){ comercialModo = m; if(m === 'seg') renderComercial(); else comercialAplicarModo(); }
+        function comercialAbrirNuevoCliente(){
+          const m = document.getElementById('modal-nuevo-cliente'); if(!m) return;
+          if(m.parentElement !== document.body) document.body.appendChild(m);   // fuera de la vista: así el fixed siempre cubre toda la pantalla
+          m.style.display = 'flex';
+          const f = document.getElementById('cli-empresa'); if(f) setTimeout(() => f.focus(), 30);
+        }
+        function comercialCerrarNuevoCliente(){ const m = document.getElementById('modal-nuevo-cliente'); if(m) m.style.display = 'none'; }
         function comercialGuardarB2C(id, campo, valor){
           const p = db_b2cPedidos.find(x=>x.id===id); if(!p) return;
           if(campo==='pendiente') p.notaComercial = valor; else p.observacionesComercial = valor;
@@ -10275,6 +10324,8 @@
         function renderComercial(){
           const tabsCont = document.getElementById('comercial-tabs');
           if(!tabsCont) return;
+          comercialAplicarModo();
+          if(comercialModo === 'cli') return;   // en la pestaña Clientes no se pinta el seguimiento
           tabsCont.innerHTML = comercialVendedores().map(v =>
             `<button class="comercial-vendedor-tab ${v===comercialVendedorActivo?'active':''}" onclick="comercialCambiarVendedor('${v.replace(/'/g,"\\'")}')">${v}</button>`
           ).join('');
