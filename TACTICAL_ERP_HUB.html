@@ -1414,23 +1414,7 @@
                         <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>1. Todas las Cotizaciones (Buscador)</span><span class="arrow" id="arrow-buscadorCot">▼</span>
                     </div>
                     <div id="buscadorCot" class="accordion-content active">
-                        <div id="buscador-nota-periodo" style="font-size:0.82rem; color:#64748b; margin-bottom:8px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>Mostrando solo el período activo arriba en "Inteligencia de Ventas" — escribe algo para buscar en todo el histórico.</div>
-                        <input type="text" id="search-cotizaciones" class="search-input" placeholder="🔍 Buscar por cliente, OT o producto..." style="margin-bottom:12px; width:100%; box-sizing:border-box; padding:10px; border:1px solid #cbd5e0; border-radius:4px; font-size:0.95rem;" oninput="renderBuscadorCotizaciones()">
-                        <div class="table-responsive">
-                            <table>
-                                <thead><tr><th>OT</th><th>Fecha</th><th>Cliente</th><th>Producto(s)</th><th>Valor</th><th>Estado</th><th></th></tr></thead>
-                                <tbody id="tabla-buscador-cotizaciones"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="accordion-item">
-                    <div class="accordion-header header-special" onclick="toggleSection('dashboard'); renderDashboard();" id="head-dashboard">
-                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>2. Inteligencia de Ventas (Dashboard)</span><span class="arrow" id="arrow-dashboard">►</span>
-                    </div>
-                    <div id="dashboard" class="accordion-content">
-                        <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:14px; padding:10px; background:var(--light-gray); border-radius:6px; border:1px solid #cbd5e0;">
+                        <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:8px;">
                             <select id="crm-periodo-tipo" onchange="crmCambiarTipo(this.value)" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;">
                                 <option value="mensual">Mensual</option>
                                 <option value="trimestral">Trimestral</option>
@@ -1441,21 +1425,20 @@
                             <span id="crm-periodo-etiqueta" style="font-weight:bold; min-width:160px; text-align:center;"></span>
                             <button class="btn-action" onclick="crmNavegar(1)">▶</button>
                         </div>
-                        <div class="dash-grid" style="margin-bottom:20px;">
-                            <div class="kpi-box" style="border-color:var(--info);"><div class="kpi-label">Dinero en Seguimiento</div><div class="kpi-value" id="kpi-pipeline">$0</div></div>
-                            <div class="kpi-box" style="border-color:var(--ganado);"><div class="kpi-label">Ventas Ganadas</div><div class="kpi-value" id="kpi-ganadas" style="color:var(--ganado);">$0</div><div id="kpi-ganadas-neto" style="font-size:0.8rem; color:#64748b; margin-top:3px;"></div><span id="kpi-ganadas-toggle" style="font-size:0.78rem; color:var(--ganado); cursor:pointer; text-decoration:underline;" onclick="const d=this.nextElementSibling; const abrir=d.style.display==='none'; d.style.display=abrir?'block':'none'; this.textContent=abrir?'Ocultar detalle ▴':'¿De dónde viene esto? ▾';">¿De dónde viene esto? ▾</span><div id="kpi-ganadas-detalle" style="display:none; margin-top:6px; text-align:left; max-height:220px; overflow-y:auto; font-size:0.78rem; color:#4a5568;"></div></div>
-                            <div class="kpi-box" style="border-color:var(--peligro);"><div class="kpi-label">Tasa de Cierre</div><div class="kpi-value" id="kpi-tasa" style="color:var(--dark);">0%</div></div>
+                        <div id="buscador-nota-periodo" style="font-size:0.82rem; color:#64748b; margin-bottom:8px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>Mostrando solo el período elegido arriba — escribe algo para buscar en todo el histórico. (La Inteligencia de Ventas ahora está en Radar y Reportes.)</div>
+                        <input type="text" id="search-cotizaciones" class="search-input" placeholder="🔍 Buscar por cliente, OT o producto..." style="margin-bottom:12px; width:100%; box-sizing:border-box; padding:10px; border:1px solid #cbd5e0; border-radius:4px; font-size:0.95rem;" oninput="renderBuscadorCotizaciones()">
+                        <div class="table-responsive">
+                            <table>
+                                <thead><tr><th>OT</th><th>Fecha</th><th>Cliente</th><th>Producto(s)</th><th>Valor</th><th>Estado</th><th></th></tr></thead>
+                                <tbody id="tabla-buscador-cotizaciones"></tbody>
+                            </table>
                         </div>
-                        <!-- Conde 2026-08-28: "dejemos el motivo de la pérdida solo en Reportes, que será lo
-                             que revisaré más frecuentemente" -- quitado de acá (estaba duplicado, mismo
-                             cálculo que "Motivos de Pérdida" en Reportes → Ventas y Comercial). -->
-                        <p style="font-size:0.85rem; color:#718096; margin:6px 0 0;">El análisis de "Motivos de Pérdida" se ve en <a href="#" onclick="showView('reportes'); return false;" style="color:var(--primary); font-weight:600;">Radar y Reportes ➔</a></p>
                     </div>
                 </div>
 
-                <div class="accordion-item">
+                                <div class="accordion-item">
                     <div class="accordion-header" onclick="toggleSection('directorio')" id="head-directorio">
-                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>3. Directorio de Clientes B2B</span><span class="arrow" id="arrow-directorio">►</span>
+                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>2. Directorio de Clientes B2B</span><span class="arrow" id="arrow-directorio">►</span>
                     </div>
                     <div id="directorio" class="accordion-content">
                         <div class="form-grid">
@@ -2839,8 +2822,9 @@
             } else if (viewId === 'crm') {
                 navContainer.style.display = 'block';
                 mainTitle.innerText = "CRM & CLIENTES B2B";
-                subTitle.innerText = "Directorio de Clientes, Buscador e Inteligencia de Ventas (2026)";
+                subTitle.innerText = "Directorio de Clientes y Buscador de cotizaciones (2026)";
                 renderClientes();
+                if (typeof renderBuscadorCotizaciones === 'function') renderBuscadorCotizaciones();
             } else if (viewId === 'calculadoras') {
                 navContainer.style.display = 'block';
                 mainTitle.innerText = "CALCULADORA DE COSTOS";
@@ -6954,8 +6938,8 @@
           return fecha instanceof Date && !isNaN(fecha) && fecha>=inicio && fecha<fin;
         }
         let crmPeriodoTipo = 'mensual', crmPeriodoOffset = 0;
-        function crmCambiarTipo(v){ crmPeriodoTipo = v; crmPeriodoOffset = 0; renderDashboard(); renderBuscadorCotizaciones(); }
-        function crmNavegar(dir){ crmPeriodoOffset += dir; renderDashboard(); renderBuscadorCotizaciones(); }
+        function crmCambiarTipo(v){ crmPeriodoTipo = v; crmPeriodoOffset = 0; renderBuscadorCotizaciones(); }
+        function crmNavegar(dir){ crmPeriodoOffset += dir; renderBuscadorCotizaciones(); }
 
         // Conde 2026-09-10: el neto real de la empresa NO incluye IVA (es plata de la DIAN, no
         // nuestra). opp.monto guarda el precio CON IVA (precioFinalTotal); la excepción son los
@@ -6991,39 +6975,16 @@
                 return `<div style="padding:2px 0; border-bottom:1px solid #edf2f7;">${fechaTxt} — ${tacticalTruncar(g.desc||'', 50)}${g.ot?` (${g.ot})`:''}: <strong>${cotFormatoCop(g.monto)}</strong></div>`;
             }).join('');
         }
-        function renderDashboard() {
-            const {inicio, fin, etiqueta} = periodoRango(crmPeriodoTipo, crmPeriodoOffset);
-            const elEtq = document.getElementById('crm-periodo-etiqueta');
-            if(elEtq) elEtq.textContent = etiqueta;
-            const selTipo = document.getElementById('crm-periodo-tipo');
-            if(selTipo) selTipo.value = crmPeriodoTipo;
-
-            const oppsPeriodo = db_opps.filter(o => fechaEnRango(fechaDeRegistro(o), inicio, fin));
-            let totalPipeline = oppsPeriodo.reduce((sum, opp) => sum + opp.monto, 0);
-            document.getElementById('kpi-pipeline').innerText = "$" + totalPipeline.toLocaleString();
-
-            const cierresPeriodo = db_historial_cierres.filter(h => fechaEnRango(fechaDeRegistro(h), inicio, fin));
-            let ganadas = cierresPeriodo.filter(h => h.estado === 'ganado');
-            let perdidas = cierresPeriodo.filter(h => h.estado === 'perdido');
-            let totalGanado = ganadas.reduce((sum, o) => sum + o.monto, 0);
-            document.getElementById('kpi-ganadas').innerText = "$" + totalGanado.toLocaleString();
-            const netoGanado = ganadas.reduce((sum, o) => sum + montoNetoSinIva(o), 0);
-            const elNeto = document.getElementById('kpi-ganadas-neto');
-            if(elNeto) elNeto.textContent = ganadas.length ? ("≈ $" + Math.round(netoGanado).toLocaleString() + " sin IVA (neto)") : "";
-            const elDetalleGanadas = document.getElementById('kpi-ganadas-detalle');
-            if(elDetalleGanadas) elDetalleGanadas.innerHTML = contDetalleVentasGanadasHtml(ganadas);
-
-            let totalCerrados = ganadas.length + perdidas.length;
-            let tasa = totalCerrados === 0 ? 0 : Math.round((ganadas.length / totalCerrados) * 100);
-            document.getElementById('kpi-tasa').innerText = tasa + "%";
-            // Conde 2026-08-28: "Motivos de Pérdida" se quitó de acá (duplicaba exactamente el mismo
-            // cálculo que ya vive en Reportes → Ventas y Comercial, ver rep-motivos en renderReportes).
-        }
+        // Conde 2026-11-07: la "Inteligencia de Ventas" (dinero en seguimiento, ventas ganadas, tasa de cierre) ya no es un acordeón del CRM:
+        // vive en Radar y Reportes (franja "Resumen de ventas" de arriba, con el año/periodo/comercial/línea elegidos).
 
         // ---- BUSCADOR DE COTIZACIONES (Conde 2026-08-06): todas las cotizaciones de las 8
         // calculadoras, activas o cerradas, en un solo lugar buscable — antes solo se veían en el
         // embudo (activas) o dispersas, sin forma de encontrar una cotización cerrada rápido.
         function renderBuscadorCotizaciones(){
+          { const pr = periodoRango(crmPeriodoTipo, crmPeriodoOffset);
+            const el = document.getElementById('crm-periodo-etiqueta'); if(el) el.textContent = pr.etiqueta;
+            const st = document.getElementById('crm-periodo-tipo'); if(st) st.value = crmPeriodoTipo; }
           const texto = ((document.getElementById('search-cotizaciones')||{}).value || '').toLowerCase();
           const activos = db_opps.map(o => ({...o, estadoTxt: (tags_etapa[o.etapa]||{}).lbl || o.etapa}));
           const cerrados = db_historial_cierres.map(o => ({...o, estadoTxt: o.estado==='ganado' ? '✅ Ganada' : '❌ Perdida'}));
@@ -11516,6 +11477,7 @@
           const ticketProm = ganadas.length===0?0:Math.round(valorGanado/ganadas.length);
           document.getElementById('rep-comercial-kpis').innerHTML = `
             <div class="kpi-box"><div class="kpi-label">Cotizaciones Generadas</div><div class="kpi-value">${totalCot}</div></div>
+            <div class="kpi-box" style="border-color:var(--info);"><div class="kpi-label">Dinero en Seguimiento</div><div class="kpi-value">${cotFormatoCop(oppsF.reduce((s,o)=>s+(o.monto||0),0))}</div><div style="font-size:0.8rem; color:#718096;">${oppsF.length} negocio${oppsF.length===1?'':'s'} abierto${oppsF.length===1?'':'s'}</div></div>
             <div class="kpi-box" style="border-color:var(--ganado);"><div class="kpi-label">Tasa de Cierre</div><div class="kpi-value" style="color:var(--ganado);">${tasaCierre}%</div></div>
             <div class="kpi-box" style="border-color:var(--primary);"><div class="kpi-label">Valor Ganado</div><div class="kpi-value" style="color:var(--primary);">${cotFormatoCop(valorGanado)}</div>${ganadas.length?`<div style="font-size:0.8rem; color:#64748b; margin-top:3px;">≈ ${cotFormatoCop(Math.round(valorGanadoNeto))} sin IVA (neto)</div>`:''}<span style="font-size:0.78rem; color:var(--primary); cursor:pointer; text-decoration:underline;" onclick="const d=this.nextElementSibling; const abrir=d.style.display==='none'; d.style.display=abrir?'block':'none'; this.textContent=abrir?'Ocultar detalle ▴':'¿De dónde viene esto? ▾';">¿De dónde viene esto? ▾</span><div style="display:none; margin-top:6px; text-align:left; max-height:220px; overflow-y:auto; font-size:0.78rem; color:#4a5568;">${contDetalleVentasGanadasHtml(ganadas)}</div></div>
             <div class="kpi-box"><div class="kpi-label">Ticket Promedio (Ganado)</div><div class="kpi-value">${cotFormatoCop(ticketProm)}</div></div>
