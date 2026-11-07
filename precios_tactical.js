@@ -490,6 +490,71 @@ async function tacticalSiguienteOT(fecha){
   }
 }
 
+/* ==========================================
+   TABLA "PRODUCTOS COTIZADOS" DEL PDF DE COTIZACIÓN (Conde 2026-11-07)
+   "optimizar espacio: para varios productos la cotización queda enorme" -- UNA sola copia compartida por las 8 calculadoras +
+   Producto Libre + Hub (antes estaba copiada 9 veces). Cambios:
+   A) títulos de una línea (Cant. · Unitario · Subtotal · IVA · Total) con la nota "Unitario y subtotal sin IVA".
+   B) cada producto en 2 filas: arriba el nombre corto y los números; abajo el detalle en letra pequeña a TODO el ancho. La foto se conserva
+      (56px, a la izquierda de las 2 filas) -- Conde: "la foto déjala, es muy importante".
+   IVA: si el cliente es Personalizado (Cuenta de Cobro, aplicaIva=false) NO se calcula IVA por línea: sin columnas Subtotal/IVA y el unitario
+   es monto/cantidad (antes se dividía entre 1,19 igual y mostraba un precio por unidad más bajo del real).
+   lineas: [{desc, cantidad, monto (total de la línea, con IVA si aplica), precioUnitario (sin IVA, opcional), fotoUrl, videoUrl}]
+   opts: { aplicaIva (default true), fmt (formato de pesos de cada herramienta), negrilla (cotTextoConNegrilla) }
+   ========================================== */
+function tacticalPdfPartirDescripcion(desc){
+  const t = String(desc == null ? '' : desc).trim();
+  const impar = s => ((s.match(/\*\*/g) || []).length % 2) === 1;     // **negrilla** cortada a la mitad: no se parte
+  let tit = t, det = '';
+  const i = t.indexOf(':');
+  if(i > 0 && i <= 70){ tit = t.slice(0, i); det = t.slice(i + 1).trim(); }
+  else if(t.length > 70){
+    const coma = t.indexOf(',');       // sin dos puntos: el nombre llega hasta la primera coma (ej. '100 CUADERNOS tamaño 24 x 17 cms, tapa dura…')
+    if(coma >= 15 && coma <= 70){ tit = t.slice(0, coma); det = t.slice(coma + 1).trim(); }
+    else {
+      const corte = t.lastIndexOf(' ', 60);
+      const c = corte > 20 ? corte : 60;
+      tit = t.slice(0, c).trim(); det = t.slice(c).trim();
+    }
+  }
+  if(impar(tit) || impar(det)) return [t, ''];
+  return [tit, det];
+}
+function tacticalPdfTablaProductosHtml(lineas, opts){
+  opts = opts || {};
+  const aplicaIva = opts.aplicaIva !== false;
+  const fmt = opts.fmt || (n => '$' + Math.round(n).toLocaleString('es-CO'));
+  const neg = opts.negrilla || (t => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'));
+  lineas = lineas || [];
+  const hayFoto = lineas.some(l => l.fotoUrl);
+  const anchos = aplicaIva ? (hayFoto ? [11, 30, 7, 12, 13, 11, 16] : [41, 7, 12, 13, 11, 16]) : (hayFoto ? [11, 43, 8, 18, 20] : [56, 8, 18, 20]);
+  const nCols = anchos.length;
+  const th = 'style="font-size:0.68rem; padding:2px 6px; white-space:nowrap;"';
+  const thR = 'style="font-size:0.68rem; padding:2px 6px; white-space:nowrap; text-align:right;"';
+  const cabecera = '<tr>' + (hayFoto ? `<th ${th} colspan="2">Descripción</th>` : `<th ${th}>Descripción</th>`) +
+    `<th ${thR}>Cant.</th><th ${thR}>Unitario</th>` + (aplicaIva ? `<th ${thR}>Subtotal</th><th ${thR}>IVA</th>` : '') + `<th ${thR}>Total</th></tr>`;
+  const tdN = 'style="text-align:right; white-space:nowrap;"';
+  const filas = lineas.map(l => {
+    const cant = l.cantidad || 1;
+    const unitario = l.precioUnitario != null ? l.precioUnitario : (l.monto / cant / (aplicaIva ? 1.19 : 1));
+    const subtotal = unitario * cant;
+    const ivaLinea = aplicaIva ? l.monto - subtotal : 0;
+    const [tit, det] = tacticalPdfPartirDescripcion(l.desc);
+    const dosFilas = !!det || !!l.videoUrl;
+    const video = l.videoUrl ? `<a href="${l.videoUrl}" style="color:#cc0000; text-decoration:none; font-size:0.65rem; font-weight:bold;">▶ Ver video del producto</a>` : '';
+    const foto = hayFoto
+      ? `<td rowspan="${dosFilas ? 2 : 1}" style="text-align:center; vertical-align:middle; padding:3px;">${l.fotoUrl ? `<img src="${l.fotoUrl}" style="width:56px; height:56px; object-fit:contain; background:#f8fafc; border:1px solid #d7dee5; border-radius:4px;">` : ''}</td>`
+      : '';
+    const numeros = `<td ${tdN}>${l.cantidad || '-'}</td><td ${tdN}>${fmt(unitario)}</td>` + (aplicaIva ? `<td ${tdN}>${fmt(subtotal)}</td><td ${tdN}>${fmt(ivaLinea)}</td>` : '') + `<td ${tdN}>${fmt(l.monto)}</td>`;
+    const celdaTit = dosFilas ? `<td style="font-weight:700; line-height:1.25; border-bottom:none;">${neg(tit)}</td>` : `<td style="line-height:1.25;">${neg(tit)}</td>`;
+    let html = `<tr>${foto}${celdaTit}${numeros}</tr>`;
+    if(dosFilas) html += `<tr><td colspan="${nCols - (hayFoto ? 1 : 0)}" style="font-size:0.72rem; line-height:1.3; color:#4a5568; border-top:none; padding-top:0;">${neg(det)}${det && video ? '<br>' : ''}${video}</td></tr>`;
+    return html;
+  }).join('');
+  const nota = aplicaIva ? '<div style="font-size:0.66rem; color:#718096; margin:0 0 3px;">Unitario y subtotal sin IVA.</div>' : '';
+  return nota + `<table class="doc-table" style="table-layout:fixed;"><colgroup>${anchos.map(a => `<col style="width:${a}%;">`).join('')}</colgroup>${cabecera}${filas}</table>`;
+}
+
 // Título corto para CRM/Kanban: siempre arranca con el formato corto automático (cantidad +
 // producto + referencia) para que las fichas de producción sean escaneables de un vistazo; si el
 // usuario escribió una descripción propia en el campo editable, se agrega después del guion, visible

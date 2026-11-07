@@ -299,7 +299,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="tactical-supabase.js?v=20261021a"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
-<script src="precios_tactical.js?v=20261021b"></script>
+<script src="precios_tactical.js?v=20261107a"></script>
 <script>
 /* ============ CONSTANTES REUTILIZADAS DEL MOTOR YA VALIDADO ============ */
 const SUSTRATOS = tacticalSeleccionarSustratos(["Propalcote__300"], 'cubo_rubik');
@@ -1009,17 +1009,9 @@ function imprimirPDFCliente(datos){
   // Conde 2026-08-19: el cliente necesita ver el valor unitario SIN IVA de cada línea, no solo
   // el total de esa línea con IVA incluido -- si no viene precalculado (l.precioUnitario), se
   // deriva del monto total de la línea asumiendo el 19% plano que se usa en toda la cotización.
-  const filasLineas = datos.lineas.map(l => {
-    const cant = l.cantidad || 1;
-    const unitario = l.precioUnitario!=null ? l.precioUnitario : (l.monto/cant/1.19);
-    // Conde 2026-09-17: "debe tener la columna de iva y total por cada producto en la misma fila" --
-    // con varios productos en un pedido (sobre todo si no se muestra el TOTAL consolidado, ver
-    // mostrarTotal) el cliente necesita identificar el precio completo de CADA producto en su propia
-    // fila, no solo en el desglose general de abajo.
-    const subtotalLinea = unitario*cant;
-    const ivaLinea = l.monto - subtotalLinea;
-    return `<tr><td><div style="display:flex; align-items:center; gap:6px;">${l.fotoUrl?`<img src="${l.fotoUrl}" style="width:56px; height:56px; object-fit:contain; background:#f8fafc; border:1px solid #d7dee5; border-radius:4px; flex-shrink:0;">`:''}<div style="line-height:1.25;">${cotTextoConNegrilla(l.desc)}${l.videoUrl?`<br><a href="${l.videoUrl}" style="color:#cc0000; text-decoration:none; font-size:0.65rem; font-weight:bold;">▶ Ver video del producto</a>`:''}</div></div></td><td style="text-align:right;">${l.cantidad||'-'}</td><td style="text-align:right;">${cop(unitario)}</td><td style="text-align:right;">${cop(subtotalLinea)}</td><td style="text-align:right;">${cop(ivaLinea)}</td><td style="text-align:right;">${cop(l.monto)}</td></tr>`;
-  }).join('');
+  // Conde 2026-11-07: la tabla de productos vive en UNA función compartida (precios_tactical.js): títulos de una línea, detalle a todo el ancho, foto conservada
+  // y sin IVA por línea cuando el cliente es Personalizado (Cuenta de Cobro).
+  const tablaProductosHtml = tacticalPdfTablaProductosHtml(datos.lineas, { aplicaIva: datos.aplicaIva !== false, fmt: cop, negrilla: cotTextoConNegrilla });
   // El desglose Subtotal/IVA se calcula siempre a partir del total (IVA plano del 19% en toda
   // la cotización) -- antes se saltaba en los pedidos multi-producto porque no se pasaba ivaTotal.
   // Conde 2026-09-02: si el cliente es Personalizado (Cuenta de Cobro) no se cobra IVA -- no
@@ -1048,11 +1040,7 @@ function imprimirPDFCliente(datos){
       <div class="doc-cliente-fechas">Fecha de emisión: ${fecha} &nbsp;|&nbsp; Válida hasta: ${validoHasta} (30 días calendario)</div>
     </div>
     <div class="doc-section-title">Productos Cotizados</div>
-    <table class="doc-table">
-      <colgroup><col style="width:38%;"><col style="width:8%;"><col style="width:14%;"><col style="width:14%;"><col style="width:12%;"><col style="width:14%;"></colgroup>
-      <tr><th>Descripción</th><th>Cantidad</th><th>Valor Unitario (sin IVA)</th><th>Subtotal (sin IVA)</th><th>IVA</th><th>Valor Total</th></tr>
-      ${filasLineas}
-    </table>
+    ${tablaProductosHtml}
     ${desgloseHtml}
     ${mostrarTotal ? `<div class="doc-total-box">TOTAL: ${cop(datos.total)} COP</div>` : ''}
     <div class="doc-cta">✅ <strong>Para aprobar esta cotización</strong>, responde confirmando el número <strong>${datos.ot||''}</strong> por WhatsApp al ${TACTICAL_INFO.telefono} o al correo ${TACTICAL_INFO.correo}. Iniciamos producción con anticipo y sherpas aprobadas.</div>
