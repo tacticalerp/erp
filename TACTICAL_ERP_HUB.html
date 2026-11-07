@@ -1083,6 +1083,13 @@
           .cm-ib.cm-der::after{ left:auto; right:0; transform:none; }
           .cm-chip{ padding:2px 10px; border-radius:999px; border:1px solid #a0aec0; background:#fff; font-size:0.72rem; cursor:pointer; color:#1a202c; }
           .cm-chip.on{ background:#1a202c; color:#fff; border-color:#1a202c; }
+          /* Conde 2026-11-07: Radar y Reportes por año y módulos plegables */
+          .rep-fl{ display:block; font-size:0.68rem; color:#a0aec0; margin-bottom:2px; }
+          .rep-fs{ background:#fff; color:#1a202c; border:1px solid #cbd5e0; border-radius:4px; padding:5px 8px; font-size:0.85rem; width:auto; }
+          .rep-resumen{ font-weight:400; font-size:0.78rem; opacity:0.85; margin-left:10px; }
+          .rep-chev{ display:inline-flex; vertical-align:-3px; margin-right:6px; transition:transform .12s; }
+          .radar-x{ position:absolute; top:6px; right:6px; background:none; border:none; cursor:pointer; padding:3px; border-radius:4px; }
+          .radar-x:hover{ background:#edf2f7; }
         </style>
         <div id="view-comercial" class="app-view">
           <div style="padding:15px; max-width:1100px; margin:0 auto;">
@@ -1764,6 +1771,21 @@
         <!-- VISTA 5: REPORTES -->
         <div id="view-reportes" class="app-view">
             <div style="padding:15px;">
+                <div style="background:#1a202c; color:#fff; border-radius:8px 8px 0 0; padding:10px 14px; display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end;">
+                    <div><label class="rep-fl">Año</label><select id="rep-g-anio" class="rep-fs" onchange="repAplicarFiltros()"><option>2026</option></select></div>
+                    <div><label class="rep-fl">Periodo</label><select id="rep-g-periodo" class="rep-fs" onchange="repAplicarFiltros()"><option value="all">Todo el año</option></select></div>
+                    <div id="rep-g-fechas" style="display:none; align-items:flex-end; gap:6px;">
+                        <div><label class="rep-fl">Desde</label><input type="date" id="rep-g-desde" class="rep-fs" onchange="repAplicarFiltros()"></div>
+                        <div><label class="rep-fl">Hasta</label><input type="date" id="rep-g-hasta" class="rep-fs" onchange="repAplicarFiltros()"></div>
+                    </div>
+                    <div><label class="rep-fl">Comercial</label><select id="rep-g-vend" class="rep-fs" onchange="repAplicarFiltros()"><option value="">Todos</option></select></div>
+                    <div><label class="rep-fl">Línea</label><select id="rep-g-linea" class="rep-fs" onchange="repAplicarFiltros()"><option value="">Todas</option></select></div>
+                    <div style="margin-left:auto; font-size:0.75rem; color:#a0aec0; max-width:230px; text-align:right;">El resumen y Ventas y comercial usan estos filtros. Comparativos y Rompecabezas muestran los 5 años que terminan en el año elegido.</div>
+                </div>
+                <div style="background:#fff; border:1px solid #cbd5e0; border-top:none; border-radius:0 0 8px 8px; padding:10px 12px; margin-bottom:14px;">
+                    <div style="font-size:0.8rem; font-weight:700; color:#4a5568; margin-bottom:6px;">Resumen de ventas · <span id="rep-g-etiqueta"></span></div>
+                    <div class="dash-grid" id="rep-comercial-kpis"></div>
+                </div>
                 <!-- Conde 2026-08-28: "unifica radar de negocio y reportes en una sola herramienta"
                      -- el Radar (recomendaciones de hoy) queda arriba, fuera del acordeón, para que
                      siga viéndose de una sola vez como antes; los reportes de siempre van debajo. -->
@@ -1776,10 +1798,11 @@
                     </div>
                     <div id="rep-radar" class="accordion-content">
                         <p style="color:#718096; font-size:0.9rem; margin:0 0 14px;">Cruces de CRM, Contabilidad y Reprocesos, traducidos a frases simples con una acción sugerida — no hace falta saber de contabilidad para leerlo.</p>
-                        <div style="font-size:0.8rem; color:#a0aec0; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px;">Esta semana</div>
+                        <div style="font-size:0.8rem; color:#a0aec0; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">Esta semana <button type="button" class="btn-action" style="text-transform:none; font-size:0.72rem; padding:2px 8px;" onclick="radarQuitarTodos('urgente')">Quitar todos</button></div>
                         <div id="radar-urgente" style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;"></div>
-                        <div style="font-size:0.8rem; color:#a0aec0; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px;">Para tener en cuenta</div>
+                        <div style="font-size:0.8rem; color:#a0aec0; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">Para tener en cuenta <button type="button" class="btn-action" style="text-transform:none; font-size:0.72rem; padding:2px 8px;" onclick="radarQuitarTodos('info')">Quitar todos</button></div>
                         <div id="radar-informativo" style="display:flex; flex-direction:column; gap:10px;"></div>
+                        <div id="radar-quitados" style="display:none; margin-top:12px; font-size:0.78rem; color:#718096;"></div>
                     </div>
                 </div>
 
@@ -1789,10 +1812,74 @@
                      histórico 2011-2026 (migracion_historico_financiero.sql) + comparativo en vivo
                      contra lo que el ERP ya factura este año. -->
                 <div class="accordion-item">
-                    <div class="accordion-header active" id="head-rep-historico" onclick="toggleSection('rep-historico')">
-                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>Tendencia Histórica (2011-2026)</span><span class="arrow" id="arrow-rep-historico">▼</span>
+                    <div class="accordion-header" id="head-rep-comercial" onclick="toggleSection('rep-comercial')">
+                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>Ventas y comercial <span class="rep-resumen" id="rep-res-comercial"></span></span><span class="arrow" id="arrow-rep-comercial">►</span>
                     </div>
-                    <div id="rep-historico" class="accordion-content active">
+                    <div id="rep-comercial" class="accordion-content">
+                        <div style="display:none; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:14px; padding:10px; background:var(--light-gray); border-radius:6px; border:1px solid #cbd5e0;">
+                            <select id="rep-periodo-tipo" onchange="repCambiarTipo(this.value)" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;">
+                                <option value="mensual">Mensual</option>
+                                <option value="trimestral">Trimestral</option>
+                                <option value="semestral">Semestral</option>
+                                <option value="anual">Anual</option>
+                                <option value="personalizado">Rango de fechas personalizado</option>
+                            </select>
+                            <span id="rep-periodo-fijo-nav">
+                                <button class="btn-action" onclick="repNavegar(-1)">◀</button>
+                                <span id="rep-periodo-etiqueta" style="font-weight:bold; min-width:160px; text-align:center; display:inline-block;"></span>
+                                <button class="btn-action" onclick="repNavegar(1)">▶</button>
+                            </span>
+                            <span id="rep-periodo-personalizado" style="display:none; align-items:center; gap:6px;">
+                                Desde <input type="date" id="rep-fecha-inicio" onchange="renderReportes()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;">
+                                Hasta <input type="date" id="rep-fecha-fin" onchange="renderReportes()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;">
+                            </span>
+                            <select id="rep-periodo-vendedor" onchange="renderReportes()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;"><option value="">Todos los vendedores</option></select>
+                            <select id="rep-periodo-linea" onchange="renderReportes()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;"><option value="">Todas las líneas</option></select>
+                        </div>
+                        <!-- Conde 2026-10-07: gráficos de barras de Ventas y Comercial -- comparativa de
+                             cotizaciones enviadas vs aprobadas, y ventas por comercial; respetan el período,
+                             el vendedor y la línea elegidos arriba (ver repRenderGraficosComercial). -->
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:12px; margin-top:15px;">
+                            <div class="data-card">
+                                <div class="card-title" style="font-size:1rem;">Cotizaciones enviadas vs. aprobadas</div>
+                                <div style="position:relative; height:240px; margin-top:8px;"><canvas id="rep-chart-env-aprob"></canvas></div>
+                            </div>
+                            <div class="data-card">
+                                <div class="card-title" style="font-size:1rem;">Ventas por comercial (valor ganado)</div>
+                                <div style="position:relative; height:240px; margin-top:8px;"><canvas id="rep-chart-vendedor"></canvas></div>
+                            </div>
+                        </div>
+                        <div class="card-grid" style="margin-top:15px;">
+                            <div class="data-card">
+                                <div class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>Top Clientes (LTV histórico total)</div>
+                                <div id="rep-top-clientes" style="font-size:0.9rem; line-height:1.6; margin-top:8px;"></div>
+                            </div>
+                            <div class="data-card">
+                                <div class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>Unidades Cotizadas por Línea</div>
+                                <div id="rep-lineas" style="font-size:0.9rem; line-height:1.6; margin-top:8px;"></div>
+                            </div>
+                            <div class="data-card">
+                                <div class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>Motivos de Pérdida</div>
+                                <div id="rep-motivos" style="font-size:0.9rem; line-height:1.6; margin-top:8px;"></div>
+                            </div>
+                            <div class="data-card">
+                                <div class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>Ventas por Cliente (en el período elegido)</div>
+                                <p style="font-size:0.78rem; color:#94a3b8; margin:2px 0 6px;">Ranking por monto -- "Ver compras" desglosa qué compró y en qué mes.</p>
+                                <div id="rep-ventas-cliente" style="font-size:0.9rem; line-height:1.6; margin-top:8px; max-height:260px; overflow-y:auto;"></div>
+                            </div>
+                            <div class="data-card">
+                                <div class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>Ventas por Producto (en el período elegido)</div>
+                                <div id="rep-ventas-producto" style="font-size:0.9rem; line-height:1.6; margin-top:8px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header" id="head-rep-historico" onclick="toggleSection('rep-historico')">
+                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>Comparativos con otros años <span class="rep-resumen" id="rep-res-comp"></span></span><span class="arrow" id="arrow-rep-historico">►</span>
+                    </div>
+                    <div id="rep-historico" class="accordion-content">
                         <p style="font-size:0.85rem; color:#718096; margin-top:0;">Ventas y estados financieros de años anteriores que subiste, comparados con lo que el ERP ya factura en vivo este año.</p>
                         <div id="th-sin-datos" style="display:none; padding:12px; background:#fff3cd; border-left:4px solid #f0d98c; border-radius:4px; font-size:0.88rem; margin-bottom:12px;">Todavía no hay datos históricos cargados -- corre <code>migracion_historico_financiero.sql</code> en el SQL Editor de Supabase y refresca esta página.</div>
                         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:10px; background:var(--light-gray); border-radius:6px; border:1px solid #cbd5e0; margin-bottom:14px;">
@@ -1868,10 +1955,10 @@
                      el informe" -- ventas mensuales del canal Personalizado (histórico cargado + pedidos
                      B2C aprobados en vivo para los meses que el histórico todavía no cubre). -->
                 <div class="accordion-item">
-                    <div class="accordion-header active" id="head-rep-rompe-pers" onclick="toggleSection('rep-rompe-pers')">
-                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M19.4 7.5V5a2 2 0 0 0-2-2h-3a2.5 2.5 0 1 0-5 0h-3a2 2 0 0 0-2 2v3a2.5 2.5 0 1 1 0 5v3a2 2 0 0 0 2 2h3a2.5 2.5 0 1 1 5 0h3a2 2 0 0 0 2-2v-2.5a2.5 2.5 0 1 0 0-5z"></path></svg>Rompecabezas personalizados</span><span class="arrow" id="arrow-rep-rompe-pers">▼</span>
+                    <div class="accordion-header" id="head-rep-rompe-pers" onclick="toggleSection('rep-rompe-pers')">
+                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M19.4 7.5V5a2 2 0 0 0-2-2h-3a2.5 2.5 0 1 0-5 0h-3a2 2 0 0 0-2 2v3a2.5 2.5 0 1 1 0 5v3a2 2 0 0 0 2 2h3a2.5 2.5 0 1 1 5 0h3a2 2 0 0 0 2-2v-2.5a2.5 2.5 0 1 0 0-5z"></path></svg>Rompecabezas personalizados <span class="rep-resumen" id="rep-res-rp"></span></span><span class="arrow" id="arrow-rep-rompe-pers">►</span>
                     </div>
-                    <div id="rep-rompe-pers" class="accordion-content active">
+                    <div id="rep-rompe-pers" class="accordion-content">
                         <p style="font-size:0.85rem; color:#718096; margin-top:0;">Ventas mes a mes del canal Personalizado (Norely y Yasmid): rompecabezas B2C y otros ingresos sin factura, año contra año.</p>
                         <!-- Conde 2026-10-21: "la información de rompecabezas personalizados de ventas la pueda ver en Radar y Reportes donde la pueda seleccionar por mes". -->
                         <div class="data-card" style="margin-bottom:14px;">
@@ -1914,70 +2001,7 @@
                     </div>
                 </div>
 
-                <div class="accordion-item">
-                    <div class="accordion-header active" id="head-rep-comercial" onclick="toggleSection('rep-comercial')">
-                        <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>Ventas y Comercial</span><span class="arrow" id="arrow-rep-comercial">▼</span>
-                    </div>
-                    <div id="rep-comercial" class="accordion-content active">
-                        <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:14px; padding:10px; background:var(--light-gray); border-radius:6px; border:1px solid #cbd5e0;">
-                            <select id="rep-periodo-tipo" onchange="repCambiarTipo(this.value)" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;">
-                                <option value="mensual">Mensual</option>
-                                <option value="trimestral">Trimestral</option>
-                                <option value="semestral">Semestral</option>
-                                <option value="anual">Anual</option>
-                                <option value="personalizado">Rango de fechas personalizado</option>
-                            </select>
-                            <span id="rep-periodo-fijo-nav">
-                                <button class="btn-action" onclick="repNavegar(-1)">◀</button>
-                                <span id="rep-periodo-etiqueta" style="font-weight:bold; min-width:160px; text-align:center; display:inline-block;"></span>
-                                <button class="btn-action" onclick="repNavegar(1)">▶</button>
-                            </span>
-                            <span id="rep-periodo-personalizado" style="display:none; align-items:center; gap:6px;">
-                                Desde <input type="date" id="rep-fecha-inicio" onchange="renderReportes()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;">
-                                Hasta <input type="date" id="rep-fecha-fin" onchange="renderReportes()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;">
-                            </span>
-                            <select id="rep-periodo-vendedor" onchange="renderReportes()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;"><option value="">Todos los vendedores</option></select>
-                            <select id="rep-periodo-linea" onchange="renderReportes()" style="padding:6px; border-radius:4px; border:1px solid #cbd5e0;"><option value="">Todas las líneas</option></select>
-                        </div>
-                        <div class="dash-grid" id="rep-comercial-kpis"></div>
-                        <!-- Conde 2026-10-07: gráficos de barras de Ventas y Comercial -- comparativa de
-                             cotizaciones enviadas vs aprobadas, y ventas por comercial; respetan el período,
-                             el vendedor y la línea elegidos arriba (ver repRenderGraficosComercial). -->
-                        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:12px; margin-top:15px;">
-                            <div class="data-card">
-                                <div class="card-title" style="font-size:1rem;">Cotizaciones enviadas vs. aprobadas</div>
-                                <div style="position:relative; height:240px; margin-top:8px;"><canvas id="rep-chart-env-aprob"></canvas></div>
-                            </div>
-                            <div class="data-card">
-                                <div class="card-title" style="font-size:1rem;">Ventas por comercial (valor ganado)</div>
-                                <div style="position:relative; height:240px; margin-top:8px;"><canvas id="rep-chart-vendedor"></canvas></div>
-                            </div>
-                        </div>
-                        <div class="card-grid" style="margin-top:15px;">
-                            <div class="data-card">
-                                <div class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>Top Clientes (LTV histórico total)</div>
-                                <div id="rep-top-clientes" style="font-size:0.9rem; line-height:1.6; margin-top:8px;"></div>
-                            </div>
-                            <div class="data-card">
-                                <div class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>Unidades Cotizadas por Línea</div>
-                                <div id="rep-lineas" style="font-size:0.9rem; line-height:1.6; margin-top:8px;"></div>
-                            </div>
-                            <div class="data-card">
-                                <div class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>Motivos de Pérdida</div>
-                                <div id="rep-motivos" style="font-size:0.9rem; line-height:1.6; margin-top:8px;"></div>
-                            </div>
-                            <div class="data-card">
-                                <div class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>Ventas por Cliente (en el período elegido)</div>
-                                <p style="font-size:0.78rem; color:#94a3b8; margin:2px 0 6px;">Ranking por monto -- "Ver compras" desglosa qué compró y en qué mes.</p>
-                                <div id="rep-ventas-cliente" style="font-size:0.9rem; line-height:1.6; margin-top:8px; max-height:260px; overflow-y:auto;"></div>
-                            </div>
-                            <div class="data-card">
-                                <div class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>Ventas por Producto (en el período elegido)</div>
-                                <div id="rep-ventas-producto" style="font-size:0.9rem; line-height:1.6; margin-top:8px;"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                
 
                 <div class="accordion-item">
                     <div class="accordion-header" id="head-rep-produccion" onclick="toggleSection('rep-produccion')">
@@ -2831,9 +2855,12 @@
                 navContainer.style.display = 'block';
                 mainTitle.innerText = "RADAR Y REPORTES";
                 subTitle.innerText = "Recomendaciones de hoy + Indicadores de Ventas, Producción, Calidad y Tareas (2026)";
+                if (typeof repInitFiltrosGlobales === 'function') repInitFiltrosGlobales();
                 if (typeof renderRadar === 'function') renderRadar();
                 if (typeof renderReportes === 'function') renderReportes();
                 if (typeof renderTendenciaHistorica === 'function') renderTendenciaHistorica();
+                if (typeof repPlegarTarjetas === 'function') repPlegarTarjetas();
+                if (typeof repActualizarResumenes === 'function') repActualizarResumenes();
             } else if (viewId === 'contabilidad') {
                 navContainer.style.display = 'block';
                 mainTitle.innerText = "CONTABILIDAD";
@@ -9669,7 +9696,11 @@
            que se puedan leer sin saber de contabilidad. Nace del análisis "Radar de Cruces".
            ========================================== */
         function radarCardHtml(color, badge, texto, accionLabel, accionOnclick){
-          return `<div class="data-card" style="border-left:4px solid ${color}; margin:0;">
+          const clave = radarClave(badge, texto, accionOnclick);
+          if(radarQuitados()[clave]) return '';
+          const cc = encodeURIComponent(clave).replace(/'/g, '%27');
+          return `<div class="data-card" data-clave="${cc}" style="border-left:4px solid ${color}; margin:0; position:relative;">
+            <button type="button" class="radar-x" title="Quitar este aviso" aria-label="Quitar este aviso" onclick="radarQuitar('${cc}')">${ticon('x',{size:13,color:'#718096',noMargin:true})}</button>
             <span class="tag" style="background:${color}; color:white; font-size:0.7rem;">${badge}</span>
             <p style="margin:8px 0 ${accionLabel?'10px':'0'}; font-size:0.92rem; color:var(--dark); line-height:1.4;">${texto}</p>
             ${accionLabel ? `<button class="btn-action" onclick="${accionOnclick}">${accionLabel}</button>` : ''}
@@ -10542,6 +10573,9 @@
 
           urgenteEl.innerHTML = urgente || '<p style="color:#a0aec0; font-style:italic;">Todo tranquilo por ahora -- no hay nada urgente que atender.</p>';
           infoEl.innerHTML = info || '<p style="color:#a0aec0; font-style:italic;">Todavía no hay suficientes datos para mostrar algo aquí.</p>';
+          const nQuitados = Object.keys(radarQuitados()).length;
+          const quitadosEl = document.getElementById('radar-quitados');
+          if(quitadosEl){ quitadosEl.style.display = nQuitados ? 'block' : 'none'; quitadosEl.innerHTML = nQuitados ? `${nQuitados} aviso${nQuitados === 1 ? '' : 's'} quitado${nQuitados === 1 ? '' : 's'} · <a href="#" onclick="radarRestaurar(); return false;">Restaurar</a>` : ''; }
           const nUrgentes = urgenteEl.querySelectorAll(':scope > .data-card').length;
           const conteoEl = document.getElementById('radar-conteo');
           if(conteoEl){ conteoEl.textContent = nUrgentes + (nUrgentes === 1 ? ' urgente' : ' urgentes'); conteoEl.style.display = nUrgentes ? 'inline-block' : 'none'; }
@@ -10636,8 +10670,9 @@
               selDesde.appendChild(new Option(a, a));
               selHasta.appendChild(new Option(a, a));
             });
-            selDesde.value = todosLosAnios[0];
-            selHasta.value = anioActual;
+            const anioG = (typeof repAnioGlobal === 'function') ? repAnioGlobal() : anioActual;
+            selHasta.value = todosLosAnios.includes(anioG) ? anioG : anioActual;
+            selDesde.value = Math.max(todosLosAnios[0], parseInt(selHasta.value, 10) - 4);   // Conde 2026-11-07: 5 años por defecto, no todo el histórico de una
             selDesde.dataset.poblado = '1'; selHasta.dataset.poblado = '1';
           }
           let anioDesde = selDesde ? parseInt(selDesde.value) : todosLosAnios[0];
@@ -11153,7 +11188,8 @@
           const selD = document.getElementById('rp-anio-desde'), selH = document.getElementById('rp-anio-hasta');
           if(selD && !selD.dataset.poblado){
             for(let a = primerAnio; a <= anioActual; a++){ selD.appendChild(new Option(a, a)); selH.appendChild(new Option(a, a)); }
-            selD.value = Math.max(primerAnio, anioActual - 4); selH.value = anioActual; // 5 años por defecto: con los 16 la gráfica de líneas queda ilegible
+            const aG = (typeof repAnioGlobal === 'function') ? repAnioGlobal() : anioActual;
+            selH.value = Math.min(anioActual, Math.max(primerAnio, aG)); selD.value = Math.max(primerAnio, parseInt(selH.value, 10) - 4); // 5 años por defecto: con los 16 la gráfica de líneas queda ilegible
             selD.dataset.poblado = '1'; selH.dataset.poblado = '1';
           }
           let desde = parseInt(selD.value), hasta = parseInt(selH.value);
@@ -11292,6 +11328,156 @@
           if(c.lineas && c.lineas.length) return c.lineas.some(l=>l.linea===linea);
           return c.linea === linea;
         }
+        /* ---- RADAR Y REPORTES: filtros globales + resumen de ventas siempre visible + módulos plegables (Conde 2026-11-07) ----
+           "radar y reportes me da toda la información de una, quiero que primero sea seleccionar el año y luego esté organizada por módulos y se
+           expanda según lo que quiero". Arriba: Año / Periodo / Comercial / Línea (mandan sobre Ventas y Comercial y fijan el año de Comparativos y
+           Rompecabezas) + el Resumen de ventas (rep-comercial-kpis). Cada módulo arranca plegado con una línea de resumen en su título y, adentro,
+           cada tarjeta (.data-card con .card-title) también se pliega. Nada de esto cambia los cálculos de los reportes. */
+        function repAnioGlobal(){ const s = document.getElementById('rep-g-anio'); return (s && s.value) ? parseInt(s.value, 10) : new Date().getFullYear(); }
+        function repMillones(v){
+          if(v == null || isNaN(v)) return '—';
+          return Math.abs(v) >= 1000000 ? '$' + (v / 1000000).toLocaleString('es-CO', { maximumFractionDigits: 0 }) + ' M' : cotFormatoCop(v);
+        }
+        function repInitFiltrosGlobales(){
+          const selA = document.getElementById('rep-g-anio');
+          if(!selA || selA.dataset.poblado) return;
+          const cur = new Date().getFullYear();
+          const anios = new Set([cur]);
+          (db_historicoAnual || []).forEach(r => anios.add(r.anio));
+          (db_historicoMensual || []).forEach(r => anios.add(r.anio));
+          [...anios].sort((a, b) => b - a).forEach(a => selA.appendChild(new Option(a, a)));
+          selA.value = cur;
+          const selP = document.getElementById('rep-g-periodo');
+          const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+          selP.innerHTML = '<option value="all">Todo el año</option>' + [1,2,3,4].map(q => `<option value="t${q}">Trimestre ${q}</option>`).join('') +
+            meses.map((m, i) => `<option value="m${i + 1}">${m}</option>`).join('') + '<option value="rango">Rango de fechas…</option>';
+          const selV = document.getElementById('rep-g-vend');
+          selV.innerHTML = '<option value="">Todos</option>' + Object.keys(VENDEDORES).map(v => `<option value="${v}">${v}</option>`).join('');
+          const selL = document.getElementById('rep-g-linea');
+          selL.innerHTML = '<option value="">Todas</option>' + Object.keys(NOMBRES_LINEA_PRODUCTO).map(l => `<option value="${l}">${NOMBRES_LINEA_PRODUCTO[l]}</option>`).join('');
+          repPeriodoTipo = 'anual'; repPeriodoOffset = 0;   // por defecto: todo el año en curso
+          selA.dataset.poblado = '1';
+        }
+        function repAplicarFiltros(){
+          repInitFiltrosGlobales();
+          const Y = repAnioGlobal(), cur = new Date().getFullYear(), hoy = new Date();
+          const per = document.getElementById('rep-g-periodo').value;
+          document.getElementById('rep-g-fechas').style.display = per === 'rango' ? 'flex' : 'none';
+          if(per === 'all'){ repPeriodoTipo = 'anual'; repPeriodoOffset = Y - cur; }
+          else if(/^t\d$/.test(per)){ repPeriodoTipo = 'trimestral'; repPeriodoOffset = (parseInt(per.slice(1), 10) - 1 - Math.floor(hoy.getMonth() / 3)) + 4 * (Y - cur); }
+          else if(/^m\d+$/.test(per)){ repPeriodoTipo = 'mensual'; repPeriodoOffset = (parseInt(per.slice(1), 10) - 1 - hoy.getMonth()) + 12 * (Y - cur); }
+          else {
+            repPeriodoTipo = 'personalizado';
+            const d = document.getElementById('rep-g-desde'), h = document.getElementById('rep-g-hasta');
+            if(!d.value) d.value = Y + '-01-01';
+            if(!h.value) h.value = Y === cur ? hoy.toISOString().slice(0, 10) : Y + '-12-31';
+            document.getElementById('rep-fecha-inicio').value = d.value; document.getElementById('rep-fecha-fin').value = h.value;
+          }
+          document.getElementById('rep-periodo-vendedor').value = document.getElementById('rep-g-vend').value;
+          document.getElementById('rep-periodo-linea').value = document.getElementById('rep-g-linea').value;
+          // Comparativos y Rompecabezas: 5 años terminando en el año elegido (se pueden ampliar adentro)
+          [['th-anio-desde', 'th-anio-hasta'], ['rp-anio-desde', 'rp-anio-hasta']].forEach(([i, f]) => {
+            const sd = document.getElementById(i), sh = document.getElementById(f);
+            if(!sd || !sh || !sh.options.length) return;
+            const anios = [...sh.options].map(o => parseInt(o.value, 10));
+            const hasta = anios.includes(Y) ? Y : Math.max(...anios);
+            sh.value = hasta; sd.value = Math.max(Math.min(...anios), hasta - 4);
+          });
+          renderReportes();
+          if(typeof renderTendenciaHistorica === 'function') renderTendenciaHistorica();
+          if(typeof renderRompecabezasPersonalizados === 'function') renderRompecabezasPersonalizados();
+          repActualizarResumenes();
+        }
+        function repActualizarResumenes(){
+          const set = (id, t) => { const e = document.getElementById(id); if(e) e.textContent = t; };
+          const r = window.repUltimoResumen;
+          if(r){
+            set('rep-res-comercial', `${r.totalCot} cotizaciones · cierre ${r.tasaCierre}% · ganadas ${repMillones(r.valorGanado)}`);
+            set('rep-g-etiqueta', r.etiqueta);
+          }
+          const Y = repAnioGlobal(), cur = new Date().getFullYear(), mesFin = Y === cur ? new Date().getMonth() + 1 : 12;
+          try {
+            const a = thIngresosPeriodo(Y, 1, mesFin, 'tactical'), b = thIngresosPeriodo(Y - 1, 1, mesFin, 'tactical');
+            set('rep-res-comp', a != null ? `${Y}: ${repMillones(a)} facturados` + (b ? ` (${a >= b ? '+' : ''}${Math.round((a / b - 1) * 100)}% vs ${Y - 1}${Y === cur ? ', mismo periodo' : ''})` : '') : '');
+          } catch(e) { set('rep-res-comp', ''); }
+          try {
+            const p = thIngresosPeriodo(Y, 1, mesFin, 'personalizado');
+            set('rep-res-rp', p != null ? `${Y}: ${repMillones(p)} en ventas` : '');
+          } catch(e) { set('rep-res-rp', ''); }
+        }
+        function repResizeCharts(el){
+          if(typeof Chart === 'undefined' || !Chart.getChart) return;
+          const mod = el.closest ? el.closest('.accordion-content') : null;
+          el.querySelectorAll('canvas').forEach(c => { const ch = Chart.getChart(c); if(ch) ch.resize(); });
+          // algunas gráficas (ej. Rompecabezas) creadas con el módulo cerrado quedan en 0x0 aunque se les haga resize(): se vuelven a dibujar ya visibles
+          setTimeout(() => {
+            const roto = [...el.querySelectorAll('canvas')].some(c => c.offsetParent !== null && c.clientWidth === 0);
+            if(!roto || !mod || el.dataset.rr) return;
+            el.dataset.rr = '1';
+            const f = { 'rep-rompe-pers': 'renderRompecabezasPersonalizados', 'rep-historico': 'renderTendenciaHistorica', 'rep-comercial': 'renderReportes' }[mod.id];
+            if(f && typeof window[f] === 'function') window[f]();
+            setTimeout(() => { delete el.dataset.rr; }, 1500);
+          }, 150);
+        }
+        // Cada tarjeta (.data-card con .card-title) de los módulos se pliega: queda solo el título (con su selector si lo trae) hasta que se hace clic.
+        function repPlegarTarjetas(){
+          ['rep-comercial', 'rep-historico', 'rep-rompe-pers', 'rep-produccion', 'rep-calidad', 'rep-tareas'].forEach(idMod => {
+            const mod = document.getElementById(idMod); if(!mod) return;
+            mod.querySelectorAll('.data-card').forEach(card => {
+              if(card.dataset.plegable) return;
+              const titulo = card.querySelector('.card-title'); if(!titulo) return;
+              const fila = titulo.parentElement === card ? titulo : titulo.parentElement;
+              if(fila.parentElement !== card) return;
+              card.dataset.plegable = '1';
+              const cuerpo = document.createElement('div'); cuerpo.className = 'rep-cuerpo'; cuerpo.style.display = 'none';
+              while(fila.nextSibling) cuerpo.appendChild(fila.nextSibling);
+              card.appendChild(cuerpo);
+              const chev = document.createElement('span'); chev.className = 'rep-chev';
+              chev.innerHTML = ticon('chevronDown', { size: 14, color: '#4a5568', noMargin: true });
+              chev.style.transform = 'rotate(-90deg)';
+              titulo.insertBefore(chev, titulo.firstChild); titulo.style.cursor = 'pointer';
+              const alternar = ev => {
+                if(ev && ev.target && ev.target.closest && ev.target.closest('select,input,button,a,textarea')) return;
+                const abre = cuerpo.style.display === 'none';
+                cuerpo.style.display = abre ? '' : 'none';
+                chev.style.transform = abre ? 'rotate(0deg)' : 'rotate(-90deg)';
+                if(abre) requestAnimationFrame(() => repResizeCharts(cuerpo));
+              };
+              fila.addEventListener('click', alternar);
+            });
+          });
+          // al abrir un módulo, sus gráficas ya dibujadas se ajustan al tamaño real
+          document.querySelectorAll('#view-reportes .accordion-header').forEach(h => {
+            if(h.dataset.rz) return; h.dataset.rz = '1';
+            h.addEventListener('click', () => setTimeout(() => { const c = document.getElementById(h.id.replace('head-', '')); if(c) repResizeCharts(c); }, 60));
+          });
+        }
+
+        /* ---- RADAR: quitar avisos (Conde 2026-11-07: "que se puedan borrar los comentarios del radar, aún muestra algunos de hace meses") ----
+           Los avisos se calculan solos cada vez; "quitar" guarda la clave del aviso en este navegador (localStorage) y deja de mostrarse hasta que se
+           restaure. La clave ignora números sueltos (días, montos) para que el aviso siga quitado aunque cambie el conteo de días. */
+        const RADAR_LS = 'tactical_radar_quitados_v1';
+        function radarQuitados(){ try { return JSON.parse(localStorage.getItem(RADAR_LS) || '{}') || {}; } catch(e) { return {}; } }
+        function radarGuardarQuitados(o){ try { localStorage.setItem(RADAR_LS, JSON.stringify(o)); } catch(e) {} }
+        function radarClave(badge, texto, accion){
+          const prot = [];
+          let s = String(texto || '').replace(/<[^>]*>/g, '').replace(/OT-\d{4}-\d+(?:-[A-Z])?/g, m => { prot.push(m); return '§' + (prot.length - 1) + '§'; });
+          s = s.replace(/[\d.,]+/g, '#').replace(/\s+/g, ' ').trim().replace(/§(\d+)§/g, (_, i) => prot[+i]).slice(0, 140);
+          return badge + '|' + String(accion || '') + '|' + s;
+        }
+        function radarQuitar(claveCodificada){ const q = radarQuitados(); q[decodeURIComponent(claveCodificada)] = new Date().toISOString().slice(0, 10); radarGuardarQuitados(q); renderRadar(); }
+        function radarQuitarTodos(zona){
+          const cont = document.getElementById(zona === 'urgente' ? 'radar-urgente' : 'radar-informativo'); if(!cont) return;
+          const cards = [...cont.querySelectorAll(':scope > [data-clave]')]; if(!cards.length) return;
+          if(!confirm(`¿Quitar los ${cards.length} avisos de esta lista? Si cambia algo importante podrás restaurarlos abajo.`)) return;
+          const q = radarQuitados(); cards.forEach(c => { q[decodeURIComponent(c.dataset.clave)] = new Date().toISOString().slice(0, 10); });
+          radarGuardarQuitados(q); renderRadar();
+        }
+        function radarRestaurar(){
+          const n = Object.keys(radarQuitados()).length; if(!n) return;
+          if(!confirm(`¿Volver a mostrar los ${n} avisos que quitaste?`)) return;
+          radarGuardarQuitados({}); renderRadar();
+        }
         function renderReportes(){
           repActualizarControlesPeriodo();
           const {inicio, fin, etiqueta} = periodoRango(repPeriodoTipo, repPeriodoOffset);
@@ -11334,6 +11520,8 @@
             <div class="kpi-box" style="border-color:var(--primary);"><div class="kpi-label">Valor Ganado</div><div class="kpi-value" style="color:var(--primary);">${cotFormatoCop(valorGanado)}</div>${ganadas.length?`<div style="font-size:0.8rem; color:#64748b; margin-top:3px;">≈ ${cotFormatoCop(Math.round(valorGanadoNeto))} sin IVA (neto)</div>`:''}<span style="font-size:0.78rem; color:var(--primary); cursor:pointer; text-decoration:underline;" onclick="const d=this.nextElementSibling; const abrir=d.style.display==='none'; d.style.display=abrir?'block':'none'; this.textContent=abrir?'Ocultar detalle ▴':'¿De dónde viene esto? ▾';">¿De dónde viene esto? ▾</span><div style="display:none; margin-top:6px; text-align:left; max-height:220px; overflow-y:auto; font-size:0.78rem; color:#4a5568;">${contDetalleVentasGanadasHtml(ganadas)}</div></div>
             <div class="kpi-box"><div class="kpi-label">Ticket Promedio (Ganado)</div><div class="kpi-value">${cotFormatoCop(ticketProm)}</div></div>
           `;
+          window.repUltimoResumen = { totalCot, tasaCierre, valorGanado, ticketProm, etiqueta };
+          if(typeof repActualizarResumenes === 'function') repActualizarResumenes();
           repRenderGraficosComercial(todasCotizaciones, ganadas, inicio, fin);
           const clientesEnFiltro = new Set(todasCotizaciones.map(c=>c.idCli));
           const topCli = [...db_clientes].filter(c=>!filtroVendedor && !filtroLinea ? true : clientesEnFiltro.has(c.id)).sort((a,b)=>b.ltv-a.ltv).slice(0,5);
