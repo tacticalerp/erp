@@ -1064,6 +1064,25 @@
              se pasó la fecha -- para que no se pierda un seguimiento por no entrar justo ese día. */
           .comercial-recordatorio{ display:flex; align-items:center; gap:8px; background:#fff7ed; border:1px solid #fdba74; color:#9a3412; padding:8px 12px; border-radius:6px; font-size:0.82rem; margin-bottom:8px; }
           .comercial-recordatorio.atrasado{ background:#fef2f2; border-color:#fca5a5; color:#991b1b; }
+          /* Conde 2026-11-07: filas expandibles de Comercial (ver comercialPanelHtml). */
+          .tabla-comercial.cm-exp tr:nth-child(even) td{ background:#fff; }
+          .tabla-comercial.cm-exp tr.alt td{ background:#e7ecf2; }
+          .tabla-comercial.cm-exp tr.cm-fila{ cursor:pointer; }
+          .tabla-comercial.cm-exp tr.cm-fila:hover td{ background:#edf2f7; }
+          .tabla-comercial.cm-exp tr.cm-panel-fila td{ padding:0; background:#f7fafc; cursor:default; }
+          .cm-chev{ display:inline-flex; vertical-align:-3px; margin-right:4px; transition:transform .12s; }
+          .cm-val{ text-align:right; font-weight:700; white-space:nowrap; }
+          .cm-tag{ padding:2px 9px; border-radius:12px; font-size:0.72rem; font-weight:700; color:#fff; display:inline-block; }
+          .cm-panel{ padding:12px 14px 14px 28px; font-size:0.8rem; color:#1a202c; border-bottom:1px solid #cbd5e0; }
+          .cm-panel a{ color:#2563eb; }
+          .cm-lb{ font-size:0.68rem; color:#718096; font-weight:700; text-transform:uppercase; margin-bottom:3px; }
+          .cm-ib{ position:relative; width:30px; height:28px; padding:0; display:inline-flex; align-items:center; justify-content:center; border-radius:4px; background:#edf2f7; cursor:pointer; }
+          .cm-ib:hover{ background:#e2e8f0; }
+          .cm-ib::after{ content:attr(data-tip); position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); background:#1a202c; color:#fff; font-size:0.7rem; font-weight:400; padding:4px 8px; border-radius:4px; white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .12s; z-index:20; }
+          .cm-ib:hover::after{ opacity:1; }
+          .cm-ib.cm-der::after{ left:auto; right:0; transform:none; }
+          .cm-chip{ padding:2px 10px; border-radius:999px; border:1px solid #a0aec0; background:#fff; font-size:0.72rem; cursor:pointer; color:#1a202c; }
+          .cm-chip.on{ background:#1a202c; color:#fff; border-color:#1a202c; }
         </style>
         <div id="view-comercial" class="app-view">
           <div style="padding:15px; max-width:1100px; margin:0 auto;">
@@ -1100,13 +1119,21 @@
               <div id="comercial-seccion-corporativo">
                 <div class="comercial-titulo-seccion">Corporativo en producción</div>
                 <div class="comercial-subtitulo">Productos aprobados</div>
-                <div class="comercial-tabla-wrap"><div class="table-responsive"><table class="tabla-comercial">
-                  <thead><tr><th style="width:18%;">Cliente</th><th style="width:32%;">Producto</th><th style="width:14%;">Fecha de entrega</th><th>Observaciones</th></tr></thead>
+                <div class="comercial-tabla-wrap"><div class="table-responsive"><table class="tabla-comercial cm-exp">
+                  <thead><tr><th style="width:18%;">Cliente</th><th style="width:25%;">Producto</th><th style="width:11%; text-align:right;">Valor</th><th style="width:13%;">Fecha de entrega</th><th>Observaciones</th></tr></thead>
                   <tbody id="comercial-aprobados"></tbody>
                 </table></div></div>
-                <div class="comercial-subtitulo" style="margin-top:10px;">Cotizaciones creadas</div>
-                <div class="comercial-tabla-wrap"><div class="table-responsive"><table class="tabla-comercial">
-                  <thead><tr><th style="width:16%;">Cliente</th><th style="width:26%;">Producto</th><th style="width:10%;">Cotizada</th><th style="width:15%;">Etapa</th><th>Observaciones</th><th style="width:92px;"></th></tr></thead>
+                <div class="comercial-subtitulo" style="margin-top:10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">Cotizaciones creadas
+                  <span style="margin-left:auto; display:flex; gap:5px; align-items:center; text-transform:none; font-weight:400;">
+                    <span id="cm-nota-30" style="font-size:0.7rem; opacity:0.85; margin-right:4px;">Últimos 30 días · escribe en el buscador para ver todo el histórico</span>
+                    <button type="button" class="cm-chip on" id="cm-chip-act" onclick="comercialCambiarFiltroEstado('act')">Activas</button>
+                    <button type="button" class="cm-chip" id="cm-chip-gan" onclick="comercialCambiarFiltroEstado('gan')">Ganadas</button>
+                    <button type="button" class="cm-chip" id="cm-chip-per" onclick="comercialCambiarFiltroEstado('per')">Perdidas</button>
+                    <button type="button" class="cm-chip" id="cm-chip-all" onclick="comercialCambiarFiltroEstado('all')">Todas</button>
+                  </span>
+                </div>
+                <div class="comercial-tabla-wrap"><div class="table-responsive"><table class="tabla-comercial cm-exp">
+                  <thead><tr><th style="width:15%;">Cliente</th><th style="width:22%;">Producto</th><th style="width:10%; text-align:right;">Valor</th><th style="width:8%;">Cotizada</th><th style="width:13%;">Etapa</th><th>Observaciones</th><th style="width:92px;"></th></tr></thead>
                   <tbody id="comercial-cotizaciones"></tbody>
                 </table></div></div>
               </div>
@@ -7121,6 +7148,7 @@
             tacticalEliminarDocVentaRemoto(d.id);
           });
           renderBuscadorCotizaciones();
+          if(typeof renderComercial === 'function') renderComercial();
           if(esVentaGanadaConLtv){
             if(typeof renderClientes === 'function') renderClientes();
             if(typeof renderKanban === 'function') renderKanban();
@@ -10181,6 +10209,94 @@
           document.getElementById('comercial-modal-crear-negocio').remove();
           renderComercial();
         }
+        /* ---- COMERCIAL: filas expandibles + Valor + filtro de estado (Conde 2026-11-07) ----
+           "unificar CRM y Comercial": desde Comercial se puede hacer lo que antes solo se hacía en CRM → Todas las cotizaciones.
+           Las tablas se ven igual que antes (más la columna Valor y una flechita); al hacer clic en una fila se abre un panel con el detalle,
+           las versiones, la ficha del cliente y las acciones (solo íconos, con el texto al pasar el mouse). Eliminar: solo administrador. */
+        let comercialFiltroEstado = 'act';
+        const comercialFilasAbiertas = new Set();
+        function comercialEsAdmin(){ return !!(window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol === 'administrador'); }
+        function comercialCambiarFiltroEstado(v){ comercialFiltroEstado = v; renderComercial(); }
+        function comercialToggleFila(key, ev){
+          if(ev && ev.target && ev.target.closest && ev.target.closest('input,select,button,a,textarea')) return;   // escribir o pulsar un botón no abre/cierra la fila
+          if(comercialFilasAbiertas.has(key)) comercialFilasAbiertas.delete(key); else comercialFilasAbiertas.add(key);
+          renderComercial();
+        }
+        function comercialChev(abierta){ return `<span class="cm-chev" style="transform:rotate(${abierta ? 0 : -90}deg);">${ticon('chevronDown',{size:14,color:'#4a5568',noMargin:true})}</span>`; }
+        function comercialBtnIcono(icono, color, tip, accion, extraStyle){
+          return `<button type="button" class="cm-ib${extraStyle ? ' cm-der' : ''}" data-tip="${tip}" aria-label="${tip}" style="border:1px solid ${color};${extraStyle||''}" onclick="${accion}">${ticon(icono,{size:15,color,noMargin:true})}</button>`;
+        }
+        // La ficha de Kanban se enlaza con su cotización ganada por OT + cliente (los OT son únicos desde el arreglo del 2026-11-06).
+        function comercialCotizacionDeFicha(f){
+          if(!f || !f.ot) return null;
+          const c = db_historial_cierres.filter(h => h.estado === 'ganado' && h.ot === f.ot);
+          return c.find(h => h.idCli === f.idCli) || (c.length === 1 ? c[0] : null);
+        }
+        function comercialFichaDeCotizacion(o){
+          return (o && o.ot) ? (db_kanban.find(f => f.ot === o.ot && (!f.idCli || !o.idCli || f.idCli === o.idCli)) || null) : null;
+        }
+        function comercialVersiones(o){
+          if(!o || !o.ot || typeof tacticalCotOtBase !== 'function') return [];
+          const base = tacticalCotOtBase(o.ot);
+          const vistos = new Set(), res = [];
+          [...db_opps, ...db_historial_cierres].forEach(x => {
+            if(!x.ot || tacticalCotOtBase(x.ot) !== base || vistos.has(x.id)) return;
+            vistos.add(x.id); res.push(x);
+          });
+          return res;
+        }
+        // o = cotización (db_opps o db_historial_cierres) o null si es una ficha creada a mano; ficha = ficha de Kanban (o null)
+        function comercialPanelHtml(o, ficha, colspan){
+          const esc = resumenCotEsc;
+          const base = o || ficha || {};
+          const cli = db_clientes.find(c => c.id === base.idCli) || null;
+          const fk = ficha || comercialFichaDeCotizacion(o);
+          const lineas = (o && Array.isArray(o.lineas) && o.lineas.length > 1) ? o.lineas : null;
+          const detalle = lineas
+            ? '<ul style="margin:0; padding-left:16px; line-height:1.5;">' + lineas.map(l => `<li>${esc(l.desc)}${l.monto != null ? ` — <strong>${cotFormatoCop(l.monto)}</strong>` : ''}</li>`).join('') + '</ul>'
+            : `<div style="line-height:1.5;">${cotTextoConNegrilla((o && o.desc) || (ficha && ficha.titulo) || '')}</div>`;
+          let extra = '';
+          if(fk){
+            extra += `<div style="margin-top:8px; display:flex; align-items:center; gap:6px;">${ticon('factory',{size:14,color:'#4a5568',noMargin:true})}<span style="color:#718096;">En Kanban:</span> <strong>${KANBAN_COLUMNA_NOMBRE[fk.columna] || fk.columna}</strong>${fk.fechaEntrega ? ' · entrega ' + kanbanFormatearFecha(fk.fechaEntrega) : ''}</div>`;
+          }
+          if(o && o.estado === 'perdido' && o.motivo) extra += `<div style="margin-top:8px; color:#e53e3e;">Motivo de pérdida: ${esc(o.motivo)}</div>`;
+          if(o && o.etapa && o.seguimientoFecha) extra += `<div style="margin-top:8px; display:flex; align-items:center; gap:6px;">${ticon('clock',{size:14,color:'#64748b',noMargin:true})}<span style="color:#718096;">Seguimiento programado:</span> ${tacticalFormatoDiaMes(o.seguimientoFecha)}</div>`;
+          const vers = comercialVersiones(o);
+          const versHtml = vers.length > 1
+            ? vers.map(v => `<span style="display:inline-block; margin:0 6px 2px 0;${v.id === o.id ? ' font-weight:700;' : ''}">${esc(v.ot)}${v.id === o.id ? ' (esta)' : ''} <span style="color:#718096;">· ${v.etapa ? 'activa' : (v.estado === 'ganado' ? 'ganada' : 'perdida')}</span></span>`).join('')
+            : '<span style="color:#718096;">Sin versiones adicionales</span>';
+          const nCot = base.idCli ? [...db_opps, ...db_historial_cierres].filter(x => x.idCli === base.idCli).length : 0;
+          const digitos = cli ? String(cli.wp || '').replace(/\D/g, '') : '';
+          const wa = digitos ? 'https://wa.me/' + (digitos.length === 10 ? '57' + digitos : digitos) : '';
+          const tarjetaCli = cli
+            ? `<div style="font-weight:700; display:flex; align-items:center; gap:6px;">${ticon('user',{size:14,color:'#4a5568',noMargin:true})}${esc(cli.nombre || cli.empresa)}</div>
+               <div style="margin-top:5px; display:flex; align-items:center; gap:6px;">${ticon('phone',{size:14,color:'#4a5568',noMargin:true})}${wa ? `<a href="${wa}" target="_blank" rel="noopener" title="Abrir WhatsApp">${esc(cli.wp)}</a>` : '<span style="color:#718096;">sin teléfono</span>'}</div>
+               <div style="margin-top:4px; display:flex; align-items:center; gap:6px;">${ticon('mail',{size:14,color:'#4a5568',noMargin:true})}${cli.correo ? `<a href="mailto:${esc(cli.correo)}">${esc(cli.correo)}</a>` : '<span style="color:#718096;">sin correo</span>'}</div>
+               <div style="margin-top:6px; font-size:0.72rem; color:#718096;">${nCot} ${nCot === 1 ? 'cotización' : 'cotizaciones'} con este cliente</div>`
+            : '<span style="color:#718096;">Cliente no encontrado en el directorio.</span>';
+          const acc = [];
+          if(o){
+            const otSeguro = (o.ot || '').replace(/'/g, '');
+            acc.push(comercialBtnIcono('printer', '#4a5568', 'Ver PDF', `verPDFCotizacionGuardada('${o.id}')`));
+            if((o.linea === 'cuadernos' || o.linea === 'manual' || LINEA_A_CALCULADORA_ARCHIVO[o.linea]) && !(o.opcionesComparativa && o.opcionesComparativa.length > 1))
+              acc.push(comercialBtnIcono('copy', '#059669', 'Duplicar cotización (número nuevo, la original no cambia)', `tacticalAbrirDuplicado('${o.id}','${o.linea}','${otSeguro}')`));
+            if(o.etapa && (o.linea === 'cuadernos' || LINEA_A_CALCULADORA_ARCHIVO[o.linea]))
+              acc.push(comercialBtnIcono('edit', '#d97706', 'Nueva versión (editar sin borrar esta)', `tacticalAbrirEdicionCotizacion('${o.id}','${o.linea}','${otSeguro}')`));
+            if(o.etapa && o.linea === 'multi' && Array.isArray(o.lineas) && o.lineas.length)
+              acc.push(comercialBtnIcono('edit', '#d97706', 'Nueva versión: elegir qué producto editar', `tacticalAbrirEdicionMulti('${o.id}')`));
+            acc.push(comercialBtnIcono('refresh', '#2563eb', 'Cambiar de comercial', `buscadorCambiarVendedor('${o.id}')`));
+            if(comercialEsAdmin()) acc.push(comercialBtnIcono('trash', '#e53e3e', 'Eliminar (solo administrador)', `eliminarCotizacionRegistro('${o.id}')`, ' margin-left:auto;'));
+          } else {
+            acc.push('<span style="color:#718096;">Ficha creada a mano: no tiene cotización asociada.</span>');
+          }
+          return `<tr class="cm-panel-fila"><td colspan="${colspan}"><div class="cm-panel">
+            <div style="display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:14px;">
+              <div><div class="cm-lb">Detalle</div>${detalle}${extra}<div class="cm-lb" style="margin-top:9px;">Versiones del mismo número</div><div>${versHtml}</div></div>
+              <div style="background:#fff; border:1px solid #cbd5e0; border-radius:6px; padding:9px 11px;"><div class="cm-lb">Cliente</div>${tarjetaCli}</div>
+            </div>
+            <div style="display:flex; gap:6px; margin-top:12px; align-items:center;">${acc.join('')}</div>
+          </div></td></tr>`;
+        }
         function renderComercial(){
           const tabsCont = document.getElementById('comercial-tabs');
           if(!tabsCont) return;
@@ -10239,48 +10355,74 @@
 
           // ---- Corporativo / Productos aprobados: fichas del Kanban de este vendedor, sin B2C, sin
           // las ya entregadas (Postventa) -- así nunca crece sin límite con lo ya entregado.
+          // Conde 2026-11-07: columna Valor (de la cotización ganada) y fila expandible.
           let aprobados = db_kanban.filter(f => f.origen!=='b2c' && f.columna!=='postventa' && f.vendedor===comercialVendedorActivo);
           if(buscar){
             aprobados = aprobados.filter(f => (f.nombreCli||'').toLowerCase().includes(buscar) || (f.titulo||'').toLowerCase().includes(buscar) || (f.ot||'').toLowerCase().includes(buscar));
           }
           aprobados.sort((a,b) => new Date(b.fechaCreacion||0) - new Date(a.fechaCreacion||0));
           const contApr = document.getElementById('comercial-aprobados');
-          if(contApr) contApr.innerHTML = aprobados.length ? aprobados.map(f => `<tr>
-            <td>${f.nombreCli}</td>
+          if(contApr) contApr.innerHTML = aprobados.length ? aprobados.map((f, i) => {
+            const quote = comercialCotizacionDeFicha(f);
+            const key = 'a:' + f.id, abierta = comercialFilasAbiertas.has(key);
+            const valor = quote ? quote.monto : f.monto;
+            return `<tr class="cm-fila${i % 2 ? ' alt' : ''}" onclick="comercialToggleFila('${key}', event)">
+            <td>${comercialChev(abierta)}${f.nombreCli}</td>
             <td>${tacticalTruncarPalabraCompleta(f.titulo, 40)}${f.ot ? `<div class="comercial-ot">${f.ot}</div>` : ""}</td>
+            <td class="cm-val">${valor != null ? cotFormatoCop(valor) : '—'}</td>
             <td>${f.fechaEntrega ? kanbanFormatearFecha(f.fechaEntrega) : '-'}</td>
             <td><input type="text" value="${(f.responsable||'').replace(/"/g,'&quot;')}" onchange="comercialGuardarNotaFicha('${f.id}',this.value)"></td>
-          </tr>`).join('') : '<tr><td colspan="4" style="text-align:center; color:#a0aec0;">Sin productos en producción.</td></tr>';
+          </tr>` + (abierta ? comercialPanelHtml(quote, f, 5) : '');
+          }).join('') : '<tr><td colspan="5" style="text-align:center; color:#a0aec0;">Sin productos en producción.</td></tr>';
 
-          // ---- Corporativo / Cotizaciones creadas: negocios activos del Embudo, sin cerrar todavía
-          // -- al marcar Ganado o Perdido salen solos de db_opps (ya no aparecen acá).
-          let cotizaciones = db_opps.filter(o => o.vendedor===comercialVendedorActivo);
+          // ---- Corporativo / Cotizaciones creadas: por defecto los negocios ACTIVOS del Embudo (igual que antes);
+          // Conde 2026-11-07: selector Activas / Ganadas / Perdidas / Todas -- las cerradas salen de db_historial_cierres.
+          const vend = comercialVendedorActivo;
+          const activosV = db_opps.filter(o => o.vendedor===vend);
+          const cerradosV = db_historial_cierres.filter(o => o.vendedor===vend);
+          let cotizaciones = comercialFiltroEstado==='act' ? activosV
+            : comercialFiltroEstado==='gan' ? cerradosV.filter(o => o.estado==='ganado')
+            : comercialFiltroEstado==='per' ? cerradosV.filter(o => o.estado==='perdido')
+            : [...activosV, ...cerradosV];
           if(buscar){
             cotizaciones = cotizaciones.filter(o => (o.nombreCli||'').toLowerCase().includes(buscar) || (o.desc||'').toLowerCase().includes(buscar) || (o.ot||'').toLowerCase().includes(buscar));
           } else {
             cotizaciones = cotizaciones.filter(o => { const f=fechaDeRegistro(o); return f && f>=hace30Dias; });
           }
           cotizaciones.sort((a,b) => (fechaDeRegistro(b)||0) - (fechaDeRegistro(a)||0));
+          ['act','gan','per','all'].forEach(k => { const b = document.getElementById('cm-chip-'+k); if(b) b.classList.toggle('on', k===comercialFiltroEstado); });
+          const notaCm = document.getElementById('cm-nota-30'); if(notaCm) notaCm.style.display = buscar ? 'none' : '';
+          const vacioCm = { act:'Sin cotizaciones activas.', gan:'Sin cotizaciones ganadas en los últimos 30 días.', per:'Sin cotizaciones perdidas en los últimos 30 días.', all:'Sin cotizaciones en los últimos 30 días.' }[comercialFiltroEstado];
           const contCot = document.getElementById('comercial-cotizaciones');
-          if(contCot) contCot.innerHTML = cotizaciones.length ? cotizaciones.map(o => {
+          if(contCot) contCot.innerHTML = cotizaciones.length ? cotizaciones.map((o, i) => {
             const fecha = fechaDeRegistro(o);
-            return `<tr>
-              <td>${o.nombreCli}</td>
-              <td>${tacticalTruncarPalabraCompleta(o.desc, 40)}${o.ot ? `<div class="comercial-ot">${o.ot}</div>` : ""}</td>
-              <td>${fecha ? fecha.toLocaleDateString('es-CO',{day:'numeric',month:'short'}) : '-'}</td>
-              <td><select onchange="avanzarEtapa('${o.id}',this.value)">
+            const key = 'c:' + o.id, abierta = comercialFilasAbiertas.has(key);
+            const activa = !!o.etapa;
+            const celdaEtapa = activa
+              ? `<select onchange="avanzarEtapa('${o.id}',this.value)">
                 <option value="req" ${o.etapa==='req'?'selected':''}>Nuevo Requerimiento</option>
-                <option value="cot" ${o.etapa==='cot'?'selected':''}>Cotización Enviada</option>
+                <option value="cot" ${o.etapa==='cot'?'selected':''}>Enviada</option>
                 <option value="neg" ${o.etapa==='neg'?'selected':''}>Seguimiento</option>
-              </select></td>
-              <td><input type="text" value="${(o.seguimiento||'').replace(/"/g,'&quot;')}" placeholder="Ej: llamé el 28, volver a llamar el 2 de sept." onchange="comercialGuardarSeguimiento('${o.id}',this.value)"></td>
-              <td style="text-align:center; white-space:nowrap;">
-                <button onclick="comercialAbrirSeguimientoFecha('${o.id}')" title="Programar seguimiento" style="background:#64748b; border:none; border-radius:50%; width:22px; height:22px; padding:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; margin-right:4px;">${ticon('clock',{color:'#fff',noMargin:true,size:13})}</button>
+              </select>`
+              : `<span class="cm-tag" style="background:${o.estado==='ganado' ? '#48bb78' : '#e53e3e'};">${o.estado==='ganado' ? 'Ganada' : 'Perdida'}</span>`;
+            const celdaObs = activa
+              ? `<input type="text" value="${(o.seguimiento||'').replace(/"/g,'&quot;')}" placeholder="Ej: llamé el 28, volver a llamar el 2 de sept." onchange="comercialGuardarSeguimiento('${o.id}',this.value)">`
+              : `<span style="color:#718096;">${resumenCotEsc(o.seguimiento || '')}</span>`;
+            const celdaAcc = activa
+              ? `<button onclick="comercialAbrirSeguimientoFecha('${o.id}')" title="Programar seguimiento" style="background:#64748b; border:none; border-radius:50%; width:22px; height:22px; padding:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; margin-right:4px;">${ticon('clock',{color:'#fff',noMargin:true,size:13})}</button>
                 <button onclick="comercialConfirmarPerdido('${o.id}')" title="Marcar cancelada" style="background:#dc2626; border:none; border-radius:50%; width:22px; height:22px; padding:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; margin-right:4px;">${ticon('x',{color:'#fff',noMargin:true,size:13})}</button>
-                <button onclick="comercialConfirmarGanado('${o.id}')" title="Marcar aprobada" style="background:#16a34a; border:none; border-radius:50%; width:22px; height:22px; padding:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">${ticon('check',{color:'#fff',noMargin:true,size:13})}</button>
-              </td>
-            </tr>`;
-          }).join('') : '<tr><td colspan="6" style="text-align:center; color:#a0aec0;">Sin cotizaciones activas.</td></tr>';
+                <button onclick="comercialConfirmarGanado('${o.id}')" title="Marcar aprobada" style="background:#16a34a; border:none; border-radius:50%; width:22px; height:22px; padding:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">${ticon('check',{color:'#fff',noMargin:true,size:13})}</button>`
+              : '';
+            return `<tr class="cm-fila${i % 2 ? ' alt' : ''}" onclick="comercialToggleFila('${key}', event)">
+              <td>${comercialChev(abierta)}${o.nombreCli}</td>
+              <td>${tacticalTruncarPalabraCompleta(o.desc, 40)}${o.ot ? `<div class="comercial-ot">${o.ot}</div>` : ""}</td>
+              <td class="cm-val">${cotFormatoCop(o.monto)}</td>
+              <td>${fecha ? fecha.toLocaleDateString('es-CO',{day:'numeric',month:'short'}) : '-'}</td>
+              <td>${celdaEtapa}</td>
+              <td>${celdaObs}</td>
+              <td style="text-align:center; white-space:nowrap;">${celdaAcc}</td>
+            </tr>` + (abierta ? comercialPanelHtml(o, null, 7) : '');
+          }).join('') : `<tr><td colspan="7" style="text-align:center; color:#a0aec0;">${vacioCm}</td></tr>`;
 
           // ---- Recordatorios de seguimiento (Conde 2026-08-28): "se active un recordatorio el dia
           // estipulado" -- se activa ese día Y se queda activo (marcado como atrasado) si no se
