@@ -208,3 +208,105 @@
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar); else iniciar();
   window.tacticalUIEscanear = function(root){ obs.disconnect(); try{ escanear(root || document.body); } finally { observar(); } };
 })();
+
+/* =====================================================================================
+   EXTRAS DE USABILIDAD (Conde 2026-11-09, pendientes de la auditoría)
+   a) Botones y campos más grandes en celular (mínimo ~40 px) sin tocar las pantallas compactas a propósito (Kanban, Tareas).
+   b) Barra fija con el TOTAL en las calculadoras cuando el resultado queda fuera de la pantalla (celular / pantalla angosta).
+   c) Los errores de validación marcan el campo o el botón que falta (borde rojo + desplazamiento), no solo muestran el aviso.
+   ===================================================================================== */
+(function(){
+  /* ---- a) objetivos táctiles en celular ---- */
+  const CSS2 = `
+    @media (max-width: 768px){
+      .ui-b, .btn-action:not(.kb-mini):not(.kb-ico):not(.kb-btn-refrescar), .btn-submit, .btn-primario, .btn-add, .btn-add-item, .btn.gris, .btn.verde, .btn.rojo, .comercial-vendedor-tab, .cm-chip{ min-height:40px; }
+      .btn.mini{ min-height:36px; }
+      input[type=checkbox], input[type=radio]{ width:20px; height:20px; }
+      select, input[type=text], input[type=number], input[type=date], input[type=email], input[type=tel]{ min-height:40px; }
+      #view-tareas select, #view-tareas input, #view-kanban select, #view-kanban input[type=text]{ min-height:0; }
+    }
+    .ui-total-bar{ display:none; position:fixed; left:0; right:0; bottom:0; z-index:9000; background:#1a202c; color:#fff; padding:10px 76px calc(10px + env(safe-area-inset-bottom)) 14px; box-shadow:0 -6px 20px rgba(0,0,0,.35); align-items:center; gap:12px; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+    .ui-total-bar.ui-visible{ display:flex; }
+    .ui-total-bar .t{ flex:1; min-width:0; line-height:1.25; }
+    .ui-total-bar .t small{ display:block; color:#a0aec0; font-size:.72rem; }
+    .ui-total-bar .t b{ font-size:1.15rem; }
+    .ui-total-bar button{ background:#cc0000; color:#fff; border:0; border-radius:6px; padding:10px 14px; font-weight:700; font-size:.9rem; min-height:40px; cursor:pointer; white-space:nowrap; }
+    .ui-error-campo{ outline:2px solid #dc2626 !important; outline-offset:2px; border-radius:4px; }
+  `;
+  function estilos(){
+    if(document.getElementById('tactical-ui-css2')) return;
+    const st = document.createElement('style'); st.id = 'tactical-ui-css2'; st.textContent = CSS2;
+    (document.head || document.documentElement).appendChild(st);
+  }
+
+  /* ---- b) barra de total ---- */
+  const esCalc = /calculadora_[a-z_]+\.html/i.test(location.pathname);
+  function copTxt(n){ return '$' + Math.round(n).toLocaleString('es-CO'); }
+  function iniciarBarra(){
+    const res = document.getElementById('resultado-contenido'); if(!res) return;
+    const bar = document.createElement('div'); bar.className = 'ui-total-bar'; bar.setAttribute('role', 'status');
+    bar.innerHTML = '<div class="t"><small id="ui-total-sub"></small><b id="ui-total-val"></b></div><button type="button" id="ui-total-ir">Ver resultado ↓</button>';
+    document.body.appendChild(bar);
+    let enPantalla = true, hayResultado = false;
+    function pintar(){
+      let r = null; try{ r = (typeof ultimoResultado !== 'undefined') ? ultimoResultado : null; }catch(e){}
+      hayResultado = !!(r && r.precioFinalTotal);
+      if(hayResultado){
+        document.getElementById('ui-total-val').textContent = copTxt(r.precioFinalTotal) + ' (IVA incl.)';
+        document.getElementById('ui-total-sub').textContent = 'Total de la cotización' + (r.precioVentaUnitario ? ' · unitario ' + copTxt(r.precioVentaUnitario) + ' + IVA' : '');
+      }
+      bar.classList.toggle('ui-visible', hayResultado && !enPantalla && window.innerWidth <= 900);
+    }
+    document.getElementById('ui-total-ir').addEventListener('click', function(){ res.scrollIntoView({behavior:'smooth', block:'start'}); });
+    new MutationObserver(pintar).observe(res, {childList:true, subtree:true});
+    if('IntersectionObserver' in window){
+      new IntersectionObserver(function(es){ enPantalla = es[0].isIntersecting; pintar(); }, {threshold:0.05}).observe(res);
+    }
+    window.addEventListener('resize', pintar);
+    pintar();
+  }
+
+  /* ---- c) marcar el campo que falta ---- */
+  const REGLAS = [
+    [/cliente o el encargado|empresa o el contacto|nombre de la empresa|escribe al menos el cliente/i, ['#in-cli-empresa', '#in-cli-encargado', '#cot-cli-empresa', '#cot-cli-encargado', '#cli-empresa', '#cli-contacto']],
+    [/vendedor/i, ['#in-vendedor', '#cot-vendedor']],
+    [/presiona .?calcular/i, ['button[onclick*="calcular"]', 'button[onclick*="cotCalcular"]']],
+    [/cantidad/i, ['#in-cantidad', '#cot-cantidad']],
+    [/guardar y generar pdf/i, ['button[onclick*="uardarYGenerar"], button[onclick*="guardarYGenerarPDF"]']],
+  ];
+  function visible(el){ return el && el.getBoundingClientRect().width > 0 && getComputedStyle(el).visibility !== 'hidden'; }
+  window.tacticalResaltarCampo = function(el){
+    if(!el) return;
+    document.querySelectorAll('.ui-error-campo').forEach(x => x.classList.remove('ui-error-campo'));
+    el.classList.add('ui-error-campo');
+    try{ el.scrollIntoView({block:'center', behavior:'smooth'}); if(/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) el.focus({preventScroll:true}); }catch(e){}
+    const quitar = function(){ el.classList.remove('ui-error-campo'); el.removeEventListener('input', quitar); el.removeEventListener('change', quitar); el.removeEventListener('click', quitar); };
+    el.addEventListener('input', quitar); el.addEventListener('change', quitar); el.addEventListener('click', quitar);
+    setTimeout(quitar, 8000);
+  };
+  function engancharAvisos(){
+    if(typeof window.tacticalAviso !== 'function' || window.tacticalAviso.__ui) return false;
+    const orig = window.tacticalAviso;
+    window.tacticalAviso = function(msg, tipo){
+      orig.apply(this, arguments);
+      try{
+        const m = String(msg == null ? '' : msg);
+        const t = tipo || (/^\s*(⚠|❌)|no se pudo|debe |escribe|ingresa|elige|selecciona|primero|falta/i.test(m) ? 'error' : '');
+        if(t !== 'error') return;
+        for(const [re, sels] of REGLAS){
+          if(!re.test(m)) continue;
+          for(const s of sels){ const el = [...document.querySelectorAll(s)].find(visible); if(el){ window.tacticalResaltarCampo(el); return; } }
+        }
+      }catch(e){}
+    };
+    window.tacticalAviso.__ui = true;
+    return true;
+  }
+
+  function iniciar(){
+    estilos();
+    if(esCalc) iniciarBarra();
+    if(!engancharAvisos()){ let n = 0; const t = setInterval(function(){ if(engancharAvisos() || ++n > 40) clearInterval(t); }, 250); }
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar); else iniciar();
+})();
