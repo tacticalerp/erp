@@ -716,7 +716,7 @@ const TACTICAL_AYUDA_KB_RETIRADO = [
     respuesta:'En la calculadora de Bolsas puedes indicar si el diseño de ambas caras es igual o diferente. Si son diferentes, el sistema calcula el material y los pliegos necesarios para cada cara por separado.' },
   { id:'acceso_rapido', titulo:'Moverme entre herramientas sin perder lo que estoy haciendo',
     keywords:['navegar','moverme','otra','herramienta','acceso','rapido','menu'],
-    respuesta:'Usa el botón redondo ☰ flotante en la esquina inferior derecha: abre un menú para ir al Hub Principal, Calculadora de Costos, Kanban, CRM, Reportes o Contabilidad sin cerrar lo que tengas abierto.' },
+    respuesta:'Usa el botón redondo ☰ flotante en la esquina inferior derecha: abre un menú para ir al Hub Principal, Cotizador, Kanban, CRM, Reportes o Contabilidad sin cerrar lo que tengas abierto.' },
 ];
 
 function tacticalNormalizarTexto(s){

@@ -310,3 +310,41 @@
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar); else iniciar();
 })();
+
+/* =====================================================================================
+   SOLO ADMIN/COMERCIAL VEN COSTOS (Conde 2026-11-09: "los costos los ve comercial y administrador")
+   En las calculadoras, para cualquier otro rol (o mientras no se sepa el rol) el resultado muestra solo el precio de venta,
+   IVA y precio final: se ocultan el desglose de costos, el costo directo, los gastos y la ganancia.
+   ===================================================================================== */
+(function(){
+  if(!/calculadora_[a-z_]+\.html/i.test(location.pathname)) return;
+  const VEN = ['administrador', 'comercial'];
+  const PERMITIDAS = /^(precio de venta|iva\b|precio final|total con iva|extra\b|ajuste adicional)/i;
+  function css(){
+    if(document.getElementById('tactical-ui-css3')) return;
+    const st = document.createElement('style'); st.id = 'tactical-ui-css3';
+    st.textContent = 'body.ui-sin-costos .ui-fila-costo{ display:none !important; }';
+    (document.head || document.documentElement).appendChild(st);
+  }
+  function marcar(){
+    const res = document.getElementById('resultado-contenido'); if(!res) return;
+    res.querySelectorAll('tr').forEach(tr => {
+      const c = tr.cells && tr.cells[0]; if(!c) return;
+      const tx = (c.textContent || '').replace(/\s+/g, ' ').trim();
+      const costo = !PERMITIDAS.test(tx) || /ganancia/i.test(tx);
+      tr.classList.toggle('ui-fila-costo', costo);
+    });
+  }
+  function aplicar(){
+    const p = window.tacticalUsuarioPerfil;
+    if(p && p.rol) document.body.classList.toggle('ui-sin-costos', VEN.indexOf(p.rol) < 0);
+  }
+  function iniciar(){
+    css();
+    document.body.classList.add('ui-sin-costos');   // cerrado por defecto hasta conocer el rol
+    const res = document.getElementById('resultado-contenido');
+    if(res){ new MutationObserver(marcar).observe(res, {childList:true, subtree:true}); marcar(); }
+    let n = 0; const t = setInterval(function(){ aplicar(); if((window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol) || ++n > 120) clearInterval(t); }, 500);
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar); else iniciar();
+})();

@@ -827,11 +827,11 @@
                     <div class="card-footer">Ver tablero por vendedor ➔</div>
                 </div>
 
-                <!-- MÓDULO 3: CALCULADORA DE COSTOS -->
+                <!-- MÓDULO 3: COTIZADOR (antes "Calculadora de Costos", renombrado por Conde 2026-11-09) -->
                 <div class="hub-card active-card" onclick="showView('calculadoras')">
                     <div>
                         <div class="card-header">
-                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="8" y1="11" x2="8" y2="11"></line><line x1="12" y1="11" x2="12" y2="11"></line><line x1="16" y1="11" x2="16" y2="11"></line><line x1="8" y1="15" x2="8" y2="15"></line><line x1="12" y1="15" x2="12" y2="15"></line><line x1="16" y1="15" x2="16" y2="19"></line><line x1="8" y1="19" x2="8" y2="19"></line><line x1="12" y1="19" x2="12" y2="19"></line></svg>Calculadora de Costos</h3>
+                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="8" y1="11" x2="8" y2="11"></line><line x1="12" y1="11" x2="12" y2="11"></line><line x1="16" y1="11" x2="16" y2="11"></line><line x1="8" y1="15" x2="8" y2="15"></line><line x1="12" y1="15" x2="12" y2="15"></line><line x1="16" y1="15" x2="16" y2="19"></line><line x1="8" y1="19" x2="8" y2="19"></line><line x1="12" y1="19" x2="12" y2="19"></line></svg>Cotizador</h3>
                             <span class="badge badge-active">Activo</span>
                         </div>
                     </div>
@@ -1458,7 +1458,7 @@
                 <!-- VISTA 4a: CALCULADORA DE COSTOS (sub-hub de cotizadores por producto) -->
         <div id="view-calculadoras" class="app-view">
             <div style="padding: 25px 20px 0 20px; text-align: center;">
-                <h3 style="margin: 0; font-size: 1.4rem; color: #e8eaed;">Calculadora de Costos</h3>
+                <h3 style="margin: 0; font-size: 1.4rem; color: #e8eaed;">Cotizador</h3>
                 <p style="color:#a0aec0; margin-top: 6px; font-size: 0.95rem;">Elige el producto que quieres cotizar:</p>
             </div>
             <div class="hub-grid" style="padding: 20px;">
@@ -2638,8 +2638,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="tactical-supabase.js?v=20261021a"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
-    <script src="precios_tactical.js?v=20261107d"></script>
-<script src="tactical-ui.js?v=20261109b"></script>
+    <script src="precios_tactical.js?v=20261109a"></script>
+<script src="tactical-ui.js?v=20261109c"></script>
     <script src="troqueles_tactical.js?v=20261107a"></script>
     <script src="precios_promocionales.js?v=20260919a"></script>
     <script>
@@ -2842,7 +2842,7 @@
                 renderAllReprocesos();
             } else if (viewId === 'calculadoras') {
                 navContainer.style.display = 'block';
-                mainTitle.innerText = "CALCULADORA DE COSTOS";
+                mainTitle.innerText = "COTIZADOR";
                 subTitle.innerText = "Selecciona el producto a cotizar (2026)";
             } else if (viewId === 'cotizador') {
                 navContainer.style.display = 'block';
