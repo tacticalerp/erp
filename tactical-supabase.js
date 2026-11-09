@@ -94,6 +94,111 @@ async function tacticalSubirFoto(dataUrl, ruta){
     return data.publicUrl;
   } catch(e){ console.error('Error subiendo foto a Storage:', e); return null; }
 }
+/* ============ FOTOS INCRUSTADAS EN LAS COTIZACIONES (Conde 2026-11-09, aviso de Supabase por egress) ============
+   La foto personalizada que se pega en una calculadora se guardaba DENTRO de la cotización como texto (data:image/...;base64),
+   y cada carga del Hub baja todas las cotizaciones: 53 de las 128 filas de historial_cierres traen foto (4,99 MB de 5,08 MB),
+   y lo mismo pasa con los pedidos de varios productos de opps (lineas). Ahora la foto se sube a Storage (carpeta cotizaciones/,
+   que la limpieza de fotos nunca borra) y en la cotización queda solo la dirección. tacticalReemplazarFotosIncrustadas() recorre
+   cualquier objeto/arreglo, sube cada data-URL y la cambia por su URL (en sitio). Si una subida falla, la foto se deja como estaba. */
+function tacticalEsFotoIncrustada(s){
+  return typeof s === 'string' && s.length > 2000 && /^data:image\/(jpeg|jpg|png|webp|gif);base64,/i.test(s);
+}
+async function tacticalHashTexto(s){
+  const b = new TextEncoder().encode(s);
+  const h = await crypto.subtle.digest('SHA-256', b);
+  return Array.from(new Uint8Array(h)).map(x => x.toString(16).padStart(2, '0')).join('').slice(0, 32);
+}
+const tacticalFotoIncrustadaCache = {};
+async function tacticalSubirFotoIncrustada(dataUrl){
+  const h = await tacticalHashTexto(dataUrl);
+  if(tacticalFotoIncrustadaCache[h]) return tacticalFotoIncrustadaCache[h];
+  const m = /^data:image\/([a-z]+);/i.exec(dataUrl); const ext = (m ? m[1] : 'jpeg').toLowerCase().replace('jpeg', 'jpg');
+  const url = await tacticalSubirFoto(dataUrl, 'cotizaciones/' + h + '.' + ext);
+  if(url) tacticalFotoIncrustadaCache[h] = url;
+  return url;
+}
+// Devuelve cuántas fotos reemplazó. "simular" = solo cuenta (no sube nada). Primero recorre en seco (síncrono, rápido) y solo
+// sube lo que de verdad es una foto incrustada.
+async function tacticalReemplazarFotosIncrustadas(raiz, simular){
+  const hallazgos = []; let bytes = 0;
+  function ir(nodo){
+    const claves = Array.isArray(nodo) ? nodo.map((_, i) => i) : Object.keys(nodo);
+    for(const k of claves){
+      const v = nodo[k];
+      if(tacticalEsFotoIncrustada(v)){ hallazgos.push([nodo, k]); bytes += v.length; }
+      else if(v && typeof v === 'object'){ ir(v); }
+    }
+  }
+  if(raiz && typeof raiz === 'object') ir(raiz);
+  tacticalReemplazarFotosIncrustadas.ultimosBytes = bytes;
+  if(simular) return hallazgos.length;
+  let n = 0;
+  for(const [nodo, k] of hallazgos){
+    const u = await tacticalSubirFotoIncrustada(nodo[k]);
+    if(u){ nodo[k] = u; n++; }
+  }
+  return n;
+}
+
+/* ---- Herramienta de administrador: "Optimizar fotos guardadas" (limpia lo que YA estaba guardado) ----
+   1) tacticalFotosIncrustadasBuscar(): recorre las tablas y cuenta (no cambia nada).
+   2) tacticalFotosIncrustadasOptimizar(): descarga un respaldo JSON de las filas que va a cambiar y las actualiza una por una
+      (solo las columnas que cambian, con update por id: nunca un upsert de toda la lista). */
+const TACTICAL_FOTOS_TABLAS = ['opps', 'historial_cierres', 'cotizaciones_cuadernos'];
+async function tacticalFotosIncrustadasBuscar(onProgreso){
+  const plan = { tablas: {}, filas: [] };
+  const PAG = 20;
+  for(const tabla of TACTICAL_FOTOS_TABLAS){
+    const r = plan.tablas[tabla] = { revisadas: 0, afectadas: 0, fotos: 0, bytes: 0 };
+    for(let desde = 0; ; desde += PAG){
+      const { data, error } = await tacticalSupabase.from(tabla).select('*').order('id').range(desde, desde + PAG - 1);
+      if(error){ throw new Error('No se pudo leer ' + tabla + ': ' + error.message); }
+      if(!data || !data.length) break;
+      for(const fila of data){
+        r.revisadas++;
+        const cols = [];
+        for(const col of Object.keys(fila)){
+          if(col === 'id') continue;
+          const v = fila[col];
+          if(tacticalEsFotoIncrustada(v) || (v && typeof v === 'object')){
+            const n = await tacticalReemplazarFotosIncrustadas(typeof v === 'string' ? { x: v } : v, true);   // simulacro: no modifica nada
+            if(n){ cols.push(col); r.fotos += n; r.bytes += tacticalReemplazarFotosIncrustadas.ultimosBytes; }
+          }
+        }
+        if(cols.length){ r.afectadas++; plan.filas.push({ tabla, id: fila.id, cols, original: Object.fromEntries(cols.map(c => [c, fila[c]])) }); }
+      }
+      if(onProgreso) onProgreso(tabla, r);
+      if(data.length < PAG) break;
+    }
+  }
+  return plan;
+}
+async function tacticalFotosIncrustadasOptimizar(plan, onProgreso){
+  // 1) respaldo de lo que se va a cambiar
+  const copia = JSON.stringify({ generado: new Date().toISOString(), nota: 'Valores originales de las columnas que cambió "Optimizar fotos guardadas". Para deshacer, devolver cada columna a su fila (tabla + id).', filas: plan.filas });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([copia], { type: 'application/json' }));
+  a.download = 'respaldo_fotos_incrustadas_' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  await new Promise(r => setTimeout(r, 800));
+  // 2) fila por fila
+  let hechas = 0, fotos = 0;
+  for(const f of plan.filas){
+    const nuevo = {};
+    for(const c of f.cols){
+      const orig = f.original[c];
+      if(typeof orig === 'string'){ const caja = { x: orig }; fotos += await tacticalReemplazarFotosIncrustadas(caja, false); nuevo[c] = caja.x; }
+      else { const v = JSON.parse(JSON.stringify(orig)); fotos += await tacticalReemplazarFotosIncrustadas(v, false); nuevo[c] = v; }
+    }
+    // si alguna subida falló, la foto queda incrustada en ese valor (no se pierde nada)
+    const { error } = await tacticalSupabase.from(f.tabla).update(nuevo).eq('id', f.id);
+    if(error){ throw new Error('Falló al actualizar ' + f.tabla + ' ' + f.id + ': ' + error.message + ' (hechas antes: ' + hechas + ')'); }
+    hechas++;
+    if(onProgreso) onProgreso(hechas, plan.filas.length, fotos);
+  }
+  return { filas: hechas, fotos };
+}
+
 // Las tablas solo guardan la URL pública -- para borrar hace falta la ruta interna del bucket, que
 // se saca de la misma URL (siempre trae "/object/public/tactical-fotos/" antes de la ruta real) en
 // vez de guardar una columna aparte solo para eso.
@@ -104,7 +209,7 @@ function tacticalRutaDesdeUrlStorage(url){
   return i === -1 ? null : decodeURIComponent(url.slice(i + marca.length));
 }
 async function tacticalEliminarFotosStorage(urls){
-  const rutas = (urls||[]).map(tacticalRutaDesdeUrlStorage).filter(Boolean);
+  const rutas = (urls||[]).map(tacticalRutaDesdeUrlStorage).filter(Boolean).filter(r => r.indexOf('cotizaciones/') !== 0);   // fotos de cotizaciones: nunca se borran
   if(!rutas.length) return;
   const { error } = await tacticalSupabase.storage.from(TACTICAL_STORAGE_BUCKET).remove(rutas);
   if(error){ console.error('Error eliminando fotos de Storage:', error); tacticalAvisoErrorGuardado('Error eliminando fotos de Storage'); }
@@ -396,6 +501,7 @@ async function tacticalOppsCargar(){
 // Supabase de verdad confirmó el guardado.
 async function tacticalSyncOpps(lista){
   if(!lista || lista.length===0) return true;
+  for(const o of lista){ try{ await tacticalReemplazarFotosIncrustadas(o); }catch(e){ console.warn('No se pudo mover la foto de una cotización a Storage:', e); } }
   const filas = lista.map(tacticalOppADb);
   const { error } = await tacticalSupabase.from('opps').upsert(filas);
   if(error){ console.error('Error guardando opps en Supabase:', error); tacticalAvisoErrorGuardado('Error guardando opps en Supabase'); return false; }
@@ -419,6 +525,7 @@ async function tacticalHistorialCargar(){
 }
 async function tacticalAgregarHistorialRemoto(entry){
   const { estado, motivo, fechaCierre, _historialRowId, ...opp } = entry;
+  try{ await tacticalReemplazarFotosIncrustadas(opp); }catch(e){ console.warn('No se pudo mover la foto del cierre a Storage:', e); }
   const { error } = await tacticalSupabase.from('historial_cierres').insert({
     opp_id: opp.id||null, snapshot: opp, estado, motivo: motivo||null,
     fecha_cierre: fechaCierre||new Date().toISOString(),
@@ -433,6 +540,7 @@ async function tacticalEliminarHistorialRemoto(oppId){
 // para un negocio YA CERRADO el vendedor vive dentro del snapshot (JSON), no en su propia columna,
 // así que se reescribe el snapshot completo (ya se arma en JS con el vendedor corregido).
 async function tacticalCorregirVendedorHistorial(oppId, snapshotActualizado){
+  try{ await tacticalReemplazarFotosIncrustadas(snapshotActualizado); }catch(e){ console.warn('No se pudo mover la foto del cierre a Storage:', e); }
   const { error } = await tacticalSupabase.from('historial_cierres').update({ snapshot: snapshotActualizado }).eq('snapshot->>id', oppId);
   if(error){ console.error('Error corrigiendo vendedor en historial:', error); tacticalAvisoErrorGuardado('Error corrigiendo vendedor en historial'); }
 }
@@ -723,6 +831,7 @@ async function tacticalCotizacionesCargar(){
   return data.map(tacticalCotizacionDeDb);
 }
 async function tacticalSyncCotizacion(c){
+  try{ await tacticalReemplazarFotosIncrustadas(c); }catch(e){ console.warn('No se pudo mover la foto de la cotización a Storage:', e); }
   const { error } = await tacticalSupabase.from('cotizaciones_cuadernos').upsert(tacticalCotizacionADb(c));
   if(error){ console.error('Error guardando cotización en Supabase:', error); tacticalAvisoErrorGuardado('Error guardando cotización en Supabase'); }
 }
@@ -773,6 +882,7 @@ async function tacticalCotizacionesCalcCargar(linea, ot){
 // solo el desglose editable se perdía sin que nadie se enterara. Devuelve true/false para que cada
 // calculadora pueda avisar en pantalla si esto vuelve a pasar.
 async function tacticalSyncCotizacionCalc(c){
+  try{ await tacticalReemplazarFotosIncrustadas(c); }catch(e){ console.warn('No se pudo mover la foto de la cotización a Storage:', e); }
   const { error } = await tacticalSupabase.from('cotizaciones_calculadoras').upsert(tacticalCotizacionCalcADb(c));
   if(error){ console.error('Error guardando cotización en Supabase:', error); return false; }
   return true;

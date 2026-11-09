@@ -811,6 +811,7 @@
                 <span style="font-weight:bold; color:var(--dark);"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>Copia de Seguridad (descarga un respaldo de todos los datos reales guardados en Supabase):</span>
                 <button class="btn-action" onclick="contExportarRespaldo()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="6 9 12 15 18 9"></polyline></svg>Exportar todo (backup)</button>
                 <button class="btn-action" id="btn-medidor" style="display:none;" onclick="medidorAbrir()">Medir consumo de datos</button>
+                <button class="btn-action" id="btn-optfotos" style="display:none;" onclick="optFotosAbrir()">Optimizar fotos guardadas</button>
                 <span id="respaldo-nota" style="font-size:0.82rem; color:#5f6e84;"></span>
             </div>
 
@@ -2637,7 +2638,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Conde 2026-09-16: "convertir esos informes en graficos" (Tendencia Histórica en Reportes) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-    <script src="tactical-supabase.js?v=20261109a"></script>
+    <script src="tactical-supabase.js?v=20261109b"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
     <script src="precios_tactical.js?v=20261109a"></script>
 <script src="tactical-ui.js?v=20261109d"></script>
@@ -2729,6 +2730,48 @@
           document.body.appendChild(m);
           if(activo) medidorCalc();
         }
+        /* ---- Optimizar fotos guardadas (Conde 2026-11-09): sube a Storage las fotos que quedaron incrustadas dentro de las cotizaciones ---- */
+        let optFotosPlan = null;
+        function optFotosCerrar(){ const m = document.getElementById('optfotos-modal'); if(m) m.remove(); }
+        function optFotosPintar(html){
+          let m = document.getElementById('optfotos-modal');
+          if(!m){
+            m = document.createElement('div'); m.id = 'optfotos-modal';
+            m.style.cssText = 'position:fixed; inset:0; background:rgba(26,32,44,0.6); z-index:99998; display:flex; align-items:center; justify-content:center; padding:16px;';
+            document.body.appendChild(m);
+          }
+          m.innerHTML = '<div style="background:#fff; color:#1a202c; border-radius:10px; padding:20px; max-width:640px; width:100%; max-height:92vh; overflow:auto; box-shadow:0 12px 40px rgba(0,0,0,.35);"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><b style="font-size:1.05rem;">Optimizar fotos guardadas</b><button class="btn-action" data-ui="none" onclick="optFotosCerrar()">Cerrar</button></div>' + html + '</div>';
+        }
+        function optFotosAbrir(){
+          optFotosPlan = null;
+          optFotosPintar('<p style="margin:0 0 10px;">Las fotos que se pegaron en las calculadoras quedaron guardadas <b>dentro</b> de cada cotización, y por eso cada carga del Hub pesa tanto (consume el "egress" de Supabase). Esta herramienta las sube a Storage y deja en la cotización solo la dirección de la foto: se ven igual.</p>'
+            + '<ol style="margin:0 0 12px 18px; padding:0; line-height:1.6;"><li><b>Buscar</b> solo cuenta cuántas hay: no cambia nada.</li><li><b>Optimizar</b> descarga primero un archivo de respaldo con lo que va a cambiar y luego actualiza fila por fila.</li></ol>'
+            + '<p style="margin:0 0 10px; color:#92400e; background:#fef3c7; border-radius:6px; padding:8px;"><b>Antes de optimizar:</b> descarga el respaldo con "Exportar todo (backup)" y pide al equipo que cierre el ERP mientras se hace (para que nadie escriba al mismo tiempo).</p>'
+            + '<button class="btn-submit" onclick="optFotosBuscar()">Buscar fotos incrustadas</button>');
+        }
+        async function optFotosBuscar(){
+          if(!tacticalRequiereAdministrador()) return;
+          optFotosPintar('<p>Buscando… esto baja una vez las tablas (unos 10 MB) y tarda un momento.</p><div id="optfotos-prog" style="font-size:0.85rem; color:#475569;"></div>');
+          try{
+            const plan = await tacticalFotosIncrustadasBuscar((tabla, r) => { const p = document.getElementById('optfotos-prog'); if(p) p.textContent = tabla + ': ' + r.revisadas + ' filas revisadas…'; });
+            optFotosPlan = plan;
+            let tot = 0, tb = 0, filas = 0;
+            const fil = Object.keys(plan.tablas).map(t => { const r = plan.tablas[t]; tot += r.fotos; tb += r.bytes; filas += r.afectadas; return '<tr><td style="padding:5px 8px;">' + medidorEsc(t) + '</td><td style="padding:5px 8px; text-align:right;">' + r.revisadas + '</td><td style="padding:5px 8px; text-align:right;">' + r.afectadas + '</td><td style="padding:5px 8px; text-align:right;">' + r.fotos + '</td><td style="padding:5px 8px; text-align:right;">' + medidorMB(r.bytes) + '</td></tr>'; }).join('');
+            optFotosPintar('<table style="width:100%; border-collapse:collapse; font-size:0.88rem;"><tr style="background:#f1f5f9; text-align:left;"><th style="padding:6px 8px;">Tabla</th><th style="padding:6px 8px; text-align:right;">Filas</th><th style="padding:6px 8px; text-align:right;">Con foto</th><th style="padding:6px 8px; text-align:right;">Fotos</th><th style="padding:6px 8px; text-align:right;">Peso</th></tr>' + fil + '</table>'
+              + '<p style="margin:10px 0;">Total: <b>' + tot + ' fotos</b> en <b>' + filas + ' filas</b> (<b>' + medidorMB(tb) + '</b> que dejarían de bajarse en cada carga).</p>'
+              + (tot ? '<p style="margin:0 0 10px; color:#92400e; background:#fef3c7; border-radius:6px; padding:8px;">Si ya hiciste el respaldo y el equipo cerró el ERP, presiona Optimizar. Se descargará un archivo <b>respaldo_fotos_incrustadas_….json</b>: guárdalo.</p><button class="btn-submit" onclick="optFotosEjecutar()">Optimizar ' + filas + ' filas</button>' : '<p>No hay nada que optimizar.</p>'));
+          } catch(e){ optFotosPintar('<p style="color:#b91c1c;">' + medidorEsc(e.message || e) + '</p><button class="btn-action" onclick="optFotosAbrir()">Volver</button>'); }
+        }
+        async function optFotosEjecutar(){
+          if(!tacticalRequiereAdministrador() || !optFotosPlan) return;
+          if(!confirm('¿Confirmas que ya hiciste el respaldo (Exportar todo) y que nadie más está usando el ERP?\n\nSe cambiarán ' + optFotosPlan.filas.length + ' filas.')) return;
+          optFotosPintar('<p>Optimizando… no cierres esta ventana.</p><div id="optfotos-prog" style="font-size:0.9rem;"></div>');
+          try{
+            const r = await tacticalFotosIncrustadasOptimizar(optFotosPlan, (h, t, f) => { const p = document.getElementById('optfotos-prog'); if(p) p.textContent = h + ' de ' + t + ' filas · ' + f + ' fotos subidas'; });
+            optFotosPlan = null;
+            optFotosPintar('<p style="color:#166534; font-weight:700;">Listo: ' + r.filas + ' filas actualizadas y ' + r.fotos + ' fotos movidas a Storage.</p><p>Ahora <b>todos deben recargar el ERP (Ctrl+F5)</b>. Después usa "Medir consumo de datos" otra vez para ver cuánto bajó la carga.</p><button class="btn-action" onclick="optFotosCerrar()">Cerrar</button>');
+          } catch(e){ optFotosPintar('<p style="color:#b91c1c;">Se detuvo: ' + medidorEsc(e.message || e) + '</p><p>Lo que ya se actualizó queda bien. Guarda el archivo de respaldo y avísame para revisar.</p><button class="btn-action" onclick="optFotosCerrar()">Cerrar</button>'); }
+        }
         function medidorCalc(){
           const el = document.getElementById('medidor-calc'); if(!el) return;
           const n = parseFloat((document.getElementById('medidor-cargas') || {}).value) || 0;
@@ -2738,6 +2781,7 @@
         function tacticalAplicarVisibilidadHub(){
             const rol = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol;
             { const bm = document.getElementById('btn-medidor'); if(bm) bm.style.display = (rol === 'administrador') ? '' : 'none'; }
+            { const bo = document.getElementById('btn-optfotos'); if(bo) bo.style.display = (rol === 'administrador') ? '' : 'none'; }
             document.querySelectorAll('#view-hub .hub-card').forEach(card => {
                 const m = (card.getAttribute('onclick') || '').match(/showView\('([^']+)'\)/);
                 // Conde 2026-10-16: tarjetas que abren un archivo aparte (location.href) declaran sus roles en data-roles.
