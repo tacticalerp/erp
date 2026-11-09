@@ -810,6 +810,7 @@
             <div id="hub-respaldo-box" style="margin: 15px 20px 0 20px; background: var(--light-gray); border: 1px solid #cbd5e0; border-radius: 6px; padding: 12px 15px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                 <span style="font-weight:bold; color:var(--dark);"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>Copia de Seguridad (descarga un respaldo de todos los datos reales guardados en Supabase):</span>
                 <button class="btn-action" onclick="contExportarRespaldo()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="6 9 12 15 18 9"></polyline></svg>Exportar todo (backup)</button>
+                <button class="btn-action" id="btn-medidor" style="display:none;" onclick="medidorAbrir()">Medir consumo de datos</button>
                 <span id="respaldo-nota" style="font-size:0.82rem; color:#5f6e84;"></span>
             </div>
 
@@ -2636,7 +2637,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Conde 2026-09-16: "convertir esos informes en graficos" (Tendencia Histórica en Reportes) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-    <script src="tactical-supabase.js?v=20261021a"></script>
+    <script src="tactical-supabase.js?v=20261109a"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
     <script src="precios_tactical.js?v=20261109a"></script>
 <script src="tactical-ui.js?v=20261109d"></script>
@@ -2683,8 +2684,60 @@
         // que vean qué más hace el ERP" -- en el Hub se ocultan las tarjetas de las vistas que el rol NO puede abrir
         // (según TACTICAL_ROLES_POR_VISTA) y las tarjetas "todavía no construido" (solo el administrador las ve).
         // Es visibilidad, no seguridad: tacticalAccesoPermitido() sigue bloqueando la entrada directa.
+        /* ---- Medidor de consumo de datos de Supabase (Conde 2026-11-09): ver tactical-supabase.js ---- */
+        function medidorMB(b){ return b < 1048576 ? Math.round(b / 1024) + ' KB' : (b / 1048576).toFixed(2) + ' MB'; }
+        function medidorEsc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+        function medidorCerrar(){ const m = document.getElementById('medidor-modal'); if(m) m.remove(); }
+        function medidorEmpezar(){
+          try{ localStorage.removeItem(TACTICAL_MEDIDOR_CLAVE); localStorage.setItem('tactical_medir', '1'); }catch(e){}
+          location.reload();   // al recargar se mide justo lo que baja el Hub al entrar
+        }
+        function medidorTerminar(){
+          try{ localStorage.removeItem('tactical_medir'); localStorage.removeItem(TACTICAL_MEDIDOR_CLAVE); }catch(e){}
+          tacticalMedidorActivo = false; tacticalMedidorDatos = null; medidorCerrar();
+          if(typeof tacticalAviso === 'function') tacticalAviso('Medición terminada. El ERP vuelve a funcionar sin medir.', 'ok');
+        }
+        function medidorReiniciar(){
+          try{ localStorage.removeItem(TACTICAL_MEDIDOR_CLAVE); }catch(e){}
+          tacticalMedidorDatos = null; tacticalMedidorCargar(); medidorAbrir();
+        }
+        function medidorAbrir(){
+          medidorCerrar();
+          const activo = tacticalMedidorActivo;
+          let cuerpo = '';
+          if(!activo){
+            cuerpo = '<p style="margin:0 0 10px;">Esta herramienta cuenta cuántos MB baja el ERP desde Supabase, tabla por tabla. Sirve para saber qué está gastando el "egress" del plan gratis.</p>'
+              + '<ol style="margin:0 0 12px 18px; padding:0; line-height:1.6;"><li>Presiona <b>Empezar a medir</b>: la página se recarga y mide todo lo que baja al entrar.</li><li>Abre esta ventana otra vez para ver el resultado de <b>una carga completa del Hub</b>.</li><li>Para medir el Kanban, déjalo abierto 5 minutos y mira de nuevo: se suma cada refresco.</li><li>Cuando termines, presiona <b>Terminar medición</b>.</li></ol>'
+              + '<button class="btn-submit" onclick="medidorEmpezar()">Empezar a medir (recarga la página)</button>';
+          } else {
+            const d = tacticalMedidorCargar();
+            const filas = Object.keys(d.filas).map(k => Object.assign({k}, d.filas[k])).sort((a, b) => b.bytes - a.bytes);
+            const tb = filas.reduce((s, f) => s + f.bytes, 0), tw = filas.reduce((s, f) => s + f.wire, 0), tn = filas.reduce((s, f) => s + f.n, 0);
+            const min = Math.max(1, Math.round((Date.now() - new Date(d.desde).getTime()) / 60000));
+            cuerpo = '<p style="margin:0 0 8px; color:#475569;">Midiendo desde hace <b>' + min + ' min</b> · ' + tn + ' peticiones · total descomprimido <b>' + medidorMB(tb) + '</b>' + (tw ? ' · por la red (aprox.) <b>' + medidorMB(tw) + '</b>' : '') + '.</p>'
+              + '<div style="max-height:46vh; overflow:auto; border:1px solid #e2e8f0; border-radius:6px;"><table style="width:100%; border-collapse:collapse; font-size:0.85rem;"><tr style="text-align:left; background:#f1f5f9;"><th style="padding:6px 8px;">Qué se pidió</th><th style="padding:6px 8px; text-align:right;">Veces</th><th style="padding:6px 8px; text-align:right;">MB</th><th style="padding:6px 8px; text-align:right;">% del total</th></tr>'
+              + (filas.length ? filas.map((f, i) => '<tr style="' + (i % 2 ? 'background:#f8fafc;' : '') + '"><td style="padding:5px 8px;">' + medidorEsc(f.k) + '</td><td style="padding:5px 8px; text-align:right;">' + f.n + '</td><td style="padding:5px 8px; text-align:right;">' + medidorMB(f.bytes) + '</td><td style="padding:5px 8px; text-align:right;">' + (tb ? Math.round(f.bytes * 100 / tb) : 0) + '%</td></tr>').join('') : '<tr><td colspan="4" style="padding:12px; color:#64748b;">Todavía no hay datos: recarga o usa el ERP un momento y vuelve a abrir.</td></tr>')
+              + '</table></div>'
+              + '<div style="margin-top:12px; padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:0.85rem;"><b>Calculadora rápida</b>: si el equipo carga el Hub <input id="medidor-cargas" type="number" value="25" min="1" style="width:64px; padding:3px;" oninput="medidorCalc()"> veces al día, el mes sería <b id="medidor-calc">—</b> (solo por cargas del Hub, usando el peso de la lista de arriba).</div>'
+              + '<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;"><button class="btn-action" onclick="medidorAbrir()">Actualizar</button><button class="btn-action" onclick="medidorReiniciar()">Reiniciar contador</button><button class="btn-action" onclick="medidorTerminar()">Terminar medición</button></div>';
+            window.__medidorTotalBytes = tb;
+          }
+          const m = document.createElement('div'); m.id = 'medidor-modal';
+          m.style.cssText = 'position:fixed; inset:0; background:rgba(26,32,44,0.6); z-index:99998; display:flex; align-items:center; justify-content:center; padding:16px;';
+          m.innerHTML = '<div style="background:#fff; color:#1a202c; border-radius:10px; padding:20px; max-width:640px; width:100%; max-height:92vh; overflow:auto; box-shadow:0 12px 40px rgba(0,0,0,.35);"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><b style="font-size:1.05rem;">Consumo de datos de Supabase' + (activo ? ' — midiendo' : '') + '</b><button class="btn-action" data-ui="none" onclick="medidorCerrar()">Cerrar</button></div>' + cuerpo + '</div>';
+          m.addEventListener('click', e => { if(e.target === m) medidorCerrar(); });
+          document.body.appendChild(m);
+          if(activo) medidorCalc();
+        }
+        function medidorCalc(){
+          const el = document.getElementById('medidor-calc'); if(!el) return;
+          const n = parseFloat((document.getElementById('medidor-cargas') || {}).value) || 0;
+          const b = window.__medidorTotalBytes || 0;
+          el.textContent = ((b * n * 30) / 1073741824).toFixed(2) + ' GB (tope del plan gratis: 5 GB)';
+        }
         function tacticalAplicarVisibilidadHub(){
             const rol = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol;
+            { const bm = document.getElementById('btn-medidor'); if(bm) bm.style.display = (rol === 'administrador') ? '' : 'none'; }
             document.querySelectorAll('#view-hub .hub-card').forEach(card => {
                 const m = (card.getAttribute('onclick') || '').match(/showView\('([^']+)'\)/);
                 // Conde 2026-10-16: tarjetas que abren un archivo aparte (location.href) declaran sus roles en data-roles.

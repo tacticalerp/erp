@@ -14,7 +14,54 @@
 const TACTICAL_SUPABASE_URL = 'https://qwqskcecyyeefxvuilkz.supabase.co';
 const TACTICAL_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3cXNrY2VjeXllZWZ4dnVpbGt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwNjg1OTAsImV4cCI6MjEwMjY0NDU5MH0.kap_k25bLqJj4Q0xW60j1tljYO1SPpbPA2aafdYYxNQ';
 
-const tacticalSupabase = supabase.createClient(TACTICAL_SUPABASE_URL, TACTICAL_SUPABASE_ANON_KEY);
+/* ---- MEDIDOR DE CONSUMO DE DATOS (Conde 2026-11-09, aviso de Supabase por egress sobre el plan gratis) ----
+   Cuando la medición está activa (localStorage 'tactical_medir' = '1'; se activa desde el Hub, botón "Medir consumo de datos"),
+   cada respuesta de Supabase se suma por tabla / función / storage. Inactivo = el fetch pasa directo, sin costo.
+   "bytes" = tamaño descomprimido de la respuesta (cota superior); "wire" = Content-Length si el servidor lo manda (aprox. lo que viaja por la red). */
+const TACTICAL_MEDIDOR_CLAVE = 'tactical_medidor_datos';
+let tacticalMedidorActivo = false;
+try{ tacticalMedidorActivo = localStorage.getItem('tactical_medir') === '1'; }catch(e){}
+let tacticalMedidorDatos = null, tacticalMedidorTimer = null;
+function tacticalMedidorCargar(){
+  if(tacticalMedidorDatos) return tacticalMedidorDatos;
+  try{ tacticalMedidorDatos = JSON.parse(localStorage.getItem(TACTICAL_MEDIDOR_CLAVE)); }catch(e){}
+  if(!tacticalMedidorDatos || !tacticalMedidorDatos.filas) tacticalMedidorDatos = { desde: new Date().toISOString(), filas: {} };
+  return tacticalMedidorDatos;
+}
+function tacticalMedidorGuardarPronto(){
+  if(tacticalMedidorTimer) return;
+  tacticalMedidorTimer = setTimeout(function(){ tacticalMedidorTimer = null; try{ localStorage.setItem(TACTICAL_MEDIDOR_CLAVE, JSON.stringify(tacticalMedidorDatos)); }catch(e){} }, 800);
+}
+function tacticalMedidorClave(url, metodo){
+  try{
+    const p = new URL(url, location.href).pathname; let m;
+    if((m = /\/rest\/v1\/rpc\/([^/]+)/.exec(p))) return 'rpc: ' + m[1];
+    if((m = /\/rest\/v1\/([^/?]+)/.exec(p))) return 'tabla: ' + m[1] + ' (' + metodo + ')';
+    if(/\/storage\/v1\//.test(p)) return 'storage (' + metodo + ')';
+    if(/\/auth\/v1\//.test(p)) return 'auth';
+    if((m = /\/functions\/v1\/([^/?]+)/.exec(p))) return 'función: ' + m[1];
+    return p;
+  }catch(e){ return 'otro'; }
+}
+function tacticalFetchMedido(input, init){
+  const p = fetch(input, init);
+  if(!tacticalMedidorActivo) return p;
+  return p.then(function(res){
+    try{
+      const url = typeof input === 'string' ? input : (input && input.url) || '';
+      const metodo = ((init && init.method) || (input && input.method) || 'GET').toUpperCase();
+      const clave = tacticalMedidorClave(url, metodo);
+      const wire = parseInt(res.headers.get('content-length') || '0', 10) || 0;
+      res.clone().arrayBuffer().then(function(b){
+        const d = tacticalMedidorCargar(); const f = d.filas[clave] || (d.filas[clave] = { n: 0, bytes: 0, wire: 0 });
+        f.n++; f.bytes += b.byteLength; f.wire += wire; d.ultima = new Date().toISOString();
+        tacticalMedidorGuardarPronto();
+      }).catch(function(){});
+    }catch(e){}
+    return res;
+  });
+}
+const tacticalSupabase = supabase.createClient(TACTICAL_SUPABASE_URL, TACTICAL_SUPABASE_ANON_KEY, { global: { fetch: tacticalFetchMedido } });
 
 // Conde 2026-08-20: clientes "particulares" (B2C -- Rompecabezas, pedidos rápidos por WhatsApp,
 // etc.) se guardan con empresa===nombre porque no tienen razón social aparte. El patrón
