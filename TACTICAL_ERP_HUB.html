@@ -4099,6 +4099,7 @@
           db_opps = await tacticalOppsCargar();
           db_historial_cierres = await tacticalHistorialCargar();
           db_kanban = await tacticalFichasKanbanCargar();
+          kanbanFirmaLigera().then(f => { kanbanFirmaLigeraUltima = f; kanbanUltimaCargaCompleta = Date.now(); });   // punto de partida del refresco liviano del Kanban
           try{ db_plotter_cola = await plotterColaCargar(); } catch(e){ console.warn('Cola de montaje no disponible', e); db_plotter_cola = []; }
           // Conde 2026-08-27: limpieza única de fichas urgentes que ya quedaron atrás en Entregar/
           // Postventa (de antes de que existiera el borrado automático, ver avisarSiPasaAEntregar) --
@@ -5789,18 +5790,40 @@
         function kanbanFirma(lista){
           return JSON.stringify(lista.map(f => [f.id, f.columna, f.urgente, f.titulo, f.fechaEntrega, f.entrega, f.responsable, f.disenoAprobado, f.vendedor, f.orden, (f.lineas || []).length, (f.fotos || []).length, (f.checklist || []).length]));
         }
+        /* Conde 2026-11-09 (aviso de Supabase por egress): el refresco del Kanban bajaba 4 tablas completas (~1 MB) cada 45 s por cada
+           persona con el Kanban abierto (~88 MB por hora). Ahora primero hace una consulta mínima (cuántas fichas, la fecha de la última
+           modificación y cuántas fotos: unos cientos de bytes) y solo baja todo si algo cambió. Cualquier cambio de una ficha (columna, líneas,
+           checklist, notas) pasa por un UPDATE de kanban_fichas, que actualiza updated_at (trigger); las fotos se detectan por su conteo.
+           Por seguridad se hace una carga completa al menos cada 15 min. */
+        let kanbanFirmaLigeraUltima = null, kanbanUltimaCargaCompleta = 0;
+        async function kanbanFirmaLigera(){
+          try{
+            const [a, b] = await Promise.all([
+              tacticalSupabase.from('kanban_fichas').select('updated_at', { count: 'exact' }).order('updated_at', { ascending: false }).limit(1),
+              tacticalSupabase.from('kanban_fotos').select('id', { count: 'exact', head: true }),
+            ]);
+            if(a.error || b.error) return null;
+            return (a.count || 0) + '|' + ((a.data && a.data[0] && a.data[0].updated_at) || '') + '|' + (b.count || 0);
+          } catch(e){ return null; }
+        }
         async function kanbanRefrescar(forzar){
           if(kanbanRefrescando) return;
           if(!forzar && (document.hidden || !kanbanVistaActiva())) return;
           if(kanbanOcupado()) return;
           kanbanRefrescando = true;
           try{
-            const nuevas = await tacticalFichasKanbanCargar(true);
-            if(!nuevas || kanbanOcupado()) return; // falló la consulta o la persona empezó a hacer algo mientras tanto
+            const firma = await kanbanFirmaLigera();
+            const hayCargaReciente = (Date.now() - kanbanUltimaCargaCompleta) < 15 * 60000;
+            let nuevas = null, sinCambios = false;
+            if(firma && firma === kanbanFirmaLigeraUltima && hayCargaReciente){ sinCambios = true; }
+            else { nuevas = await tacticalFichasKanbanCargar(true); }
+            if(!sinCambios && !nuevas) return;         // falló la consulta
+            if(kanbanOcupado()) return;                // la persona empezó a hacer algo mientras tanto
+            if(!sinCambios){ kanbanFirmaLigeraUltima = firma; kanbanUltimaCargaCompleta = Date.now(); }
             kanbanUltimaActualizacion = new Date();
             const marca = document.getElementById('kb-actualizado');
             if(marca) marca.textContent = 'Actualizado ' + kanbanUltimaActualizacion.toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'});
-            if(kanbanFirma(nuevas) !== kanbanFirma(db_kanban)){ db_kanban = nuevas; renderKanban(); }
+            if(nuevas && kanbanFirma(nuevas) !== kanbanFirma(db_kanban)){ db_kanban = nuevas; renderKanban(); }
           } catch(e){ console.warn('No se pudo refrescar el Kanban:', e); }
           finally { kanbanRefrescando = false; }
         }
