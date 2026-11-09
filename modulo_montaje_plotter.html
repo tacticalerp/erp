@@ -170,7 +170,7 @@
 <script src="rompecabezas_catalogo.js?v=20261103a"></script>
 <script>
 if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const ROLES_PERMITIDOS = ['administrador','diseno'];
+const ROLES_PERMITIDOS = ['administrador','diseno','produccion'];   // Conde 2026-11-09: producción también
 function esc(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 const fmt = n => (Math.round(n*10)/10).toString().replace('.',',');
 

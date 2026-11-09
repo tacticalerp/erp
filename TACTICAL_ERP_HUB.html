@@ -2664,7 +2664,8 @@
             contabilidad: ['administrador', 'contabilidad'],
             // Conde 2026-08-28: "los precios y las fotos serán para cualquier comercial" -- se agrega
             // 'comercial' a las 2 (antes solo admin/producción/contabilidad y admin/diseño podían).
-            precios: ['administrador', 'produccion', 'contabilidad', 'comercial'],
+            // Conde 2026-11-09: diseño entra SOLO a la pestaña Troqueles (sin precios ni inventario): ver insAplicarRol().
+            precios: ['administrador', 'produccion', 'contabilidad', 'comercial', 'diseno'],
             fototeca: ['administrador', 'diseno', 'comercial'],
             botwa: ['administrador', 'comercial'],
             galeriabot: ['administrador', 'comercial', 'diseno'],
@@ -2692,6 +2693,9 @@
                 const oculta = (roles && !roles.includes(rol)) || (card.classList.contains('disabled-card') && rol !== 'administrador');
                 card.style.display = oculta ? 'none' : '';
             });
+            { const c = [...document.querySelectorAll('#view-hub .hub-card')].find(x => /showView\('precios'\)/.test(x.getAttribute('onclick') || ''));
+              const h = c && c.querySelector('.card-title');
+              if(h && h.lastChild && h.lastChild.nodeType === 3){ if(!h.dataset.tituloOriginal) h.dataset.tituloOriginal = h.lastChild.textContent; h.lastChild.textContent = (rol === 'diseno') ? 'Troqueles' : h.dataset.tituloOriginal; } }
             document.querySelectorAll('#view-hub .hub-grupo').forEach(g => {
                 const hay = [...g.querySelectorAll('.hub-card')].some(c => c.style.display !== 'none');
                 g.style.display = hay ? '' : 'none';
@@ -2877,6 +2881,7 @@
                 subTitle.innerText = "Precios de papeles, impresión, acabados y más — fuente única para las 8 herramientas (2026)";
                 if (typeof renderPanelPrecios === 'function') renderPanelPrecios();
                 if (typeof renderPanelRecomendaciones === 'function') renderPanelRecomendaciones();
+                if (typeof insAplicarRol === 'function') insAplicarRol();
             } else if (viewId === 'corte') {
                 navContainer.style.display = 'block';
                 mainTitle.innerText = "CALCULADORA DE CORTE";
@@ -6700,7 +6705,23 @@
           return 'otros';
         }
         function insFamToggle(el){ const k = el.getAttribute('data-fam'); if(!k) return; if(el.open) insFamAbiertas.add(k); else insFamAbiertas.delete(k); }
+        /* Roles que ven los PRECIOS de Insumos y precios; los demás (diseño) ven solo el catálogo de Troqueles. */
+        const INS_ROLES_PRECIOS = ['administrador', 'produccion', 'contabilidad', 'comercial'];
+        function insVePrecios(){ const r = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol; return INS_ROLES_PRECIOS.includes(r); }
+        function insAplicarRol(){
+          const ve = insVePrecios();
+          ['ins-tab-btn-precios', 'ins-tab-btn-inv'].forEach(id => { const b = document.getElementById(id); if(b) b.style.display = ve ? '' : 'none'; });
+          const intro = document.querySelector('#view-precios .data-card'); if(intro) intro.style.display = ve ? '' : 'none';
+          if(!ve){
+            insCambiarTab('troq');
+            const mt = document.getElementById('app-header-title');
+            const st = document.getElementById('app-header-sub');
+            if(mt && /INSUMOS Y PRECIOS/.test(mt.innerText)) mt.innerText = 'TROQUELES';
+            if(st) st.innerText = 'Catálogo de troqueles de Tactical (2026)';
+          }
+        }
         function insCambiarTab(tab){
+          if(tab !== 'troq' && !insVePrecios()) tab = 'troq';
           ['precios', 'troq', 'inv'].forEach(k => {
             const p = document.getElementById('ins-tab-' + k); if(p) p.style.display = tab === k ? '' : 'none';
             const b = document.getElementById('ins-tab-btn-' + k); if(b) b.classList.toggle('active', tab === k);
