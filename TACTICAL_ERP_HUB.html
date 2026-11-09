@@ -2747,7 +2747,32 @@
           optFotosPintar('<p style="margin:0 0 10px;">Las fotos que se pegaron en las calculadoras quedaron guardadas <b>dentro</b> de cada cotización, y por eso cada carga del Hub pesa tanto (consume el "egress" de Supabase). Esta herramienta las sube a Storage y deja en la cotización solo la dirección de la foto: se ven igual.</p>'
             + '<ol style="margin:0 0 12px 18px; padding:0; line-height:1.6;"><li><b>Buscar</b> solo cuenta cuántas hay: no cambia nada.</li><li><b>Optimizar</b> descarga primero un archivo de respaldo con lo que va a cambiar y luego actualiza fila por fila.</li></ol>'
             + '<p style="margin:0 0 10px; color:#92400e; background:#fef3c7; border-radius:6px; padding:8px;"><b>Antes de optimizar:</b> descarga el respaldo con "Exportar todo (backup)" y pide al equipo que cierre el ERP mientras se hace (para que nadie escriba al mismo tiempo).</p>'
-            + '<button class="btn-submit" onclick="optFotosBuscar()">Buscar fotos incrustadas</button>');
+            + '<div style="display:flex; gap:8px; flex-wrap:wrap;"><button class="btn-submit" onclick="optFotosBuscar()">Buscar fotos incrustadas</button><button class="btn-action" onclick="optFotosVerificar()">Verificar que las fotos se ven</button></div>');
+        }
+        /* Revisa, con lo que el Hub tiene cargado, que cada foto de cotización que ya vive en Storage (cotizaciones/) de verdad abre. */
+        async function optFotosVerificar(){
+          const urls = new Set(); let incrustadas = 0;
+          (function ir(n){
+            if(typeof n === 'string'){
+              if(/^data:image\//.test(n) && n.length > 2000) incrustadas++;
+              else if(/^https?:\/\//.test(n) && n.indexOf('/tactical-fotos/cotizaciones/') > -1) urls.add(n);
+            } else if(n && typeof n === 'object'){ Object.keys(n).forEach(k => ir(n[k])); }
+          })([db_opps, db_historial_cierres]);
+          const lista = [...urls];
+          optFotosPintar('<p>Revisando ' + lista.length + ' fotos…</p><div id="optfotos-prog" style="font-size:0.9rem;"></div>');
+          const ok = [], rotas = []; let i = 0;
+          function probar(u){ return new Promise(res => { const im = new Image(); im.onload = () => res({ u, ok: im.naturalWidth > 0 }); im.onerror = () => res({ u, ok: false }); im.src = u; }); }
+          async function obrero(){ while(i < lista.length){ const u = lista[i++]; const r = await probar(u); (r.ok ? ok : rotas).push(u); const p = document.getElementById('optfotos-prog'); if(p) p.textContent = (ok.length + rotas.length) + ' de ' + lista.length; } }
+          await Promise.all([obrero(), obrero(), obrero(), obrero()]);
+          let estado = '';
+          if(rotas.length){
+            try{ const r = await fetch(rotas[0], { method: 'GET' }); const tx = (await r.text()).slice(0, 160); estado = 'Respuesta del servidor para la primera rota: ' + r.status + ' ' + tx; } catch(e){ estado = 'La primera rota no se pudo consultar: ' + e.message; }
+          }
+          optFotosPintar('<p style="font-weight:700; color:' + (rotas.length ? '#b91c1c' : '#166534') + ';">' + ok.length + ' de ' + lista.length + ' fotos abren bien' + (rotas.length ? ' · ' + rotas.length + ' NO abren' : '') + '.</p>'
+            + '<p style="margin:0 0 8px; color:#475569;">Fotos todavía incrustadas en lo cargado: <b>' + incrustadas + '</b>.</p>'
+            + (ok.length ? '<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">' + ok.slice(0, 6).map(u => '<a href="' + u + '" target="_blank"><img src="' + u + '" style="height:70px; border:1px solid #cbd5e0; border-radius:4px;"></a>').join('') + '</div>' : '')
+            + (rotas.length ? '<p style="margin:0 0 6px; font-size:0.82rem; word-break:break-all;">Primera que no abre:<br><a href="' + rotas[0] + '" target="_blank">' + medidorEsc(rotas[0]) + '</a></p><p style="font-size:0.82rem; color:#475569; word-break:break-all;">' + medidorEsc(estado) + '</p>' : '')
+            + '<button class="btn-action" onclick="optFotosAbrir()">Volver</button>');
         }
         async function optFotosBuscar(){
           if(!tacticalRequiereAdministrador()) return;
