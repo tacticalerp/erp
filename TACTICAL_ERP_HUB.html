@@ -2568,16 +2568,25 @@
             <div style="padding:10px;">
                 <div class="data-card" style="margin-bottom:16px;">
                     <div class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>Galería Fotos Bot Rompecabezas</div>
-                    <p style="color:#64748b; margin:8px 0 0;">Todas las fotos originales, previsualizaciones y comprobantes que ha mandado un cliente por WhatsApp (se guardan 30 días). Solo lectura -- para aprobar pagos y crear el pedido en el CRM/Kanban usa el módulo "Bot WhatsApp".</p>
+                    <p style="color:#64748b; margin:8px 0 0;">Las fotos que ha mandado un cliente por WhatsApp, las previsualizaciones y los comprobantes. Aquí ves <b>miniaturas</b> (livianas); la foto grande se abre solo al hacer clic en "Ver grande". Se guardan 30 días (180 si el cliente tiene un pedido aprobado) y puedes marcar una foto como "Conservar" para que no se borre. Solo lectura -- para aprobar pagos y crear el pedido usa el módulo "Bot WhatsApp".</p>
                     <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-                        <input type="text" id="galeriabot-url" placeholder="URL del servidor del bot (ej: https://bot.tacticalmarketing.com)" style="flex:1; min-width:280px; padding:8px; border:1px solid #cbd5e0; border-radius:6px;">
-                        <input type="password" id="galeriabot-key" placeholder="Clave del bot (HUB_API_KEY)" style="width:220px; padding:8px; border:1px solid #cbd5e0; border-radius:6px;">
-                        <button class="btn-action" onclick="galeriaBotGuardarConfig()">Guardar</button>
-                        <button class="btn-submit" style="width:auto;" onclick="galeriaBotCargar()">Buscar fotos</button>
+                        <input type="text" id="galeriabot-buscar" placeholder="Buscar por nombre o celular…" style="flex:1; min-width:220px; padding:8px; border:1px solid #cbd5e0; border-radius:6px;" onkeydown="if(event.key==='Enter') galeriaBotCargar(true)">
+                        <select id="galeriabot-tipo" onchange="galeriaBotCargar(true)" style="padding:8px; border:1px solid #cbd5e0; border-radius:6px;"><option value="">Todas</option><option value="original">Fotos del cliente</option><option value="preview">Previsualizaciones</option><option value="comprobante">Comprobantes</option></select>
+                        <button class="btn-submit" style="width:auto;" onclick="galeriaBotCargar(true)">Buscar fotos</button>
                     </div>
+                    <div id="galeriabot-uso" style="margin-top:10px;"></div>
                     <p id="galeriabot-estado" style="font-size:0.85em; color:#64748b; margin-top:8px;"></p>
+                    <details style="margin-top:8px;"><summary style="cursor:pointer; font-size:0.85rem; color:#475569;">Archivos antiguos (de antes de las miniaturas, vía el servidor del bot)</summary>
+                        <div style="margin-top:8px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                            <input type="text" id="galeriabot-url" placeholder="URL del servidor del bot" style="flex:1; min-width:240px; padding:8px; border:1px solid #cbd5e0; border-radius:6px;">
+                            <input type="password" id="galeriabot-key" placeholder="Clave del bot (HUB_API_KEY)" style="width:200px; padding:8px; border:1px solid #cbd5e0; border-radius:6px;">
+                            <button class="btn-action" onclick="galeriaBotGuardarConfig()">Guardar</button>
+                            <button class="btn-action" onclick="galeriaBotCargarAntiguas()">Listar antiguos</button>
+                        </div>
+                    </details>
                 </div>
-                <div id="galeriabot-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px;"></div>
+                <div id="galeriabot-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); gap:14px;"></div>
+                <div style="text-align:center; margin-top:14px;"><button class="btn-action" id="galeriabot-mas" style="display:none;" onclick="galeriaBotCargar(false)">Cargar más</button></div>
             </div>
         </div>
 
@@ -5625,53 +5634,115 @@
         // GALERÍA DE FOTOS DEL BOT (Rompecabezas B2C) -- solo lectura, para comercial/diseño.
         // Reutiliza la misma URL/clave que ya guarda "Bot WhatsApp" (mismo servidor, misma clave).
         // ==========================================
-        function galeriaBotInit(){
-          document.getElementById('galeriabot-url').value = botwaUrlBase();
-          document.getElementById('galeriabot-key').value = botwaKey();
-        }
         function galeriaBotGuardarConfig(){
           localStorage.setItem('tactical_botwa_url', document.getElementById('galeriabot-url').value.trim());
           localStorage.setItem('tactical_botwa_key', document.getElementById('galeriabot-key').value.trim());
           document.getElementById('galeriabot-estado').innerText = 'Configuración guardada en este navegador.';
         }
-        async function galeriaBotCargar(){
+        /* ---- Galería del bot con MINIATURAS (Conde 2026-11-10): la tabla bot_fotos (migracion_bot_fotos.sql) guarda una miniatura de ~25 KB
+           por foto; aquí solo se bajan miniaturas (y 60 por vez). La foto grande se pide al hacer clic. Así abrir la galería no consume el
+           "egress" de Supabase como antes (que bajaba TODAS las fotos a tamaño completo). ---- */
+        const GALERIA_BUCKET = 'bot-rompecabezas-media';
+        const GALERIA_PAGINA = 60;
+        let galeriaPos = 0;
+        function galeriaBotInit(){
+          const u = document.getElementById('galeriabot-url'), k = document.getElementById('galeriabot-key');
+          if(u) u.value = botwaUrlBase(); if(k) k.value = botwaKey();
+          galeriaBotCargar(true);
+        }
+        function galeriaKB(b){ return b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB'; }
+        async function galeriaBotUso(){
+          const cont = document.getElementById('galeriabot-uso'); if(!cont) return;
+          try{
+            let total = 0, n = 0;
+            for(let d = 0; ; d += 1000){
+              const { data, error } = await tacticalSupabase.from('bot_fotos').select('bytes, bytes_mini').range(d, d + 999);
+              if(error) throw error;
+              (data || []).forEach(f => { total += (Number(f.bytes) || 0) + (Number(f.bytes_mini) || 0); n++; });
+              if(!data || data.length < 1000) break;
+            }
+            const pct = Math.min(100, total / (1000 * 1048576) * 100);
+            cont.innerHTML = '<div style="font-size:0.82rem; color:#475569;">Espacio usado por las fotos del bot: <b>' + galeriaKB(total) + '</b> de 1.000 MB del plan gratis (' + n + ' fotos)</div>'
+              + '<div style="height:8px; background:#e2e8f0; border-radius:4px; margin-top:4px; overflow:hidden;"><div style="height:8px; width:' + pct.toFixed(1) + '%; background:' + (pct > 70 ? '#dc2626' : pct > 40 ? '#d97706' : '#16a34a') + ';"></div></div>';
+          } catch(e){ cont.innerHTML = ''; }
+        }
+        async function galeriaBotCargar(reiniciar){
+          const estado = document.getElementById('galeriabot-estado');
+          const cont = document.getElementById('galeriabot-grid');
+          const masBtn = document.getElementById('galeriabot-mas');
+          if(reiniciar){ galeriaPos = 0; cont.innerHTML = ''; galeriaBotUso(); }
+          estado.innerText = 'Buscando...';
+          try{
+            const texto = (document.getElementById('galeriabot-buscar').value || '').trim();
+            const tipo = document.getElementById('galeriabot-tipo').value;
+            let q = tacticalSupabase.from('bot_fotos').select('*').order('creado', { ascending: false }).range(galeriaPos, galeriaPos + GALERIA_PAGINA - 1);
+            if(tipo) q = q.eq('tipo', tipo);
+            if(texto){ const s = texto.replace(/[,()%]/g, ' '); q = q.or('nombre.ilike.%' + s + '%,celular.ilike.%' + s + '%'); }
+            const { data, error } = await q;
+            if(error) throw error;
+            const fotos = data || [];
+            galeriaPos += fotos.length;
+            if(reiniciar && fotos.length === 0){
+              estado.innerText = '';
+              cont.innerHTML = '<p style="color:#64748b; grid-column:1/-1;">Sin fotos' + (texto || tipo ? ' con ese filtro' : ' registradas todavía (o ya pasaron los 30 días de retención)') + '. Si vienes de la versión anterior, mira "Archivos antiguos" arriba.</p>';
+              masBtn.style.display = 'none'; return;
+            }
+            const rutas = fotos.map(f => f.ruta_mini).filter(Boolean);
+            const firmadas = {};
+            if(rutas.length){
+              const { data: urls } = await tacticalSupabase.storage.from(GALERIA_BUCKET).createSignedUrls(rutas, 3600);
+              (urls || []).forEach(u => { if(u && u.path && u.signedUrl) firmadas[u.path] = u.signedUrl; });
+            }
+            const etiqueta = { original: 'Foto del cliente', preview: 'Previsualización', comprobante: 'Comprobante' };
+            cont.insertAdjacentHTML('beforeend', fotos.map(f => '<div class="data-card" style="padding:8px;">'
+              + '<div style="height:150px; display:flex; align-items:center; justify-content:center; background:#f8fafc; border-radius:6px; overflow:hidden;">' + (firmadas[f.ruta_mini] ? '<img loading="lazy" src="' + firmadas[f.ruta_mini] + '" style="max-width:100%; max-height:150px;">' : '<span style="color:#94a3b8; font-size:0.8rem;">sin miniatura</span>') + '</div>'
+              + '<p style="margin:6px 0 0; font-weight:bold; font-size:0.85em;">' + medidorEsc(f.nombre || 'Sin nombre') + '</p>'
+              + '<p style="margin:2px 0; font-size:0.78em; color:#64748b;">' + medidorEsc(f.celular || '') + ' · ' + (etiqueta[f.tipo] || f.tipo) + '</p>'
+              + '<p style="margin:2px 0; font-size:0.72em; color:#64748b;">' + (f.creado ? new Date(f.creado).toLocaleString('es-CO') : '') + ' · ' + galeriaKB(Number(f.bytes) || 0) + '</p>'
+              + '<div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;"><button class="btn-action" data-ui="none" style="padding:4px 8px; font-size:0.78rem;" onclick="galeriaBotVerGrande(\'' + f.ruta + '\')">Ver grande</button>'
+              + '<label style="font-size:0.75rem; color:#475569; display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" ' + (f.conservar ? 'checked' : '') + ' onchange="galeriaBotConservar(\'' + f.id + '\', this.checked)"> Conservar</label></div>'
+              + '</div>').join(''));
+            estado.innerText = 'Mostrando ' + galeriaPos + ' foto(s).';
+            masBtn.style.display = fotos.length === GALERIA_PAGINA ? '' : 'none';
+          }catch(e){
+            estado.innerText = 'No se pudo cargar la galería: ' + (e.message || e) + '. ¿Ya corriste supabase/migracion_bot_fotos.sql en Supabase?';
+          }
+        }
+        async function galeriaBotVerGrande(ruta){
+          try{
+            const { data, error } = await tacticalSupabase.storage.from(GALERIA_BUCKET).createSignedUrl(ruta, 600);
+            if(error) throw error;
+            window.open(data.signedUrl, '_blank', 'noopener');
+          }catch(e){ alert('No se pudo abrir la foto: ' + (e.message || e)); }
+        }
+        async function galeriaBotConservar(id, valor){
+          const { error } = await tacticalSupabase.from('bot_fotos').update({ conservar: !!valor }).eq('id', id);
+          if(error) alert('No se pudo guardar: ' + error.message);
+        }
+        /* Archivos de ANTES de las miniaturas (se sirven desde el bot, tamaño completo): solo se listan; cada uno se abre al hacer clic. */
+        async function galeriaBotCargarAntiguas(){
           const url = botwaUrlBase(), key = botwaKey();
           const estado = document.getElementById('galeriabot-estado');
           const cont = document.getElementById('galeriabot-grid');
-          if(!url || !key){ estado.innerText = 'Falta configurar la URL y la clave del bot (arriba) y presionar Guardar.'; return; }
-          estado.innerText = 'Buscando...';
+          if(!url || !key){ estado.innerText = 'Falta la URL y la clave del bot (en "Archivos antiguos") y presionar Guardar.'; return; }
+          estado.innerText = 'Buscando archivos antiguos...';
           try{
             const res = await fetch(url + '/api/fotos', { headers: { 'x-api-key': key } });
-            if(!res.ok) throw new Error('HTTP '+res.status);
+            if(!res.ok) throw new Error('HTTP ' + res.status);
             const fotos = await res.json();
-            estado.innerText = `${fotos.length} archivo(s).`;
-            if(fotos.length===0){ cont.innerHTML = '<p style="color:#64748b;">Sin archivos (o ya pasaron los 30 días de retención).</p>'; return; }
-            cont.innerHTML = fotos.map(f => `
-              <div class="data-card">
-                <div id="galeriabot-img-${f.archivo}" style="min-height:120px; display:flex; align-items:center; justify-content:center; color:#64748b; font-size:0.8em;">Cargando...</div>
-                <p style="margin:8px 0 0; font-weight:bold; font-size:0.9em;">${f.nombre || 'Sin nombre'}</p>
-                <p style="margin:2px 0; font-size:0.85em; color:#64748b;">${f.celular || ''}</p>
-                <p style="margin:2px 0; font-size:0.75em; color:#64748b;">${f.creado ? new Date(f.creado).toLocaleString('es-CO') : ''}</p>
-              </div>`).join('');
-            fotos.forEach(f => galeriaBotCargarImagen(f.archivo));
-          }catch(e){
-            estado.innerText = 'No se pudo conectar con el bot: ' + e.message;
-          }
+            estado.innerText = fotos.length + ' archivo(s) antiguo(s). Se abren uno por uno al hacer clic (no se bajan todos).';
+            document.getElementById('galeriabot-mas').style.display = 'none';
+            cont.innerHTML = fotos.map(f => '<div class="data-card" style="padding:8px;"><p style="margin:0; font-weight:bold; font-size:0.85em;">' + medidorEsc(f.nombre || 'Sin nombre') + '</p><p style="margin:2px 0; font-size:0.78em; color:#64748b;">' + medidorEsc(f.celular || '') + '</p><p style="margin:2px 0; font-size:0.72em; color:#64748b;">' + (f.creado ? new Date(f.creado).toLocaleString('es-CO') : '') + '</p><button class="btn-action" data-ui="none" style="padding:4px 8px; font-size:0.78rem;" onclick="galeriaBotAbrirAntigua(\'' + encodeURIComponent(f.archivo) + '\')">Abrir</button></div>').join('');
+          }catch(e){ estado.innerText = 'No se pudo conectar con el bot: ' + e.message; }
         }
-        async function galeriaBotCargarImagen(archivo){
+        async function galeriaBotAbrirAntigua(archivoCodificado){
           const url = botwaUrlBase(), key = botwaKey();
-          const holder = document.getElementById(`galeriabot-img-${archivo}`);
           try{
-            const res = await fetch(`${url}/media/${encodeURIComponent(archivo)}`, { headers: { 'x-api-key': key } });
-            if(!res.ok) throw new Error('HTTP '+res.status);
+            const res = await fetch(url + '/media/' + archivoCodificado, { headers: { 'x-api-key': key } });
+            if(!res.ok) throw new Error('HTTP ' + res.status);
             const blob = await res.blob();
-            const blobUrl = URL.createObjectURL(blob);
-            if(holder) holder.innerHTML = blob.type === 'application/pdf'
-              ? `<a href="${blobUrl}" target="_blank" rel="noopener">${ticon('fileText')}Ver PDF</a>`
-              : `<a href="${blobUrl}" target="_blank" rel="noopener"><img src="${blobUrl}" style="max-width:100%; max-height:200px; border-radius:6px; border:1px solid #e2e8f0;"></a>`;
-          }catch(e){
-            if(holder) holder.innerText = 'No se pudo cargar.';
-          }
+            window.open(URL.createObjectURL(blob), '_blank', 'noopener');
+          }catch(e){ alert('No se pudo abrir: ' + e.message); }
         }
 
         // ==========================================
