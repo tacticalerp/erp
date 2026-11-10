@@ -1014,7 +1014,7 @@
                 <div class="hub-card active-card" onclick="showView('bandeja')">
                     <div>
                         <div class="card-header">
-                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>11A. Bandeja de WhatsApp</h3>
+                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>11A. Bandeja de WhatsApp<span id="bj-card-badge" style="display:none; background:#25d366; color:#fff; border-radius:10px; font-size:0.72rem; padding:1px 8px; margin-left:8px;"></span></h3>
                         </div>
                     </div>
                     <div class="card-footer">Ingresar al Módulo ➔</div>
@@ -5538,6 +5538,19 @@
   .fpanel select{width:100%; padding:6px; border:1px solid #cbd5e0; border-radius:6px; background:#fff; font-size:.82rem}
   .fpanel .lim{grid-column:1/-1; color:var(--wa-green); cursor:pointer; font-weight:600; font-size:.78rem}
   .cuenta{font-weight:700} .cuenta.ok{color:#1fa855} .cuenta.am{color:#dd6b20} .cuenta.rd{color:#c53030} .cuenta.ex{color:#718096}
+  .modal{position:absolute; inset:0; background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center; z-index:30}
+  .modal.on{display:flex}
+  .caja{background:#fff; border-radius:12px; padding:16px; width:min(440px,92%); max-height:88%; overflow:auto; box-shadow:0 8px 30px rgba(0,0,0,.3)}
+  .caja h3{margin:0 0 10px; font-size:1.05rem} .caja .sub{color:var(--wa-sub); font-size:.8rem; margin:0 0 10px}
+  .caja .fila-m{display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--wa-line)}
+  .caja input[type=text], .caja select, .caja textarea{border:1px solid #cbd5e0; border-radius:6px; padding:6px 8px; font:inherit; font-size:.88rem; width:100%}
+  .caja .acciones{display:flex; gap:8px; justify-content:flex-end; margin-top:12px; flex-wrap:wrap}
+  .caja .x{margin-left:auto; color:#c53030; cursor:pointer; font-weight:700; padding:0 6px}
+  .sw{display:inline-block; width:22px; height:22px; border-radius:50%; cursor:pointer; border:3px solid transparent}
+  .sw.on{border-color:#111b21}
+  .chipE{display:inline-block; color:#fff; font-size:.74rem; font-weight:700; padding:2px 9px; border-radius:10px}
+  .ent .ico{cursor:pointer}
+  .ayuda-r{font-size:.74rem; color:var(--wa-green); cursor:pointer; margin-left:auto; padding:2px 8px}
   .vacio{margin:auto; color:var(--wa-sub); text-align:center; padding:20px}
   @media (max-width:900px){
     .app,.app.panel-on{grid-template-columns:minmax(0,1fr); height:calc(100vh - 118px)}
@@ -5571,8 +5584,13 @@
         ];
         const BJ_ETQ = { asesor:['Necesita asesor','as'], conasesor:['Con asesor','co'], pago:['Pago por verificar','pg'], bot:['Atiende el bot','bo'] };
         const BJ_COLORES = ['#6a7175','#a35fd0','#d9822b','#1f8a70','#3b82c4','#c0392b'];
-        let bjRoot = null, bjChats = [], bjSel = null, bjFiltro = 'todas', bjF = {prod:'', tam:'', tipo:''}, bjFabierto = false;
+        let bjRoot = null, bjChats = [], bjSel = null, bjFiltro = 'todas', bjF = {prod:'', tam:'', tipo:'', etq:''}, bjFabierto = false;
         let bjPanel = false, bjModo = 'resp', bjMsgs = [], bjDatos = null, bjTimer = null, bjError = '', bjEstadoRender = '';
+        let bjEtq = [], bjColoresEtq = ['#cc0000','#dd6b20','#d69e2e','#2f855a','#2b6cb0','#6b46c1','#b83280','#4a5568'];
+        let bjRapidas = BJ_RAPIDAS.map(r => ({atajo: r[0], titulo: r[1], texto: r[2]})), bjPlantillas = [];
+        let bjSelEtq = new Set(), bjColorNuevo = '#2b6cb0', bjEditR = [], bjEditP = [], bjNoLeidosPrev = null, bjTituloOriginal = null;
+        function bjSonidoOn(){ try { return localStorage.getItem('bj_sonido') !== '0'; } catch(_){ return true; } }
+        function bjEsAdmin(){ return window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol === 'administrador'; }
         const bjMediaCache = {};
 
         function bjEsc(t){ return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -5623,7 +5641,7 @@
             bjRoot.innerHTML = `<style>${BJ_CSS}</style>
               <div class="app" id="app">
                 <aside class="lista">
-                  <div class="lh"><b>Chats</b><span class="ic" style="cursor:pointer" onclick="bjTick()" title="Actualizar">⟳</span></div>
+                  <div class="lh"><b>Chats</b><span class="ic" style="cursor:pointer"><span id="campana" onclick="bjToggleSonido()" title="Sonido de aviso">🔔</span> <span onclick="bjTick()" title="Actualizar">⟳</span></span></div>
                   <div class="bus"><input id="bus" placeholder="Buscar por nombre o número" oninput="bjPintar()"></div>
                   <div class="chips" id="chips"></div>
                   <div class="fpanel" id="fpanel"></div>
@@ -5631,11 +5649,19 @@
                 </aside>
                 <section class="chat" id="chat"><div class="vacio">Elige un chat de la lista</div></section>
                 <aside class="panel" id="panel"></aside>
+                <div class="modal" id="modal" onclick="if(event.target.id==='modal')bjCerrarModal()"></div>
               </div>`;
           }
           bjDetener();
+          bjCampana();
+          bjCargarAjustes();
           bjTick();
           bjTimer = setInterval(bjTick, 8000);
+        }
+        async function bjCargarAjustes(){
+          try { const e = await bjApi('/api/etiquetas'); bjEtq = e.catalogo || []; if(e.colores) bjColoresEtq = e.colores; } catch(_){}
+          try { const r = await bjApi('/api/respuestas-rapidas'); if(Array.isArray(r) && r.length) bjRapidas = r; } catch(_){}
+          try { bjPlantillas = await bjApi('/api/plantillas'); } catch(_){}
         }
         function bjDetener(){ if(bjTimer){ clearInterval(bjTimer); bjTimer = null; } }
 
@@ -5645,7 +5671,7 @@
           if(document.hidden) return;
           try { bjChats = await bjApi('/api/conversaciones'); bjError = ''; }
           catch(e){ bjError = e.message; }
-          bjPintarLista(); bjPintarChips();
+          bjPintarLista(); bjPintarChips(); bjAvisar();
           if(bjSel && !bjError){
             await bjNuevosMensajes();
             const c = bjChats.find(x => x.phone === bjSel);
@@ -5655,6 +5681,10 @@
           }
         }
 
+        function bjChipsEtq(c){
+          return (c.etiquetas || []).map(id => bjEtq.find(e => e.id === id)).filter(Boolean)
+            .map(e => `<span class="e" style="background:${e.color}">${bjEsc(e.nombre)}</span>`).join('');
+        }
         function bjPintar(){ bjPintarChips(); bjPintarLista(); }
         function bjPintarChips(){
           const defs = [['todas','Todos'],['noleidos','No leídos'],['vencer','Por vencer'],['asesor','Necesitan asesor'],['pago','Pagos'],['conasesor','Con asesor'],['bot','Bot']];
@@ -5664,13 +5694,14 @@
             const n = k === 'todas' ? 0 : cuenta(k);
             const b = n && ['noleidos','asesor','pago','vencer'].includes(k) ? `<i class="${k === 'noleidos' ? '' : 'r'}">${n}</i>` : '';
             return `<span class="chip ${bjFiltro === k ? 'on' : ''}" onclick="bjFiltro='${k}';bjPintar()">${t}${b}</span>`;
-          }).join('') + `<span class="chip ${(bjF.prod || bjF.tam || bjF.tipo) ? 'on' : ''}" onclick="bjFabierto=!bjFabierto;bjPintar()">Filtros ▾</span>`;
+          }).join('') + `<span class="chip ${(bjF.prod || bjF.tam || bjF.tipo || bjF.etq) ? 'on' : ''}" onclick="bjFabierto=!bjFabierto;bjPintar()">Filtros ▾</span>`;
           const fp = bjQ('fpanel'); fp.classList.toggle('on', bjFabierto);
           const sel = (v, arr) => arr.map(([val, t]) => `<option value="${val}" ${v === val ? 'selected' : ''}>${t}</option>`).join('');
           fp.innerHTML = `<div><label>Producto</label><select onchange="bjF.prod=this.value;bjPintar()">${sel(bjF.prod, [['','Todos'],['Rompecabezas','Rompecabezas'],['Rompecabezas con imán','Rompecabezas con imán'],['Imanes publicitarios','Imanes publicitarios'],['Cuadernos','Cuadernos'],['Sin definir','Sin definir']])}</select></div>
             <div><label>Tamaño (fichas)</label><select onchange="bjF.tam=this.value;bjPintar()">${sel(bjF.tam, [['','Todos'],['1-100','Hasta 100'],['101-300','101 a 300'],['301-99999','Más de 300']])}</select></div>
             <div><label>Tipo de cliente</label><select onchange="bjF.tipo=this.value;bjPintar()">${sel(bjF.tipo, [['','Todos'],['Nuevo','Nuevo'],['Recurrente','Recurrente'],['Empresa','Empresa']])}</select></div>
-            <div class="lim" onclick="bjF={prod:'',tam:'',tipo:''};bjPintar()">Limpiar filtros</div>`;
+            <div><label>Etiqueta</label><select onchange="bjF.etq=this.value;bjPintar()">${sel(bjF.etq, [['','Todas']].concat(bjEtq.map(e => [e.id, e.nombre])))}</select></div>
+            <div class="lim" onclick="bjF={prod:'',tam:'',tipo:'',etq:''};bjPintar()">Limpiar filtros</div>`;
         }
         function bjPintarLista(){
           const cont = bjQ('items');
@@ -5679,6 +5710,7 @@
           const okF = c => {
             if(bjF.prod && c.producto !== bjF.prod) return false;
             if(bjF.tipo && c.tipo !== bjF.tipo) return false;
+            if(bjF.etq && !(c.etiquetas || []).includes(bjF.etq)) return false;
             if(bjF.tam){ const [a, b] = bjF.tam.split('-').map(Number); if(!c.fichas || c.fichas < a || c.fichas > b) return false; }
             if(q && !(`${c.nombre || ''} ${c.phone}`.toLowerCase().includes(q))) return false;
             return true;
@@ -5691,7 +5723,7 @@
               <div class="av" style="background:${bjColor(c)}">${bjEsc(bjIni(c))}</div>
               <div class="t"><div class="l1"><span class="nm">${bjEsc(bjNombreChat(c))}</span><span class="hr ${c.noleidos ? 'nl' : ''}">${bjHoraLista(c.ultimoTs)}</span></div>
               <div class="l2"><span class="pv">${pref}${bjEsc(c.ultimoTexto)}</span>${c.noleidos ? `<span class="badge">${c.noleidos}</span>` : ''}</div>
-              <div class="etq"><span class="e ${BJ_ETQ[c.estado][1]}">${BJ_ETQ[c.estado][0]}</span>${c.asignadoA ? `<span class="e ok">${bjEsc(c.asignadoA)}</span>` : ''}<span class="e tg">${bjEsc(c.producto)}${c.fichas ? ' · ' + c.fichas + 'f' : ''}</span><span class="e ${clk}">⏱ ${r.corto}</span></div></div></div>`;
+              <div class="etq"><span class="e ${BJ_ETQ[c.estado][1]}">${BJ_ETQ[c.estado][0]}</span>${c.asignadoA ? `<span class="e ok">${bjEsc(c.asignadoA)}</span>` : ''}<span class="e tg">${bjEsc(c.producto)}${c.fichas ? ' · ' + c.fichas + 'f' : ''}</span>${bjChipsEtq(c)}<span class="e ${clk}">⏱ ${r.corto}</span></div></div></div>`;
           }).join('') || '<div class="vacio">No hay chats aquí.</div>';
         }
 
@@ -5721,7 +5753,7 @@
             cuerpo = media ? `<div class="foto" data-media="${bjEsc(media)}" data-full="${bjEsc(full)}" onclick="bjVerGrande(this)">📷 cargando foto…</div>` : '<div class="foto">📷 imagen</div>';
             if(m.texto) cuerpo += bjEsc(m.texto);
           } else if(m.tipo === 'audio'){ cuerpo = `🎤 <i>Audio</i><br>${bjEsc(m.texto)}`; }
-          else if(m.tipo === 'document'){ cuerpo = `📄 ${bjEsc(m.texto)}`; }
+          else if(m.tipo === 'document'){ cuerpo = full ? `<a href="#" data-full="${bjEsc(full)}" onclick="event.preventDefault();bjVerGrande(this)" style="color:#0a6e3a;font-weight:600">📄 ${bjEsc(m.texto)}</a>` : `📄 ${bjEsc(m.texto)}`; }
           else { cuerpo = bjEsc(m.texto); }
           const tk = m.by === 'cliente' ? '' : '<span class="tk">✓✓</span>';
           return `<div class="m ${cls}">${who}<div style="white-space:pre-wrap">${cuerpo}</div><div class="h">${hr} ${tk}</div></div>`;
@@ -5743,14 +5775,14 @@
           bjEstadoRender = c.estado + (c.asignadoA || '');
           const vencida = bjRest(c) <= 0;
           let entrada;
-          if(vencida) entrada = `<div class="bloqueo"><span>⏱ Pasaron más de 24 h desde el último mensaje del cliente. WhatsApp solo permite enviarle una <b>plantilla aprobada</b>; las plantillas aún no están activas en esta bandeja.</span></div>`;
-          else if(tomado) entrada = `<div class="modo"><span class="${bjModo === 'resp' ? 'on' : ''}" onclick="bjModo='resp';bjPintarChat()">Responder al cliente</span><span class="n ${bjModo === 'nota' ? 'on' : ''}" onclick="bjModo='nota';bjPintarChat()">Nota interna</span></div>
-            <div class="ent"><div class="rapidas" id="rap"></div><textarea id="txt" rows="1" placeholder="${bjModo === 'nota' ? 'Nota interna (el cliente no la ve)' : 'Escribe un mensaje o / para respuestas rápidas'}" oninput="bjRap()" onkeydown="if(event.key==='Enter'&&!event.shiftKey&&window.innerWidth>900){event.preventDefault();bjEnviar();}"></textarea><button class="env" onclick="bjEnviar()">➤</button></div>`;
+          if(vencida) entrada = `<div class="bloqueo"><span>⏱ Pasaron más de 24 h desde el último mensaje del cliente. WhatsApp solo permite enviarle una <b>plantilla aprobada</b>.</span>${tomado ? '<button class="bt v" onclick="bjAbrirPlantillas()">Enviar plantilla</button>' : '<button class="bt v" onclick="bjTomar()">Tomar este chat</button>'}</div>`;
+          else if(tomado) entrada = `<div class="modo"><span class="${bjModo === 'resp' ? 'on' : ''}" onclick="bjModo='resp';bjPintarChat()">Responder al cliente</span><span class="n ${bjModo === 'nota' ? 'on' : ''}" onclick="bjModo='nota';bjPintarChat()">Nota interna</span><span class="ayuda-r" id="estado-env"></span><span class="ayuda-r" onclick="bjAbrirEditorRapidas()">✎ Respuestas rápidas</span></div>
+            <div class="ent"><div class="rapidas" id="rap"></div><span class="ico" title="Adjuntar foto o documento" onclick="bjQ('arch').click()">📎</span><input type="file" id="arch" style="display:none" accept="image/jpeg,image/png,image/webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt" onchange="bjArchivoElegido(this)"><textarea id="txt" rows="1" placeholder="${bjModo === 'nota' ? 'Nota interna (el cliente no la ve)' : 'Escribe un mensaje o / para respuestas rápidas'}" oninput="bjRap()" onkeydown="if(event.key==='Enter'&&!event.shiftKey&&window.innerWidth>900){event.preventDefault();bjEnviar();}"></textarea><button class="env" onclick="bjEnviar()">➤</button></div>`;
           else entrada = `<div class="bloqueo"><span>${c.estado === 'bot' ? '🤖 El bot atiende este chat.' : '🔔 Este chat necesita a una persona.'} Para escribirle tú, toma el chat: el bot se pausa solo.</span><button class="bt v" onclick="bjTomar()">Tomar este chat</button></div>`;
           h.innerHTML = `
             <div class="ch"><span class="volver" onclick="bjCerrar()">←</span><div class="av" style="background:${bjColor(c)}">${bjEsc(bjIni(c))}</div>
               <div class="info" onclick="bjTogglePanel()"><b>${bjEsc(bjNombreChat(c))}</b><small>${bjTel(c.phone)} · toca para ver datos del pedido</small></div>
-              <div class="acc">${tomado ? '<button class="bt g" onclick="bjDevolver()">Devolver al bot</button><button class="bt g" onclick="bjResolver()">✓ Resuelto</button>' : ''}<button class="bt g" onclick="bjTogglePanel()">Pedido / lead</button></div></div>
+              <div class="acc">${tomado ? '<button class="bt g" onclick="bjDevolver()">Devolver al bot</button><button class="bt g" onclick="bjResolver()">✓ Resuelto</button>' : ''}<button class="bt g" onclick="bjAbrirEtiquetas()">🏷 Etiquetas</button><button class="bt g" onclick="bjTogglePanel()">Pedido / lead</button></div></div>
             <div class="banda" id="banda"></div>
             <div class="msgs" id="msgs">${bjHtmlMensajes(c)}</div>${entrada}`;
           if(bjQ('txt')) bjQ('txt').value = borrador;
@@ -5761,7 +5793,7 @@
         function bjActualizarBanda(c){
           const b = bjQ('banda'); if(!b) return;
           const r = bjFmtRest(c), tomado = c.estado === 'conasesor';
-          b.innerHTML = `<span>${bjEsc(c.motivo || 'Sin pendientes')}</span><span>⏱ <span class="cuenta ${r.cls}">${r.txt}</span></span><span class="bot">${tomado ? '🔇 Bot en pausa · lo atiende ' + bjEsc(c.asignadoA || '—') : '🤖 Bot activo'}</span>`;
+          b.innerHTML = `<span>${bjEsc(c.motivo || 'Sin pendientes')}</span><span>⏱ <span class="cuenta ${r.cls}">${r.txt}</span></span><span class="bot">${tomado ? '🔇 Bot en pausa · lo atiende ' + bjEsc(c.asignadoA || '—') : '🤖 Bot activo'}</span>${bjChipsEtq(c) ? `<span>${bjChipsEtq(c).replace(/class="e"/g, 'class="chipE"')}</span>` : ''}`;
         }
         async function bjNuevosMensajes(){
           const ult = bjMsgs.length ? bjMsgs[bjMsgs.length - 1].ts : 0;
@@ -5823,6 +5855,7 @@
             const fotos = [['Foto original', ped.fotos.original], ['Previsualización', ped.fotos.preview], ['Comprobante', ped.fotos.comprobante]].filter(x => x[1]);
             if(fotos.length) h += `<div class="sec"><h4>Fotos del pedido</h4><div class="mini">${fotos.map(([t, n]) => `<div class="foto" data-media="${bjEsc(n)}" data-full="${bjEsc(n)}" onclick="bjVerGrande(this)" style="height:62px;font-size:.66rem">${t}</div>`).join('')}</div></div>`;
             if(!ped.aprobado && ped.fotos.comprobante) h += `<div class="sec"><button class="pbt v" onclick="bjAprobar('${ped.id}')">✔ Ya verifiqué el pago — Aprobar</button></div>`;
+            if(ped.aprobado) h += `<div class="sec"><button class="pbt v" onclick="bjAbrirKanban()">Abrir en el Kanban</button></div>`;
           } else if(d && d.lead){
             h += `<div class="sec"><h4>Caso para asesor</h4><p style="margin:0 0 8px">${bjEsc(d.lead.motivo)}</p>${d.lead.cantidadAprox ? fila('Cantidad aprox.', d.lead.cantidadAprox + ' unidades') : ''}</div>`;
           } else {
@@ -5837,12 +5870,12 @@
           const t = bjQ('txt'), r = bjQ('rap'); if(!t || !r) return;
           if(bjModo === 'resp' && t.value.startsWith('/')){
             const q = t.value.slice(1).toLowerCase();
-            const l = BJ_RAPIDAS.filter(x => x[1].toLowerCase().includes(q) || x[0].includes(q));
-            r.innerHTML = l.map(x => `<div onclick="bjUsarRap('${x[0]}')"><b>/${x[0]}</b> · ${bjEsc(x[1])}<br><small style="color:var(--wa-sub)">${bjEsc(x[2].slice(0, 70))}…</small></div>`).join('');
+            const l = bjRapidas.filter(x => (x.titulo || '').toLowerCase().includes(q) || x.atajo.includes(q));
+            r.innerHTML = l.map(x => `<div onclick="bjUsarRap('${bjEsc(x.atajo)}')"><b>/${bjEsc(x.atajo)}</b> · ${bjEsc(x.titulo)}<br><small style="color:var(--wa-sub)">${bjEsc(x.texto.slice(0, 70))}…</small></div>`).join('') || '<div style="color:#667781">Sin coincidencias</div>';
             r.classList.add('on');
           } else r.classList.remove('on');
         }
-        function bjUsarRap(k){ const x = BJ_RAPIDAS.find(r => r[0] === k); bjQ('txt').value = x[2]; bjQ('rap').classList.remove('on'); bjQ('txt').focus(); }
+        function bjUsarRap(k){ const x = bjRapidas.find(r => r.atajo === k); if(!x) return; bjQ('txt').value = x.texto; bjQ('rap').classList.remove('on'); bjQ('txt').focus(); }
 
         async function bjAccion(ruta, cuerpo){
           try { await bjApi(`/api/conversaciones/${bjSel}/${ruta}`, {method:'POST', body: JSON.stringify(Object.assign({nombre: bjNombreUsuario()}, cuerpo || {}))}); }
@@ -5864,6 +5897,166 @@
           t.value = ''; await bjRecargarTodo();
           const nt = bjQ('txt'); if(nt) nt.focus();
         }
+        // ---------- Etiquetas personalizadas ----------
+        function bjAbrirModal(html){ const m = bjQ('modal'); m.innerHTML = `<div class="caja">${html}</div>`; m.classList.add('on'); }
+        function bjCerrarModal(){ const m = bjQ('modal'); if(m){ m.classList.remove('on'); m.innerHTML = ''; } }
+        function bjAbrirEtiquetas(){
+          const c = bjChats.find(x => x.phone === bjSel); if(!c) return;
+          bjSelEtq = new Set(c.etiquetas || []); bjPintarModalEtq();
+        }
+        function bjPintarModalEtq(){
+          const filas = bjEtq.map(e => `<div class="fila-m"><input type="checkbox" ${bjSelEtq.has(e.id) ? 'checked' : ''} onchange="this.checked ? bjSelEtq.add('${e.id}') : bjSelEtq.delete('${e.id}')"><span class="chipE" style="background:${e.color}">${bjEsc(e.nombre)}</span><span class="x" title="Borrar esta etiqueta de todos los chats" onclick="bjBorrarEtq('${e.id}')">✕</span></div>`).join('')
+            || '<p class="sub">Aún no hay etiquetas. Crea la primera abajo (ej. «Colegio», «Cliente VIP», «Pago pendiente»).</p>';
+          bjAbrirModal(`<h3>Etiquetas del chat</h3><p class="sub">Marca las que apliquen a este cliente. Puedes crear o borrar etiquetas cuando lo necesites.</p>${filas}
+            <h3 style="margin-top:14px;font-size:.92rem">Crear etiqueta nueva</h3>
+            <input type="text" id="netq" maxlength="24" placeholder="Nombre (máx. 24 letras)">
+            <div style="margin:8px 0">${bjColoresEtq.map(col => `<span class="sw ${col === bjColorNuevo ? 'on' : ''}" style="background:${col}" onclick="bjColorNuevo='${col}';bjPintarModalEtq()"></span>`).join(' ')}</div>
+            <div class="acciones"><button class="bt g" onclick="bjCrearEtq()">+ Crear</button><button class="bt g" onclick="bjCerrarModal()">Cancelar</button><button class="bt v" onclick="bjGuardarEtq()">Guardar</button></div>`);
+        }
+        async function bjCrearEtq(){
+          const nombre = (bjQ('netq').value || '').trim(); if(!nombre) return;
+          try { const e = await bjApi('/api/etiquetas', {method:'POST', body: JSON.stringify({nombre, color: bjColorNuevo})}); bjEtq.push(e); bjSelEtq.add(e.id); bjPintarModalEtq(); }
+          catch(err){ alert(err.message); }
+        }
+        async function bjBorrarEtq(id){
+          const e = bjEtq.find(x => x.id === id); if(!e) return;
+          if(!confirm(`¿Borrar la etiqueta «${e.nombre}»? Se quita de TODOS los chats que la tengan.`)) return;
+          try { await bjApi('/api/etiquetas/' + id, {method:'DELETE'}); bjEtq = bjEtq.filter(x => x.id !== id); bjSelEtq.delete(id); if(bjF.etq === id) bjF.etq = ''; bjPintarModalEtq(); bjTick(); }
+          catch(err){ alert(err.message); }
+        }
+        async function bjGuardarEtq(){
+          try { await bjApi(`/api/conversaciones/${bjSel}/etiquetas`, {method:'POST', body: JSON.stringify({ids: [...bjSelEtq]})}); bjCerrarModal(); await bjTick(); const c = bjChats.find(x => x.phone === bjSel); if(c) bjActualizarBanda(c); }
+          catch(err){ alert(err.message); }
+        }
+
+        // ---------- Adjuntar foto o documento ----------
+        function bjLeerBase64(blob){
+          return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.onerror = () => rej(new Error('No se pudo leer el archivo')); fr.readAsDataURL(blob); });
+        }
+        // WhatsApp acepta JPG/PNG de hasta 5 MB: las fotos grandes se reducen aquí (lado máx. 2000 px) antes de enviarlas.
+        async function bjImagenOptimizada(file){
+          if(file.type === 'image/png' && file.size < 1800000) return {blob: file, mime: 'image/png', nombre: file.name};
+          if(file.type === 'image/jpeg' && file.size < 1800000) return {blob: file, mime: 'image/jpeg', nombre: file.name};
+          const bmp = await createImageBitmap(file);
+          const esc = Math.min(1, 2000 / Math.max(bmp.width, bmp.height));
+          const cv = document.createElement('canvas'); cv.width = Math.round(bmp.width * esc); cv.height = Math.round(bmp.height * esc);
+          const ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height); ctx.drawImage(bmp, 0, 0, cv.width, cv.height);
+          const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.85));
+          return {blob, mime: 'image/jpeg', nombre: file.name.replace(/\.[^.]+$/, '') + '.jpg'};
+        }
+        async function bjArchivoElegido(inp){
+          const file = inp.files && inp.files[0]; inp.value = ''; if(!file) return;
+          const est = bjQ('estado-env'); const caption = (bjQ('txt') && bjModo === 'resp') ? bjQ('txt').value.trim() : '';
+          try {
+            let tipo, blob = file, mime = file.type, nombre = file.name;
+            if(file.type.startsWith('image/')){ tipo = 'image'; const o = await bjImagenOptimizada(file); blob = o.blob; mime = o.mime; nombre = o.nombre; }
+            else { tipo = 'document'; if(file.size > 15 * 1024 * 1024) throw new Error('El documento pesa más de 15 MB'); }
+            if(est) est.textContent = 'Enviando ' + nombre + '…';
+            const base64 = await bjLeerBase64(blob);
+            await bjApi(`/api/conversaciones/${bjSel}/enviar-archivo`, {method:'POST', body: JSON.stringify({tipo, base64, mime, filename: nombre, caption, nombre: bjNombreUsuario()})});
+            if(bjQ('txt')) bjQ('txt').value = '';
+            await bjRecargarTodo();
+          } catch(e){ alert('No se pudo enviar el archivo: ' + e.message); if(est) est.textContent = ''; }
+        }
+
+        // ---------- Plantillas de WhatsApp (ventana de 24 h cerrada) ----------
+        function bjAbrirPlantillas(){
+          const c = bjChats.find(x => x.phone === bjSel); if(!c) return;
+          if(!bjPlantillas.length){
+            bjAbrirModal(`<h3>Plantillas de WhatsApp</h3><p class="sub">Aún no hay plantillas registradas. Una plantilla se crea y la aprueba Meta en WhatsApp Manager; después se registra aquí con su nombre exacto.</p>
+              <div class="acciones">${bjEsAdmin() ? '<button class="bt v" onclick="bjAbrirEditorPlantillas()">Registrar plantillas</button>' : ''}<button class="bt g" onclick="bjCerrarModal()">Cerrar</button></div>`);
+            return;
+          }
+          bjAbrirModal(`<h3>Enviar plantilla</h3><p class="sub">Pasaron más de 24 h: solo se puede iniciar la conversación con una plantilla aprobada.</p>
+            <select id="plsel" onchange="bjPintarParamsPl()">${bjPlantillas.map(p => `<option value="${p.id}">${bjEsc(p.nombre)}</option>`).join('')}</select>
+            <div id="plprev" style="background:#f0f2f5;border-radius:8px;padding:8px;margin:10px 0;font-size:.88rem"></div><div id="plpar"></div>
+            <div class="acciones">${bjEsAdmin() ? '<button class="bt g" onclick="bjAbrirEditorPlantillas()">Editar plantillas</button>' : ''}<button class="bt g" onclick="bjCerrarModal()">Cancelar</button><button class="bt v" onclick="bjEnviarPlantilla()">Enviar</button></div>`);
+          bjPintarParamsPl();
+        }
+        function bjPintarParamsPl(){
+          const p = bjPlantillas.find(x => x.id === bjQ('plsel').value); if(!p) return;
+          const c = bjChats.find(x => x.phone === bjSel);
+          bjQ('plprev').textContent = p.texto;
+          bjQ('plpar').innerHTML = Array.from({length: p.parametros}, (_, i) => `<label style="font-size:.78rem;color:#667781">Dato ${i + 1}</label><input type="text" id="plp${i}" value="${i === 0 && c && c.nombre ? bjEsc(c.nombre.split(' ')[0]) : ''}" style="margin-bottom:6px">`).join('');
+        }
+        async function bjEnviarPlantilla(){
+          const p = bjPlantillas.find(x => x.id === bjQ('plsel').value); if(!p) return;
+          const parametros = Array.from({length: p.parametros}, (_, i) => (bjQ('plp' + i).value || '').trim());
+          try { await bjApi(`/api/conversaciones/${bjSel}/enviar-plantilla`, {method:'POST', body: JSON.stringify({plantillaId: p.id, parametros, nombre: bjNombreUsuario()})}); bjCerrarModal(); await bjRecargarTodo(); }
+          catch(e){ alert(e.message); }
+        }
+        function bjAbrirEditorPlantillas(){
+          if(!bjEditP.length) bjEditP = bjPlantillas.map(p => Object.assign({}, p));
+          const filas = bjEditP.map((p, i) => `<div style="border:1px solid #e9edef;border-radius:8px;padding:8px;margin-bottom:8px">
+            <div style="display:flex;gap:6px"><input type="text" value="${bjEsc(p.nombre)}" placeholder="nombre exacto en Meta" onchange="bjEditP[${i}].nombre=this.value"><input type="text" value="${bjEsc(p.idioma)}" style="width:70px" onchange="bjEditP[${i}].idioma=this.value"><input type="text" value="${p.parametros}" style="width:50px" title="Cantidad de datos {{1}},{{2}}…" onchange="bjEditP[${i}].parametros=this.value"><span class="x" onclick="bjEditP.splice(${i},1);bjAbrirEditorPlantillas()">✕</span></div>
+            <textarea rows="2" placeholder="Texto tal como lo aprobó Meta, con {{1}} para los datos" style="margin-top:6px" onchange="bjEditP[${i}].texto=this.value">${bjEsc(p.texto)}</textarea></div>`).join('');
+          bjAbrirModal(`<h3>Plantillas de WhatsApp</h3><p class="sub">Registra aquí solo las plantillas YA APROBADAS en WhatsApp Manager (nombre exacto, idioma y cantidad de datos).</p>${filas || '<p class="sub">Ninguna todavía.</p>'}
+            <div class="acciones"><button class="bt g" onclick="bjEditP.push({nombre:'',idioma:'es',texto:'',parametros:0});bjAbrirEditorPlantillas()">+ Agregar</button><button class="bt g" onclick="bjEditP=[];bjCerrarModal()">Cancelar</button><button class="bt v" onclick="bjGuardarPlantillas()">Guardar</button></div>`);
+        }
+        async function bjGuardarPlantillas(){
+          try { bjPlantillas = await bjApi('/api/plantillas', {method:'PUT', body: JSON.stringify({lista: bjEditP})}); bjEditP = []; bjCerrarModal(); }
+          catch(e){ alert(e.message); }
+        }
+
+        // ---------- Respuestas rápidas editables ----------
+        function bjAbrirEditorRapidas(){
+          if(!bjEditR.length) bjEditR = bjRapidas.map(r => Object.assign({}, r));
+          const filas = bjEditR.map((r, i) => `<div style="border:1px solid #e9edef;border-radius:8px;padding:8px;margin-bottom:8px">
+            <div style="display:flex;gap:6px"><input type="text" value="${bjEsc(r.atajo)}" style="width:110px" placeholder="atajo" onchange="bjEditR[${i}].atajo=this.value"><input type="text" value="${bjEsc(r.titulo)}" placeholder="título" onchange="bjEditR[${i}].titulo=this.value"><span class="x" onclick="bjEditR.splice(${i},1);bjAbrirEditorRapidas()">✕</span></div>
+            <textarea rows="2" style="margin-top:6px" onchange="bjEditR[${i}].texto=this.value">${bjEsc(r.texto)}</textarea></div>`).join('');
+          bjAbrirModal(`<h3>Respuestas rápidas</h3><p class="sub">Se usan escribiendo <b>/</b> y el atajo en la caja de mensaje. Las ven todos los asesores.</p>${filas}
+            <div class="acciones"><button class="bt g" onclick="bjEditR.push({atajo:'',titulo:'',texto:''});bjAbrirEditorRapidas()">+ Agregar</button><button class="bt g" onclick="bjEditR=[];bjCerrarModal()">Cancelar</button><button class="bt v" onclick="bjGuardarRapidas()">Guardar</button></div>`);
+        }
+        async function bjGuardarRapidas(){
+          try { const r = await bjApi('/api/respuestas-rapidas', {method:'PUT', body: JSON.stringify({lista: bjEditR})}); bjRapidas = r; bjEditR = []; bjCerrarModal(); }
+          catch(e){ alert(e.message); }
+        }
+
+        // ---------- Avisos: sonido, título de la pestaña y contador en la tarjeta del Hub ----------
+        function bjCampana(){ const el = bjQ('campana'); if(el) el.textContent = bjSonidoOn() ? '🔔' : '🔕'; }
+        function bjToggleSonido(){
+          const on = !bjSonidoOn(); try { localStorage.setItem('bj_sonido', on ? '1' : '0'); } catch(_){}
+          bjCampana();
+          if(on && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+          if(on) bjBeep();
+        }
+        function bjBeep(){
+          try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)(), o = ctx.createOscillator(), g = ctx.createGain();
+            o.type = 'sine'; o.frequency.value = 880; g.gain.value = 0.08; o.connect(g); g.connect(ctx.destination);
+            o.start(); o.frequency.setValueAtTime(1175, ctx.currentTime + 0.12); o.stop(ctx.currentTime + 0.28);
+          } catch(_){}
+        }
+        function bjAvisar(){
+          const total = bjChats.reduce((n, c) => n + (c.phone === bjSel && document.getElementById('view-bandeja').classList.contains('active-view') ? 0 : (c.noleidos || 0)), 0);
+          const badge = document.getElementById('bj-card-badge');
+          if(badge){ badge.textContent = total; badge.style.display = total ? 'inline-block' : 'none'; }
+          if(bjTituloOriginal === null) bjTituloOriginal = document.title.replace(/^\(\d+\)\s*/, '');
+          document.title = (total ? `(${total}) ` : '') + bjTituloOriginal;
+          if(bjNoLeidosPrev !== null && total > bjNoLeidosPrev){
+            if(bjSonidoOn()) bjBeep();
+            if(document.hidden && 'Notification' in window && Notification.permission === 'granted'){
+              try { new Notification('WhatsApp · Tactical', {body: `${total} mensaje(s) sin leer en la bandeja`}); } catch(_){}
+            }
+          }
+          bjNoLeidosPrev = total;
+        }
+        // Con la bandeja cerrada, cada 20 s se consulta solo la lista para avisar si llegó algo nuevo (solo administrador/comercial).
+        async function bjFondo(){
+          const perfil = window.tacticalUsuarioPerfil;
+          if(!perfil || !['administrador', 'comercial'].includes(perfil.rol)) return;
+          const vista = document.getElementById('view-bandeja');
+          if(vista && vista.classList.contains('active-view')) return;
+          if(!botwaUrlBase() || !botwaKey()) return;
+          try { bjChats = await bjApi('/api/conversaciones'); bjAvisar(); } catch(_){}
+        }
+        setInterval(bjFondo, 20000);
+        function bjAbrirKanban(){
+          const c = bjChats.find(x => x.phone === bjSel);
+          showView('kanban');
+          setTimeout(() => { const b = document.getElementById('kb-buscador'); if(b && c && c.nombre){ b.value = c.nombre; if(typeof renderKanban === 'function') renderKanban(); } }, 400);
+        }
+
         async function bjAprobar(id){
           if(typeof botwaCargarPedidos !== 'function'){ alert('Abre la sección Bot WhatsApp una vez para activar la aprobación.'); return; }
           await botwaCargarPedidos();
