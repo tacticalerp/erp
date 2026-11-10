@@ -51,3 +51,8 @@ estacion_diseno/__pycache__/
 # Plantillas de referencia bajadas de templatemaker.nl (2026-10-17): su licencia permite usarlas para empaque/impresion
 # pero NO compartirlas ni incluirlas en publicaciones digitales -- el repo es publico, asi que no se suben.
 cajas_laser/referencia_templatemaker/
+
+# Codigos de recuperacion y claves: NUNCA al repo (es publico)
+*recovery*codes*
+*codigos*recuperacion*
+mockup_*.html

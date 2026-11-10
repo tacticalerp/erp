@@ -544,6 +544,17 @@
             #view-corte #corte-kpis .kpi-value { font-size: 1.25rem; }
             #view-corte #corte-svg { margin-top: 8px !important; padding: 4px !important; }
         }
+        /* Bandeja de WhatsApp en celular: encabezado mínimo para dar espacio al chat. */
+        @media (max-width: 768px) {
+            body:has(#view-bandeja.active-view) header { padding: 6px 10px; gap: 4px 8px; justify-content: space-between; text-align: left; }
+            body:has(#view-bandeja.active-view) header > div:first-child { flex: 1 1 100%; }
+            body:has(#view-bandeja.active-view) header h2 { font-size: 0.95rem; width: auto; justify-content: flex-start; }
+            body:has(#view-bandeja.active-view) #app-header-sub, body:has(#view-bandeja.active-view) #tactical-usuario-nombre { display: none; }
+            body:has(#view-bandeja.active-view) #tactical-usuario-barra { order: 2; }
+            body:has(#view-bandeja.active-view) #nav-hub-container { order: 3; }
+            body:has(#view-bandeja.active-view) .nav-btn-hub { padding: 4px 10px; font-size: 0.78rem; }
+            #view-bandeja > div { padding: 0 !important; }
+        }
         /* MÓVIL */
         @media (max-width: 768px) {
             body { padding: 4px; }
@@ -994,6 +1005,16 @@
                     <div>
                         <div class="card-header">
                             <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>Bot WhatsApp (Rompecabezas)</h3>
+                        </div>
+                    </div>
+                    <div class="card-footer">Ingresar al Módulo ➔</div>
+                </div>
+
+                <!-- MÓDULO 11A: BANDEJA DE WHATSAPP -- Conde 2026-11-10: un solo punto de atención (bot + asesores) -->
+                <div class="hub-card active-card" onclick="showView('bandeja')">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>11A. Bandeja de WhatsApp</h3>
                         </div>
                     </div>
                     <div class="card-footer">Ingresar al Módulo ➔</div>
@@ -2561,6 +2582,13 @@
             </div>
         </div>
 
+        <!-- VISTA: BANDEJA DE WHATSAPP (Conde 2026-11-10). Se dibuja dentro de un Shadow DOM (ver bjInit). -->
+        <div id="view-bandeja" class="app-view">
+            <div style="padding:6px 8px;">
+                <div id="bj-host" style="max-width:1500px; margin:0 auto; border-radius:8px; overflow:hidden; border:1px solid #2d3748; background:#fff;"></div>
+            </div>
+        </div>
+
         <!-- VISTA: GALERÍA DE FOTOS DEL BOT (Rompecabezas B2C) -- Conde 2026-09-23: comercial y diseño
              necesitan entrar a ver las fotos/comprobantes sin el login del proyecto de Supabase, que
              expondría todo el ERP. Reusa la misma URL/clave del bot que ya se guarda para "Bot WhatsApp". -->
@@ -2681,6 +2709,7 @@
             precios: ['administrador', 'produccion', 'contabilidad', 'comercial', 'diseno'],
             fototeca: ['administrador', 'diseno', 'comercial'],
             botwa: ['administrador', 'comercial'],
+            bandeja: ['administrador', 'comercial'],
             galeriabot: ['administrador', 'comercial', 'diseno'],
             comercial: ['administrador', 'comercial'],
         };
@@ -3030,6 +3059,11 @@
                 mainTitle.innerText = "BOT WHATSAPP";
                 subTitle.innerText = "Pedidos de Rompecabezas B2C entrados por WhatsApp — verificación de pago y aprobación (2026)";
                 if (typeof botwaInit === 'function') botwaInit();
+            } else if (viewId === 'bandeja') {
+                navContainer.style.display = 'block';
+                mainTitle.innerText = "BANDEJA DE WHATSAPP";
+                subTitle.innerText = "Un solo lugar para el bot y los asesores (2026)";
+                if (typeof bjInit === 'function') bjInit();
             } else if (viewId === 'galeriabot') {
                 navContainer.style.display = 'block';
                 mainTitle.innerText = "GALERÍA FOTOS BOT ROMPECABEZAS";
@@ -5406,6 +5440,438 @@
           renderBotwaLista();
           botwaConsultarInterruptor();
         }
+        const BJ_CSS = `:host{display:block; font-family:"Segoe UI",Helvetica,Arial,sans-serif; color:#111b21}
+
+  :host{
+    --wa-green:#008069; --wa-accent:#25d366; --wa-bg:#f0f2f5; --wa-line:#e9edef; --wa-text:#111b21; --wa-sub:#667781;
+    --wa-out:#d9fdd3; --wa-in:#ffffff; --wa-chat:#efeae2; --bot:#e7f1fb; --tick:#53bdeb; --warn:#fff5c4; --red:#cc0000;
+  }
+  *{box-sizing:border-box}
+  .app{display:grid; grid-template-columns:380px 1fr; height:calc(100vh - 150px); min-height:560px; max-width:1500px; margin:0 auto; background:#fff; position:relative; overflow:hidden}
+  .app.panel-on{grid-template-columns:380px 1fr 340px}
+  /* ===== lista ===== */
+  .lista{display:flex; flex-direction:column; border-right:1px solid var(--wa-line); min-height:0; background:#fff}
+  .lh{background:var(--wa-bg); padding:10px 14px; display:flex; align-items:center; justify-content:space-between; height:59px}
+  .lh b{font-size:1.05rem} .lh .ic{color:#54656f; letter-spacing:10px}
+  .bus{padding:7px 10px; background:#fff}
+  .bus input{width:100%; border:none; background:var(--wa-bg); border-radius:8px; padding:8px 12px; font-size:.9rem}
+  .chips{display:flex; gap:6px; padding:2px 10px 8px; flex-wrap:wrap; background:#fff}
+  .chip{background:var(--wa-bg); color:var(--wa-sub); border-radius:16px; padding:4px 11px; font-size:.82rem; cursor:pointer}
+  .chip.on{background:#d9fdd3; color:#0a6e3a; font-weight:600}
+  .chip i{font-style:normal; background:var(--wa-accent); color:#fff; border-radius:9px; padding:0 6px; margin-left:4px; font-size:.7rem}
+  .chip i.r{background:var(--red)}
+  .items{overflow-y:auto; flex:1}
+  .it{display:flex; gap:12px; padding:0 14px; cursor:pointer; align-items:center}
+  .it:hover{background:var(--wa-bg)} .it.sel{background:var(--wa-bg)}
+  .av{width:49px; height:49px; border-radius:50%; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:1rem; flex:0 0 49px; margin:10px 0}
+  .it .t{flex:1; min-width:0; padding:11px 0; border-bottom:1px solid var(--wa-line)}
+  .it .l1{display:flex; justify-content:space-between; align-items:baseline}
+  .it .nm{font-size:1rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .it .hr{font-size:.75rem; color:var(--wa-sub)} .it .hr.nl{color:#1fa855; font-weight:600}
+  .it .l2{display:flex; justify-content:space-between; align-items:center; margin-top:2px; gap:6px}
+  .it .pv{font-size:.88rem; color:var(--wa-sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .badge{background:var(--wa-accent); color:#fff; border-radius:11px; min-width:20px; height:20px; font-size:.72rem; display:flex; align-items:center; justify-content:center; padding:0 6px; font-weight:700}
+  .etq{display:flex; gap:4px; margin-top:3px; flex-wrap:wrap}
+  .e{font-size:.66rem; font-weight:700; padding:1px 7px; border-radius:9px; color:#fff}
+  .e.as{background:var(--red)} .e.co{background:#2b6cb0} .e.pg{background:#dd6b20} .e.bo{background:#8696a0} .e.ok{background:#1fa855}
+  /* ===== chat ===== */
+  .chat{display:flex; flex-direction:column; min-height:0; background:var(--wa-chat); position:relative}
+  .ch{background:var(--wa-bg); padding:8px 14px; display:flex; align-items:center; gap:12px; height:59px; border-bottom:1px solid var(--wa-line)}
+  .ch .av{margin:0; width:40px; height:40px; flex-basis:40px; font-size:.9rem}
+  .ch .info{flex:1; min-width:0; cursor:pointer} .ch .info b{display:block; font-size:1rem}
+  .ch .info small{color:var(--wa-sub); font-size:.78rem; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .ch .info b{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .ch .acc{display:flex; gap:6px; align-items:center}
+  .bt{border:none; border-radius:18px; padding:7px 13px; font-size:.82rem; cursor:pointer; font-weight:600}
+  .bt.v{background:var(--wa-green); color:#fff} .bt.g{background:#e9edef; color:#3b4a54} .bt.r{background:var(--red); color:#fff}
+  .volver{display:none; font-size:1.3rem; cursor:pointer; color:#54656f; padding-right:4px}
+  .banda{background:#fff; font-size:.8rem; padding:6px 14px; display:flex; gap:14px; flex-wrap:wrap; border-bottom:1px solid var(--wa-line); color:#3b4a54}
+  .banda .v{color:#1fa855; font-weight:600} .banda .bot{font-weight:600}
+  .msgs{flex:1; overflow-y:auto; padding:14px 8% 10px; display:flex; flex-direction:column; gap:3px;
+        background-image:radial-gradient(rgba(0,0,0,.035) 1px, transparent 1px); background-size:18px 18px}
+  .dia{align-self:center; background:#fff; color:#54656f; font-size:.74rem; padding:4px 11px; border-radius:7px; margin:8px 0; box-shadow:0 1px .5px rgba(0,0,0,.08)}
+  .m{max-width:66%; padding:6px 8px 4px 9px; border-radius:8px; font-size:.92rem; line-height:1.32; box-shadow:0 1px .5px rgba(0,0,0,.13); position:relative; margin-top:6px}
+  .m.in{background:var(--wa-in); align-self:flex-start; border-top-left-radius:0}
+  .m.out{background:var(--wa-out); align-self:flex-end; border-top-right-radius:0}
+  .m.bot{background:var(--bot); align-self:flex-end; border-top-right-radius:0}
+  .m .q{font-size:.72rem; font-weight:700; margin-bottom:1px}
+  .m.out .q{color:#0a6e3a} .m.bot .q{color:#2b6cb0}
+  .m .h{font-size:.68rem; color:var(--wa-sub); text-align:right; margin-top:2px; white-space:nowrap}
+  .m .h .tk{color:var(--tick); margin-left:2px}
+  .m .foto{width:230px; height:140px; background:#cbd5e0; border-radius:6px; display:flex; align-items:center; justify-content:center; color:#718096; font-size:.8rem; margin-bottom:3px}
+  .sys{align-self:center; background:var(--warn); color:#54451a; font-size:.76rem; padding:4px 11px; border-radius:7px; margin:7px 0; text-align:center; box-shadow:0 1px .5px rgba(0,0,0,.08)}
+  .nota-i{align-self:center; background:#fff8c5; border:1px dashed #d6a800; color:#5c4a00; font-size:.82rem; padding:6px 11px; border-radius:7px; margin:6px 0; max-width:75%}
+  .nota-i b{display:block; font-size:.7rem; text-transform:uppercase; letter-spacing:.4px}
+  /* ===== barra de escribir ===== */
+  .ent{background:var(--wa-bg); padding:8px 12px; display:flex; align-items:flex-end; gap:8px; position:relative}
+  .ent .ico{color:#54656f; font-size:1.25rem; padding:8px 4px}
+  .ent textarea{flex:1; border:none; border-radius:8px; padding:10px 12px; font:inherit; min-height:42px; max-height:110px; resize:none; background:#fff}
+  .ent .env{background:var(--wa-green); color:#fff; border:none; width:42px; height:42px; border-radius:50%; font-size:1.1rem; cursor:pointer}
+  .ent.bloq textarea{background:#f5f6f6}
+  .ent.bloq .env{background:#c5ccd1}
+  .bloqueo{background:#fff; border-top:1px solid var(--wa-line); padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; font-size:.85rem; color:#3b4a54}
+  .modo{display:flex; gap:4px; padding:0 12px 6px; background:var(--wa-bg); font-size:.76rem}
+  .modo span{padding:2px 10px; border-radius:11px; cursor:pointer; color:#54656f}
+  .modo span.on{background:#fff; color:var(--wa-text); font-weight:600}
+  .modo span.n.on{background:#fff8c5}
+  .rapidas{position:absolute; bottom:56px; left:56px; right:60px; background:#fff; border-radius:10px; box-shadow:0 4px 18px rgba(0,0,0,.2); overflow:hidden; z-index:5; display:none}
+  .rapidas.on{display:block}
+  .rapidas div{padding:9px 14px; font-size:.86rem; cursor:pointer; border-bottom:1px solid var(--wa-line)}
+  .rapidas div:hover{background:var(--wa-bg)} .rapidas b{color:var(--wa-green)}
+  /* ===== panel de datos ===== */
+  .panel{background:#fff; border-left:1px solid var(--wa-line); overflow-y:auto; display:none; min-height:0}
+  .app.panel-on .panel{display:block}
+  .ph{background:var(--wa-bg); height:59px; display:flex; align-items:center; gap:14px; padding:0 14px; font-weight:600}
+  .ph span{cursor:pointer; font-size:1.2rem; color:#54656f}
+  .sec{padding:12px 16px; border-bottom:8px solid var(--wa-bg); font-size:.86rem}
+  .sec h4{margin:0 0 8px; font-size:.78rem; color:var(--wa-green); text-transform:uppercase; letter-spacing:.4px}
+  .fila{display:flex; justify-content:space-between; gap:10px; padding:3px 0} .fila span:first-child{color:var(--wa-sub)} .fila span:last-child{text-align:right; font-weight:600}
+  .tot{font-size:1.05rem}
+  .mini{display:flex; gap:6px; margin-top:6px} .mini div{flex:1; height:62px; background:#cbd5e0; border-radius:6px; font-size:.66rem; color:#718096; display:flex; align-items:flex-end; justify-content:center; padding-bottom:3px}
+  .pbt{display:block; width:100%; margin-top:8px; border:none; border-radius:8px; padding:9px; font-weight:600; cursor:pointer; font-size:.86rem}
+  .pbt.v{background:var(--wa-green); color:#fff} .pbt.g{background:#e9edef; color:#3b4a54}
+  .e.ck{background:#1fa855} .e.am{background:#dd6b20} .e.rd{background:#c53030} .e.ex{background:#718096}
+  .e.tg{background:#e9edef; color:#3b4a54}
+  .fpanel{display:none; background:#fff; border-bottom:1px solid var(--wa-line); padding:6px 12px 10px; font-size:.8rem}
+  .fpanel.on{display:grid; grid-template-columns:1fr 1fr; gap:6px 10px}
+  .fpanel label{display:block; color:var(--wa-sub); font-size:.72rem; margin-bottom:1px}
+  .fpanel select{width:100%; padding:6px; border:1px solid #cbd5e0; border-radius:6px; background:#fff; font-size:.82rem}
+  .fpanel .lim{grid-column:1/-1; color:var(--wa-green); cursor:pointer; font-weight:600; font-size:.78rem}
+  .cuenta{font-weight:700} .cuenta.ok{color:#1fa855} .cuenta.am{color:#dd6b20} .cuenta.rd{color:#c53030} .cuenta.ex{color:#718096}
+  .vacio{margin:auto; color:var(--wa-sub); text-align:center; padding:20px}
+  @media (max-width:900px){
+    .app,.app.panel-on{grid-template-columns:minmax(0,1fr); height:calc(100vh - 118px)}
+    .lista,.chat{min-width:0; width:100%}
+    .chat{display:none} .app.ver-chat .lista{display:none} .app.ver-chat .chat{display:flex}
+    .volver{display:block} .msgs{padding:10px 10px} .m{max-width:84%}
+    .panel{position:absolute; inset:0; z-index:10; display:none}
+    .app.panel-on .panel{display:block}
+    .acc .bt.g{display:none}
+    /* tamaños parecidos a WhatsApp en el celular */
+    .m{font-size:1rem; line-height:1.35; padding:7px 9px 4px 10px}
+    .it .nm{font-size:1.06rem} .it .pv{font-size:.95rem}
+    .it .hr{font-size:.78rem} .badge{min-width:22px; height:22px; font-size:.78rem}
+    .ch{height:56px} .ch .info b{font-size:1.06rem}
+    .ent textarea{font-size:1rem} .banda{font-size:.78rem}
+  }
+`;
+        // ==========================================
+        // BANDEJA DE WHATSAPP (Conde 2026-11-10): un solo punto de atención para el bot y los asesores,
+        // con el aspecto de WhatsApp Web. Los datos viven en el servidor del bot (Railway): conversaciones
+        // completas, estado (bot / necesita asesor / pago / con asesor) y acciones de un asesor. Usa la
+        // misma URL y clave del bot que "Bot WhatsApp". Se dibuja dentro de un Shadow DOM para que los
+        // estilos del Hub no se mezclen con los de la bandeja.
+        // ==========================================
+        const BJ_RAPIDAS = [
+          ['pago','Datos de pago','Con gusto te envío los datos de pago. ¿Prefieres Nequi, Daviplata o cuenta Bancolombia?'],
+          ['horario','Horario de entrega','Puedes recoger tu pedido de lunes a viernes, de 8:00 a.m. a 1:00 p.m. y de 2:00 p.m. a 4:40 p.m., en la Calle 5B Bis #53-56 (barrio Colón, Bogotá).'],
+          ['tiempo','Tiempo de entrega','La entrega normal es de 4 a 5 días hábiles desde que confirmamos el anticipo.'],
+          ['foto','Pedir la foto','¿Me envías la foto que quieres usar? Mientras más nítida, mejor queda tu rompecabezas.'],
+          ['gracias','Gracias','¡Gracias por escribirnos! Cualquier cosa me avisas por aquí 😊']
+        ];
+        const BJ_ETQ = { asesor:['Necesita asesor','as'], conasesor:['Con asesor','co'], pago:['Pago por verificar','pg'], bot:['Atiende el bot','bo'] };
+        const BJ_COLORES = ['#6a7175','#a35fd0','#d9822b','#1f8a70','#3b82c4','#c0392b'];
+        let bjRoot = null, bjChats = [], bjSel = null, bjFiltro = 'todas', bjF = {prod:'', tam:'', tipo:''}, bjFabierto = false;
+        let bjPanel = false, bjModo = 'resp', bjMsgs = [], bjDatos = null, bjTimer = null, bjError = '', bjEstadoRender = '';
+        const bjMediaCache = {};
+
+        function bjEsc(t){ return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+        function bjNombreUsuario(){ const p = window.tacticalUsuarioPerfil; return p && p.nombre ? String(p.nombre).split(' ')[0] : 'Asesor'; }
+        function bjTel(c){ const d = String(c || ''); return d.length === 12 && d.startsWith('57') ? `+57 ${d.slice(2,5)} ${d.slice(5,8)} ${d.slice(8)}` : (d ? '+' + d : ''); }
+        function bjNombreChat(c){ return c.nombre || bjTel(c.phone); }
+        function bjIni(c){ const n = c.nombre; return n ? n.split(' ').map(x => x[0]).slice(0,2).join('').toUpperCase() : '#'; }
+        function bjColor(c){ return BJ_COLORES[parseInt(String(c.phone).slice(-2) || '0', 10) % 6]; }
+        function bjHora(ts){ return new Date(ts).toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit', hour12:false}); }
+        function bjDiaTxt(ts){
+          const d = new Date(ts), h = new Date();
+          const ini = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+          const dif = Math.round((ini(h) - ini(d)) / 86400000);
+          if(dif === 0) return 'HOY'; if(dif === 1) return 'AYER';
+          return d.toLocaleDateString('es-CO', {day:'2-digit', month:'short', year:'numeric'}).toUpperCase();
+        }
+        function bjHoraLista(ts){
+          if(!ts) return '';
+          const dt = bjDiaTxt(ts);
+          return dt === 'HOY' ? bjHora(ts) : dt === 'AYER' ? 'ayer' : new Date(ts).toLocaleDateString('es-CO', {day:'2-digit', month:'2-digit'});
+        }
+        function bjRest(c){ return c.venceTs ? c.venceTs - Date.now() : -1; }
+        function bjFmtRest(c){
+          const ms = bjRest(c);
+          if(ms <= 0) return {txt:'Ventana cerrada', corto:'cerrada', cls:'ex'};
+          const m = Math.floor(ms / 60000), hh = Math.floor(m / 60), mm = m % 60;
+          return {txt:`Quedan ${hh} h ${String(mm).padStart(2,'0')} min para responder`, corto:`${hh} h ${String(mm).padStart(2,'0')}`, cls: ms < 3600e3 ? 'rd' : ms < 6 * 3600e3 ? 'am' : 'ok'};
+        }
+        async function bjApi(ruta, opts){
+          const url = botwaUrlBase(), key = botwaKey();
+          if(!url || !key) throw new Error('Falta configurar la URL y la clave del bot. Se hace una sola vez en la sección "Bot WhatsApp".');
+          const res = await fetch(url + ruta, Object.assign({}, opts, { headers: Object.assign({'x-api-key': key, 'content-type': 'application/json'}, (opts && opts.headers) || {}) }));
+          if(!res.ok){
+            let msg = 'HTTP ' + res.status;
+            try { const j = await res.json(); if(j && j.error) msg = j.error; } catch(_){}
+            throw new Error(msg);
+          }
+          if(res.status === 204) return null;
+          return res.json();
+        }
+        function bjQ(id){ return bjRoot.getElementById(id); }
+
+        function bjInit(){
+          const host = document.getElementById('bj-host');
+          if(!host) return;
+          if(!bjRoot){
+            bjRoot = host.attachShadow({mode:'open'});
+            bjRoot.innerHTML = `<style>${BJ_CSS}</style>
+              <div class="app" id="app">
+                <aside class="lista">
+                  <div class="lh"><b>Chats</b><span class="ic" style="cursor:pointer" onclick="bjTick()" title="Actualizar">⟳</span></div>
+                  <div class="bus"><input id="bus" placeholder="Buscar por nombre o número" oninput="bjPintar()"></div>
+                  <div class="chips" id="chips"></div>
+                  <div class="fpanel" id="fpanel"></div>
+                  <div class="items" id="items"></div>
+                </aside>
+                <section class="chat" id="chat"><div class="vacio">Elige un chat de la lista</div></section>
+                <aside class="panel" id="panel"></aside>
+              </div>`;
+          }
+          bjDetener();
+          bjTick();
+          bjTimer = setInterval(bjTick, 8000);
+        }
+        function bjDetener(){ if(bjTimer){ clearInterval(bjTimer); bjTimer = null; } }
+
+        async function bjTick(){
+          const vista = document.getElementById('view-bandeja');
+          if(!vista || !vista.classList.contains('active-view')){ bjDetener(); return; }
+          if(document.hidden) return;
+          try { bjChats = await bjApi('/api/conversaciones'); bjError = ''; }
+          catch(e){ bjError = e.message; }
+          bjPintarLista(); bjPintarChips();
+          if(bjSel && !bjError){
+            await bjNuevosMensajes();
+            const c = bjChats.find(x => x.phone === bjSel);
+            if(c){
+              if((c.estado + (c.asignadoA || '')) !== bjEstadoRender) bjPintarChat(); else bjActualizarBanda(c);
+            }
+          }
+        }
+
+        function bjPintar(){ bjPintarChips(); bjPintarLista(); }
+        function bjPintarChips(){
+          const defs = [['todas','Todos'],['noleidos','No leídos'],['vencer','Por vencer'],['asesor','Necesitan asesor'],['pago','Pagos'],['conasesor','Con asesor'],['bot','Bot']];
+          const cuenta = k => k === 'vencer' ? bjChats.filter(c => bjRest(c) > 0 && bjRest(c) < 3 * 3600e3).length
+            : k === 'noleidos' ? bjChats.filter(c => c.noleidos).length : bjChats.filter(c => c.estado === k).length;
+          bjQ('chips').innerHTML = defs.map(([k, t]) => {
+            const n = k === 'todas' ? 0 : cuenta(k);
+            const b = n && ['noleidos','asesor','pago','vencer'].includes(k) ? `<i class="${k === 'noleidos' ? '' : 'r'}">${n}</i>` : '';
+            return `<span class="chip ${bjFiltro === k ? 'on' : ''}" onclick="bjFiltro='${k}';bjPintar()">${t}${b}</span>`;
+          }).join('') + `<span class="chip ${(bjF.prod || bjF.tam || bjF.tipo) ? 'on' : ''}" onclick="bjFabierto=!bjFabierto;bjPintar()">Filtros ▾</span>`;
+          const fp = bjQ('fpanel'); fp.classList.toggle('on', bjFabierto);
+          const sel = (v, arr) => arr.map(([val, t]) => `<option value="${val}" ${v === val ? 'selected' : ''}>${t}</option>`).join('');
+          fp.innerHTML = `<div><label>Producto</label><select onchange="bjF.prod=this.value;bjPintar()">${sel(bjF.prod, [['','Todos'],['Rompecabezas','Rompecabezas'],['Rompecabezas con imán','Rompecabezas con imán'],['Imanes publicitarios','Imanes publicitarios'],['Cuadernos','Cuadernos'],['Sin definir','Sin definir']])}</select></div>
+            <div><label>Tamaño (fichas)</label><select onchange="bjF.tam=this.value;bjPintar()">${sel(bjF.tam, [['','Todos'],['1-100','Hasta 100'],['101-300','101 a 300'],['301-99999','Más de 300']])}</select></div>
+            <div><label>Tipo de cliente</label><select onchange="bjF.tipo=this.value;bjPintar()">${sel(bjF.tipo, [['','Todos'],['Nuevo','Nuevo'],['Recurrente','Recurrente'],['Empresa','Empresa']])}</select></div>
+            <div class="lim" onclick="bjF={prod:'',tam:'',tipo:''};bjPintar()">Limpiar filtros</div>`;
+        }
+        function bjPintarLista(){
+          const cont = bjQ('items');
+          if(bjError){ cont.innerHTML = `<div class="vacio">No se pudo cargar la bandeja:<br><b>${bjEsc(bjError)}</b></div>`; return; }
+          const q = (bjQ('bus').value || '').trim().toLowerCase();
+          const okF = c => {
+            if(bjF.prod && c.producto !== bjF.prod) return false;
+            if(bjF.tipo && c.tipo !== bjF.tipo) return false;
+            if(bjF.tam){ const [a, b] = bjF.tam.split('-').map(Number); if(!c.fichas || c.fichas < a || c.fichas > b) return false; }
+            if(q && !(`${c.nombre || ''} ${c.phone}`.toLowerCase().includes(q))) return false;
+            return true;
+          };
+          const lista = bjChats.filter(c => okF(c) && (bjFiltro === 'todas' || (bjFiltro === 'noleidos' ? c.noleidos : bjFiltro === 'vencer' ? (bjRest(c) > 0 && bjRest(c) < 3 * 3600e3) : c.estado === bjFiltro)));
+          cont.innerHTML = lista.map(c => {
+            const r = bjFmtRest(c), clk = r.cls === 'ok' ? 'ck' : r.cls;
+            const pref = c.ultimoBy && c.ultimoBy !== 'cliente' ? '<span style="color:#53bdeb">✓✓</span> ' : '';
+            return `<div class="it ${bjSel === c.phone ? 'sel' : ''}" onclick="bjAbrir('${c.phone}')">
+              <div class="av" style="background:${bjColor(c)}">${bjEsc(bjIni(c))}</div>
+              <div class="t"><div class="l1"><span class="nm">${bjEsc(bjNombreChat(c))}</span><span class="hr ${c.noleidos ? 'nl' : ''}">${bjHoraLista(c.ultimoTs)}</span></div>
+              <div class="l2"><span class="pv">${pref}${bjEsc(c.ultimoTexto)}</span>${c.noleidos ? `<span class="badge">${c.noleidos}</span>` : ''}</div>
+              <div class="etq"><span class="e ${BJ_ETQ[c.estado][1]}">${BJ_ETQ[c.estado][0]}</span>${c.asignadoA ? `<span class="e ok">${bjEsc(c.asignadoA)}</span>` : ''}<span class="e tg">${bjEsc(c.producto)}${c.fichas ? ' · ' + c.fichas + 'f' : ''}</span><span class="e ${clk}">⏱ ${r.corto}</span></div></div></div>`;
+          }).join('') || '<div class="vacio">No hay chats aquí.</div>';
+        }
+
+        async function bjAbrir(phone){
+          bjSel = phone; bjMsgs = []; bjDatos = null; bjModo = 'resp';
+          bjQ('app').classList.add('ver-chat');
+          const c = bjChats.find(x => x.phone === phone); if(c) c.noleidos = 0;
+          bjApi(`/api/conversaciones/${phone}/leido`, {method:'POST'}).catch(() => {});
+          try { bjMsgs = await bjApi(`/api/conversaciones/${phone}/mensajes`); } catch(e){ bjMsgs = []; }
+          try { bjDatos = await bjApi(`/api/conversaciones/${phone}/datos`); } catch(e){ bjDatos = null; }
+          bjPintarLista(); bjPintarChat(); bjPintarPanel();
+        }
+        function bjCerrar(){ bjSel = null; bjPanel = false; const a = bjQ('app'); a.classList.remove('ver-chat'); a.classList.remove('panel-on'); bjQ('chat').innerHTML = '<div class="vacio">Elige un chat de la lista</div>'; bjPintarLista(); }
+        function bjTogglePanel(){ bjPanel = !bjPanel; bjQ('app').classList.toggle('panel-on', bjPanel); bjRefrescarDatos(); }
+        async function bjRefrescarDatos(){ if(!bjSel) return; try { bjDatos = await bjApi(`/api/conversaciones/${bjSel}/datos`); } catch(e){} bjPintarPanel(); }
+
+        function bjBurbuja(m, c){
+          const hr = bjHora(m.ts);
+          if(m.by === 'sistema') return `<div class="sys">${bjEsc(m.texto)}</div>`;
+          if(m.by === 'nota') return `<div class="nota-i"><b>Nota interna · ${bjEsc(m.autor || '')} · solo el equipo</b>${bjEsc(m.texto)} <span style="color:#8a6d00">· ${hr}</span></div>`;
+          const cls = m.by === 'cliente' ? 'in' : m.by === 'bot' ? 'bot' : 'out';
+          const who = m.by === 'bot' ? '<div class="q">🤖 Bot</div>' : m.by === 'asesor' ? `<div class="q">${bjEsc(m.autor || 'Asesor')}</div>` : '';
+          let cuerpo = '';
+          const media = m.media && (typeof m.media === 'object' ? (m.media.mini || m.media.ruta || m.media.local) : m.media);
+          const full = m.media && (typeof m.media === 'object' ? (m.media.ruta || m.media.local || m.media.mini) : m.media);
+          if(m.tipo === 'image'){
+            cuerpo = media ? `<div class="foto" data-media="${bjEsc(media)}" data-full="${bjEsc(full)}" onclick="bjVerGrande(this)">📷 cargando foto…</div>` : '<div class="foto">📷 imagen</div>';
+            if(m.texto) cuerpo += bjEsc(m.texto);
+          } else if(m.tipo === 'audio'){ cuerpo = `🎤 <i>Audio</i><br>${bjEsc(m.texto)}`; }
+          else if(m.tipo === 'document'){ cuerpo = `📄 ${bjEsc(m.texto)}`; }
+          else { cuerpo = bjEsc(m.texto); }
+          const tk = m.by === 'cliente' ? '' : '<span class="tk">✓✓</span>';
+          return `<div class="m ${cls}">${who}<div style="white-space:pre-wrap">${cuerpo}</div><div class="h">${hr} ${tk}</div></div>`;
+        }
+        function bjHtmlMensajes(c){
+          let ultDia = '', out = '';
+          for(const m of bjMsgs){
+            const d = bjDiaTxt(m.ts);
+            if(d !== ultDia){ out += `<div class="dia">${d}</div>`; ultDia = d; }
+            out += bjBurbuja(m, c);
+          }
+          return out;
+        }
+        function bjPintarChat(){
+          const c = bjChats.find(x => x.phone === bjSel), h = bjQ('chat');
+          if(!c){ h.innerHTML = '<div class="vacio">Elige un chat de la lista</div>'; return; }
+          const borrador = bjQ('txt') ? bjQ('txt').value : '';
+          const tomado = c.estado === 'conasesor', r = bjFmtRest(c);
+          bjEstadoRender = c.estado + (c.asignadoA || '');
+          const vencida = bjRest(c) <= 0;
+          let entrada;
+          if(vencida) entrada = `<div class="bloqueo"><span>⏱ Pasaron más de 24 h desde el último mensaje del cliente. WhatsApp solo permite enviarle una <b>plantilla aprobada</b>; las plantillas aún no están activas en esta bandeja.</span></div>`;
+          else if(tomado) entrada = `<div class="modo"><span class="${bjModo === 'resp' ? 'on' : ''}" onclick="bjModo='resp';bjPintarChat()">Responder al cliente</span><span class="n ${bjModo === 'nota' ? 'on' : ''}" onclick="bjModo='nota';bjPintarChat()">Nota interna</span></div>
+            <div class="ent"><div class="rapidas" id="rap"></div><textarea id="txt" rows="1" placeholder="${bjModo === 'nota' ? 'Nota interna (el cliente no la ve)' : 'Escribe un mensaje o / para respuestas rápidas'}" oninput="bjRap()" onkeydown="if(event.key==='Enter'&&!event.shiftKey&&window.innerWidth>900){event.preventDefault();bjEnviar();}"></textarea><button class="env" onclick="bjEnviar()">➤</button></div>`;
+          else entrada = `<div class="bloqueo"><span>${c.estado === 'bot' ? '🤖 El bot atiende este chat.' : '🔔 Este chat necesita a una persona.'} Para escribirle tú, toma el chat: el bot se pausa solo.</span><button class="bt v" onclick="bjTomar()">Tomar este chat</button></div>`;
+          h.innerHTML = `
+            <div class="ch"><span class="volver" onclick="bjCerrar()">←</span><div class="av" style="background:${bjColor(c)}">${bjEsc(bjIni(c))}</div>
+              <div class="info" onclick="bjTogglePanel()"><b>${bjEsc(bjNombreChat(c))}</b><small>${bjTel(c.phone)} · toca para ver datos del pedido</small></div>
+              <div class="acc">${tomado ? '<button class="bt g" onclick="bjDevolver()">Devolver al bot</button><button class="bt g" onclick="bjResolver()">✓ Resuelto</button>' : ''}<button class="bt g" onclick="bjTogglePanel()">Pedido / lead</button></div></div>
+            <div class="banda" id="banda"></div>
+            <div class="msgs" id="msgs">${bjHtmlMensajes(c)}</div>${entrada}`;
+          if(bjQ('txt')) bjQ('txt').value = borrador;
+          bjActualizarBanda(c);
+          const m = bjQ('msgs'); m.scrollTop = m.scrollHeight;
+          bjCargarImagenes();
+        }
+        function bjActualizarBanda(c){
+          const b = bjQ('banda'); if(!b) return;
+          const r = bjFmtRest(c), tomado = c.estado === 'conasesor';
+          b.innerHTML = `<span>${bjEsc(c.motivo || 'Sin pendientes')}</span><span>⏱ <span class="cuenta ${r.cls}">${r.txt}</span></span><span class="bot">${tomado ? '🔇 Bot en pausa · lo atiende ' + bjEsc(c.asignadoA || '—') : '🤖 Bot activo'}</span>`;
+        }
+        async function bjNuevosMensajes(){
+          const ult = bjMsgs.length ? bjMsgs[bjMsgs.length - 1].ts : 0;
+          let nuevos = [];
+          try { nuevos = await bjApi(`/api/conversaciones/${bjSel}/mensajes?desde=${ult}`); } catch(e){ return; }
+          if(!nuevos.length) return;
+          const cont = bjQ('msgs'); if(!cont) return;
+          const cerca = cont.scrollHeight - cont.scrollTop - cont.clientHeight < 120;
+          const c = bjChats.find(x => x.phone === bjSel);
+          let ultDia = bjMsgs.length ? bjDiaTxt(bjMsgs[bjMsgs.length - 1].ts) : '';
+          let html = '';
+          for(const m of nuevos){
+            const d = bjDiaTxt(m.ts);
+            if(d !== ultDia){ html += `<div class="dia">${d}</div>`; ultDia = d; }
+            html += bjBurbuja(m, c);
+          }
+          bjMsgs = bjMsgs.concat(nuevos);
+          cont.insertAdjacentHTML('beforeend', html);
+          if(cerca) cont.scrollTop = cont.scrollHeight;
+          if(nuevos.some(m => m.by === 'cliente')) bjApi(`/api/conversaciones/${bjSel}/leido`, {method:'POST'}).catch(() => {});
+          bjCargarImagenes();
+        }
+        async function bjBlob(nombre){
+          if(bjMediaCache[nombre]) return bjMediaCache[nombre];
+          const res = await fetch(`${botwaUrlBase()}/media/${encodeURIComponent(nombre)}`, { headers: { 'x-api-key': botwaKey() } });
+          if(!res.ok) throw new Error('HTTP ' + res.status);
+          const url = URL.createObjectURL(await res.blob());
+          bjMediaCache[nombre] = url;
+          return url;
+        }
+        async function bjCargarImagenes(){
+          if(!bjRoot) return;
+          for(const el of bjRoot.querySelectorAll('.foto[data-media]:not([data-listo])')){
+            el.setAttribute('data-listo', '1');
+            try {
+              const url = await bjBlob(el.getAttribute('data-media'));
+              el.innerHTML = `<img src="${url}" alt="foto" style="max-width:230px; max-height:260px; border-radius:6px; display:block; cursor:zoom-in">`;
+              el.style.background = 'none'; el.style.height = 'auto';
+            } catch(e){ el.textContent = '📷 foto no disponible'; }
+          }
+        }
+        async function bjVerGrande(el){
+          const nombre = el.getAttribute('data-full');
+          try { window.open(await bjBlob(nombre), '_blank'); } catch(e){ alert('No se pudo abrir la foto grande: ' + e.message); }
+        }
+
+        function bjPintarPanel(){
+          const p = bjQ('panel'), d = bjDatos, c = bjChats.find(x => x.phone === bjSel);
+          if(!p || !c) return;
+          const fila = (a, b) => `<div class="fila"><span>${bjEsc(a)}</span><span>${bjEsc(b)}</span></div>`;
+          const cop = n => n == null ? '—' : '$' + Math.round(n).toLocaleString('es-CO');
+          let h = `<div class="ph"><span onclick="bjTogglePanel()">✕</span>Datos del cliente</div>
+            <div class="sec"><div style="display:flex;gap:12px;align-items:center"><div class="av" style="background:${bjColor(c)};margin:0">${bjEsc(bjIni(c))}</div><div><b style="font-size:1rem">${bjEsc(bjNombreChat(c))}</b><div style="color:var(--wa-sub)">${bjTel(c.phone)}</div></div></div></div>`;
+          if(d && d.pedido){
+            const ped = d.pedido;
+            h += `<div class="sec"><h4>Pedido</h4>${fila('Estado', ped.estado)}${ped.items.map(i => fila(`${i.fichas} fichas · ${i.medida || ''} cm`, 'x' + i.cantidad)).join('')}
+              ${ped.caja ? fila('Caja', ped.caja === 'estandar' ? 'Estándar (incluida)' : ped.caja) : ''}${ped.express ? fila('Entrega', 'EXPRESS x' + ped.cantidadExpress) : ''}${ped.iman ? fila('Con imán', 'x' + ped.cantidadIman) : ''}${ped.frase ? fila('Frase', `«${ped.frase}» · tipografía ${ped.tipografia}`) : ''}</div>
+              <div class="sec"><h4>Dinero</h4><div class="fila tot"><span>Total</span><span>${cop(ped.total)}</span></div>${fila('Anticipo 50%', cop(ped.anticipo))}${fila('Saldo', cop(ped.saldo))}</div>`;
+            const fotos = [['Foto original', ped.fotos.original], ['Previsualización', ped.fotos.preview], ['Comprobante', ped.fotos.comprobante]].filter(x => x[1]);
+            if(fotos.length) h += `<div class="sec"><h4>Fotos del pedido</h4><div class="mini">${fotos.map(([t, n]) => `<div class="foto" data-media="${bjEsc(n)}" data-full="${bjEsc(n)}" onclick="bjVerGrande(this)" style="height:62px;font-size:.66rem">${t}</div>`).join('')}</div></div>`;
+            if(!ped.aprobado && ped.fotos.comprobante) h += `<div class="sec"><button class="pbt v" onclick="bjAprobar('${ped.id}')">✔ Ya verifiqué el pago — Aprobar</button></div>`;
+          } else if(d && d.lead){
+            h += `<div class="sec"><h4>Caso para asesor</h4><p style="margin:0 0 8px">${bjEsc(d.lead.motivo)}</p>${d.lead.cantidadAprox ? fila('Cantidad aprox.', d.lead.cantidadAprox + ' unidades') : ''}</div>`;
+          } else {
+            h += `<div class="sec"><h4>Sin pedido todavía</h4><p style="margin:0">${bjEsc(c.producto === 'Sin definir' ? 'Aún no ha definido qué producto quiere.' : 'Le interesa: ' + c.producto + (c.fichas ? ' de ' + c.fichas + ' fichas' : '') + '.')}</p></div>`;
+          }
+          h += `<div class="sec"><h4>Clasificación</h4>${fila('Producto', c.producto)}${c.fichas ? fila('Tamaño', c.fichas + ' fichas') : ''}${c.forma ? fila('Forma', c.forma) : ''}${fila('Tipo de cliente', c.tipo)}${d && d.ocasion ? fila('Ocasión', d.ocasion) : ''}</div>`;
+          p.innerHTML = h;
+          bjCargarImagenes();
+        }
+
+        function bjRap(){
+          const t = bjQ('txt'), r = bjQ('rap'); if(!t || !r) return;
+          if(bjModo === 'resp' && t.value.startsWith('/')){
+            const q = t.value.slice(1).toLowerCase();
+            const l = BJ_RAPIDAS.filter(x => x[1].toLowerCase().includes(q) || x[0].includes(q));
+            r.innerHTML = l.map(x => `<div onclick="bjUsarRap('${x[0]}')"><b>/${x[0]}</b> · ${bjEsc(x[1])}<br><small style="color:var(--wa-sub)">${bjEsc(x[2].slice(0, 70))}…</small></div>`).join('');
+            r.classList.add('on');
+          } else r.classList.remove('on');
+        }
+        function bjUsarRap(k){ const x = BJ_RAPIDAS.find(r => r[0] === k); bjQ('txt').value = x[2]; bjQ('rap').classList.remove('on'); bjQ('txt').focus(); }
+
+        async function bjAccion(ruta, cuerpo){
+          try { await bjApi(`/api/conversaciones/${bjSel}/${ruta}`, {method:'POST', body: JSON.stringify(Object.assign({nombre: bjNombreUsuario()}, cuerpo || {}))}); }
+          catch(e){ alert(e.message); return false; }
+          return true;
+        }
+        async function bjRecargarTodo(){
+          try { bjChats = await bjApi('/api/conversaciones'); } catch(e){}
+          try { bjMsgs = await bjApi(`/api/conversaciones/${bjSel}/mensajes`); } catch(e){}
+          bjPintarLista(); bjPintarChips(); bjPintarChat(); bjRefrescarDatos();
+        }
+        async function bjTomar(){ if(await bjAccion('tomar')) await bjRecargarTodo(); }
+        async function bjDevolver(){ if(confirm('¿Devolver este chat al bot? El bot volverá a contestarle al cliente.') && await bjAccion('devolver')) await bjRecargarTodo(); }
+        async function bjResolver(){ if(confirm('¿Marcar este chat como resuelto? El bot vuelve a atenderlo y se cierran los casos pendientes de este cliente.') && await bjAccion('resolver')) await bjRecargarTodo(); }
+        async function bjEnviar(){
+          const t = bjQ('txt'); const texto = t ? t.value.trim() : ''; if(!texto) return;
+          const ok = await bjAccion(bjModo === 'nota' ? 'nota' : 'enviar', {texto});
+          if(!ok) return;
+          t.value = ''; await bjRecargarTodo();
+          const nt = bjQ('txt'); if(nt) nt.focus();
+        }
+        async function bjAprobar(id){
+          if(typeof botwaCargarPedidos !== 'function'){ alert('Abre la sección Bot WhatsApp una vez para activar la aprobación.'); return; }
+          await botwaCargarPedidos();
+          if(!botwaPedidos.find(x => x.id === id)){ alert('Ese pedido ya no está pendiente de aprobación.'); return; }
+          await botwaAprobar(id);
+          bjTick(); bjRefrescarDatos();
+        }
+
         // Interruptor general del bot (efecto inmediato, sin redesplegar). Conde 2026-10-17.
         let botwaEncendido = null;
         async function botwaConsultarInterruptor(){
