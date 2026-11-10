@@ -5641,7 +5641,7 @@
             bjRoot.innerHTML = `<style>${BJ_CSS}</style>
               <div class="app" id="app">
                 <aside class="lista">
-                  <div class="lh"><b>Chats</b><span class="ic" style="cursor:pointer"><span id="campana" onclick="bjToggleSonido()" title="Sonido de aviso">🔔</span> <span onclick="bjTick()" title="Actualizar">⟳</span></span></div>
+                  <div class="lh"><b>Chats</b><span class="ic" style="cursor:pointer"><span id="campana" onclick="bjToggleSonido()" title="Sonido de aviso">🔔</span> <span id="btn-alm" onclick="bjAbrirAlmacenamiento()" title="Almacenamiento (solo administrador)" style="display:none">💾</span> <span onclick="bjTick()" title="Actualizar">⟳</span></span></div>
                   <div class="bus"><input id="bus" placeholder="Buscar por nombre o número" oninput="bjPintar()"></div>
                   <div class="chips" id="chips"></div>
                   <div class="fpanel" id="fpanel"></div>
@@ -5654,6 +5654,7 @@
           }
           bjDetener();
           bjCampana();
+          if(bjEsAdmin() && bjQ('btn-alm')) bjQ('btn-alm').style.display = '';
           bjCargarAjustes();
           bjTick();
           bjTimer = setInterval(bjTick, 8000);
@@ -5816,10 +5817,26 @@
           if(nuevos.some(m => m.by === 'cliente')) bjApi(`/api/conversaciones/${bjSel}/leido`, {method:'POST'}).catch(() => {});
           bjCargarImagenes();
         }
+        // Las fotos se guardan en la caché del navegador (Cache Storage): al volver a abrir un chat NO se vuelven a
+        // bajar de Supabase (cada descarga cuenta contra el egress del plan). El chat muestra miniaturas (~25 KB); la
+        // foto completa solo se baja al hacer clic.
         async function bjBlob(nombre){
           if(bjMediaCache[nombre]) return bjMediaCache[nombre];
-          const res = await fetch(`${botwaUrlBase()}/media/${encodeURIComponent(nombre)}`, { headers: { 'x-api-key': botwaKey() } });
-          if(!res.ok) throw new Error('HTTP ' + res.status);
+          const clave = 'https://bj.cache.local/media/' + encodeURIComponent(nombre);
+          let cache = null;
+          try { cache = await caches.open('bj-media-v1'); } catch(_){}
+          let res = cache ? await cache.match(clave) : null;
+          if(!res){
+            res = await fetch(`${botwaUrlBase()}/media/${encodeURIComponent(nombre)}`, { headers: { 'x-api-key': botwaKey() } });
+            if(!res.ok) throw new Error('HTTP ' + res.status);
+            if(cache){
+              try {
+                await cache.put(clave, res.clone());
+                const ks = await cache.keys();
+                if(ks.length > 400) for(const k of ks.slice(0, ks.length - 300)) await cache.delete(k);
+              } catch(_){}
+            }
+          }
           const url = URL.createObjectURL(await res.blob());
           bjMediaCache[nombre] = url;
           return url;
@@ -5829,7 +5846,9 @@
           for(const el of bjRoot.querySelectorAll('.foto[data-media]:not([data-listo])')){
             el.setAttribute('data-listo', '1');
             try {
-              const url = await bjBlob(el.getAttribute('data-media'));
+              let url;
+              try { url = await bjBlob(el.getAttribute('data-media')); }
+              catch(e1){ const alt = el.getAttribute('data-full'); if(!alt || alt === el.getAttribute('data-media')) throw e1; url = await bjBlob(alt); }
               el.innerHTML = `<img src="${url}" alt="foto" style="max-width:230px; max-height:260px; border-radius:6px; display:block; cursor:zoom-in">`;
               el.style.background = 'none'; el.style.height = 'auto';
             } catch(e){ el.textContent = '📷 foto no disponible'; }
@@ -6010,6 +6029,29 @@
         async function bjGuardarRapidas(){
           try { const r = await bjApi('/api/respuestas-rapidas', {method:'PUT', body: JSON.stringify({lista: bjEditR})}); bjRapidas = r; bjEditR = []; bjCerrarModal(); }
           catch(e){ alert(e.message); }
+        }
+
+        // ---------- Almacenamiento (dónde quedó cada cosa y cuánto pesa) ----------
+        function bjMB(b){ return b >= 1073741824 ? (b / 1073741824).toFixed(2) + ' GB' : (b / 1048576).toFixed(b < 10485760 ? 2 : 0) + ' MB'; }
+        async function bjAbrirAlmacenamiento(){
+          bjAbrirModal('<h3>Almacenamiento</h3><p class="sub">Consultando…</p>');
+          try {
+            const a = await bjApi('/api/almacenamiento');
+            const v = a.volumen, d = a.disco, sp = a.supabase;
+            const barra = (pct, color) => `<div style="background:#e9edef;border-radius:6px;height:10px;margin:4px 0 8px"><div style="width:${Math.min(100, pct)}%;background:${color};height:10px;border-radius:6px"></div></div>`;
+            const col = pct => pct >= 80 ? '#c53030' : pct >= 60 ? '#dd6b20' : '#1fa855';
+            const fila = (t, val, nota) => `<div class="fila-m"><span style="flex:1">${t}${nota ? `<br><small style="color:#667781">${nota}</small>` : ''}</span><b>${val}</b></div>`;
+            bjAbrirModal(`<h3>Almacenamiento</h3>
+              <p class="sub">Qué se guarda y dónde. Los chats y el contexto del bot viven en el disco de Railway; las fotos y documentos, en Supabase Storage.</p>
+              <h3 style="font-size:.92rem;margin:8px 0 2px">Disco de Railway (volumen del bot)</h3>
+              ${v ? `${barra(v.porcentaje, col(v.porcentaje))}<div style="font-size:.85rem">${bjMB(v.usadoBytes)} usados de ${bjMB(v.totalBytes)} (${v.porcentaje} %). Si pasa del 80 % te llega un aviso por correo.</div>` : '<p class="sub">No se pudo medir el volumen.</p>'}
+              ${fila('Conversaciones', bjMB(d.conversaciones.bytes), `${d.conversaciones.chatsGuardados} chats · se borran a los ${d.conversaciones.retencionDias} días sin actividad`)}
+              ${fila('Fotos originales (copia local)', bjMB(d.fotosOriginalesLocales.bytes), `${d.fotosOriginalesLocales.archivos} archivos · se borran a los ${d.fotosOriginalesLocales.retencionDias} días (la copia buena está en Supabase)`)}
+              ${fila('Contexto del bot + pedidos', bjMB(d.contextoDelBot.bytes + d.pedidos.bytes))}
+              <h3 style="font-size:.92rem;margin:12px 0 2px">Fotos en Supabase (bucket del bot)</h3>
+              ${sp ? `${barra(sp.usadoBytes / sp.presupuestoBytes * 100, col(sp.usadoBytes / sp.presupuestoBytes * 100))}<div style="font-size:.85rem">${bjMB(sp.usadoBytes)} de ${bjMB(sp.presupuestoBytes)} de presupuesto (el plan gratis trae 1 GB de almacenamiento en total, compartido con el resto del ERP). Retención: 30 días; 180 si el pedido se aprobó.</div>` : '<p class="sub">No se pudo consultar Supabase.</p>'}
+              <div class="acciones"><button class="bt v" onclick="bjCerrarModal()">Cerrar</button></div>`);
+          } catch(e){ bjAbrirModal(`<h3>Almacenamiento</h3><p class="sub">No se pudo consultar: ${bjEsc(e.message)}</p><div class="acciones"><button class="bt v" onclick="bjCerrarModal()">Cerrar</button></div>`); }
         }
 
         // ---------- Avisos: sonido, título de la pestaña y contador en la tarjeta del Hub ----------
