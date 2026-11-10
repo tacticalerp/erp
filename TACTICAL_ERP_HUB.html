@@ -6037,6 +6037,7 @@
           bjAbrirModal('<h3>Almacenamiento</h3><p class="sub">Consultando…</p>');
           try {
             const a = await bjApi('/api/almacenamiento');
+            let rb = null; try { rb = await bjApi('/api/respaldos'); } catch(_){}
             const v = a.volumen, d = a.disco, sp = a.supabase;
             const barra = (pct, color) => `<div style="background:#e9edef;border-radius:6px;height:10px;margin:4px 0 8px"><div style="width:${Math.min(100, pct)}%;background:${color};height:10px;border-radius:6px"></div></div>`;
             const col = pct => pct >= 80 ? '#c53030' : pct >= 60 ? '#dd6b20' : '#1fa855';
@@ -6050,8 +6051,18 @@
               ${fila('Contexto del bot + pedidos', bjMB(d.contextoDelBot.bytes + d.pedidos.bytes))}
               <h3 style="font-size:.92rem;margin:12px 0 2px">Fotos en Supabase (bucket del bot)</h3>
               ${sp ? `${barra(sp.usadoBytes / sp.presupuestoBytes * 100, col(sp.usadoBytes / sp.presupuestoBytes * 100))}<div style="font-size:.85rem">${bjMB(sp.usadoBytes)} de ${bjMB(sp.presupuestoBytes)} de presupuesto (el plan gratis trae 1 GB de almacenamiento en total, compartido con el resto del ERP). Retención: 30 días; 180 si el pedido se aprobó.</div>` : '<p class="sub">No se pudo consultar Supabase.</p>'}
-              <div class="acciones"><button class="bt v" onclick="bjCerrarModal()">Cerrar</button></div>`);
+              <h3 style="font-size:.92rem;margin:12px 0 2px">Respaldo de chats y pedidos</h3>
+              <p class="sub" style="margin-bottom:6px">Cada semana se guarda una copia comprimida de los chats, el contexto del bot, los pedidos y las etiquetas en Supabase (se conservan las últimas 8). Las fotos no se incluyen: ya están en Supabase.</p>
+              ${rb && rb.length ? `<div style="font-size:.85rem">Último respaldo: <b>${new Date(rb[0].creado || Date.now()).toLocaleString('es-CO')}</b>${rb[0].bytes ? ' · ' + bjMB(rb[0].bytes) : ''} · ${rb.length} guardado(s)</div>` : '<div style="font-size:.85rem;color:#c53030">Todavía no hay respaldos. Se hace el primero automáticamente, o puedes hacerlo ahora.</div>'}
+              <div class="acciones"><button class="bt g" id="btn-rb" onclick="bjHacerRespaldo()">Hacer respaldo ahora</button><button class="bt v" onclick="bjCerrarModal()">Cerrar</button></div>`);
           } catch(e){ bjAbrirModal(`<h3>Almacenamiento</h3><p class="sub">No se pudo consultar: ${bjEsc(e.message)}</p><div class="acciones"><button class="bt v" onclick="bjCerrarModal()">Cerrar</button></div>`); }
+        }
+
+        async function bjHacerRespaldo(){
+          const b = bjQ('btn-rb'); if(b){ b.disabled = true; b.textContent = 'Guardando…'; }
+          try { const r = await bjApi('/api/respaldos', {method:'POST'}); alert(`Respaldo guardado: ${r.chats} chat(s) y ${r.pedidos} pedido(s)/lead(s) (${bjMB(r.bytes)}).`); }
+          catch(e){ alert('No se pudo hacer el respaldo: ' + e.message); }
+          bjAbrirAlmacenamiento();
         }
 
         // ---------- Avisos: sonido, título de la pestaña y contador en la tarjeta del Hub ----------
