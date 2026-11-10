@@ -2573,7 +2573,9 @@
                         <input type="text" id="galeriabot-buscar" placeholder="Buscar por nombre o celular…" style="flex:1; min-width:220px; padding:8px; border:1px solid #cbd5e0; border-radius:6px;" onkeydown="if(event.key==='Enter') galeriaBotCargar(true)">
                         <select id="galeriabot-tipo" onchange="galeriaBotCargar(true)" style="padding:8px; border:1px solid #cbd5e0; border-radius:6px;"><option value="">Todas</option><option value="original">Fotos del cliente</option><option value="preview">Previsualizaciones</option><option value="comprobante">Comprobantes</option></select>
                         <button class="btn-submit" style="width:auto;" onclick="galeriaBotCargar(true)">Buscar fotos</button>
+                        <button class="btn-action" id="galeriabot-probar" style="display:none;" onclick="galeriaBotProbar()">Probar que el alojamiento funciona</button>
                     </div>
+                    <div id="galeriabot-prueba" style="margin-top:8px; font-size:0.85rem;"></div>
                     <div id="galeriabot-uso" style="margin-top:10px;"></div>
                     <p id="galeriabot-estado" style="font-size:0.85em; color:#64748b; margin-top:8px;"></p>
                     <details style="margin-top:8px;"><summary style="cursor:pointer; font-size:0.85rem; color:#475569;">Archivos antiguos (de antes de las miniaturas, vía el servidor del bot)</summary>
@@ -5648,6 +5650,7 @@
         function galeriaBotInit(){
           const u = document.getElementById('galeriabot-url'), k = document.getElementById('galeriabot-key');
           if(u) u.value = botwaUrlBase(); if(k) k.value = botwaKey();
+          const bp = document.getElementById('galeriabot-probar'); if(bp) bp.style.display = (window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol === 'administrador') ? '' : 'none';
           galeriaBotCargar(true);
         }
         function galeriaKB(b){ return b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB'; }
@@ -5706,6 +5709,48 @@
             masBtn.style.display = fotos.length === GALERIA_PAGINA ? '' : 'none';
           }catch(e){
             estado.innerText = 'No se pudo cargar la galería: ' + (e.message || e) + '. ¿Ya corriste supabase/migracion_bot_fotos.sql en Supabase?';
+          }
+        }
+        /* Prueba (solo administrador) del alojamiento: sube una foto mínima, la registra, la firma y la abre, y borra todo. Usa los mismos permisos
+           (rol "authenticated") que el bot, así que si esto funciona, la SQL quedó bien. */
+        async function galeriaBotProbar(){
+          if(!tacticalRequiereAdministrador()) return;
+          const sal = document.getElementById('galeriabot-prueba');
+          const lineas = [];
+          const paso = (txt, ok) => { lineas.push((ok ? '✔ ' : '✘ ') + txt); sal.innerHTML = lineas.map(medidorEsc).join('<br>'); return ok; };
+          sal.innerHTML = 'Probando…';
+          const ruta = 'prueba_' + Date.now() + '.jpg';
+          const rutaMini = 'mini_' + ruta;
+          let subido = false, fila = null;
+          try{
+            const cv = document.createElement('canvas'); cv.width = 240; cv.height = 180;
+            const cx = cv.getContext('2d'); cx.fillStyle = '#2563eb'; cx.fillRect(0, 0, 240, 180); cx.fillStyle = '#fff'; cx.font = '20px sans-serif'; cx.fillText('Prueba del bot', 40, 95);
+            const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.8));
+            const st = tacticalSupabase.storage.from(GALERIA_BUCKET);
+            let e = (await st.upload(ruta, blob, { contentType: 'image/jpeg' })).error;
+            if(!paso('subir un archivo al espacio de fotos del bot' + (e ? ' — ' + e.message : ''), !e)) throw new Error('storage');
+            subido = true;
+            e = (await st.upload(rutaMini, blob, { contentType: 'image/jpeg' })).error;
+            paso('subir la miniatura' + (e ? ' — ' + e.message : ''), !e);
+            const ins = await tacticalSupabase.from('bot_fotos').insert({ tipo: 'original', celular: 'prueba-sistema', nombre: 'PRUEBA-borrar', ruta, ruta_mini: rutaMini, bytes: blob.size, bytes_mini: blob.size, ancho: 240, alto: 180 }).select();
+            if(!paso('registrar la foto en la tabla bot_fotos' + (ins.error ? ' — ' + ins.error.message : ''), !ins.error)) throw new Error('tabla');
+            fila = ins.data && ins.data[0];
+            const rd = await tacticalSupabase.from('bot_fotos').select('id').eq('celular', 'prueba-sistema');
+            paso('leer la tabla' + (rd.error ? ' — ' + rd.error.message : ''), !rd.error && rd.data && rd.data.length >= 1);
+            const fr = await st.createSignedUrl(ruta, 120);
+            paso('firmar el enlace de la foto' + (fr.error ? ' — ' + fr.error.message : ''), !fr.error && fr.data && fr.data.signedUrl);
+            if(fr.data && fr.data.signedUrl){ const r = await fetch(fr.data.signedUrl); paso('abrir la foto con el enlace firmado (HTTP ' + r.status + ')', r.ok); }
+            const up = await tacticalSupabase.from('bot_fotos').update({ conservar: true }).eq('id', fila.id);
+            paso('marcar "conservar"' + (up.error ? ' — ' + up.error.message : ''), !up.error);
+          } catch(err){ if(err.message !== 'storage' && err.message !== 'tabla') paso('error inesperado: ' + err.message, false); }
+          finally {
+            try{
+              await tacticalSupabase.from('bot_fotos').delete().eq('celular', 'prueba-sistema');
+              if(subido) await tacticalSupabase.storage.from(GALERIA_BUCKET).remove([ruta, rutaMini]);
+              lineas.push('Limpieza: la prueba se borró sola.');
+            } catch(e2){ lineas.push('No se pudo limpiar la prueba: ' + e2.message); }
+            const todoBien = lineas.every(l => l.indexOf('✘') !== 0);
+            sal.innerHTML = lineas.map(medidorEsc).join('<br>') + '<br><b style="color:' + (todoBien ? '#166534' : '#b91c1c') + ';">' + (todoBien ? 'TODO BIEN: el alojamiento está listo.' : 'Hay algo que revisar: mándame esta lista.') + '</b>';
           }
         }
         async function galeriaBotVerGrande(ruta){
