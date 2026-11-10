@@ -5423,6 +5423,9 @@
         // modulo_montajes_rompecabezas.html (crea cliente en CRM + ficha en Kanban).
         let botwaPedidos = [];
 
+        // SEGURIDAD (2026-11-10): nombre, frase y motivo de los pedidos/leads los escribe un CLIENTE por WhatsApp (cualquiera
+        // puede hacerlo): siempre se escapan antes de pintarlos con innerHTML, o un mensaje con código se ejecutaría en la sesión del Hub.
+        function botwaEsc(t){ return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
         function botwaUrlBase(){
           return (localStorage.getItem('tactical_botwa_url')||'').trim().replace(/\/$/,'');
         }
@@ -6185,26 +6188,26 @@
             if(p.tipo === 'lead_asesor'){
               const cantidadTxt = p.cantidadAprox ? ` (~${p.cantidadAprox} unidades)` : '';
               return `<div class="data-card" style="border-left:4px solid #dd6b20;">
-                <div class="card-title">${p.nombre || 'Sin nombre'} <span style="font-size:0.7rem; font-weight:normal; color:#dd6b20; background:#fff3e0; padding:2px 6px; border-radius:10px;">Lead — asesor</span></div>
-                <p style="margin:4px 0; font-size:0.9em; color:#64748b;">${p.cel}</p>
-                <p style="margin:4px 0; font-size:0.9em;">${p.motivo || 'El bot no pudo resolverlo y pidió pasarlo a un asesor.'}${cantidadTxt} — falta contactar y cerrar manualmente.</p>
+                <div class="card-title">${botwaEsc(p.nombre) || 'Sin nombre'} <span style="font-size:0.7rem; font-weight:normal; color:#dd6b20; background:#fff3e0; padding:2px 6px; border-radius:10px;">Lead — asesor</span></div>
+                <p style="margin:4px 0; font-size:0.9em; color:#64748b;">${botwaEsc(p.cel)}</p>
+                <p style="margin:4px 0; font-size:0.9em;">${botwaEsc(p.motivo) || 'El bot no pudo resolverlo y pidió pasarlo a un asesor.'}${botwaEsc(cantidadTxt)} — falta contactar y cerrar manualmente.</p>
                 <div style="display:flex; gap:8px; margin-top:10px;">
                   <button class="btn-action" onclick="botwaMarcarContactado('${p.id}')">${ticon('phone')}Ya lo contacté</button>
                 </div>
               </div>`;
             }
             const medioTxt = (p.items && p.items.length)
-              ? p.items.map(it => `${it.forma?it.forma+' — ':''}${it.fichas} fichas (${it.medida}cm) x${it.cantidad}`).join('<br>')
-              : `${p.linea==='laser'?'Láser':'Troquel'}${p.forma?' - '+p.forma:''} — ${p.fichas} fichas (${p.medida}cm) x${p.cantidad}`;
+              ? p.items.map(it => `${it.forma?botwaEsc(it.forma)+' — ':''}${botwaEsc(it.fichas)} fichas (${botwaEsc(it.medida)}cm) x${botwaEsc(it.cantidad)}`).join('<br>')
+              : `${p.linea==='laser'?'Láser':'Troquel'}${p.forma?' - '+botwaEsc(p.forma):''} — ${botwaEsc(p.fichas)} fichas (${botwaEsc(p.medida)}cm) x${botwaEsc(p.cantidad)}`;
             const totalTxt = p.total!=null ? '$'+Math.round(p.total).toLocaleString('es-CO') : 'A cotizar';
             // Express (+30%, entrega en 2-3 días, URGENTE para producción) e imán (+30%, entrega normal)
             const etiquetaExpress = p.express ? `<span style="font-size:0.7rem; font-weight:bold; color:#fff; background:#c53030; padding:2px 6px; border-radius:10px; margin-left:6px;">EXPRESS x${p.cantidadExpress||1}</span>` : '';
             const etiquetaIman = p.iman ? `<span style="font-size:0.7rem; font-weight:bold; color:#fff; background:#2b6cb0; padding:2px 6px; border-radius:10px; margin-left:6px;">CON IMÁN x${p.cantidadIman||1}</span>` : '';
             return `<div class="data-card"${p.express ? ' style="border-left:4px solid #c53030;"' : ''}>
-              <div class="card-title">${p.nombre}${etiquetaExpress}${etiquetaIman}</div>
-              <p style="margin:4px 0; font-size:0.9em; color:#64748b;">${p.cel}</p>
+              <div class="card-title">${botwaEsc(p.nombre)}${etiquetaExpress}${etiquetaIman}</div>
+              <p style="margin:4px 0; font-size:0.9em; color:#64748b;">${botwaEsc(p.cel)}</p>
               <p style="margin:4px 0; font-size:0.9em;">${medioTxt}</p>
-              ${p.frase ? `<p style="margin:4px 0; font-size:0.9em;">Frase: <b>«${p.frase}»</b> — tipografía ${p.tipografia}</p>` : ''}
+              ${p.frase ? `<p style="margin:4px 0; font-size:0.9em;">Frase: <b>«${botwaEsc(p.frase)}»</b> — tipografía ${botwaEsc(p.tipografia)}</p>` : ''}
               <p style="margin:4px 0; font-weight:bold;">${totalTxt}</p>
               <div id="botwa-img-${p.id}" style="margin-top:8px; font-size:0.8em; color:#64748b;">Cargando comprobante...</div>
               <div style="display:flex; gap:8px; margin-top:10px;">
@@ -6326,13 +6329,13 @@
             if(pausados.length===0){ cont.innerHTML = '<p style="color:#64748b;">Ningún cliente con el bot en pausa ahora mismo.</p>'; return; }
             cont.innerHTML = pausados.map(s => `
               <div class="data-card">
-                <div class="card-title">${s.nombre || 'Sin nombre'}</div>
-                <p style="margin:4px 0; font-size:0.9em; color:#64748b;">${s.phone}</p>
+                <div class="card-title">${botwaEsc(s.nombre) || 'Sin nombre'}</div>
+                <p style="margin:4px 0; font-size:0.9em; color:#64748b;">${botwaEsc(s.phone)}</p>
                 <p style="margin:4px 0; font-size:0.8em; color:#64748b;">En pausa desde ${s.pausadoDesde ? new Date(s.pausadoDesde).toLocaleString('es-CO') : '—'}</p>
                 <button class="btn-action" onclick="botwaReactivarBot('${s.phone}')">Reactivar bot</button>
               </div>`).join('');
           }catch(e){
-            cont.innerHTML = '<p style="color:#e53e3e;">No se pudo conectar con el bot: ' + e.message + '</p>';
+            cont.innerHTML = '<p style="color:#e53e3e;">No se pudo conectar con el bot: ' + botwaEsc(e.message) + '</p>';
           }
         }
         async function botwaReactivarBot(cel){
