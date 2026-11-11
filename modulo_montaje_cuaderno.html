@@ -401,7 +401,7 @@ function construirSlots(){
   add('contra','CONTRACARÁTULA','Por fuera','respaldo','tapa',true);
   S.insertos.forEach((ins,i)=>{
     const n = ins || ('Inserto '+(i+1));
-    add('ins'+i+'f', n.toUpperCase()+' · FRENTE', 'Hoja que se repite en el cuaderno', 'frente', 'interior', false, false);
+    add('ins'+i+'f', n.toUpperCase()+' · FRENTE', 'Hoja única: no se repite', 'frente', 'interior', false, false);
     add('ins'+i+'r', n.toUpperCase()+' · ATRÁS', 'Reverso de esa hoja', 'respaldo', 'interior', false, false);
   });
   const nombreInt = (S.interior||'Hoja interior').toUpperCase();
