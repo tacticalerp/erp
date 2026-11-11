@@ -1109,6 +1109,7 @@
           .cm-ib.cm-der::after{ left:auto; right:0; transform:none; }
           .cm-chip{ padding:2px 10px; border-radius:999px; border:1px solid #a0aec0; background:#fff; font-size:0.72rem; cursor:pointer; color:#1a202c; }
           .cm-chip.on{ background:#1a202c; color:#fff; border-color:#1a202c; }
+          .cm-chip .cm-n{ font-size:0.68rem; opacity:.75; margin-left:2px; }
           /* Conde 2026-11-07: Radar y Reportes por año y módulos plegables */
           .rep-fl{ display:block; font-size:0.68rem; color:#a0aec0; margin-bottom:2px; }
           .rep-fs{ background:#fff; color:#1a202c; border:1px solid #cbd5e0; border-radius:4px; padding:5px 8px; font-size:0.85rem; width:auto; }
@@ -1165,7 +1166,9 @@
                 <div class="comercial-subtitulo" style="margin-top:10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">Cotizaciones creadas
                   <span style="margin-left:auto; display:flex; gap:5px; align-items:center; text-transform:none; font-weight:400;">
                     <span id="cm-nota-30" style="font-size:0.7rem; opacity:0.85; margin-right:4px;">Últimos 30 días · escribe en el buscador para ver todo el histórico</span>
-                    <button type="button" class="cm-chip on" id="cm-chip-act" onclick="comercialCambiarFiltroEstado('act')">Activas</button>
+                    <button type="button" class="cm-chip on" id="cm-chip-act" onclick="comercialCambiarFiltroEstado('act')">Activas <span class="cm-n" id="cm-n-act"></span></button>
+                    <button type="button" class="cm-chip" id="cm-chip-env" onclick="comercialCambiarFiltroEstado('env')">Enviadas <span class="cm-n" id="cm-n-env"></span></button>
+                    <button type="button" class="cm-chip" id="cm-chip-seg" onclick="comercialCambiarFiltroEstado('seg')">Seguimiento <span class="cm-n" id="cm-n-seg"></span></button>
                     <button type="button" class="cm-chip" id="cm-chip-gan" onclick="comercialCambiarFiltroEstado('gan')">Ganadas</button>
                     <button type="button" class="cm-chip" id="cm-chip-per" onclick="comercialCambiarFiltroEstado('per')">Perdidas</button>
                     <button type="button" class="cm-chip" id="cm-chip-all" onclick="comercialCambiarFiltroEstado('all')">Todas</button>
@@ -11215,9 +11218,8 @@
               </div>
               <label style="font-size:0.8rem; font-weight:700; color:#4a5568; display:block; margin-bottom:3px;">Etapa comercial actual:</label>
               <select id="opp-etapa" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e0; border-radius:6px; margin-bottom:16px; font-size:0.9rem;">
-                <option value="req">Nuevo Requerimiento</option>
-                <option value="cot">Cotización Enviada</option>
-                <option value="neg">En Negociación / Seguimiento</option>
+                <option value="cot">Enviada</option>
+                <option value="neg">Seguimiento</option>
               </select>
               <div style="display:flex; gap:8px;">
                 <button type="button" onclick="document.getElementById('comercial-modal-crear-negocio').remove()" style="flex:1; padding:10px; border:1px solid #cbd5e0; background:#fff; color:#4a5568; border-radius:6px; font-weight:700; cursor:pointer;">Cancelar</button>
@@ -11246,6 +11248,20 @@
            Las tablas se ven igual que antes (más la columna Valor y una flechita); al hacer clic en una fila se abre un panel con el detalle,
            las versiones, la ficha del cliente y las acciones (solo íconos, con el texto al pasar el mouse). Eliminar: solo administrador. */
         let comercialFiltroEstado = 'act';
+        /* Reloj de seguimiento (Conde 2026-11-11): gris = sin fecha · azul = programado para otro día · naranja = mañana · rojo = hoy o atrasado.
+           Usa la fecha LOCAL (antes el recordatorio comparaba contra la fecha UTC y pasaba al día siguiente a las 7 p. m. de Colombia). */
+        function comercialHoyISO(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+        function comercialRelojInfo(o){
+          if(!o.seguimientoFecha) return { color: '#64748b', titulo: 'Programar seguimiento' };
+          const [y, m, d] = String(o.seguimientoFecha).slice(0, 10).split('-').map(Number);
+          const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+          const dias = Math.round((new Date(y, m - 1, d) - hoy) / 86400000);
+          const fecha = tacticalFormatoDiaMes(o.seguimientoFecha);
+          if(dias < 0) return { color: '#dc2626', titulo: 'Seguimiento ATRASADO (' + fecha + ', hace ' + (-dias) + (dias === -1 ? ' día' : ' días') + ') — clic para reprogramar' };
+          if(dias === 0) return { color: '#dc2626', titulo: 'Seguimiento HOY (' + fecha + ') — clic para reprogramar' };
+          if(dias === 1) return { color: '#f97316', titulo: 'Seguimiento mañana (' + fecha + ') — clic para reprogramar' };
+          return { color: '#2563eb', titulo: 'Seguimiento programado: ' + fecha + ' — clic para reprogramar' };
+        }
         const comercialFilasAbiertas = new Set();
         function comercialEsAdmin(){ return !!(window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol === 'administrador'); }
         function comercialCambiarFiltroEstado(v){ comercialFiltroEstado = v; renderComercial(); }
@@ -11416,7 +11432,12 @@
           const vend = comercialVendedorActivo;
           const activosV = db_opps.filter(o => verTodos || o.vendedor===vend);
           const cerradosV = db_historial_cierres.filter(o => verTodos || o.vendedor===vend);
+          const etapaEf = o => (o.etapa === 'req' ? 'cot' : o.etapa);   // Conde 2026-11-11: sin "Nuevo requerimiento": se muestra como Enviada
+          { const n = { act: activosV.length, env: activosV.filter(o => etapaEf(o) === 'cot').length, seg: activosV.filter(o => etapaEf(o) === 'neg').length };
+            Object.keys(n).forEach(k => { const e = document.getElementById('cm-n-' + k); if(e) e.textContent = n[k]; }); }
           let cotizaciones = comercialFiltroEstado==='act' ? activosV
+            : comercialFiltroEstado==='env' ? activosV.filter(o => etapaEf(o) === 'cot')
+            : comercialFiltroEstado==='seg' ? activosV.filter(o => etapaEf(o) === 'neg')
             : comercialFiltroEstado==='gan' ? cerradosV.filter(o => o.estado==='ganado')
             : comercialFiltroEstado==='per' ? cerradosV.filter(o => o.estado==='perdido')
             : [...activosV, ...cerradosV];
@@ -11426,9 +11447,9 @@
             cotizaciones = cotizaciones.filter(o => { const f=fechaDeRegistro(o); return f && f>=hace30Dias; });
           }
           cotizaciones.sort((a,b) => (fechaDeRegistro(b)||0) - (fechaDeRegistro(a)||0));
-          ['act','gan','per','all'].forEach(k => { const b = document.getElementById('cm-chip-'+k); if(b) b.classList.toggle('on', k===comercialFiltroEstado); });
+          ['act','env','seg','gan','per','all'].forEach(k => { const b = document.getElementById('cm-chip-'+k); if(b) b.classList.toggle('on', k===comercialFiltroEstado); });
           const notaCm = document.getElementById('cm-nota-30'); if(notaCm) notaCm.style.display = buscar ? 'none' : '';
-          const vacioCm = { act:'Sin cotizaciones activas.', gan:'Sin cotizaciones ganadas en los últimos 30 días.', per:'Sin cotizaciones perdidas en los últimos 30 días.', all:'Sin cotizaciones en los últimos 30 días.' }[comercialFiltroEstado];
+          const vacioCm = { act:'Sin cotizaciones activas.', env:'Sin cotizaciones enviadas.', seg:'Sin cotizaciones en seguimiento.', gan:'Sin cotizaciones ganadas en los últimos 30 días.', per:'Sin cotizaciones perdidas en los últimos 30 días.', all:'Sin cotizaciones en los últimos 30 días.' }[comercialFiltroEstado];
           const contCot = document.getElementById('comercial-cotizaciones');
           if(contCot) contCot.innerHTML = cotizaciones.length ? cotizaciones.map((o, i) => {
             const fecha = fechaDeRegistro(o);
@@ -11436,16 +11457,15 @@
             const activa = !!o.etapa;
             const celdaEtapa = activa
               ? `<select onchange="avanzarEtapa('${o.id}',this.value)">
-                <option value="req" ${o.etapa==='req'?'selected':''}>Nuevo Requerimiento</option>
-                <option value="cot" ${o.etapa==='cot'?'selected':''}>Enviada</option>
-                <option value="neg" ${o.etapa==='neg'?'selected':''}>Seguimiento</option>
+                <option value="cot" ${etapaEf(o)==='cot'?'selected':''}>Enviada</option>
+                <option value="neg" ${etapaEf(o)==='neg'?'selected':''}>Seguimiento</option>
               </select>`
               : `<span class="cm-tag" style="background:${o.estado==='ganado' ? '#48bb78' : '#e53e3e'};">${o.estado==='ganado' ? 'Ganada' : 'Perdida'}</span>`;
             const celdaObs = activa
               ? `<input type="text" value="${(o.seguimiento||'').replace(/"/g,'&quot;')}" placeholder="Ej: llamé el 28, volver a llamar el 2 de sept." onchange="comercialGuardarSeguimiento('${o.id}',this.value)">`
               : `<span style="color:#5f6e84;">${resumenCotEsc(o.seguimiento || '')}</span>`;
             const celdaAcc = activa
-              ? `<button onclick="comercialAbrirSeguimientoFecha('${o.id}')" title="Programar seguimiento" style="background:#64748b; border:none; border-radius:50%; width:22px; height:22px; padding:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; margin-right:4px;">${ticon('clock',{color:'#fff',noMargin:true,size:13})}</button>
+              ? `<button onclick="comercialAbrirSeguimientoFecha('${o.id}')" title="${comercialRelojInfo(o).titulo}" style="background:${comercialRelojInfo(o).color}; border:none; border-radius:50%; width:22px; height:22px; padding:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; margin-right:4px;">${ticon('clock',{color:'#fff',noMargin:true,size:13})}</button>
                 <button onclick="comercialConfirmarPerdido('${o.id}')" title="Marcar cancelada" style="background:#dc2626; border:none; border-radius:50%; width:22px; height:22px; padding:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; margin-right:4px;">${ticon('x',{color:'#fff',noMargin:true,size:13})}</button>
                 <button onclick="comercialConfirmarGanado('${o.id}')" title="Marcar aprobada" style="background:#16a34a; border:none; border-radius:50%; width:22px; height:22px; padding:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">${ticon('check',{color:'#fff',noMargin:true,size:13})}</button>`
               : '';
@@ -11465,7 +11485,7 @@
           // atendió, para que nunca se pierda un seguimiento por no entrar justo ese día.
           const contRec = document.getElementById('comercial-recordatorios');
           if(contRec){
-            const hoyStr = new Date().toISOString().slice(0,10);
+            const hoyStr = comercialHoyISO();
             const pendientesHoy = db_opps.filter(o => o.vendedor===comercialVendedorActivo && o.seguimientoFecha && o.seguimientoFecha <= hoyStr);
             pendientesHoy.sort((a,b) => (a.seguimientoFecha||'').localeCompare(b.seguimientoFecha||''));
             contRec.innerHTML = pendientesHoy.map(o => {
