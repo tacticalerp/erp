@@ -452,6 +452,9 @@
         .kanban-card-actions { gap:3px; margin-top:4px; }
         .kanban-card-actions .btn-action.kb-mini { padding:0 6px; font-size:0.62rem; line-height:1.5; min-width:0; margin-right:0; border-radius:3px; opacity:0.85; }
         .kanban-card-actions .btn-action.kb-mini:hover { opacity:1; background:#e2e8f0; }
+        [data-kb-hold]{ position:relative; overflow:hidden; touch-action:manipulation; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+        [data-kb-hold].kb-holding::after{ content:''; position:absolute; left:0; bottom:0; height:3px; width:0; background:#2563eb; animation:kbHold 3s linear forwards; }
+        @keyframes kbHold{ from{ width:0; } to{ width:100%; } }
         /* Conde 2026-10-09: ficha cerrada -- las flechas ▲▼◀▶ a la IZQUIERDA de "Ver detalle", los dos en
            una misma fila que ocupa todo el ancho (antes quedaban pegadas encima del texto y en el celular
            era difícil acertarles). */
@@ -6906,6 +6909,53 @@
           kanbanPersistirOrden(f.columna);
           renderKanban();
         }
+        /* Conde 2026-11-11: mantener ▲ 3 segundos = la ficha pasa al PRINCIPIO de su columna; mantener ▼ 3 segundos = al FINAL.
+           Un clic normal sigue moviendo una sola posición. Mientras se mantiene, una barrita azul se llena en el botón (3 s). */
+        const KB_HOLD_MS = 3000;
+        let kbHoldTimer = null, kbHoldBtn = null, kbSuprimirClickHasta = 0;
+        function kanbanMoverAlExtremo(id, dir){
+          const f = db_kanban.find(x => x.id === id); if(!f) return false;
+          const otras = db_kanban.filter(x => x.columna === f.columna && x !== f);
+          if(!otras.length) return false;
+          const lista = db_kanban.filter(x => x.columna === f.columna);
+          if((dir < 0 && lista[0] === f) || (dir > 0 && lista[lista.length - 1] === f)){
+            if(typeof tacticalAviso === 'function') tacticalAviso('Esa ficha ya está ' + (dir < 0 ? 'de primera' : 'de última') + ' en la columna.', 'info');
+            return false;
+          }
+          db_kanban.splice(db_kanban.indexOf(f), 1);
+          if(dir < 0) db_kanban.splice(db_kanban.indexOf(otras[0]), 0, f);
+          else db_kanban.splice(db_kanban.indexOf(otras[otras.length - 1]) + 1, 0, f);
+          kanbanPersistirOrden(f.columna);
+          renderKanban();
+          return true;
+        }
+        function kanbanFlechaClick(btn, id, delta){
+          if(Date.now() < kbSuprimirClickHasta) return;   // ese clic es el final de una pulsación larga (ya se movió al extremo)
+          kanbanMoverEnColumna(id, delta);
+        }
+        function kbHoldCancelar(){
+          if(kbHoldTimer){ clearTimeout(kbHoldTimer); kbHoldTimer = null; }
+          if(kbHoldBtn){ kbHoldBtn.classList.remove('kb-holding'); kbHoldBtn = null; }
+        }
+        document.addEventListener('pointerdown', e => {
+          const b = e.target && e.target.closest ? e.target.closest('[data-kb-hold]') : null;
+          if(!b || (e.pointerType === 'mouse' && e.button !== 0)) return;
+          kbHoldCancelar();
+          kbHoldBtn = b; b.classList.add('kb-holding');
+          const dir = parseInt(b.getAttribute('data-kb-hold'), 10), id = b.getAttribute('data-kb-id');
+          kbHoldTimer = setTimeout(() => {
+            kbHoldTimer = null;
+            kbSuprimirClickHasta = Date.now() + 700;
+            kbHoldCancelar();
+            kanbanMoverAlExtremo(id, dir);
+          }, KB_HOLD_MS);
+        }, true);
+        ['pointerup', 'pointercancel', 'pointerleave', 'dragstart'].forEach(ev => document.addEventListener(ev, e => {
+          if(!kbHoldBtn) return;
+          if(ev === 'pointerleave' && !(e.target === kbHoldBtn)) return;
+          kbHoldCancelar();
+        }, true));
+        document.addEventListener('contextmenu', e => { if(e.target && e.target.closest && e.target.closest('[data-kb-hold]')) e.preventDefault(); }, true);
         // Texto seleccionable en las fichas (OT, cliente...): la ficha es arrastrable (draggable), y eso impedía seleccionar texto con el mouse.
         // Al apretar el mouse sobre un texto .kb-sel la ficha deja de ser arrastrable hasta soltarlo; y si quedó texto seleccionado, ese clic no abre la ficha.
         const KB_TEXTO_SELECCIONABLE = '.kb-sel, .kanban-card-title, .kanban-card-meta, .kb-carr-info';
@@ -7197,8 +7247,8 @@
             const flechasHtml = `
               <div class="kb-fila-compacta" onclick="event.stopPropagation();" ontouchstart="event.stopPropagation();">
                 <div class="kb-flechas">
-                  <button class="btn-action kb-mini" ontouchstart="event.stopPropagation();" onclick="kanbanMoverEnColumna('${f.id}',-1)" title="Subir una posición en esta columna">▲</button>
-                  <button class="btn-action kb-mini" ontouchstart="event.stopPropagation();" onclick="kanbanMoverEnColumna('${f.id}',1)" title="Bajar una posición en esta columna">▼</button>
+                  <button class="btn-action kb-mini" ontouchstart="event.stopPropagation();" onclick="kanbanFlechaClick(this,'${f.id}',-1)" data-kb-hold="-1" data-kb-id="${f.id}" title="Subir una posición · mantén 3 segundos para llevarla al principio de la columna">▲</button>
+                  <button class="btn-action kb-mini" ontouchstart="event.stopPropagation();" onclick="kanbanFlechaClick(this,'${f.id}',1)" data-kb-hold="1" data-kb-id="${f.id}" title="Bajar una posición · mantén 3 segundos para llevarla al final de la columna">▼</button>
                   ${puedeAtras?`<button class="btn-action kb-mini" ontouchstart="event.stopPropagation();" onclick="moverFicha('${f.id}',-1)" title="Mover a la columna anterior">◀</button>`:''}
                   ${puedeAdelante?`<button class="btn-action kb-mini" ontouchstart="event.stopPropagation();" onclick="moverFicha('${f.id}',1)" title="Mover a la siguiente columna">▶</button>`:''}
                 </div>
@@ -7273,8 +7323,8 @@
             ${fotosSectionHtml}
             ${editSectionHtml}
             <div class="kanban-card-actions">
-              <button class="btn-action kb-mini" onclick="kanbanMoverEnColumna('${f.id}',-1)" title="Subir una posición en esta columna">▲</button>
-              <button class="btn-action kb-mini" onclick="kanbanMoverEnColumna('${f.id}',1)" title="Bajar una posición en esta columna">▼</button>
+              <button class="btn-action kb-mini" onclick="kanbanFlechaClick(this,'${f.id}',-1)" data-kb-hold="-1" data-kb-id="${f.id}" title="Subir una posición · mantén 3 segundos para llevarla al principio de la columna">▲</button>
+              <button class="btn-action kb-mini" onclick="kanbanFlechaClick(this,'${f.id}',1)" data-kb-hold="1" data-kb-id="${f.id}" title="Bajar una posición · mantén 3 segundos para llevarla al final de la columna">▼</button>
               ${puedeAtras?`<button class="btn-action kb-mini" onclick="moverFicha('${f.id}',-1)" title="Mover a la columna anterior">◀</button>`:''}
               ${puedeAdelante?`<button class="btn-action kb-mini" onclick="moverFicha('${f.id}',1)" title="Mover a la siguiente columna">▶</button>`:''}
             </div>
