@@ -1131,7 +1131,7 @@
             <p style="color:#a0aec0; font-size:0.85rem; margin:0 0 12px;">Vista compacta por vendedor -- Cliente/Producto/Fecha se llenan solos desde el CRM/Kanban/B2C; "Pendiente" y "Observaciones" se editan a mano (clic y escribe).</p>
             <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px;">
               <div id="comercial-tabs" style="display:flex; gap:6px;"></div>
-              <input type="text" id="comercial-buscar" placeholder="Buscar en todo el historial de este vendedor (cliente, OT, producto)..." oninput="renderComercial()" style="flex:1; min-width:220px; padding:7px 10px; border:1px solid #cbd5e0; border-radius:5px; font-size:0.85rem;">
+              <input type="text" id="comercial-buscar" placeholder="Buscar en todo el historial de este vendedor (cliente, OT, producto)..." oninput="comercialBuscarCambio()" style="flex:1; min-width:220px; padding:7px 10px; border:1px solid #cbd5e0; border-radius:5px; font-size:0.85rem;">
               <!-- Conde 2026-08-28: "deja crear negocio manual en comercial, que sea un botón que abra
                    una ventana flotante" -- reemplaza el formulario siempre visible que tenía CRM antes
                    (ver comercialAbrirCrearNegocio más abajo). -->
@@ -11314,7 +11314,16 @@
         }
         const comercialFilasAbiertas = new Set();
         function comercialEsAdmin(){ return !!(window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol === 'administrador'); }
-        function comercialCambiarFiltroEstado(v){ comercialFiltroEstado = v; renderComercial(); }
+        /* Conde 2026-11-12: "necesito buscar cotizaciones de hace más de 30 días". Buscar ya ignoraba el límite de 30 días, pero con el filtro en
+           "Activas" nunca aparecían las ya cerradas (ganadas/perdidas). Ahora, al escribir, el filtro pasa solo a "Todas" y vuelve a "Activas" si se borra. */
+        let comercialFiltroAuto = false;
+        function comercialBuscarCambio(){
+          const v = ((document.getElementById('comercial-buscar') || {}).value || '').trim();
+          if(v && comercialFiltroEstado === 'act'){ comercialFiltroEstado = 'all'; comercialFiltroAuto = true; }
+          else if(!v && comercialFiltroAuto){ comercialFiltroEstado = 'act'; comercialFiltroAuto = false; }
+          renderComercial();
+        }
+        function comercialCambiarFiltroEstado(v){ comercialFiltroEstado = v; comercialFiltroAuto = false; renderComercial(); }
         function comercialToggleFila(key, ev){
           if(ev && ev.target && ev.target.closest && ev.target.closest('input,select,button,a,textarea')) return;   // escribir o pulsar un botón no abre/cierra la fila
           if(comercialFilasAbiertas.has(key)) comercialFilasAbiertas.delete(key); else comercialFilasAbiertas.add(key);
@@ -11499,7 +11508,15 @@
           cotizaciones.sort((a,b) => (fechaDeRegistro(b)||0) - (fechaDeRegistro(a)||0));
           ['act','env','seg','gan','per','all'].forEach(k => { const b = document.getElementById('cm-chip-'+k); if(b) b.classList.toggle('on', k===comercialFiltroEstado); });
           const notaCm = document.getElementById('cm-nota-30'); if(notaCm) notaCm.style.display = buscar ? 'none' : '';
-          const vacioCm = { act:'Sin cotizaciones activas.', env:'Sin cotizaciones enviadas.', seg:'Sin cotizaciones en seguimiento.', gan:'Sin cotizaciones ganadas en los últimos 30 días.', per:'Sin cotizaciones perdidas en los últimos 30 días.', all:'Sin cotizaciones en los últimos 30 días.' }[comercialFiltroEstado];
+          let vacioBusqueda = '';
+          if(buscar){
+            const coincide = o => (o.nombreCli||'').toLowerCase().includes(buscar) || (o.desc||'').toLowerCase().includes(buscar) || (o.ot||'').toLowerCase().includes(buscar);
+            const enOtros = [...db_opps, ...db_historial_cierres].filter(o => coincide(o) && !(verTodos || o.vendedor===vend)).length;
+            vacioBusqueda = enOtros
+              ? `Sin resultados para "${resumenCotEsc(buscar)}" de este vendedor, pero hay ${enOtros} en otros vendedores: abre la pestaña "Todos".`
+              : `Sin resultados para "${resumenCotEsc(buscar)}" en todo el historial. Revisa el nombre del cliente, la OT o una palabra del producto.`;
+          }
+          const vacioCm = vacioBusqueda || { act:'Sin cotizaciones activas.', env:'Sin cotizaciones enviadas.', seg:'Sin cotizaciones en seguimiento.', gan:'Sin cotizaciones ganadas en los últimos 30 días.', per:'Sin cotizaciones perdidas en los últimos 30 días.', all:'Sin cotizaciones en los últimos 30 días.' }[comercialFiltroEstado];
           const contCot = document.getElementById('comercial-cotizaciones');
           if(contCot) contCot.innerHTML = cotizaciones.length ? cotizaciones.map((o, i) => {
             const fecha = fechaDeRegistro(o);
