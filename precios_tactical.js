@@ -276,6 +276,7 @@ const TACTICAL_CALCULADORAS_SUSTRATOS = [
   {id:'cajas', label:'Cajas'},
   {id:'carpetas', label:'Carpetas'},
   {id:'volantes', label:'Volantes/Afiches/Plegables'},
+  {id:'universal', label:'Calculadora Universal'},
   {id:'rompecabezas', label:'Rompecabezas'},
   {id:'cubo_rubik', label:'Cubo Rubik'},
 ];
@@ -366,9 +367,11 @@ const PRECIOS_CARTON_MICRO_COP = tacticalMergeNivel1(PRECIOS_BASE_CARTON_MICRO, 
 const tacticalEtiquetasCarton = (obj, prefijo) => Object.fromEntries(Object.keys(obj).map(k => [k, prefijo + k.replace(/(\d)x(\d)/g, '$1 × $2') + ' cm']));
 const PRECIOS_OFFSET_TOLERANCIA_MERMA_MILLAR = (TACTICAL_PRECIOS_OVERRIDE.offsetToleranciaMerma != null) ? TACTICAL_PRECIOS_OVERRIDE.offsetToleranciaMerma : 180;
 
-/* ---- IMPRESIÓN DIGITAL (dos tarifarios: Cuadernos usa un tiraje distinto al de las demás líneas) ---- */
-const PRECIOS_DIGITAL_CLIC_CUADERNOS = tacticalMergeNivel2({ carta:{color:750, negro:350}, octavo:{color:900, negro:450}, pliego_max:{color:1000, negro:550} }, TACTICAL_PRECIOS_OVERRIDE.digitalClicCuadernos);
-const PRECIOS_DIGITAL_CLIC_OTRAS_LINEAS = tacticalMergeNivel2({ carta:{color:1000, negro:250}, octavo:{color:1400, negro:350}, pliego_max:{color:2200, negro:550} }, TACTICAL_PRECIOS_OVERRIDE.digitalClicOtrasLineas);
+/* ---- IMPRESIÓN DIGITAL ---- Conde 2026-11-13: un solo tarifario para TODAS las calculadoras (el de
+   Cuadernos, con pliego máximo color a $1.130). Se conservan las dos claves porque cada calculadora
+   lee la suya y el Panel de Precios guarda los ajustes por separado; los valores base son iguales. */
+const PRECIOS_DIGITAL_CLIC_CUADERNOS = tacticalMergeNivel2({ carta:{color:750, negro:350}, octavo:{color:900, negro:450}, pliego_max:{color:1130, negro:550} }, TACTICAL_PRECIOS_OVERRIDE.digitalClicCuadernos);
+const PRECIOS_DIGITAL_CLIC_OTRAS_LINEAS = tacticalMergeNivel2({ carta:{color:750, negro:350}, octavo:{color:900, negro:450}, pliego_max:{color:1130, negro:550} }, TACTICAL_PRECIOS_OVERRIDE.digitalClicOtrasLineas);
 
 /* ---- ACABADOS ---- */
 const PRECIOS_PLASTIFICADO_COP_M2 = (TACTICAL_PRECIOS_OVERRIDE.plastificadoM2 != null) ? TACTICAL_PRECIOS_OVERRIDE.plastificadoM2 : 950;
@@ -436,8 +439,8 @@ const PRECIOS_CAMPOS_PANEL = [
   {grupo:"Impresión Offset — Plancha (CTP)", tipo:"nivel1", clave:"offsetCtp", base:{medio_pliego:22000, cuarto:11000, octavo:9000}, etiquetas:{medio_pliego:"Medio pliego", cuarto:"Cuarto de pliego", octavo:"Octavo de pliego"}},
   {grupo:"Impresión Offset — Millar (tiro)", tipo:"nivel1", clave:"offsetMillar", base:{medio_pliego_color:25000, medio_pliego_policromia_4x0:100000, cuarto:17000, octavo:12000}, etiquetas:{medio_pliego_color:"Medio pliego (1-2 tintas)", medio_pliego_policromia_4x0:"Medio pliego policromía 4x0", cuarto:"Cuarto de pliego", octavo:"Octavo de pliego"}},
   {grupo:"Impresión Offset — Recargo fondo pleno", tipo:"nivel1", clave:"offsetRecargoFondoPleno", base:{medio_pliego:90000, cuarto:50000, octavo:50000}, etiquetas:{medio_pliego:"Medio pliego", cuarto:"Cuarto de pliego", octavo:"Octavo de pliego"}},
-  {grupo:"Impresión Digital — Cuadernos ($/clic)", tipo:"nivel2", clave:"digitalClicCuadernos", base:{ carta:{color:750, negro:350}, octavo:{color:900, negro:450}, pliego_max:{color:1000, negro:550} }},
-  {grupo:"Impresión Digital — Otras líneas ($/clic)", tipo:"nivel2", clave:"digitalClicOtrasLineas", base:{ carta:{color:1000, negro:250}, octavo:{color:1400, negro:350}, pliego_max:{color:2200, negro:550} }},
+  {grupo:"Impresión Digital — Cuadernos ($/clic)", tipo:"nivel2", clave:"digitalClicCuadernos", base:{ carta:{color:750, negro:350}, octavo:{color:900, negro:450}, pliego_max:{color:1130, negro:550} }},
+  {grupo:"Impresión Digital — Otras líneas ($/clic)", tipo:"nivel2", clave:"digitalClicOtrasLineas", base:{ carta:{color:750, negro:350}, octavo:{color:900, negro:450}, pliego_max:{color:1130, negro:550} }},
   {grupo:"Acabados", tipo:"simple", customAcabados:true, campos:[
     {clave:"plastificadoM2", etiqueta:"Plastificado ($/m²)", base:950},
     {clave:"plastificadoPiso", etiqueta:"Plastificado (piso mínimo OT)", base:30000},
@@ -590,6 +593,7 @@ const TACTICAL_LINEAS_BASE = [
   {clave:'cajas', label:'Cajas'},
   {clave:'bolsas', label:'Bolsas'},
   {clave:'volantes', label:'Volantes / Afiches / Plegables'},
+  {clave:'universal', label:'Calculadora Universal'},
   {clave:'rompecabezas', label:'Rompecabezas (B2B)'},
   {clave:'cubo_rubik', label:'Cubo Rubik'},
 ];

@@ -1532,6 +1532,14 @@
                     </div>
                     <div class="card-footer">Abrir calculadora ➔</div>
                 </div>
+                <div class="hub-card active-card" onclick="location.href='calculadora_universal.html'">
+                    <div>
+                        <div class="card-header">
+                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>Calculadora Universal (catálogos, calendarios, tacos, sobres, tarjetas, etiquetas)</h3>
+                        </div>
+                    </div>
+                    <div class="card-footer">Abrir calculadora ➔</div>
+                </div>
                 <div class="hub-card active-card" onclick="location.href='calculadora_bolsas.html'">
                     <div>
                         <div class="card-header">
@@ -2685,7 +2693,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="tactical-supabase.js?v=20261109b"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
-    <script src="precios_tactical.js?v=20261109a"></script>
+    <script src="precios_tactical.js?v=20261113b"></script>
 <script src="tactical-ui.js?v=20261109d"></script>
     <script src="troqueles_tactical.js?v=20261107a"></script>
     <script src="precios_promocionales.js?v=20260919a"></script>
@@ -4724,7 +4732,7 @@
         // tipo de producto es cada ficha, y como base del filtro que aísla solo una línea.
         const KANBAN_COLOR_LINEA = {
           cuadernos:'#2b6cb0', rompecabezas:'#805ad5', cubo_rubik:'#d69e2e', carpetas:'#38a169',
-          volantes:'#dd6b20', bolsas:'#319795', cajas:'#c53030', promocionales:'#b83280', manual:'#718096',
+          volantes:'#dd6b20', universal:'#0f766e', bolsas:'#319795', cajas:'#c53030', promocionales:'#b83280', manual:'#718096',
         };
         // "riel" solo se usa en Cuadernos: 'A' = Taco (arranca de una vez), 'B' = Carátula (espera
         // aprobación de arte), 'gate' = Anillado/Encuadernación, bloqueado hasta que A y B estén listos.
@@ -5298,6 +5306,7 @@
           {clave:'cajas', label:'📦 Cajas'},
           {clave:'bolsas', label:'🛍️ Bolsas'},
           {clave:'volantes', label:'📰 Volantes / Afiches / Plegables'},
+          {clave:'universal', label:'Calculadora Universal'},
           {clave:'rompecabezas', label:'🧩 Rompecabezas (B2B / mayoristas)'},
           {clave:'cubo_rubik_con_caja', label:'🎲 Cubo Rubik — con caja'},
           {clave:'cubo_rubik_sin_caja', label:'🎲 Cubo Rubik — sin caja'},
@@ -7642,7 +7651,7 @@
           {id:'cubo_rubik_3', calculadora:'cubo_rubik', label:'Cubo Rubik', condicion:'Siempre se muestra', original:'Siempre preguntar al cliente si el pedido va con caja de empaque antes de cerrar la cotización.'},
         ];
         const RECOMENDACIONES_CALCULADORAS_SELECT = [
-          {clave:'cajas', label:'Cajas Blandas'}, {clave:'carpetas', label:'Carpetas'}, {clave:'volantes', label:'Volantes/Afiches/Plegables'},
+          {clave:'cajas', label:'Cajas Blandas'}, {clave:'carpetas', label:'Carpetas'}, {clave:'volantes', label:'Volantes/Afiches/Plegables'}, {clave:'universal', label:'Calculadora Universal'},
           {clave:'rompecabezas', label:'Rompecabezas'}, {clave:'bolsas', label:'Bolsas de Papel'}, {clave:'cubo_rubik', label:'Cubo Rubik'},
         ];
         function renderPanelRecomendaciones(){
@@ -9526,6 +9535,7 @@
           cubo_rubik: 'calculadora_cubo_rubik.html',
           promocionales: 'calculadora_promocionales.html',
           volantes: 'calculadora_volantes.html',
+          universal: 'calculadora_universal.html',
           // "libre" (calculadora_libre.html) queda afuera a propósito -- guarda su opp con
           // linea:'manual' para compatibilidad con fichas manuales del Kanban, así que no hay forma
           // confiable de distinguir sus cotizaciones de las verdaderamente manuales por el campo
@@ -10732,7 +10742,7 @@
         // aportan las otras 6 líneas.
         const NOMBRES_LINEA_PRODUCTO = {
           cuadernos:"Cuadernos/Agendas", rompecabezas:"Rompecabezas", cubo_rubik:"Cubo Rubik",
-          carpetas:"Carpetas", volantes:"Volantes/Afiches/Plegables", bolsas:"Bolsas de Papel",
+          carpetas:"Carpetas", volantes:"Volantes/Afiches/Plegables", universal:"Calculadora Universal", bolsas:"Bolsas de Papel",
           cajas:"Cajas Blandas", promocionales:"Promocionales (Merchandising)",
           manual:"Producto libre (fuera de catálogo)", otro:"Sin clasificar",
         };
@@ -11065,7 +11075,7 @@
         // las demás líneas, de cotizaciones_calculadoras (se consulta solo el mes elegido).
         const RESUMEN_COT_COLORES = { todas:'#B4B2A9', ganada:'#639922', seguimiento:'#EF9F27', perdida:'#E24B4A' };
         const RESUMEN_COT_TITULOS = { todas:'Todas', ganada:'Ganada', seguimiento:'En seguimiento', perdida:'Perdida' };
-        const RESUMEN_COT_LINEAS = { cuadernos:'Cuadernos', carpetas:'Carpetas', volantes:'Volantes', rompecabezas:'Rompecabezas', cubo_rubik:'Cubo Rubik', bolsas:'Bolsas', cajas:'Cajas', promocionales:'Promocionales', manual:'Libre' };
+        const RESUMEN_COT_LINEAS = { cuadernos:'Cuadernos', carpetas:'Carpetas', volantes:'Volantes', universal:'Universal', rompecabezas:'Rompecabezas', cubo_rubik:'Cubo Rubik', bolsas:'Bolsas', cajas:'Cajas', promocionales:'Promocionales', manual:'Libre' };
         let resumenCotFilas = [], resumenCotEstado = 'todas', resumenCotCacheCalc = {};
         function resumenCotEsc(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
         function resumenCotDescCuaderno(p){
@@ -14379,7 +14389,7 @@
             // real por venta). precioVenta = subtotal*(1+utilidad)*(1+ventas) => margen% = 1-1/((1+u)(1+v)).
             const margenContribPctCuadernos = sumaVentas>0 ? (sumaMargen/sumaVentas) : 0.2284;
             const PUNTO_EQUILIBRIO_MARGEN_DEFAULT_LINEA = {
-                carpetas: 1-1/(1.40*1.03), cajas: 1-1/(1.40*1.03), bolsas: 1-1/(1.40*1.03), volantes: 1-1/(1.40*1.03),
+                carpetas: 1-1/(1.40*1.03), cajas: 1-1/(1.40*1.03), bolsas: 1-1/(1.40*1.03), volantes: 1-1/(1.40*1.03), universal: 1-1/(1.40*1.03),
                 cubo_rubik: 1-1/(1.50*1.05), rompecabezas: 1-1/(1.50*1.05),
                 // promocionales usa un modelo de descuento por monto, no %Utilidad/%Ventas -- sin
                 // fórmula equivalente confiable todavía, así que cae al respaldo (margen real de Cuadernos).
