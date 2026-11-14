@@ -1294,12 +1294,12 @@ function tacticalCrearTareaRompecabezas(tipo, nombre, items){
 function tacticalAnunciarCotizacionGuardada(ok, ot, cliente, total, extra, etiqueta){
   const que = etiqueta || 'Cotización';
   if(!ok){
-    alert('⚠️ ' + que + ' ' + (ot || '') + ' NO se pudo guardar en el CRM (revisa tu conexión a internet).\n\nVuelve a presionar Guardar para intentarlo de nuevo.');
+    tacticalAviso('⚠️ ' + que + ' ' + (ot || '') + ' NO se pudo guardar en el CRM (revisa tu conexión a internet).\n\nVuelve a presionar Guardar para intentarlo de nuevo.');
     return;
   }
   if(typeof tacticalMarcarGuardado === 'function') tacticalMarcarGuardado();
   const monto = (typeof total === 'number' && isFinite(total)) ? '\nTotal: $' + Math.round(total).toLocaleString('es-CO') : '';
-  alert('✅ ' + que + ' guardada — ' + (ot || '') + '\nCliente: ' + (cliente || '') + monto + (extra ? '\n\n' + extra : ''));
+  tacticalAviso('✅ ' + que + ' guardada — ' + (ot || '') + '\nCliente: ' + (cliente || '') + monto + (extra ? '\n\n' + extra : ''));
 }
 
 
@@ -1531,7 +1531,7 @@ function tacticalTroquelEsc(s){ return String(s == null ? '' : s).replace(/[&<>"
 
 /* =====================================================================================
    MEJORAS DE USABILIDAD COMPARTIDAS (Conde 2026-11-07, auditoría de usabilidad)
-   1) Avisos NO bloqueantes: window.alert() ahora muestra un aviso flotante arriba (rojo = error, verde = listo, azul = info)
+   1) Avisos NO bloqueantes: window.tacticalAviso() ahora muestra un aviso flotante arriba (rojo = error, verde = listo, azul = info)
       que se cierra solo; los largos (como "Cotización guardada") esperan a que los cierres. confirm() sigue siendo nativo.
       window.alertBloqueante() = el alert nativo, solo para los casos donde el aviso debe verse ANTES de cambiar de página.
    2) Aviso al salir con una cotización sin guardar (beforeunload).

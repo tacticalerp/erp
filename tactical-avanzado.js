@@ -550,7 +550,7 @@ function tacticalCantPdfHtml(d){
 async function tacticalCantGuardar(){
   const cfg = window.tacticalCantCfg;
   const est = tacticalCantEst();
-  if(!cfg || !est.r){ alert("Primero presiona 'Calcular Cotización'."); return; }
+  if(!cfg || !est.r){ tacticalAviso("Primero presiona 'Calcular Cotización'."); return; }
   // Funciones de la página: por defecto las de las calculadoras; el Hub (Cuadernos) pasa las suyas en cfg.fn.
   const F = Object.assign({
     siguienteOT: () => siguienteOT(),
@@ -568,8 +568,8 @@ async function tacticalCantGuardar(){
     despues: () => { if(typeof refrescarDatalistClientes==='function') refrescarDatalistClientes(); if(typeof fotoPersonalReiniciar==='function') fotoPersonalReiniciar(); },
   }, cfg.fn || {});
   let cols;
-  try{ cols = tacticalCantColumnas(); } catch(err){ alert('No se pudieron calcular las cantidades: '+err.message); return; }
-  if(cols.length<2){ alert('Escribe al menos una segunda cantidad (Cantidad 2 o Cantidad 3) y vuelve a calcular.'); return; }
+  try{ cols = tacticalCantColumnas(); } catch(err){ tacticalAviso('No se pudieron calcular las cantidades: '+err.message); return; }
+  if(cols.length<2){ tacticalAviso('Escribe al menos una segunda cantidad (Cantidad 2 o Cantidad 3) y vuelve a calcular.'); return; }
   const val = k => (document.getElementById(tacticalCantId(k))||{value:''}).value.trim();
   const may = t => F.mayusculas ? t.toUpperCase() : t;
   const empresa = may(val('empresa')), encargado = may(val('encargado')), telefono = val('telefono'), correo = val('correo');
@@ -577,7 +577,7 @@ async function tacticalCantGuardar(){
   const ventana = document.getElementById('tactical-avz-cmp');
   if(ventana) ventana.style.display = 'none';
   if(!tacticalExigirVendedor(tacticalCantId('vendedor'))) return;
-  if(!empresa && !encargado){ alert("Ingresa al menos el Cliente o el Encargado antes de guardar."); return; }
+  if(!empresa && !encargado){ tacticalAviso("Ingresa al menos el Cliente o el Encargado antes de guardar."); return; }
   const empresaDef = may('Cliente Particular'), encargadoDef = may('Sin contacto directo');
   let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (String(c.empresa||'').toLowerCase()===(empresa||empresaDef).toLowerCase() && String(c.nombre||'').toLowerCase()===(encargado||encargadoDef).toLowerCase()));
   if(!cli){

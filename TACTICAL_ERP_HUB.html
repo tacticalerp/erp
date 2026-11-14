@@ -2735,7 +2735,7 @@
             if(!rolesPermitidos) return true; // vista sin restricción de rol
             const rolActual = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol;
             if(rolesPermitidos.includes(rolActual)) return true;
-            alert(`No tienes permiso para entrar aquí.\nEsta sección es solo para: ${rolesPermitidos.join(', ')}.`);
+            tacticalAviso(`No tienes permiso para entrar aquí.\nEsta sección es solo para: ${rolesPermitidos.join(', ')}.`);
             return false;
         }
         // Conde 2026-10-09: "para los usuarios que no tienen acceso a alguna herramienta, déjalas ocultas, no quiero
@@ -2886,7 +2886,7 @@
         function tacticalRequiereAdministrador(){
             const rolActual = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol;
             if(rolActual === 'administrador') return true;
-            alert('Solo el administrador puede hacer esto.');
+            tacticalAviso('Solo el administrador puede hacer esto.');
             return false;
         }
         // Conde 2026-08-20: borrar fichas del Kanban es un permiso un poco más amplio que el resto
@@ -2895,7 +2895,7 @@
         function tacticalRequiereComercialOAdmin(){
             const rolActual = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol;
             if(rolActual === 'administrador' || rolActual === 'comercial') return true;
-            alert('Solo administrador o comercial pueden hacer esto.');
+            tacticalAviso('Solo administrador o comercial pueden hacer esto.');
             return false;
         }
 
@@ -3303,7 +3303,7 @@
         function proyectoGuardarForm(id){
             const g = k => document.getElementById(k).value.trim();
             const nombre = g('pf-nombre');
-            if(!nombre){ alert('Escribe el nombre del proyecto.'); return; }
+            if(!nombre){ tacticalAviso('Escribe el nombre del proyecto.'); return; }
             let p = id ? db_proyectos.find(x => x.id === id) : null;
             const nuevo = !p;
             if(nuevo){ p = { id: crypto.randomUUID(), orden: db_proyectos.length, estado: 'activo' }; db_proyectos.push(p); }
@@ -3351,7 +3351,7 @@
             if(!tacticalRequiereAdministrador()) return;
             const input = document.getElementById('personal-nombre-nuevo');
             const nombre = input.value.trim();
-            if(!nombre){ alert('Escribe el nombre de la persona.'); return; }
+            if(!nombre){ tacticalAviso('Escribe el nombre de la persona.'); return; }
             const p = { id: crypto.randomUUID(), nombre, areas: [], orden: db_personal.length };
             db_personal.push(p);
             tacticalSyncPersonal(p);
@@ -4062,9 +4062,9 @@
             const deteccion = document.getElementById('sel-deteccion').value;
             const observaciones = document.getElementById('txt-observaciones').value.trim();
 
-            if(observaciones === '') { alert('Debe registrar la lección aprendida.'); return; }
+            if(observaciones === '') { tacticalAviso('Debe registrar la lección aprendida.'); return; }
             const detailRows = document.querySelectorAll('.detail-row-grid');
-            if(detailRows.length === 0) { alert('Añada al menos un insumo dañado.'); return; }
+            if(detailRows.length === 0) { tacticalAviso('Añada al menos un insumo dañado.'); return; }
 
             let desgloseItems = [];
             let costoTotalIncidente = 0;
@@ -4114,7 +4114,7 @@
             reprocesoUltimoOTBuscado = null;
             renderAllReprocesos();
             actualizarFormularioReceta(); // ya deja una fila de insumo en blanco lista para el siguiente incidente
-            alert(`Incidente registrado (pérdida: ${cotFormatoCop(costoTotalIncidente)}). El formulario quedó limpio y listo para registrar otro incidente.`);
+            tacticalAviso(`Incidente registrado (pérdida: ${cotFormatoCop(costoTotalIncidente)}). El formulario quedó limpio y listo para registrar otro incidente.`);
         }
 
         function renderAllReprocesos() {
@@ -4319,7 +4319,7 @@
             const tipo = document.getElementById('cli-tipo').value;
             const identificacion = document.getElementById('cli-identificacion').value.trim();
 
-            if(!empresa && !nombre) { alert("Debe ingresar al menos la Empresa o el Contacto."); return; }
+            if(!empresa && !nombre) { tacticalAviso("Debe ingresar al menos la Empresa o el Contacto."); return; }
 
             const empresaFinal = empresa || 'CLIENTE PARTICULAR';
             const nombreFinal = nombre || 'SIN CONTACTO DIRECTO';
@@ -4331,7 +4331,7 @@
                 (c.empresa.toUpperCase() === empresaFinal && c.nombre.toUpperCase() === nombreFinal)
             );
             if(yaExiste){
-                alert(`Ya existe un cliente registrado como "${yaExiste.empresa} - ${yaExiste.nombre}". Use ese registro (búsquelo en el directorio) en vez de crear uno nuevo con los mismos datos.`);
+                tacticalAviso(`Ya existe un cliente registrado como "${yaExiste.empresa} - ${yaExiste.nombre}". Use ese registro (búsquelo en el directorio) en vez de crear uno nuevo con los mismos datos.`);
                 return;
             }
 
@@ -4476,7 +4476,7 @@
             const c = db_clientes.find(x=>x.id===id);
             if(!c) return;
             const empresa = document.getElementById('cli-edit-empresa-'+id).value.trim();
-            if(!empresa){ alert('La empresa no puede quedar vacía.'); return; }
+            if(!empresa){ tacticalAviso('La empresa no puede quedar vacía.'); return; }
             c.empresa = empresa;
             c.nombre = document.getElementById('cli-edit-nombre-'+id).value.trim();
             c.wp = document.getElementById('cli-edit-wp-'+id).value.trim();
@@ -4489,7 +4489,7 @@
         }
 
         function eliminarCliente(id){
-          if(!comercialEsAdmin()){ alert('Solo el administrador puede eliminar clientes.'); return; }
+          if(!comercialEsAdmin()){ tacticalAviso('Solo el administrador puede eliminar clientes.'); return; }
             if(!tacticalRequiereAdministrador()) return;
             const c = db_clientes.find(x=>x.id===id); if(!c) return;
             const asociados = db_opps.filter(o=>o.idCli===id).length + db_historial_cierres.filter(h=>h.idCli===id).length;
@@ -4576,7 +4576,7 @@
             const idx = db_opps.findIndex(o => o.id === idOpp);
             const opp = db_opps[idx];
             const marcadas = [...document.querySelectorAll('.chk-linea-ganado')].filter(c=>c.checked).map(c=>parseInt(c.dataset.idx,10));
-            if(marcadas.length === 0){ alert('Selecciona al menos un producto aprobado.'); return; }
+            if(marcadas.length === 0){ tacticalAviso('Selecciona al menos un producto aprobado.'); return; }
             const lineasAprobadas = marcadas.map(i => opp.lineas[i]);
             // Recalcula el resumen del negocio (monto/descripción/cantidad) para que reflejen SOLO lo
             // aprobado -- de esto salen tanto el Documento de Venta como la ficha del Kanban.
@@ -4610,7 +4610,7 @@
               if(typeof showView === 'function'){
                 showView('cotizador');
                 if(typeof cotRenderResultado === 'function') cotRenderResultado(opcionElegida.resultado, opcionElegida.params);
-                alert(`Ficha creada en el Kanban (columna "Cotización Aprobada") con entrega comprometida para ${kanbanFormatearFecha(fecha)}.\n\nYa quedó cargada aquí en el cotizador — presiona "🏭 Generar Orden de Producción" para imprimirla.`);
+                tacticalAviso(`Ficha creada en el Kanban (columna "Cotización Aprobada") con entrega comprometida para ${kanbanFormatearFecha(fecha)}.\n\nYa quedó cargada aquí en el cotizador — presiona "🏭 Generar Orden de Producción" para imprimirla.`);
               }
             }
         }
@@ -4870,7 +4870,7 @@
           const desc = document.getElementById('kb-descripcion').value.trim();
           const cantidad = tacticalLeerNumeroFormateado('kb-cantidad')||1;
           const fechaEntrega = document.getElementById('kb-fechaEntrega').value;
-          if(!clienteTxt || !desc){ alert('Ingresa al menos el Cliente y la Descripción.'); return; }
+          if(!clienteTxt || !desc){ tacticalAviso('Ingresa al menos el Cliente y la Descripción.'); return; }
 
           let cli = db_clientes.find(c => c.empresa.toLowerCase()===clienteTxt.toLowerCase());
           if(!cli){
@@ -4996,31 +4996,31 @@
           if(!confirm('Esta ficha tiene '+items.length+' rompecabezas y en la cola de montaje solo hay '+filas.length+'.'+String.fromCharCode(10,10)+'Faltan:'+String.fromCharCode(10)+txtFalt+String.fromCharCode(10,10)+'¿Agregar los que faltan a la cola?'+String.fromCharCode(10)+'(Cancelar = no hacer nada)')) return;
           const nuevas = faltan.map(i=>({ ficha_id:f.id, ot:f.ot||null, cliente:f.nombreCli||'', forma:i.forma, fichas:i.fichas, medida:i.medida, cantidad:i.cantidad, thumb_url:i.thumb_url, estado:'pendiente' }));
           const { error } = await tacticalSupabase.from('plotter_cola').insert(nuevas);
-          if(error){ alert('No se pudo agregar: '+(error.message||error)); return; }
+          if(error){ tacticalAviso('No se pudo agregar: '+(error.message||error)); return; }
           db_plotter_cola = await plotterColaCargar(); renderKanban();
         }
         async function enviarAMontaje(id){
           const f = db_kanban.find(x=>x.id===id); if(!f) return;
-          if(plotterEstadoFicha(id)){ alert('Esta ficha ya fue enviada a montaje.'); return; }
+          if(plotterEstadoFicha(id)){ tacticalAviso('Esta ficha ya fue enviada a montaje.'); return; }
           const items = await plotterItemsDeFicha(f);
-          if(!items.length){ alert('No encontré el rompecabezas de esta ficha (tamaño y fichas). Revisa que venga de Montajes Rompecabezas B2C.'); return; }
+          if(!items.length){ tacticalAviso('No encontré el rompecabezas de esta ficha (tamaño y fichas). Revisa que venga de Montajes Rompecabezas B2C.'); return; }
           const resumen = items.map(i=>`${i.cantidad} x ${i.fichas} fichas ${i.medida} cm`).join('\n');
           if(!confirm(`Enviar a montaje (plotter)?\n\nCliente: ${f.nombreCli||''}\n${resumen}\n\nAparecerán como miniaturas pendientes en Montajes > Montaje Rompecabezas Plotter.`)) return;
           const filas = items.map(i=>({ ficha_id:f.id, ot:f.ot||null, cliente:f.nombreCli||'', forma:i.forma, fichas:i.fichas, medida:i.medida, cantidad:i.cantidad, thumb_url:i.thumb_url, estado:'pendiente' }));
           const { error } = await tacticalSupabase.from('plotter_cola').insert(filas);
-          if(error){ alert('No se pudo enviar a montaje: '+(error.message||error)+'\n\n¿Ya corriste supabase/migracion_plotter_montajes.sql?'); return; }
+          if(error){ tacticalAviso('No se pudo enviar a montaje: '+(error.message||error)+'\n\n¿Ya corriste supabase/migracion_plotter_montajes.sql?'); return; }
           db_plotter_cola = await plotterColaCargar(); renderKanban();
         }
         async function quitarDeColaMontaje(id){
           if(!confirm('¿Quitar este rompecabezas de la cola de montaje? (Solo si todavía no está en un montaje.)')) return;
           const { error } = await tacticalSupabase.from('plotter_cola').delete().eq('ficha_id', id).eq('estado','pendiente');
-          if(error){ alert('No se pudo quitar: '+(error.message||error)); return; }
+          if(error){ tacticalAviso('No se pudo quitar: '+(error.message||error)); return; }
           db_plotter_cola = await plotterColaCargar(); renderKanban();
         }
         async function marcarYaImpresa(id){
           if(!confirm('¿Este rompecabezas ya salió impreso del plotter?')) return;
           const { error } = await tacticalSupabase.from('plotter_cola').update({ estado:'impreso' }).eq('ficha_id', id).eq('estado','en_montaje');
-          if(error){ alert('No se pudo marcar: '+(error.message||error)); return; }
+          if(error){ tacticalAviso('No se pudo marcar: '+(error.message||error)); return; }
           db_plotter_cola = await plotterColaCargar(); renderKanban();
         }
 
@@ -5261,7 +5261,7 @@
                 img.onload = async function(){
                     const dataUrl = tacticalComprimirImagen(img);
                     const url = await tacticalSubirFoto(dataUrl, `kanban/${fichaId}/${Date.now()}.jpg`);
-                    if(!url){ alert('No se pudo subir la foto. Intenta de nuevo.'); return; }
+                    if(!url){ tacticalAviso('No se pudo subir la foto. Intenta de nuevo.'); return; }
                     const ficha = db_kanban.find(x=>x.id===fichaId);
                     if(!ficha) return;
                     if(!ficha.fotos) ficha.fotos = [];
@@ -5387,7 +5387,7 @@
           }).join('');
         }
         function fototecaGuardarArchivo(clave, file){
-          if(!file || !file.type.startsWith('image/')){ alert('Eso no es una imagen.'); return; }
+          if(!file || !file.type.startsWith('image/')){ tacticalAviso('Eso no es una imagen.'); return; }
           const reader = new FileReader();
           reader.onload = function(e){
             const img = new Image();
@@ -5399,7 +5399,7 @@
             img.onload = async function(){
               const dataUrl = tacticalComprimirImagen(img);
               const url = await tacticalSubirFoto(dataUrl, `fototeca/${clave}.jpg`);
-              if(!url){ alert('No se pudo subir la foto. Intenta de nuevo.'); return; }
+              if(!url){ tacticalAviso('No se pudo subir la foto. Intenta de nuevo.'); return; }
               const item = fototecaObtenerOCrearItem(clave, clave.startsWith('custom_'));
               item.foto = url;
               tacticalSyncFototecaItem(item);
@@ -5878,7 +5878,7 @@
         }
         async function bjVerGrande(el){
           const nombre = el.getAttribute('data-full');
-          try { window.open(await bjBlob(nombre), '_blank'); } catch(e){ alert('No se pudo abrir la foto grande: ' + e.message); }
+          try { window.open(await bjBlob(nombre), '_blank'); } catch(e){ tacticalAviso('No se pudo abrir la foto grande: ' + e.message); }
         }
 
         function bjPintarPanel(){
@@ -5920,7 +5920,7 @@
 
         async function bjAccion(ruta, cuerpo){
           try { await bjApi(`/api/conversaciones/${bjSel}/${ruta}`, {method:'POST', body: JSON.stringify(Object.assign({nombre: bjNombreUsuario()}, cuerpo || {}))}); }
-          catch(e){ alert(e.message); return false; }
+          catch(e){ tacticalAviso(e.message); return false; }
           return true;
         }
         async function bjRecargarTodo(){
@@ -5957,17 +5957,17 @@
         async function bjCrearEtq(){
           const nombre = (bjQ('netq').value || '').trim(); if(!nombre) return;
           try { const e = await bjApi('/api/etiquetas', {method:'POST', body: JSON.stringify({nombre, color: bjColorNuevo})}); bjEtq.push(e); bjSelEtq.add(e.id); bjPintarModalEtq(); }
-          catch(err){ alert(err.message); }
+          catch(err){ tacticalAviso(err.message); }
         }
         async function bjBorrarEtq(id){
           const e = bjEtq.find(x => x.id === id); if(!e) return;
           if(!confirm(`¿Borrar la etiqueta «${e.nombre}»? Se quita de TODOS los chats que la tengan.`)) return;
           try { await bjApi('/api/etiquetas/' + id, {method:'DELETE'}); bjEtq = bjEtq.filter(x => x.id !== id); bjSelEtq.delete(id); if(bjF.etq === id) bjF.etq = ''; bjPintarModalEtq(); bjTick(); }
-          catch(err){ alert(err.message); }
+          catch(err){ tacticalAviso(err.message); }
         }
         async function bjGuardarEtq(){
           try { await bjApi(`/api/conversaciones/${bjSel}/etiquetas`, {method:'POST', body: JSON.stringify({ids: [...bjSelEtq]})}); bjCerrarModal(); await bjTick(); const c = bjChats.find(x => x.phone === bjSel); if(c) bjActualizarBanda(c); }
-          catch(err){ alert(err.message); }
+          catch(err){ tacticalAviso(err.message); }
         }
 
         // ---------- Adjuntar foto o documento ----------
@@ -5997,7 +5997,7 @@
             await bjApi(`/api/conversaciones/${bjSel}/enviar-archivo`, {method:'POST', body: JSON.stringify({tipo, base64, mime, filename: nombre, caption, nombre: bjNombreUsuario()})});
             if(bjQ('txt')) bjQ('txt').value = '';
             await bjRecargarTodo();
-          } catch(e){ alert('No se pudo enviar el archivo: ' + e.message); if(est) est.textContent = ''; }
+          } catch(e){ tacticalAviso('No se pudo enviar el archivo: ' + e.message); if(est) est.textContent = ''; }
         }
 
         // ---------- Plantillas de WhatsApp (ventana de 24 h cerrada) ----------
@@ -6024,7 +6024,7 @@
           const p = bjPlantillas.find(x => x.id === bjQ('plsel').value); if(!p) return;
           const parametros = Array.from({length: p.parametros}, (_, i) => (bjQ('plp' + i).value || '').trim());
           try { await bjApi(`/api/conversaciones/${bjSel}/enviar-plantilla`, {method:'POST', body: JSON.stringify({plantillaId: p.id, parametros, nombre: bjNombreUsuario()})}); bjCerrarModal(); await bjRecargarTodo(); }
-          catch(e){ alert(e.message); }
+          catch(e){ tacticalAviso(e.message); }
         }
         function bjAbrirEditorPlantillas(){
           if(!bjEditP.length) bjEditP = bjPlantillas.map(p => Object.assign({}, p));
@@ -6036,7 +6036,7 @@
         }
         async function bjGuardarPlantillas(){
           try { bjPlantillas = await bjApi('/api/plantillas', {method:'PUT', body: JSON.stringify({lista: bjEditP})}); bjEditP = []; bjCerrarModal(); }
-          catch(e){ alert(e.message); }
+          catch(e){ tacticalAviso(e.message); }
         }
 
         // ---------- Respuestas rápidas editables ----------
@@ -6050,7 +6050,7 @@
         }
         async function bjGuardarRapidas(){
           try { const r = await bjApi('/api/respuestas-rapidas', {method:'PUT', body: JSON.stringify({lista: bjEditR})}); bjRapidas = r; bjEditR = []; bjCerrarModal(); }
-          catch(e){ alert(e.message); }
+          catch(e){ tacticalAviso(e.message); }
         }
 
         // ---------- Almacenamiento (dónde quedó cada cosa y cuánto pesa) ----------
@@ -6082,8 +6082,8 @@
 
         async function bjHacerRespaldo(){
           const b = bjQ('btn-rb'); if(b){ b.disabled = true; b.textContent = 'Guardando…'; }
-          try { const r = await bjApi('/api/respaldos', {method:'POST'}); alert(`Respaldo guardado: ${r.chats} chat(s) y ${r.pedidos} pedido(s)/lead(s) (${bjMB(r.bytes)}).`); }
-          catch(e){ alert('No se pudo hacer el respaldo: ' + e.message); }
+          try { const r = await bjApi('/api/respaldos', {method:'POST'}); tacticalAviso(`Respaldo guardado: ${r.chats} chat(s) y ${r.pedidos} pedido(s)/lead(s) (${bjMB(r.bytes)}).`); }
+          catch(e){ tacticalAviso('No se pudo hacer el respaldo: ' + e.message); }
           bjAbrirAlmacenamiento();
         }
 
@@ -6133,9 +6133,9 @@
         }
 
         async function bjAprobar(id){
-          if(typeof botwaCargarPedidos !== 'function'){ alert('Abre la sección Bot WhatsApp una vez para activar la aprobación.'); return; }
+          if(typeof botwaCargarPedidos !== 'function'){ tacticalAviso('Abre la sección Bot WhatsApp una vez para activar la aprobación.'); return; }
           await botwaCargarPedidos();
-          if(!botwaPedidos.find(x => x.id === id)){ alert('Ese pedido ya no está pendiente de aprobación.'); return; }
+          if(!botwaPedidos.find(x => x.id === id)){ tacticalAviso('Ese pedido ya no está pendiente de aprobación.'); return; }
           await botwaAprobar(id);
           bjTick(); bjRefrescarDatos();
         }
@@ -6181,7 +6181,7 @@
             if(!res.ok) throw new Error('HTTP '+res.status);
             await botwaConsultarInterruptor();
           }catch(err){
-            alert('No se pudo cambiar el interruptor: ' + err.message);
+            tacticalAviso('No se pudo cambiar el interruptor: ' + err.message);
           }
         }
         async function botwaCargarPedidos(){
@@ -6298,7 +6298,7 @@
           botwaMarcarImportadoEnBot(p.id);
           botwaPedidos = botwaPedidos.filter(x=>x.id!==id);
           renderBotwaLista();
-          alert(`Pedido aprobado (${decision === 'diseno' ? 'requiere diseño' : 'solo impresión'}). Se creó el cliente en el CRM, la tarea en Diseño y la ficha en el Kanban (columna ${decision === 'diseno' ? 'Cotización Aprobada' : 'Diseño'}).`);
+          tacticalAviso(`Pedido aprobado (${decision === 'diseno' ? 'requiere diseño' : 'solo impresión'}). Se creó el cliente en el CRM, la tarea en Diseño y la ficha en el Kanban (columna ${decision === 'diseno' ? 'Cotización Aprobada' : 'Diseño'}).`);
         }
         function botwaMarcarContactado(id){
           const p = botwaPedidos.find(x=>x.id===id);
@@ -6319,7 +6319,7 @@
           botwaPausarBot(p.cel);
           botwaPedidos = botwaPedidos.filter(x=>x.id!==id);
           renderBotwaLista();
-          alert('Marcado como contactado. El cliente quedó guardado en el CRM para seguimiento, y el bot ya no le va a responder a ese número (lo reactivas desde "Clientes con el bot en pausa" cuando cierres el caso).');
+          tacticalAviso('Marcado como contactado. El cliente quedó guardado en el CRM para seguimiento, y el bot ya no le va a responder a ese número (lo reactivas desde "Clientes con el bot en pausa" cuando cierres el caso).');
         }
         async function botwaMarcarImportadoEnBot(id){
           const url = botwaUrlBase(), key = botwaKey();
@@ -6363,7 +6363,7 @@
           try{
             await fetch(`${url}/api/sesiones/${encodeURIComponent(cel)}/reactivar`, { method:'POST', headers:{'x-api-key':key} });
             botwaCargarPausados();
-          }catch(e){ alert('No se pudo reactivar: ' + e.message); }
+          }catch(e){ tacticalAviso('No se pudo reactivar: ' + e.message); }
         }
 
         // ==========================================
@@ -6492,11 +6492,11 @@
             const { data, error } = await tacticalSupabase.storage.from(GALERIA_BUCKET).createSignedUrl(ruta, 600);
             if(error) throw error;
             window.open(data.signedUrl, '_blank', 'noopener');
-          }catch(e){ alert('No se pudo abrir la foto: ' + (e.message || e)); }
+          }catch(e){ tacticalAviso('No se pudo abrir la foto: ' + (e.message || e)); }
         }
         async function galeriaBotConservar(id, valor){
           const { error } = await tacticalSupabase.from('bot_fotos').update({ conservar: !!valor }).eq('id', id);
-          if(error) alert('No se pudo guardar: ' + error.message);
+          if(error) tacticalAviso('No se pudo guardar: ' + error.message);
         }
         /* Archivos de ANTES de las miniaturas (se sirven desde el bot, tamaño completo): solo se listan; cada uno se abre al hacer clic. */
         async function galeriaBotCargarAntiguas(){
@@ -6521,7 +6521,7 @@
             if(!res.ok) throw new Error('HTTP ' + res.status);
             const blob = await res.blob();
             window.open(URL.createObjectURL(blob), '_blank', 'noopener');
-          }catch(e){ alert('No se pudo abrir: ' + e.message); }
+          }catch(e){ tacticalAviso('No se pudo abrir: ' + e.message); }
         }
 
         // ==========================================
@@ -6621,12 +6621,12 @@
         }
         async function segmentosCopiarNumeros(){
           const numeros = [...new Set(segResultados.map(r=>r.telefono).filter(Boolean))];
-          if(numeros.length===0){ alert('No hay números para copiar -- busca primero.'); return; }
+          if(numeros.length===0){ tacticalAviso('No hay números para copiar -- busca primero.'); return; }
           try{
             await navigator.clipboard.writeText(numeros.join('\n'));
             document.getElementById('seg-estado').innerText = `${numeros.length} número(s) único(s) copiados al portapapeles.`;
           }catch(e){
-            alert('No se pudo copiar automático, aquí están los números:\n\n' + numeros.join('\n'));
+            tacticalAviso('No se pudo copiar automático, aquí están los números:\n\n' + numeros.join('\n'));
           }
         }
 
@@ -6636,7 +6636,7 @@
             // Plan Maestro: máximo 2 tarjetas "urgente" manuales a la vez, para no saturar el banner
             // de alertas (Conde 2026-08-20: subió de 1 a 2).
             const cantidadUrgentes = db_kanban.filter(x=>x.urgente && x.id!==id).length;
-            if(cantidadUrgentes>=2){ alert('Ya hay 2 fichas marcadas como urgente. Solo puede haber 2 a la vez — quítale la marca a alguna antes de marcar esta.'); return; }
+            if(cantidadUrgentes>=2){ tacticalAviso('Ya hay 2 fichas marcadas como urgente. Solo puede haber 2 a la vez — quítale la marca a alguna antes de marcar esta.'); return; }
           }
           f.urgente = !f.urgente;
           kanbanGuardarCampos(f, ['urgente']);
@@ -7518,9 +7518,9 @@
           if(!tacticalRequiereAdministrador()) return;
           const nombre = document.getElementById('sc-nombre').value.trim();
           const gramaje = document.getElementById('sc-gramaje').value.trim();
-          if(!nombre || !gramaje){ alert('Escribe el nombre y el gramaje del papel.'); return; }
+          if(!nombre || !gramaje){ tacticalAviso('Escribe el nombre y el gramaje del papel.'); return; }
           const calculadoras = TACTICAL_CALCULADORAS_SUSTRATOS.filter(c => document.getElementById('sc-calc-'+c.id).checked).map(c => c.id);
-          if(calculadoras.length === 0){ alert('Marca en cuáles calculadoras debe aparecer este papel.'); return; }
+          if(calculadoras.length === 0){ tacticalAviso('Marca en cuáles calculadoras debe aparecer este papel.'); return; }
           const p6090raw = document.getElementById('sc-p6090').value.trim();
           const p70100raw = document.getElementById('sc-p70100').value.trim();
           db_sustratos_custom.push({
@@ -7596,9 +7596,9 @@
           if(!tacticalRequiereAdministrador()) return;
           const nombre = document.getElementById('ac-nombre').value.trim();
           const precioRaw = document.getElementById('ac-precio').value.trim();
-          if(!nombre){ alert('Escribe el nombre del acabado.'); return; }
+          if(!nombre){ tacticalAviso('Escribe el nombre del acabado.'); return; }
           const calculadoras = TACTICAL_CALCULADORAS_SUSTRATOS.filter(c => document.getElementById('ac-calc-'+c.id).checked).map(c => c.id);
-          if(calculadoras.length === 0){ alert('Marca en cuáles calculadoras debe aparecer este acabado.'); return; }
+          if(calculadoras.length === 0){ tacticalAviso('Marca en cuáles calculadoras debe aparecer este acabado.'); return; }
           db_acabados_custom.push({
             id: crypto.randomUUID(), nombre,
             precioM2: precioRaw === '' ? 0 : parseFloat(precioRaw),
@@ -7708,13 +7708,13 @@
           });
           const cache = (typeof tacticalRecomendacionesCache !== 'undefined') ? tacticalRecomendacionesCache : {overrides:{}, custom:[]};
           await tacticalGuardarRecomendacionesOverride(overrides, cache.custom||[]);
-          alert('Recomendaciones guardadas — ya aplican en las calculadoras.');
+          tacticalAviso('Recomendaciones guardadas — ya aplican en las calculadoras.');
         }
         async function agregarRecomendacionCustom(){
           if(!tacticalRequiereAdministrador()) return;
           const calculadora = document.getElementById('rec-nueva-calculadora').value;
           const texto = document.getElementById('rec-nueva-texto').value.trim();
-          if(!texto){ alert('Escribe el texto de la recomendación.'); return; }
+          if(!texto){ tacticalAviso('Escribe el texto de la recomendación.'); return; }
           const cache = (typeof tacticalRecomendacionesCache !== 'undefined') ? tacticalRecomendacionesCache : {overrides:{}, custom:[]};
           const custom = [...(cache.custom||[]), {id: crypto.randomUUID(), calculadora, texto}];
           await tacticalGuardarRecomendacionesOverride(cache.overrides||{}, custom);
@@ -8014,10 +8014,10 @@
           if(btn){ btn.disabled = true; btn.textContent = 'Limpiando...'; }
           try{
             const n = await tacticalEjecutarLimpiezaFotos();
-            alert(n ? `Listo: se liberaron ${n} foto(s) de fichas/pedidos con más de 4 meses. La información de esos registros sigue intacta.` : 'No había fotos de más de 4 meses para liberar todavía.');
+            tacticalAviso(n ? `Listo: se liberaron ${n} foto(s) de fichas/pedidos con más de 4 meses. La información de esos registros sigue intacta.` : 'No había fotos de más de 4 meses para liberar todavía.');
           } catch(e){
             console.error('Error en limpieza manual de fotos:', e);
-            alert('Ocurrió un error al ejecutar la limpieza. Revisa la consola.');
+            tacticalAviso('Ocurrió un error al ejecutar la limpieza. Revisa la consola.');
           } finally {
             if(btn){ btn.disabled = false; btn.textContent = '🧹 Ejecutar limpieza ahora'; }
           }
@@ -9682,7 +9682,7 @@
         // una cotización NUEVA e independiente para ese producto, el pedido original no se toca.
         function tacticalAbrirEdicionMulti(id){
           const target = db_opps.find(o => o.id === id) || db_historial_cierres.find(o => o.id === id);
-          if(!target || !Array.isArray(target.lineas) || !target.lineas.length){ alert('No se encontraron los productos de este pedido.'); return; }
+          if(!target || !Array.isArray(target.lineas) || !target.lineas.length){ tacticalAviso('No se encontraron los productos de este pedido.'); return; }
           const overlayPrevio = document.getElementById('tactical-edicion-multi-overlay'); if(overlayPrevio) overlayPrevio.remove();
           const overlay = document.createElement('div');
           overlay.style.cssText = 'position:fixed; inset:0; background:rgba(26,32,44,0.6); z-index:99999; display:flex; align-items:center; justify-content:center; padding:20px;';
@@ -9753,7 +9753,7 @@
           const desc = document.getElementById('tfl-desc').value.trim();
           const cant = parseFloat(document.getElementById('tfl-cant').value);
           const unit = parseFloat(document.getElementById('tfl-unit').value);
-          if(!desc || !(cant > 0) || !(unit >= 0)){ alert('Completa descripción, cantidad y precio.'); return; }
+          if(!desc || !(cant > 0) || !(unit >= 0)){ tacticalAviso('Completa descripción, cantidad y precio.'); return; }
           const monto = Math.round(cant*unit*(aplicaIva?1.19:1));
           // Conde 2026-10-07: "al hacer cambios se cree una nueva cotización, mismo número pero con
           // B, C, D según la versión" -- el pedido original NO se toca: se clona como cotización
@@ -9783,7 +9783,7 @@
           const ov = document.getElementById('tactical-edicion-multi-overlay'); if(ov) ov.remove();
           renderBuscadorCotizaciones();
           if(typeof renderComercial === 'function') renderComercial();
-          alert(`Se creó la cotización ${nuevo.ot} (versión nueva de ${original.ot}). La original queda intacta.`);
+          tacticalAviso(`Se creó la cotización ${nuevo.ot} (versión nueva de ${original.ot}). La original queda intacta.`);
         }
         async function tacticalElegirLineaMulti(idPedido, lineaIdx){
           const overlay = document.getElementById('tactical-edicion-multi-overlay');
@@ -9793,7 +9793,7 @@
           if(!linea) return;
           if(linea.linea === 'cuadernos'){
             const cot = await tacticalCargarLineaPedidoParaEditar(idPedido, lineaIdx);
-            if(!cot){ alert('No se pudo abrir esta línea para editar.'); return; }
+            if(!cot){ tacticalAviso('No se pudo abrir esta línea para editar.'); return; }
             showView('cotizador');
             initCotizador();
             cotPoblarFormularioEdicion(cot);
@@ -9806,13 +9806,13 @@
         // DUPLICAR una cotización de Cuadernos (también las ya ganadas/perdidas): abre el formulario cargado, pero como cotización NUEVA.
         function cotCargarParaDuplicar(id){
           const cot = db_cotizaciones.find(c => c.id === id || c.idOpp === id);
-          if(!cot){ alert('No se encontró el detalle guardado de esta cotización (puede ser muy antigua, de antes de que se empezara a guardar el desglose).'); return; }
+          if(!cot){ tacticalAviso('No se encontró el detalle guardado de esta cotización (puede ser muy antigua, de antes de que se empezara a guardar el desglose).'); return; }
           cotModoDuplicar = true;
           cotPoblarFormularioEdicion(cot);
         }
         function cotCargarCotizacionGuardada(id){
           const cot = db_cotizaciones.find(c => c.id === id);
-          if(!cot){ alert('No se encontró el detalle guardado de esta cotización (puede ser muy antigua, de antes de que se empezara a guardar el desglose).'); return; }
+          if(!cot){ tacticalAviso('No se encontró el detalle guardado de esta cotización (puede ser muy antigua, de antes de que se empezara a guardar el desglose).'); return; }
           cotPoblarFormularioEdicion(cot);
         }
         // Conde 2026-09-04: "necesito poder editar las cotizaciones que son de varios productos" --
@@ -9996,21 +9996,21 @@
         }
         async function cotActualizarClienteClick(){
           const cli = db_clientes.find(c => c.id === cotClienteEditandoId);
-          if(!cli){ alert('Primero elige un cliente existente de la lista para poder actualizarlo.'); return; }
+          if(!cli){ tacticalAviso('Primero elige un cliente existente de la lista para poder actualizarlo.'); return; }
           const d = cotDatosClienteForm();
-          if(!d.empresa && !d.encargado){ alert('Escribe al menos el Cliente o el Encargado.'); return; }
+          if(!d.empresa && !d.encargado){ tacticalAviso('Escribe al menos el Cliente o el Encargado.'); return; }
           if(!confirm('¿Actualizar en el CRM los datos de «' + cli.empresa + (cli.nombre ? ' — ' + cli.nombre : '') + '» con lo que está escrito aquí?' + ((d.empresa && d.empresa !== cli.empresa) ? '\n\nEl nombre pasará a: ' + d.empresa : ''))) return;
           const nuevo = { ...cli, empresa: d.empresa || cli.empresa, nombre: d.encargado || 'SIN CONTACTO DIRECTO', wp: d.telefono, correo: d.correo, tipo: d.tipo, identificacion: d.identificacion };
           cotMensajeCliente('Guardando...', true);
           const ok = await tacticalActualizarDatosCliente(nuevo);
-          if(!ok){ cotMensajeCliente('No se pudo guardar. Revisa tu conexión e intenta de nuevo.', false); alert('No se pudo actualizar el cliente (revisa tu conexión). No se cambió nada.'); return; }
+          if(!ok){ cotMensajeCliente('No se pudo guardar. Revisa tu conexión e intenta de nuevo.', false); tacticalAviso('No se pudo actualizar el cliente (revisa tu conexión). No se cambió nada.'); return; }
           Object.assign(cli, nuevo);
           cotRefrescarDatalistClientes(); cotActualizarBotonesCliente();
           cotMensajeCliente('✓ Cliente actualizado en el CRM: ' + cli.empresa, true);
         }
         async function cotCrearClienteClick(){
           const d = cotDatosClienteForm();
-          if(!d.empresa && !d.encargado){ alert('Escribe al menos el Cliente o el Encargado.'); return; }
+          if(!d.empresa && !d.encargado){ tacticalAviso('Escribe al menos el Cliente o el Encargado.'); return; }
           const empresa = d.empresa || 'CLIENTE PARTICULAR', nombre = d.encargado || 'SIN CONTACTO DIRECTO';
           const existente = db_clientes.find(c => (d.correo && c.correo && c.correo.toLowerCase() === d.correo.toLowerCase()) ||
             (c.empresa.toUpperCase() === empresa && (c.nombre || '').toUpperCase() === nombre));
@@ -10022,7 +10022,7 @@
           const cli = { id: crypto.randomUUID(), empresa, nombre, wp: d.telefono, correo: d.correo, clase: 'nuevo', ltv: 0, tipo: d.tipo, identificacion: d.identificacion };
           cotMensajeCliente('Guardando...', true);
           const ok = await tacticalCrearCliente(cli);
-          if(!ok){ cotMensajeCliente('No se pudo guardar. Revisa tu conexión e intenta de nuevo.', false); alert('No se pudo crear el cliente (revisa tu conexión). No se guardó nada.'); return; }
+          if(!ok){ cotMensajeCliente('No se pudo guardar. Revisa tu conexión e intenta de nuevo.', false); tacticalAviso('No se pudo crear el cliente (revisa tu conexión). No se guardó nada.'); return; }
           db_clientes.push(cli);
           cotClienteEditandoId = cli.id;
           cotRefrescarDatalistClientes(); cotActualizarBotonesCliente();
@@ -10202,7 +10202,7 @@
         // PDF) y RECIÉN AHÍ abre WhatsApp -- ya no hace falta darle a los 2 botones por separado.
         async function cotCompartirWhatsAppClick(){
           if(!cotUltimoOT){
-            if(!cotUltimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
+            if(!cotUltimoResultado){ tacticalAviso("Primero presiona 'Calcular Cotización'."); return; }
             await cotGuardarYGenerarPDF();
             if(!cotUltimoOT) return; // cotGuardarYGenerarPDF ya mostró su propia alerta si algo faltaba
           }
@@ -10241,7 +10241,7 @@
           return tacticalObtenerVideoProducto('cuadernos');
         }
         async function cotGuardarYGenerarPDF(){
-          if(!cotUltimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
+          if(!cotUltimoResultado){ tacticalAviso("Primero presiona 'Calcular Cotización'."); return; }
           const empresa = document.getElementById('cot-cli-empresa').value.trim().toUpperCase();
           const encargado = document.getElementById('cot-cli-encargado').value.trim().toUpperCase();
           const telefono = document.getElementById('cot-cli-telefono').value.trim();
@@ -10250,7 +10250,7 @@
           const identificacion = document.getElementById('cot-cli-identificacion').value.trim();
           const vendedor = document.getElementById('cot-vendedor').value;
           if(!tacticalExigirVendedor('cot-vendedor')) return;
-          if(!empresa && !encargado){ alert("Ingresa al menos el Cliente o el Encargado antes de generar el PDF."); return; }
+          if(!empresa && !encargado){ tacticalAviso("Ingresa al menos el Cliente o el Encargado antes de generar el PDF."); return; }
 
           // Buscar o crear cliente en el CRM
           let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toUpperCase()===(empresa||'CLIENTE PARTICULAR') && c.nombre.toUpperCase()===(encargado||'SIN CONTACTO DIRECTO')));
@@ -10358,7 +10358,7 @@
           const pd = cotPedidoActivo();
           if(!pd || !pd.lineas[idx]) return;
           const linea = pd.lineas[idx];
-          if(!linea.params || !linea.resultado){ alert('Esta línea es muy antigua y no guardó los datos necesarios para volver a cargarla en el formulario -- quítala y créala de nuevo si tiene un error.'); return; }
+          if(!linea.params || !linea.resultado){ tacticalAviso('Esta línea es muy antigua y no guardó los datos necesarios para volver a cargarla en el formulario -- quítala y créala de nuevo si tiene un error.'); return; }
           cotPoblarFormularioEdicion({
             params: linea.params, resultado: linea.resultado, desc: linea.desc, id: null, ot: pd.ot, vendedor: pd.vendedor,
             cliente: {
@@ -10405,7 +10405,7 @@
             <button type="button" class="btn-submit" style="margin-top:6px; background:var(--peligro); display:inline-block; width:auto;" onclick="cotCancelarPedido()">${ticon('x')}Cancelar pedido</button>`;
         }
         async function cotIniciarOAgregarPedido(){
-          if(!cotUltimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
+          if(!cotUltimoResultado){ tacticalAviso("Primero presiona 'Calcular Cotización'."); return; }
           const empresa = document.getElementById('cot-cli-empresa').value.trim().toUpperCase();
           const encargado = document.getElementById('cot-cli-encargado').value.trim().toUpperCase();
           const telefono = document.getElementById('cot-cli-telefono').value.trim();
@@ -10414,7 +10414,7 @@
           const identificacion = document.getElementById('cot-cli-identificacion').value.trim();
           const vendedor = document.getElementById('cot-vendedor').value;
           if(!tacticalExigirVendedor('cot-vendedor')) return;
-          if(!empresa && !encargado){ alert("Ingresa al menos el Cliente o el Encargado antes de agregar al pedido."); return; }
+          if(!empresa && !encargado){ tacticalAviso("Ingresa al menos el Cliente o el Encargado antes de agregar al pedido."); return; }
 
           let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toUpperCase()===(empresa||'CLIENTE PARTICULAR') && c.nombre.toUpperCase()===(encargado||'SIN CONTACTO DIRECTO')));
           if(!cli){
@@ -10458,7 +10458,7 @@
           }
           window.tacticalPedidoBorradorCache = pd; tacticalGuardarPedidoBorrador(pd);
           cotRefrescarBannerPedido();
-          alert(mensajePedido);
+          tacticalAviso(mensajePedido);
         }
         async function cotCerrarPedido(){
           const pd = cotPedidoActivo();
@@ -10491,7 +10491,7 @@
             }
             window.tacticalPedidoBorradorCache = null; tacticalEliminarPedidoBorrador();
             cotRefrescarBannerPedido();
-            alert(`Pedido ${pd.ot} guardado en el CRM — 1 producto, total ${cotFormatoCop(montoTotal)}.`);
+            tacticalAviso(`Pedido ${pd.ot} guardado en el CRM — 1 producto, total ${cotFormatoCop(montoTotal)}.`);
             verPDFGenerico({
               ot: pd.ot, fecha: new Date(), vendedor: pd.vendedor, cliente: {empresa: cliPd.empresa, encargado: cliPd.nombre, telefono: cliPd.wp, correo: cliPd.correo},
               lineas: [{desc:l.desc, cantidad:l.cantidad, monto:l.monto, precioUnitario:l.precioUnitario, fotoUrl:l.fotoUrl, videoUrl:l.videoUrl}],
@@ -10507,7 +10507,7 @@
           tacticalSyncOpps(db_opps);
           window.tacticalPedidoBorradorCache = null; tacticalEliminarPedidoBorrador();
           cotRefrescarBannerPedido();
-          alert(`Pedido ${pd.ot} guardado en el CRM — ${pd.lineas.length} producto(s), total ${cotFormatoCop(montoTotal)}.`);
+          tacticalAviso(`Pedido ${pd.ot} guardado en el CRM — ${pd.lineas.length} producto(s), total ${cotFormatoCop(montoTotal)}.`);
 
           // Conde 2026-09-17: "pregunta si sumas el total o si se borra" -- varias líneas del mismo
           // pedido suelen ser variaciones del mismo producto (tamaños, por ejemplo), no productos
@@ -10548,7 +10548,7 @@
             <button type="button" class="btn-submit" style="margin-top:6px; background:var(--peligro); display:inline-block; width:auto;" onclick="cotCancelarComparacion()">${ticon('x')}Cancelar comparación</button>`;
         }
         async function cotAgregarOpcionComparacion(){
-          if(!cotUltimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
+          if(!cotUltimoResultado){ tacticalAviso("Primero presiona 'Calcular Cotización'."); return; }
           const empresa = document.getElementById('cot-cli-empresa').value.trim().toUpperCase();
           const encargado = document.getElementById('cot-cli-encargado').value.trim().toUpperCase();
           const telefono = document.getElementById('cot-cli-telefono').value.trim();
@@ -10557,7 +10557,7 @@
           const identificacion = document.getElementById('cot-cli-identificacion').value.trim();
           const vendedor = document.getElementById('cot-vendedor').value;
           if(!tacticalExigirVendedor('cot-vendedor')) return;
-          if(!empresa && !encargado){ alert("Ingresa al menos el Cliente o el Encargado antes de agregar la opción."); return; }
+          if(!empresa && !encargado){ tacticalAviso("Ingresa al menos el Cliente o el Encargado antes de agregar la opción."); return; }
 
           let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toUpperCase()===(empresa||'CLIENTE PARTICULAR') && c.nombre.toUpperCase()===(encargado||'SIN CONTACTO DIRECTO')));
           if(!cli){
@@ -10586,7 +10586,7 @@
           comp.opciones.push({ titulo, params: p, resultado: r, fotoUrl: cotFotoElegidaUrl(), videoUrl: cotVideoElegidoUrl() });
           window.tacticalComparacionBorradorCache = comp; tacticalGuardarComparacionBorrador(comp);
           cotRefrescarBannerComparacion();
-          alert(`Agregada como opción ${comp.opciones.length} de la comparación ${comp.ot}.`);
+          tacticalAviso(`Agregada como opción ${comp.opciones.length} de la comparación ${comp.ot}.`);
         }
         function cotCancelarComparacion(){
           const comp = cotComparacionActiva();
@@ -10724,7 +10724,7 @@
         /* ---- ORDEN DE PRODUCCIÓN ---- */
         const COT_NOMBRE_MAQUINA = { octavo:"Octavo", cuarto:"Cuarto", medio_pliego:"Medio Pliego", digital:"Digital (Konica)" };
         async function cotGenerarOrdenProduccion(){
-          if(!cotUltimoResultado){ alert("Primero presiona 'Calcular Cotización'."); return; }
+          if(!cotUltimoResultado){ tacticalAviso("Primero presiona 'Calcular Cotización'."); return; }
           const r = cotUltimoResultado, p = cotUltimoParams;
           const ot = await cotObtenerOT();
           const nombresTapa = {dura:"Dura", semidura:"Semidura", blanda:"Blanda"};
@@ -11396,7 +11396,7 @@
           const monto = parseFloat(document.getElementById('opp-monto').value) || 0;
           const etapa = document.getElementById('opp-etapa').value;
           const vendedor = document.getElementById('opp-vendedor').value;
-          if(!idCli || !desc){ alert('Debe seleccionar un cliente y escribir la descripción.'); return; }
+          if(!idCli || !desc){ tacticalAviso('Debe seleccionar un cliente y escribir la descripción.'); return; }
           const cliObj = db_clientes.find(c => c.id === idCli);
           db_opps.push({ id: crypto.randomUUID(), idCli, nombreCli: tacticalNombreCliente(cliObj), desc, monto, etapa, vendedor, fecha: new Date().toISOString() });
           tacticalSyncOpps(db_opps);
@@ -12244,7 +12244,7 @@
         // PDF del plano: usa el mismo área de impresión y el mismo logo que las cotizaciones.
         function corteImprimirPlano(){
           const c = corteUltimo;
-          if(!c || c.n <= 0){ alert('Primero escribe las medidas para ver el plano de corte.'); return; }
+          if(!c || c.n <= 0){ tacticalAviso('Primero escribe las medidas para ver el plano de corte.'); return; }
           const fecha = new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
           const orient = { n: 0, g: 0 };
           c.sel.p.forEach(p => { if(Math.round(p[2]) === Math.round(c.w * 10) && Math.round(p[3]) === Math.round(c.h * 10)) orient.n++; else orient.g++; });
@@ -12922,7 +12922,7 @@
             if(!nuevo) return numeroAnterior;
             const choca = lista.find(x => x.id !== idActual && String(x.numero).toUpperCase() === nuevo);
             if(choca){
-                alert('El número ' + nuevo + ' ya lo tiene otro comprobante. Cámbialo primero (o usa otro número) -- no puede haber dos con el mismo número.');
+                tacticalAviso('El número ' + nuevo + ' ya lo tiene otro comprobante. Cámbialo primero (o usa otro número) -- no puede haber dos con el mismo número.');
                 return null;
             }
             return nuevo;
@@ -12976,7 +12976,7 @@
            resta del Valor Total del ítem, el ReteIVA se descuenta a nivel de documento). */
         let contDocItemContador = 0;
         function contAgregarItemDoc(descripcion, cantidad, valorUnitario, iva){
-            if(document.querySelectorAll('#doc-items-body tr').length >= 10){ alert('Máximo 10 ítems por documento.'); return; }
+            if(document.querySelectorAll('#doc-items-body tr').length >= 10){ tacticalAviso('Máximo 10 ítems por documento.'); return; }
             contDocItemContador++;
             const id = 'docitem_'+contDocItemContador;
             const mostrarReteiva = document.getElementById('doc-aplicaReteiva').checked;
@@ -13077,7 +13077,7 @@
            Conde 2026-08-20: IVA por ítem se sugiere solo (19%) pero se puede editar o dejar en 0. */
         let contCxpItemContador = 0;
         function contAgregarItemCxp(descripcion, cantidad, valorUnitario, iva){
-            if(document.querySelectorAll('#cxp-items-body tr').length >= 10){ alert('Máximo 10 ítems por factura.'); return; }
+            if(document.querySelectorAll('#cxp-items-body tr').length >= 10){ tacticalAviso('Máximo 10 ítems por factura.'); return; }
             contCxpItemContador++;
             const id = 'cxpitem_'+contCxpItemContador;
             const tr = document.createElement('tr');
@@ -13180,9 +13180,9 @@
         // cotización original, esto solo acorta el ÍTEM de la factura.
         function generarDocVentaDesdePrefacturasSeleccionadas(){
             const checks = [...document.querySelectorAll('.chk-prefactura:checked')];
-            if(checks.length === 0){ alert('Selecciona al menos una prefactura.'); return; }
+            if(checks.length === 0){ tacticalAviso('Selecciona al menos una prefactura.'); return; }
             const clientesSel = new Set(checks.map(c => c.dataset.cli));
-            if(clientesSel.size > 1){ alert('Todas las prefacturas seleccionadas deben ser del mismo cliente -- selecciona solo las de un cliente a la vez.'); return; }
+            if(clientesSel.size > 1){ tacticalAviso('Todas las prefacturas seleccionadas deben ser del mismo cliente -- selecciona solo las de un cliente a la vez.'); return; }
             const ids = checks.map(c => c.dataset.id);
             const seleccionadas = db_prefacturas.filter(p => ids.includes(p.id));
             if(docVentaEditandoId) cancelarEdicionDocVenta();
@@ -13208,7 +13208,7 @@
             if(seleccionadas[0].vendedor) document.getElementById('doc-vendedor').value = seleccionadas[0].vendedor;
             window.tacticalPrefacturasEnEdicion = ids;
             const cli = db_clientes.find(c => c.id === seleccionadas[0].idCli);
-            alert(`Formulario prellenado con ${seleccionadas.length} pedido(s) de ${cli?cli.empresa:''}. Revisa los datos y presiona "Registrar Documento de Venta" para generar el número real.`);
+            tacticalAviso(`Formulario prellenado con ${seleccionadas.length} pedido(s) de ${cli?cli.empresa:''}. Revisa los datos y presiona "Registrar Documento de Venta" para generar el número real.`);
             document.getElementById('doc-cliente').scrollIntoView({behavior:'smooth', block:'center'});
         }
 
@@ -13396,7 +13396,7 @@
         function contModalCruzarAnticipos(idDoc){
             const doc = db_docventa.find(d => d.id === idDoc); if(!doc) return;
             const disp = contAnticiposDisponibles(doc.idCli);
-            if(!disp.length){ alert('Este cliente no tiene anticipos sin cruzar.'); return; }
+            if(!disp.length){ tacticalAviso('Este cliente no tiene anticipos sin cruzar.'); return; }
             const previo = document.getElementById('cont-cruce-overlay'); if(previo) previo.remove();
             const ov = document.createElement('div'); ov.id = 'cont-cruce-overlay';
             ov.style.cssText = 'position:fixed; inset:0; background:rgba(26,32,44,0.6); z-index:99999; display:flex; align-items:center; justify-content:center; padding:20px;';
@@ -13414,7 +13414,7 @@
                 const r = await contAplicarCrucesAnticipos(doc, ids);
                 tacticalSyncDocVenta(doc);
                 renderContabilidad();
-                alert('Se cruzaron anticipos por ' + cotFormatoCop(r.total) + ' con ' + doc.numero + '. Saldo por cobrar: ' + cotFormatoCop(doc.saldoPendiente) + '.');
+                tacticalAviso('Se cruzaron anticipos por ' + cotFormatoCop(r.total) + ' con ' + doc.numero + '. Saldo por cobrar: ' + cotFormatoCop(doc.saldoPendiente) + '.');
             };
         }
 
@@ -13543,7 +13543,7 @@
             contInformeUltimo = { nombre: 'anticipos_por_cliente_' + contHoy(), filas: csv };
         }
         function contInformeDescargar(){
-            if(!contInformeUltimo || contInformeUltimo.filas.length < 2){ alert('No hay datos en este informe para descargar.'); return; }
+            if(!contInformeUltimo || contInformeUltimo.filas.length < 2){ tacticalAviso('No hay datos en este informe para descargar.'); return; }
             const celda = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
             const blob = new Blob(['﻿' + contInformeUltimo.filas.map(f => f.map(celda).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = contInformeUltimo.nombre + '.csv';
@@ -13568,7 +13568,7 @@
             const aplicaReteiva = document.getElementById('doc-aplicaReteiva').checked;
             const vendedor = document.getElementById('doc-vendedor').value;
 
-            if(!cli || items.length===0 || valorBruto<=0){ alert("Debe seleccionar cliente y agregar al menos un ítem con valor mayor a 0."); return; }
+            if(!cli || items.length===0 || valorBruto<=0){ tacticalAviso("Debe seleccionar cliente y agregar al menos un ítem con valor mayor a 0."); return; }
 
             const fechaDoc = contFechaComprobante('doc-fecha');
             if(fechaDoc === null) return;
@@ -13583,7 +13583,7 @@
 
             if(docVentaEditandoId){
                 const idx = db_docventa.findIndex(d => d.id === docVentaEditandoId);
-                if(idx===-1){ alert("Este documento ya no existe (puede que se haya eliminado)."); cancelarEdicionDocVenta(); return; }
+                if(idx===-1){ tacticalAviso("Este documento ya no existe (puede que se haya eliminado)."); cancelarEdicionDocVenta(); return; }
                 const anterior = db_docventa[idx];
                 const numeroDoc = contNumeroEditado('doc-numero', anterior.numero, db_docventa, anterior.id);
                 if(numeroDoc === null) return;
@@ -13622,7 +13622,7 @@
                 if(idsAnticipos.length) cruce = await contAplicarCrucesAnticipos(doc, idsAnticipos);
                 tacticalSyncDocVenta(doc);
                 docAnticiposOff.clear();
-                if(cruce && cruce.total > 0) alert('Documento ' + numero + ' guardado.\n\nSe cruzaron anticipos del cliente por ' + cotFormatoCop(cruce.total) + '.\nSaldo por cobrar: ' + cotFormatoCop(doc.saldoPendiente) + '.');
+                if(cruce && cruce.total > 0) tacticalAviso('Documento ' + numero + ' guardado.\n\nSe cruzaron anticipos del cliente por ' + cotFormatoCop(cruce.total) + '.\nSaldo por cobrar: ' + cotFormatoCop(doc.saldoPendiente) + '.');
 
                 // Si este documento se generó desde "Prefacturas pendientes", las marca facturadas
                 // para que desaparezcan de esa lista y no se vuelvan a facturar por error.
@@ -13681,8 +13681,8 @@
         function editarDocVenta(id){
             const doc = db_docventa.find(d=>d.id===id);
             if(!doc) return;
-            if(ncParcialesDe(doc).length){ alert('Este documento tiene Nota(s) Crédito parcial(es) (' + ncParcialesDe(doc).map(x => x.numero).join(', ') + '), no se puede editar. Si necesitas cambiarlo, elimina primero esas Notas Crédito (sección Notas Crédito).'); return; }
-            if(doc.estado==='anulada'){ alert('Este documento está anulado por una Nota Crédito, no se puede editar. Si fue un error, elimina primero la Nota Crédito (sección Notas Crédito) para reactivarlo.'); return; }
+            if(ncParcialesDe(doc).length){ tacticalAviso('Este documento tiene Nota(s) Crédito parcial(es) (' + ncParcialesDe(doc).map(x => x.numero).join(', ') + '), no se puede editar. Si necesitas cambiarlo, elimina primero esas Notas Crédito (sección Notas Crédito).'); return; }
+            if(doc.estado==='anulada'){ tacticalAviso('Este documento está anulado por una Nota Crédito, no se puede editar. Si fue un error, elimina primero la Nota Crédito (sección Notas Crédito) para reactivarlo.'); return; }
             // Conde 2026-08-21: "de cliente ya pagadas no las deje eliminar ni editar" -- mismo
             // candado que CxP.
             // Conde 2026-09-25: candado suavizado a confirm() "mientras nos adaptamos al manejo
@@ -13740,8 +13740,8 @@
         function eliminarDocVenta(id){
             const doc = db_docventa.find(d=>d.id===id);
             if(!doc) return;
-            if(ncParcialesDe(doc).length){ alert('Este documento tiene Nota(s) Crédito parcial(es) (' + ncParcialesDe(doc).map(x => x.numero).join(', ') + '), no se puede eliminar. Si quieres borrarlo, elimina primero esas Notas Crédito (sección Notas Crédito).'); return; }
-            if(doc.estado==='anulada'){ alert('Este documento está anulado por una Nota Crédito, no se puede eliminar. Si quieres borrarlo, elimina primero la Nota Crédito (sección Notas Crédito).'); return; }
+            if(ncParcialesDe(doc).length){ tacticalAviso('Este documento tiene Nota(s) Crédito parcial(es) (' + ncParcialesDe(doc).map(x => x.numero).join(', ') + '), no se puede eliminar. Si quieres borrarlo, elimina primero esas Notas Crédito (sección Notas Crédito).'); return; }
+            if(doc.estado==='anulada'){ tacticalAviso('Este documento está anulado por una Nota Crédito, no se puede eliminar. Si quieres borrarlo, elimina primero la Nota Crédito (sección Notas Crédito).'); return; }
             // Conde 2026-09-25: candado suavizado a confirm(), ver editarDocVenta arriba.
             if(doc.estado==='pagada' && !confirm(`Este documento "${doc.numero}" ya está pagado. ¿Seguro que quieres eliminarlo?\n\nYa se registraron cobros contra este documento.`)) return;
             if(!confirm(`¿Eliminar el documento "${doc.numero}"?\n\nEsta acción no se puede deshacer.`)) return;
@@ -13816,7 +13816,7 @@
             if(seleccion.length===0) return;
             const clientes = [...new Set(seleccion.map(d=>d.idCli))];
             if(clientes.length>1){
-                alert('Elegiste facturas de clientes distintos -- un solo comprobante de ingreso debe ser para UN solo cliente. Deja marcadas solo las de un cliente.');
+                tacticalAviso('Elegiste facturas de clientes distintos -- un solo comprobante de ingreso debe ser para UN solo cliente. Deja marcadas solo las de un cliente.');
                 return;
             }
             // Conde 2026-09-25: "en ocasiones el proveedor nos paga ese reteiva" (el cliente paga
@@ -13874,9 +13874,9 @@
             const referenciaSoporte = document.getElementById('ing-referencia').value.trim();
             const reteivaRecibida = document.getElementById('ing-reteivaRecibida').checked;
 
-            if(valor<=0){ alert("Debe ingresar un valor mayor a 0."); return; }
-            if(docs.length===0 && !idClienteManual){ alert("Selecciona un documento de venta, o un cliente si este abono no tiene factura."); return; }
-            if(docs.length===0 && !concepto){ alert("Escribe un concepto para este abono sin factura."); return; }
+            if(valor<=0){ tacticalAviso("Debe ingresar un valor mayor a 0."); return; }
+            if(docs.length===0 && !idClienteManual){ tacticalAviso("Selecciona un documento de venta, o un cliente si este abono no tiene factura."); return; }
+            if(docs.length===0 && !concepto){ tacticalAviso("Escribe un concepto para este abono sin factura."); return; }
 
             const fechaComprobante = contFechaComprobante('ing-fecha');
             if(fechaComprobante === null) return;
@@ -13886,7 +13886,7 @@
 
             if(ingresoEditandoId){
                 const idx = db_ingresos.findIndex(x => x.id === ingresoEditandoId);
-                if(idx===-1){ alert("Este comprobante ya no existe (puede que se haya eliminado)."); cancelarEdicionIngreso(); return; }
+                if(idx===-1){ tacticalAviso("Este comprobante ya no existe (puede que se haya eliminado)."); cancelarEdicionIngreso(); return; }
                 const anterior = db_ingresos[idx];
                 const numeroIngreso = contNumeroEditado('ing-numero', anterior.numero, db_ingresos, anterior.id);
                 if(numeroIngreso === null) return;
@@ -14021,13 +14021,13 @@
             const iva = items.reduce((s,i)=>s+i.iva,0);
             const fechaVencimiento = document.getElementById('cxp-fechaVenc').value.trim();
 
-            if(!proveedor || items.length===0 || monto<=0){ alert("Debe ingresar el proveedor y agregar al menos un ítem con valor mayor a 0."); return; }
+            if(!proveedor || items.length===0 || monto<=0){ tacticalAviso("Debe ingresar el proveedor y agregar al menos un ítem con valor mayor a 0."); return; }
 
             await contObtenerOCrearProveedor(proveedor); // registra el proveedor si es nuevo, o simplemente reutiliza el ya existente por nombre exacto
 
             if(cxpEditandoId){
                 const idx = db_cxp.findIndex(c => c.id === cxpEditandoId);
-                if(idx===-1){ alert("Esta cuenta por pagar ya no existe (puede que se haya eliminado)."); cancelarEdicionCxp(); return; }
+                if(idx===-1){ tacticalAviso("Esta cuenta por pagar ya no existe (puede que se haya eliminado)."); cancelarEdicionCxp(); return; }
                 const anterior = db_cxp[idx];
                 // Conserva lo ya abonado: si antes tenía saldo pendiente 300 de un monto de 1000
                 // (o sea ya se pagaron 700), y al editar el monto sube a 1200, el saldo pendiente
@@ -14156,7 +14156,7 @@
             if(seleccion.length===0) return;
             const proveedores = [...new Set(seleccion.map(c=>c.proveedor))];
             if(proveedores.length>1){
-                alert('Elegiste facturas de proveedores distintos -- un solo comprobante de egreso debe ser para UN solo proveedor. Deja marcadas solo las de un proveedor.');
+                tacticalAviso('Elegiste facturas de proveedores distintos -- un solo comprobante de egreso debe ser para UN solo proveedor. Deja marcadas solo las de un proveedor.');
                 return;
             }
             const totalSeleccion = seleccion.reduce((s,c)=>s+c.saldoPendiente,0);
@@ -14218,14 +14218,14 @@
             const medioPago = document.getElementById('egr-medioPago').value;
             const referenciaSoporte = document.getElementById('egr-referencia').value.trim();
 
-            if(!beneficiario || monto<=0){ alert("Debe ingresar el beneficiario y un monto mayor a 0."); return; }
+            if(!beneficiario || monto<=0){ tacticalAviso("Debe ingresar el beneficiario y un monto mayor a 0."); return; }
 
             const fechaComprobante = contFechaComprobante('egr-fecha');
             if(fechaComprobante === null) return;
 
             if(egresoEditandoId){
                 const idx = db_egresos.findIndex(x => x.id === egresoEditandoId);
-                if(idx===-1){ alert("Este comprobante ya no existe (puede que se haya eliminado)."); cancelarEdicionEgreso(); return; }
+                if(idx===-1){ tacticalAviso("Este comprobante ya no existe (puede que se haya eliminado)."); cancelarEdicionEgreso(); return; }
                 const anterior = db_egresos[idx];
                 const numeroEgreso = contNumeroEditado('egr-numero', anterior.numero, db_egresos, anterior.id);
                 if(numeroEgreso === null) return;
@@ -14654,25 +14654,25 @@
             const esManual = campo.value.trim() && campo.dataset.auto !== 'true';
             if(esManual){
                 const numero = campo.value.trim().toUpperCase();
-                if(db_notasCredito.some(x => x.numero === numero)){ alert('El número ' + numero + ' ya lo tiene otra Nota Crédito.'); return null; }
+                if(db_notasCredito.some(x => x.numero === numero)){ tacticalAviso('El número ' + numero + ' ya lo tiene otra Nota Crédito.'); return null; }
                 contActualizarContadorDesdeNumero('nc', numero);
                 return numero;
             }
             const k = await tacticalSiguienteNumero('nc');
-            if(k == null){ alert('No se pudo generar el número de la Nota Crédito. ¿Ya corriste supabase/migracion_notas_credito.sql en Supabase?'); return null; }
+            if(k == null){ tacticalAviso('No se pudo generar el número de la Nota Crédito. ¿Ya corriste supabase/migracion_notas_credito.sql en Supabase?'); return null; }
             return 'NC-' + String(k).padStart(4, '0');
         }
         async function contGuardarNotaCreditoParcial(doc){
             const motivo = document.getElementById('nc-motivo').value.trim();
-            if(!motivo){ alert('Escribe el motivo de la Nota (ej. descuento acordado, devolución de una parte del pedido).'); return; }
+            if(!motivo){ tacticalAviso('Escribe el motivo de la Nota (ej. descuento acordado, devolución de una parte del pedido).'); return; }
             const fecha = contFechaComprobante('nc-fecha'); if(fecha === null) return;
             const bruto = contNumeroDesdeInput(document.getElementById('nc-bruto')), iva = contNumeroDesdeInput(document.getElementById('nc-iva'));
-            if(!(bruto > 0)){ alert('Escribe el valor a acreditar antes de IVA.'); return; }
+            if(!(bruto > 0)){ tacticalAviso('Escribe el valor a acreditar antes de IVA.'); return; }
             const rest = ncRestante(doc);
-            if(bruto > rest.bruto + 1){ alert('El valor antes de IVA (' + cotFormatoCop(bruto) + ') supera lo que queda por acreditar de ' + doc.numero + ' (' + cotFormatoCop(rest.bruto) + ').'); return; }
-            if(iva > rest.iva + 1){ alert('El IVA (' + cotFormatoCop(iva) + ') supera el IVA que queda por acreditar de ' + doc.numero + ' (' + cotFormatoCop(rest.iva) + ').'); return; }
+            if(bruto > rest.bruto + 1){ tacticalAviso('El valor antes de IVA (' + cotFormatoCop(bruto) + ') supera lo que queda por acreditar de ' + doc.numero + ' (' + cotFormatoCop(rest.bruto) + ').'); return; }
+            if(iva > rest.iva + 1){ tacticalAviso('El IVA (' + cotFormatoCop(iva) + ') supera el IVA que queda por acreditar de ' + doc.numero + ' (' + cotFormatoCop(rest.iva) + ').'); return; }
             const r = ncReduccionCartera(doc, bruto, iva);
-            if(r.total > doc.totalCobrar + 1){ alert('La Nota baja la cartera ' + cotFormatoCop(r.total) + ', más de lo que tiene por cobrar la factura (' + cotFormatoCop(doc.totalCobrar) + ').'); return; }
+            if(r.total > doc.totalCobrar + 1){ tacticalAviso('La Nota baja la cartera ' + cotFormatoCop(r.total) + ', más de lo que tiene por cobrar la factura (' + cotFormatoCop(doc.totalCobrar) + ').'); return; }
             const cli = db_clientes.find(c => c.id === doc.idCli);
             let aviso = '¿Generar Nota Crédito PARCIAL sobre ' + doc.numero + ' (' + (cli ? cli.empresa : 'cliente eliminado') + ') por ' + cotFormatoCop(bruto + iva) + ' (antes de IVA ' + cotFormatoCop(bruto) + ' + IVA ' + cotFormatoCop(iva) + ')?' +
                 '\n\nLa factura NO se anula: lo que el cliente debe baja ' + cotFormatoCop(r.total) + ' (saldo pendiente ' + cotFormatoCop(doc.saldoPendiente) + ' → ' + cotFormatoCop(Math.max(0, doc.saldoPendiente - r.total)) + ').';
@@ -14683,7 +14683,7 @@
                 valorBruto: bruto, iva, totalDocumento: r.total, totalCobrar: r.total, cobradoPrevio: Math.max(0, r.total - doc.saldoPendiente) };
             // Primero la Nota; la factura solo se ajusta si la Nota quedó guardada (nunca a medias).
             const ok = await tacticalSyncNotaCredito(nota);
-            if(!ok){ alert('No se pudo guardar la Nota Crédito en Supabase, así que la factura NO se modificó. ¿Ya corriste supabase/migracion_notas_credito.sql?'); return; }
+            if(!ok){ tacticalAviso('No se pudo guardar la Nota Crédito en Supabase, así que la factura NO se modificó. ¿Ya corriste supabase/migracion_notas_credito.sql?'); return; }
             db_notasCredito.push(nota);
             ncParcialAplicar(doc, r.total);
             tacticalSyncDocVenta(doc);
@@ -14697,12 +14697,12 @@
         }
         async function contGuardarNotaCredito(){
             const doc = db_docventa.find(d => d.id === document.getElementById('nc-docventa').value);
-            if(!doc){ alert('Elige la factura o cuenta de cobro sobre la que haces la Nota.'); return; }
-            if(doc.estado === 'anulada'){ alert('Ese documento ya está anulado.'); return; }
+            if(!doc){ tacticalAviso('Elige la factura o cuenta de cobro sobre la que haces la Nota.'); return; }
+            if(doc.estado === 'anulada'){ tacticalAviso('Ese documento ya está anulado.'); return; }
             if(document.getElementById('nc-tipo').value === 'parcial') return contGuardarNotaCreditoParcial(doc);
-            if(ncParcialesDe(doc).length){ alert('Esta factura ya tiene Nota(s) Crédito parcial(es). Para el valor que queda, haz otra Nota PARCIAL por ese valor (arriba muestra cuánto queda por acreditar), o elimina primero las parciales si quieres anularla completa.'); return; }
+            if(ncParcialesDe(doc).length){ tacticalAviso('Esta factura ya tiene Nota(s) Crédito parcial(es). Para el valor que queda, haz otra Nota PARCIAL por ese valor (arriba muestra cuánto queda por acreditar), o elimina primero las parciales si quieres anularla completa.'); return; }
             const motivo = document.getElementById('nc-motivo').value.trim();
-            if(!motivo){ alert('Escribe el motivo de la anulación (ej. error en la facturación, el cliente canceló el pedido).'); return; }
+            if(!motivo){ tacticalAviso('Escribe el motivo de la anulación (ej. error en la facturación, el cliente canceló el pedido).'); return; }
             const fecha = contFechaComprobante('nc-fecha');
             if(fecha === null) return;
             const cli = db_clientes.find(c => c.id === doc.idCli);
@@ -14716,11 +14716,11 @@
             let numero;
             if(esManual){
                 numero = campo.value.trim().toUpperCase();
-                if(db_notasCredito.some(n => n.numero === numero)){ alert('El número ' + numero + ' ya lo tiene otra Nota Crédito.'); return; }
+                if(db_notasCredito.some(n => n.numero === numero)){ tacticalAviso('El número ' + numero + ' ya lo tiene otra Nota Crédito.'); return; }
                 contActualizarContadorDesdeNumero('nc', numero);
             } else {
                 const n = await tacticalSiguienteNumero('nc');
-                if(n == null){ alert('No se pudo generar el número de la Nota Crédito. ¿Ya corriste supabase/migracion_notas_credito.sql en Supabase?'); return; }
+                if(n == null){ tacticalAviso('No se pudo generar el número de la Nota Crédito. ¿Ya corriste supabase/migracion_notas_credito.sql en Supabase?'); return; }
                 numero = 'NC-' + String(n).padStart(4, '0');
             }
             const nota = {
@@ -14729,7 +14729,7 @@
             };
             // Primero la Nota; la factura solo se anula si la Nota quedó guardada (nunca a medias).
             const ok = await tacticalSyncNotaCredito(nota);
-            if(!ok){ alert('No se pudo guardar la Nota Crédito en Supabase, así que la factura NO se anuló. ¿Ya corriste supabase/migracion_notas_credito.sql?'); return; }
+            if(!ok){ tacticalAviso('No se pudo guardar la Nota Crédito en Supabase, así que la factura NO se anuló. ¿Ya corriste supabase/migracion_notas_credito.sql?'); return; }
             db_notasCredito.push(nota);
             doc.estado = 'anulada'; doc.saldoPendiente = 0;
             tacticalSyncDocVenta(doc);
@@ -14773,25 +14773,25 @@
             const fecha = document.getElementById('nc-ed-fecha-' + id).value;
             const bruto = contNumeroDesdeInput(document.getElementById('nc-ed-bruto-' + id));
             const iva = contNumeroDesdeInput(document.getElementById('nc-ed-iva-' + id));
-            if(!numero){ alert('El número de la Nota Crédito no puede quedar vacío.'); return; }
-            if(!fecha){ alert('Elige la fecha de la Nota Crédito.'); return; }
-            if(db_notasCredito.some(x => x.id !== id && x.numero === numero)){ alert('El número ' + numero + ' ya lo tiene otra Nota Crédito.'); return; }
-            if(bruto <= 0){ alert('El valor antes de IVA debe ser mayor a 0.'); return; }
+            if(!numero){ tacticalAviso('El número de la Nota Crédito no puede quedar vacío.'); return; }
+            if(!fecha){ tacticalAviso('Elige la fecha de la Nota Crédito.'); return; }
+            if(db_notasCredito.some(x => x.id !== id && x.numero === numero)){ tacticalAviso('El número ' + numero + ' ya lo tiene otra Nota Crédito.'); return; }
+            if(bruto <= 0){ tacticalAviso('El valor antes de IVA debe ser mayor a 0.'); return; }
             const anterior = { numero: n.numero, fecha: n.fecha, valorBruto: n.valorBruto, iva: n.iva, totalDocumento: n.totalDocumento, totalCobrar: n.totalCobrar, cobradoPrevio: n.cobradoPrevio };
             const docP = db_docventa.find(d => d.id === n.idDocVenta);
             if(docP && docP.estado !== 'anulada'){
                 // Nota PARCIAL: al cambiar el valor, la factura recalcula lo que el cliente debe.
                 const rest = ncRestante(docP, n.id);
-                if(bruto > rest.bruto + 1){ alert('El valor antes de IVA supera lo que queda por acreditar de ' + docP.numero + ' (' + cotFormatoCop(rest.bruto) + ').'); return; }
-                if(iva > rest.iva + 1){ alert('El IVA supera el IVA que queda por acreditar de ' + docP.numero + ' (' + cotFormatoCop(rest.iva) + ').'); return; }
+                if(bruto > rest.bruto + 1){ tacticalAviso('El valor antes de IVA supera lo que queda por acreditar de ' + docP.numero + ' (' + cotFormatoCop(rest.bruto) + ').'); return; }
+                if(iva > rest.iva + 1){ tacticalAviso('El IVA supera el IVA que queda por acreditar de ' + docP.numero + ' (' + cotFormatoCop(rest.iva) + ').'); return; }
                 const foto = { totalCobrar: docP.totalCobrar, saldoPendiente: docP.saldoPendiente, estado: docP.estado };
                 ncParcialRevertir(docP, n.totalCobrar, n.cobradoPrevio);
                 const rr = ncReduccionCartera(docP, bruto, iva);
-                if(rr.total > docP.totalCobrar + 1){ Object.assign(docP, foto); alert('La Nota baja la cartera más de lo que tiene por cobrar la factura (' + cotFormatoCop(docP.totalCobrar) + ').'); return; }
+                if(rr.total > docP.totalCobrar + 1){ Object.assign(docP, foto); tacticalAviso('La Nota baja la cartera más de lo que tiene por cobrar la factura (' + cotFormatoCop(docP.totalCobrar) + ').'); return; }
                 const exceso = ncParcialAplicar(docP, rr.total);
                 n.numero = numero; n.fecha = fecha; n.valorBruto = bruto; n.iva = iva; n.totalDocumento = rr.total; n.totalCobrar = rr.total; n.cobradoPrevio = exceso;
                 const okP = await tacticalSyncNotaCredito(n);
-                if(!okP){ Object.assign(n, anterior); Object.assign(docP, foto); alert('No se pudo guardar el cambio en Supabase; la Nota Crédito y la factura quedaron como estaban.'); return; }
+                if(!okP){ Object.assign(n, anterior); Object.assign(docP, foto); tacticalAviso('No se pudo guardar el cambio en Supabase; la Nota Crédito y la factura quedaron como estaban.'); return; }
                 tacticalSyncDocVenta(docP);
                 if(numero !== anterior.numero) contActualizarContadorDesdeNumero('nc', numero);
                 ncEditando.delete(id);
@@ -14801,7 +14801,7 @@
             const diferencia = (n.totalCobrar || 0) - (n.totalDocumento || 0); // envío / ReteIVA que ya traía la factura, se conserva
             n.numero = numero; n.fecha = fecha; n.valorBruto = bruto; n.iva = iva; n.totalDocumento = bruto + iva; n.totalCobrar = n.totalDocumento + diferencia;
             const ok = await tacticalSyncNotaCredito(n);
-            if(!ok){ Object.assign(n, anterior); alert('No se pudo guardar el cambio en Supabase; la Nota Crédito quedó como estaba.'); return; }
+            if(!ok){ Object.assign(n, anterior); tacticalAviso('No se pudo guardar el cambio en Supabase; la Nota Crédito quedó como estaba.'); return; }
             if(numero !== anterior.numero) contActualizarContadorDesdeNumero('nc', numero);
             ncEditando.delete(id);
             renderContabilidad();
