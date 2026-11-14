@@ -2696,7 +2696,7 @@
     <script src="tactical-supabase.js?v=20261109b"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
     <script src="precios_tactical.js?v=20261113d"></script>
-<script src="tactical-avanzado.js?v=20261114f"></script>
+<script src="tactical-avanzado.js?v=20261114g"></script>
 <script src="tactical-ui.js?v=20261109d"></script>
     <script src="troqueles_tactical.js?v=20261114a"></script>
     <script src="precios_promocionales.js?v=20260919a"></script>
@@ -9252,12 +9252,19 @@
           if(desglose["tapa_carton"]>0){
             const precioCarton = detalleTapaCarton ? detalleTapaCarton.precioPliego : 0;
             const sobranteTxt = detalleTapaCarton ? ` — ${detalleTapaCarton.pliegosNecesarios} necesarios + ${detalleTapaCarton.pliegosSobrante} de sobrante` : '';
+            const pcCarton = detalleTapaCarton && detalleTapaCarton.planoCorte;
+            const pliegoCartonTxt = pcCarton ? ` (pliego ${pcCarton.pliegoAncho}x${pcCarton.pliegoAlto})` : '';
+            const corteCartonTxt = pcCarton ? ` — corte a ${tacticalAvzNum(pcCarton.piezaAncho)}x${tacticalAvzNum(pcCarton.piezaAlto)}cm` : '';
             costoDirecto += precioCarton>0
-              ? avz.linea('car', 'Insumos', `Cartón ${detalleTapaCarton.calibreMm} mm (tapas)${sobranteTxt}`, Math.round(desglose["tapa_carton"]/precioCarton*100)/100, 'pliego', precioCarton, desglose["tapa_carton"])
+              ? avz.linea('car', 'Insumos', `Cartón ${detalleTapaCarton.calibreMm} mm (tapas)${pliegoCartonTxt}${sobranteTxt}${corteCartonTxt}`, Math.round(desglose["tapa_carton"]/precioCarton*100)/100, 'pliego', precioCarton, desglose["tapa_carton"])
               : tacticalAvzLineaCosto(avz, 'car', 'Insumos', 'Cartón de tapas', desglose["tapa_carton"], 1);
           }
           costoDirecto += tacticalAvzLineaCosto(avz, 'sem', 'Insumos', 'Tapa semidura: segunda capa y colaminado', desglose["tapa_semidura_segunda_capa"], 1);
-          costoDirecto += tacticalAvzLineaCosto(avz, 'gua', 'Insumos', 'Guardas (papel, impresión y plastificado)', desglose["guardas"], p.cantidad);
+          const dGua = detalleLineas["Guardas"];
+          const pcGua = dGua && dGua.detalleMaterial && dGua.detalleMaterial.planoCorte;
+          const pliegoGuaTxt = (dGua && dGua.detalleMaterial && dGua.detalleMaterial.formato) ? ` (pliego ${dGua.detalleMaterial.formato})` : '';
+          const corteGuaTxt = pcGua ? ` — corte a ${tacticalAvzNum(pcGua.piezaAncho)}x${tacticalAvzNum(pcGua.piezaAlto)}cm` : '';
+          costoDirecto += tacticalAvzLineaCosto(avz, 'gua', 'Insumos', `Guardas (papel, impresión y plastificado)${pliegoGuaTxt}${corteGuaTxt}`, desglose["guardas"], p.cantidad);
           costoDirecto += tacticalAvzLineaCosto(avz, 'arm', 'Procesos', 'Encuadernación, refile y limpieza', desglose["armado_encuadernacion"], p.cantidad);
           for(const k of Object.keys(desglose)){
             if(k.startsWith("linea_") || ["levante","tapa_armado_forrado","tapa_carton","tapa_semidura_segunda_capa","guardas","armado_encuadernacion"].includes(k)) continue;

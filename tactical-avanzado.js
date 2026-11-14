@@ -285,17 +285,30 @@ function tacticalAvzInsumosTextos(insumos){
 // detalle embebido como texto ("Taco — papel Bond 70g (pliego 70x100) — ... — corte a 50x70cm");
 // esto lo separa en columnas sin tocar cómo se arma el texto en cada calculadora.
 function tacticalAvzParsearInsumo(i){
-  const texto = i.concepto || '';
+  let texto = i.concepto || '';
   let material = '', pliego = '', corte = '';
   const mPapel = texto.match(/^(.*?)\s*—\s*papel\s+([^(]+?)\s*\(pliego\s+([^)]+)\)/i);
   if(mPapel){
     const clave = mPapel[1].trim();
     material = clave ? `${clave} — ${mPapel[2].trim()}` : mPapel[2].trim();
     pliego = mPapel[3].trim();
+  } else {
+    // No es una línea de "papel" (ej. Cartón de tapas, Guardas) pero igual puede traer su propio
+    // "(pliego AxB)" embebido -- se toma igual, y el texto que sobra (sin el pliego/corte/
+    // necesarios+sobrante) queda como etiqueta del insumo.
+    const mPliego = texto.match(/\(?pliego\s+([\d.,]+\s*x\s*[\d.,]+)\)?/i);
+    if(mPliego){ pliego = mPliego[1].replace(/\s+/g, ''); texto = texto.replace(mPliego[0], '').trim(); }
   }
-  const mCorte = texto.match(/corte a\s*([\d.,]+\s*x\s*[\d.,]+)\s*cm/i);
-  if(mCorte) corte = mCorte[1].replace(/\s+/g, '') + ' cm';
-  if(!material) material = texto;
+  const mCorte = texto.match(/\s*—?\s*corte a\s*([\d.,]+\s*x\s*[\d.,]+)\s*cm/i);
+  if(mCorte){ corte = mCorte[1].replace(/\s+/g, '') + ' cm'; if(!mPapel) texto = texto.replace(mCorte[0], '').trim(); }
+  if(!material){
+    material = texto
+      .replace(/\d+\s*necesarios\s*\+\s*\d+\s*de sobrante/i, '')
+      .replace(/\s*—\s*—\s*/g, ' — ')
+      .replace(/\s*—\s*$/, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
   return { material, pliego, corte };
 }
 function tacticalAvzInsumosTablaHtml(insumos){
@@ -312,10 +325,10 @@ function tacticalAvzInsumosTablaHtml(insumos){
   }).join('');
   return `<table style="width:100%; border-collapse:collapse; font-size:inherit;">
     <tr>
-      <th style="text-align:left; padding:2px 6px; border-bottom:2px solid #cbd5e0;">Papel / material</th>
-      <th style="text-align:right; padding:2px 6px; border-bottom:2px solid #cbd5e0;">Cantidad</th>
-      <th style="text-align:left; padding:2px 6px; border-bottom:2px solid #cbd5e0;">Tamaño pliego</th>
-      <th style="text-align:left; padding:2px 6px; border-bottom:2px solid #cbd5e0;">Corte</th>
+      <th style="text-align:left; padding:2px 6px; border-bottom:2px solid #cbd5e0; font-size:0.82em; font-weight:600;">Papel / material</th>
+      <th style="text-align:right; padding:2px 6px; border-bottom:2px solid #cbd5e0; font-size:0.82em; font-weight:600;">Cantidad</th>
+      <th style="text-align:left; padding:2px 6px; border-bottom:2px solid #cbd5e0; font-size:0.82em; font-weight:600;">Tamaño pliego</th>
+      <th style="text-align:left; padding:2px 6px; border-bottom:2px solid #cbd5e0; font-size:0.82em; font-weight:600;">Corte</th>
     </tr>
     ${filas}
   </table>`;
