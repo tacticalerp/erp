@@ -73,8 +73,9 @@ function tacticalAvzHtml(lineas){
   const nAj = (lineas||[]).filter(l => l.ajustado).length;
   const E = tacticalAvzEsc, C = tacticalAvzCop;
   let h = `<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:8px 0 4px;">
-    <label style="font-weight:600; color:var(--azul,#1e3a5f); cursor:pointer; margin:0;"><input type="checkbox"${pro?' checked':''} onchange="tacticalAvzToggle(this.checked)" style="margin-right:6px;">Versión profesional (ver insumos con cantidad y unitario, y editar precios)</label>
+    <label style="font-weight:600; color:var(--azul,#1e3a5f); cursor:pointer; margin:0;"><input type="checkbox"${pro?' checked':''} onchange="tacticalAvzToggle(this.checked)" style="margin-right:6px;">Versión profesional <span title="Ver insumos con cantidad y unitario, y editar precios." style="cursor:help; font-weight:normal; color:var(--texto-suave,#5a6472);">ⓘ</span></label>
     ${nAj>0 ? `<span style="color:#b45309; font-weight:600;">${nAj} renglón(es) ajustado(s) a mano</span> <button type="button" data-ui="cancel" onclick="tacticalAvzRestablecerTodo()">Quitar ajustes</button>` : ''}
+    ${pro ? `<span title="Los ajustes aplican solo a esta cotización y a esta cantidad, y se guardan con ella. Los precios de lista se cambian en el Panel de Precios." style="cursor:help; color:var(--texto-suave,#5a6472); font-size:0.78rem;">ⓘ Sobre estos ajustes</span>` : ''}
   </div>`;
   h += `<details id="tactical-avz-detalle"${window.tacticalAvz.abierto?' open':''} ontoggle="window.tacticalAvz.abierto=this.open" style="margin-top:4px;">
     <summary style="cursor:pointer; font-weight:600; color:var(--azul,#1e3a5f);">Ver el desglose de costos</summary>
@@ -149,7 +150,6 @@ function tacticalAvzTablaHtml(lineas, pro){
     }
   });
   h += `</table></div>`;
-  if(pro) h += `<div class="hint" style="margin-top:4px;">Los ajustes aplican solo a esta cotización y a esta cantidad, y se guardan con ella. Los precios de lista se cambian en el Panel de Precios.</div>`;
   return h;
 }
 
