@@ -9201,7 +9201,12 @@
             const d = detalleLineas[clave], id = 'L'+(nLin++);
             const papel = d.sustrato ? `${d.sustrato.nombre} ${d.sustrato.gramaje}g` : '';
             let parcial = 0;
-            if(d.detalleMaterial && d.costoMaterial>0) parcial += avz.linea(id+':mat', 'Insumos', `${clave} — papel ${papel} (pliego ${d.detalleMaterial.formato}) — ${d.detalleMaterial.pliegosNecesarios} necesarios + ${d.detalleMaterial.pliegosSobrante} de sobrante`, d.detalleMaterial.nPliegos, 'pliego', d.detalleMaterial.precioPliego, d.costoMaterial);
+            // Conde 2026-11-14: "quiero que en este listado de insumos esté también el corte que se
+            // debe hacer" -- antes solo decía el pliego madre y cuántos hacen falta, sin decir a
+            // qué tamaño se corta cada uno.
+            const pc = d.detalleMaterial && d.detalleMaterial.planoCorte;
+            const corteTxt = pc ? ` — corte a ${tacticalAvzNum(pc.piezaAncho)}x${tacticalAvzNum(pc.piezaAlto)}cm` : '';
+            if(d.detalleMaterial && d.costoMaterial>0) parcial += avz.linea(id+':mat', 'Insumos', `${clave} — papel ${papel} (pliego ${d.detalleMaterial.formato}) — ${d.detalleMaterial.pliegosNecesarios} necesarios + ${d.detalleMaterial.pliegosSobrante} de sobrante${corteTxt}`, d.detalleMaterial.nPliegos, 'pliego', d.detalleMaterial.precioPliego, d.costoMaterial);
             const di = d.detalleImpresion;
             if(di && d.costoImpresion>0){
               parcial += (di.via==='digital' && di.nClics>0)
