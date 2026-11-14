@@ -813,17 +813,23 @@ function uniProcesarComponente(c, p){
     const usaDigital = !!(impDigital && impDigital.total < impOffset.total);
     const det = usaDigital ? impDigital : impOffset;
     out.detalleImpresion = det; out.usaDigital = usaDigital;
+    let nPliegosImpresionSinMerma;
     if(usaDigital){
       [out.montajeAncho, out.montajeAlto] = DIGITAL_FORMATOS_CM[det.clase];
       out.nPliegosImpresion = Math.ceil((nPiezas+mermaDigital)/det.piezasPorClic);
+      nPliegosImpresionSinMerma = Math.ceil(nPiezas/det.piezasPorClic);
       out.planoImpresion = planoImpresionDigital(ancho, alto, det.clase);
     } else {
       const planoImp = planoImpresionOffset(ancho, alto, det.fraccion);
       [out.montajeAncho, out.montajeAlto] = tacticalCorteMontajeOffset(det.fraccion, planoImp, OFFSET_FORMATOS_CM, OFFSET_FORMATOS_IMPRESION_CM);
       out.nPliegosImpresion = det.nPasadas;
+      // Conde 2026-11-14: en el camino "unico" (cuadernillos con varias hojas en una sola forma)
+      // la merma no se puede separar limpiamente de las pasadas sin rehacer el cálculo de formas
+      // -- se deja igual a nPliegosImpresion (sobrante 0) solo en ese caso.
+      nPliegosImpresionSinMerma = unico ? out.nPliegosImpresion : costoImpresionOffset(nPiezas, tintasTiro, tintasRetiro, esPolicromia, ancho, alto).nPasadas;
       out.planoImpresion = planoImp;
     }
-    out.detalleMaterial = costoMaterialPliegos(out.montajeAncho, out.montajeAlto, sustratoNombre, gramaje, out.nPliegosImpresion, 0);
+    out.detalleMaterial = costoMaterialPliegos(out.montajeAncho, out.montajeAlto, sustratoNombre, gramaje, nPliegosImpresionSinMerma, out.nPliegosImpresion-nPliegosImpresionSinMerma);
   }
   out.carasPlastificado = c.plast||0;
   out.areaPlastificadoM2 = (out.montajeAncho*out.montajeAlto/10000)*out.nPliegosImpresion*out.carasPlastificado;

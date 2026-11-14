@@ -710,10 +710,11 @@ function cotizarRompecabezas(p){
   // y se colamina en pequeño"). El material y el plastificado se cobran sobre el tamaño de montaje
   // de impresión real -- aunque eso reduzca el aprovechamiento del pliego madre y suba el costo
   // frente al corte directo, es lo correcto (confirmado explícitamente por Conde).
-  let anchoMontajeImpresion, altoMontajeImpresion, nPliegosImpresion;
+  let anchoMontajeImpresion, altoMontajeImpresion, nPliegosImpresion, nPliegosImpresionSinMerma;
   if(usaDigital){
     [anchoMontajeImpresion, altoMontajeImpresion] = DIGITAL_FORMATOS_CM[detalleImpresion.clase];
     nPliegosImpresion = Math.ceil(piezasFisicasImpresion/detalleImpresion.piezasPorClic);
+    nPliegosImpresionSinMerma = Math.ceil(p.cantidad/detalleImpresion.piezasPorClic);
   } else {
     // Conde 2026-08-24: la máquina litográfica alimenta cualquier tamaño intermedio dentro de su
     // rango (no solo el máximo de catálogo) -- el material se corta AJUSTADO a lo que la pasada
@@ -722,9 +723,13 @@ function cotizarRompecabezas(p){
     const planoImp = planoImpresionOffset(anchoMontaje, altoMontaje, detalleImpresion.fraccion);
     [anchoMontajeImpresion, altoMontajeImpresion] = tacticalCorteMontajeOffset(detalleImpresion.fraccion, planoImp, OFFSET_FORMATOS_CM, OFFSET_FORMATOS_IMPRESION_CM);
     nPliegosImpresion = detalleImpresion.nPasadas;
+    // Conde 2026-11-14: cuántas pasadas harían falta SIN la merma de impresión -- la diferencia con
+    // nPliegosImpresion es el sobrante real de pliegos por culpa de la merma (mismo total de
+    // siempre, solo cambia el desglose necesarios/sobrante).
+    nPliegosImpresionSinMerma = costoImpresionOffset(p.cantidad, 4, 0, true, anchoMontaje, altoMontaje).nPasadas;
   }
 
-  const detalleMaterial = costoMaterialPliegos(anchoMontajeImpresion, altoMontajeImpresion, sustratoNombre, gramaje, nPliegosImpresion, 0);
+  const detalleMaterial = costoMaterialPliegos(anchoMontajeImpresion, altoMontajeImpresion, sustratoNombre, gramaje, nPliegosImpresionSinMerma, nPliegosImpresion-nPliegosImpresionSinMerma);
 
   const areaMontajeImpresionM2 = (anchoMontajeImpresion*altoMontajeImpresion)/10000;
   // Plastificado se hace sobre TODO lo que se imprime (al tamaño grande de montaje), incluida la

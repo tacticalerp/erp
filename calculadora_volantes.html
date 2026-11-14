@@ -830,10 +830,11 @@ function cotizarVolante(p){
   // corregido en Rompecabezas). El material y el plastificado se cobran sobre ese tamaño real de
   // máquina, no sobre el tamaño final del volante -- aunque eso suba el costo frente al corte
   // directo, es lo correcto.
-  let anchoMontajeImpresion, altoMontajeImpresion, nPliegosImpresion;
+  let anchoMontajeImpresion, altoMontajeImpresion, nPliegosImpresion, nPliegosImpresionSinMerma;
   if(usaDigital){
     [anchoMontajeImpresion, altoMontajeImpresion] = DIGITAL_FORMATOS_CM[detalleImpresion.clase];
     nPliegosImpresion = Math.ceil(piezasConMerma/detalleImpresion.piezasPorClic);
+    nPliegosImpresionSinMerma = Math.ceil(p.cantidad/detalleImpresion.piezasPorClic);
   } else {
     // Conde 2026-08-24: la máquina litográfica alimenta cualquier tamaño intermedio dentro de su
     // rango (no solo el máximo de catálogo) -- el material se corta AJUSTADO a lo que la pasada
@@ -843,8 +844,10 @@ function cotizarVolante(p){
     const planoImp = planoImpresionOffset(p.ancho, p.alto, detalleImpresion.fraccion);
     [anchoMontajeImpresion, altoMontajeImpresion] = tacticalCorteMontajeOffset(detalleImpresion.fraccion, planoImp, OFFSET_FORMATOS_CM, OFFSET_FORMATOS_IMPRESION_CM);
     nPliegosImpresion = detalleImpresion.nPasadas;
+    // Conde 2026-11-14: pasadas sin la merma de impresión -- la diferencia es el sobrante real.
+    nPliegosImpresionSinMerma = costoImpresionOffset(p.cantidad, p.tintasTiro, p.tintasRetiro, esPolicromia, p.ancho, p.alto).nPasadas;
   }
-  const detalleMaterial = costoMaterialPliegos(anchoMontajeImpresion, altoMontajeImpresion, sustratoNombre, gramaje, nPliegosImpresion, 0);
+  const detalleMaterial = costoMaterialPliegos(anchoMontajeImpresion, altoMontajeImpresion, sustratoNombre, gramaje, nPliegosImpresionSinMerma, nPliegosImpresion-nPliegosImpresionSinMerma);
 
   const costoRefile = costoRefileComercial(tamano, p.cantidad);
   const costoEmpaque = costoEmpaqueComercial(tamano, p.cantidad);
@@ -946,16 +949,19 @@ function cotizarIman(p){
   // 30x50 si es offset, ver IMAN_MONTAJE_MAX_CM) y SOLO DESPUÉS se corta a piezas finales (mismo
   // criterio ya corregido en Volante normal y Rompecabezas). El adhesivo se cobra sobre ese tamaño
   // de montaje, no sobre el tamaño final del imán.
-  let anchoMontajeImpresion, altoMontajeImpresion, nPliegosImpresion;
+  let anchoMontajeImpresion, altoMontajeImpresion, nPliegosImpresion, nPliegosImpresionSinMerma;
   if(usaDigital){
     [anchoMontajeImpresion, altoMontajeImpresion] = IMAN_DIGITAL_FORMATOS_CM[detalleImpresion.clase];
     nPliegosImpresion = Math.ceil(piezasConMerma/detalleImpresion.piezasPorClic);
+    nPliegosImpresionSinMerma = Math.ceil(p.cantidad/detalleImpresion.piezasPorClic);
   } else {
     anchoMontajeImpresion = detalleImpresion.montajeAncho;
     altoMontajeImpresion = detalleImpresion.montajeAlto;
     nPliegosImpresion = detalleImpresion.nPasadas;
+    // Conde 2026-11-14: pasadas sin la merma de impresión -- la diferencia es el sobrante real.
+    nPliegosImpresionSinMerma = costoImpresionOffsetIman(p.cantidad, p.tintasTiro, 0, esPolicromia, p.ancho, p.alto).nPasadas;
   }
-  const detalleMaterial = costoMaterialPliegos(anchoMontajeImpresion, altoMontajeImpresion, sustratoNombre, gramaje, nPliegosImpresion, 0, SUSTRATOS_ADHESIVOS);
+  const detalleMaterial = costoMaterialPliegos(anchoMontajeImpresion, altoMontajeImpresion, sustratoNombre, gramaje, nPliegosImpresionSinMerma, nPliegosImpresion-nPliegosImpresionSinMerma, SUSTRATOS_ADHESIVOS);
 
   let piezasPorLamina = piezasPorPliego(p.ancho, p.alto, IMAN_LAMINA_CM.ancho, IMAN_LAMINA_CM.alto);
   if(piezasPorLamina===0) piezasPorLamina = 1;
