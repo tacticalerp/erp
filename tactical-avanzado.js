@@ -689,26 +689,47 @@ function tacticalAvzFichaTecnica(p, r, reglas){
 function tacticalAvzEnvolverCantidadesExtra(id2, id3){
   const el2 = document.getElementById(id2), el3 = document.getElementById(id3);
   if(!el2 || !el3 || el2.dataset.avzPlegado) return;
+  const id1 = id2.replace(/2$/, '');
+  const el1 = document.getElementById(id1);
+  if(!el1) return;
   el2.dataset.avzPlegado = '1';
+  const cont1 = el1.closest('.campo') || el1.closest('.form-group') || el1.parentElement;
   const cont2 = el2.closest('.campo') || el2.closest('.form-group') || el2.parentElement;
   const cont3 = el3.closest('.campo') || el3.closest('.form-group') || el3.parentElement;
+  // Conde 2026-11-14: "el recuadro existente en Cantidad prácticamente se divide en 3, pues veo
+  // espacio suficiente para escribir hasta 5 dígitos sin problema, en lugar de expandir 2
+  // recuadros más que son bastante amplios" -- en vez de mostrar 2 campos "campo chico" aparte,
+  // la cantidad principal entra a una fila flex, y al activar, cantidad 2 y 3 se meten en esa
+  // MISMA fila (3 campos angostos ocupando el mismo ancho de siempre). Las otras 2 opciones de
+  // precio no necesitan ningún cambio de estructura propio -- esto vive solo aquí.
+  const fila = document.createElement('div');
+  fila.className = 'tactical-avz-cant-fila';
+  fila.style.cssText = 'display:flex; gap:4px;';
+  el1.parentNode.insertBefore(fila, el1);
+  fila.appendChild(el1);
+  [el1, el2, el3].forEach(el => {
+    el.style.width = '0'; el.style.flex = '1 1 0'; el.style.minWidth = '0'; el.style.padding = '7px 4px';
+  });
+  if(!el2.placeholder) el2.placeholder = 'Cant. 2';
+  if(!el3.placeholder) el3.placeholder = 'Cant. 3';
+  el2.title = 'Cantidad 2 (opcional)'; el3.title = 'Cantidad 3 (opcional)';
+  cont2.style.display = 'none';
+  cont3.style.display = 'none';
   const toggle = document.createElement('a');
   toggle.href = '#';
   toggle.className = 'tactical-avz-cant-toggle';
   toggle.style.cssText = 'display:inline-block; font-size:0.82rem; font-weight:600; color:var(--azul,#1e3a5f); text-decoration:none; margin:2px 0 10px; cursor:pointer;';
-  const sincronizarTexto = () => { toggle.textContent = (cont2.style.display==='none') ? '+ Cotizar más Cantidades' : '✕ Quitar otras cantidades'; };
+  const sincronizarTexto = () => { toggle.textContent = fila.contains(el2) ? '✕ Quitar otras cantidades' : '+ Cotizar más Cantidades'; };
   toggle.addEventListener('click', e => {
     e.preventDefault();
-    const abrir = cont2.style.display==='none';
-    cont2.style.display = abrir ? '' : 'none';
-    cont3.style.display = abrir ? '' : 'none';
-    if(!abrir){ el2.value=''; el3.value=''; }
+    const abrir = !fila.contains(el2);
+    if(abrir){ fila.appendChild(el2); fila.appendChild(el3); }
+    else { el2.value=''; el3.value=''; cont2.appendChild(el2); cont3.appendChild(el3); }
     sincronizarTexto();
   });
-  cont2.parentNode.insertBefore(toggle, cont2);
+  cont1.parentNode.insertBefore(toggle, cont1.nextSibling);
   const tieneValores = (el2.value||'').trim()!=='' || (el3.value||'').trim()!=='';
-  cont2.style.display = tieneValores ? '' : 'none';
-  cont3.style.display = tieneValores ? '' : 'none';
+  if(tieneValores){ fila.appendChild(el2); fila.appendChild(el3); }
   sincronizarTexto();
 }
 function tacticalAvzSincronizarCantidadesExtra(){
