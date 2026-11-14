@@ -363,7 +363,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="tactical-supabase.js?v=20261109b"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
-<script src="precios_tactical.js?v=20261113c"></script>
+<script src="precios_tactical.js?v=20261113d"></script>
 <script src="tactical-avanzado.js?v=20261113o"></script>
 <script src="tactical-ui.js?v=20261109d"></script>
 <script src="troqueles_tactical.js?v=20261107a"></script>
@@ -787,7 +787,7 @@ function poblarTroqueles(){
     return {
       id: t.id,
       grupo: dos ? (dura ? 'Cajas duras · 2 piezas' : 'Cajas blandas · 2 piezas') : 'Cajas blandas · 1 pieza',
-      nombre: `<b>${dura ? 'Caja dura' : 'Caja blanda'} ${tacticalTroquelNum(t.ancho)} x ${tacticalTroquelNum(t.alto)}</b> x ${tacticalTroquelNum(t.largo)}`,
+      nombre: `<b>${dura ? 'Caja dura' : 'Caja blanda'} ${tacticalTroquelHV(t.ancho, t.alto)}</b> x ${tacticalTroquelNum(t.largo)}`,
       tags: tags,
       titulo: `Ancho ${t.ancho} cm, alto ${t.alto} cm, largo ${t.largo} cm. Montaje de impresión ${t.anchoImpreso}x${t.altoImpreso} cm.`
     };

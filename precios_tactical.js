@@ -1428,6 +1428,16 @@ function tacticalParamsConDuplicado(p){
    items: [{id, nombre (HTML: <b>..</b> para lo importante), grupo?, tags?:[texto], titulo?}]
    ===================================================================================== */
 function tacticalTroquelNum(n){ return String(n).replace('.', ','); }
+// Conde 2026-11-13: "que los troqueles indique cual medida es horizontal y cual vertical" -- antes
+// "33 x 25" no decía cuál de los dos números era cuál al armar el montaje. tacticalTroquelHV() es
+// para el campo `nombre` (admite HTML, letra chica gris); tacticalTroquelHVTxt() es para `tags`
+// (texto plano, tacticalTroquelPicker lo escapa, no admite HTML).
+function tacticalTroquelHV(ancho, alto){
+  return tacticalTroquelNum(ancho) + '<small style="color:#94a3b8; font-weight:400;"> h</small> x ' + tacticalTroquelNum(alto) + '<small style="color:#94a3b8; font-weight:400;"> v</small>';
+}
+function tacticalTroquelHVTxt(ancho, alto){
+  return tacticalTroquelNum(ancho) + 'h x ' + tacticalTroquelNum(alto) + 'v';
+}
 function tacticalTroquelEsc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 (function(){
   const reg = {};   // selectId -> {items, wrap}

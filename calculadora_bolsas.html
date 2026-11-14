@@ -391,7 +391,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="tactical-supabase.js?v=20261109b"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
-<script src="precios_tactical.js?v=20261113c"></script>
+<script src="precios_tactical.js?v=20261113d"></script>
 <script src="tactical-avanzado.js?v=20261113o"></script>
 <script src="tactical-ui.js?v=20261109d"></script>
 <script>
@@ -901,7 +901,7 @@ function poblarTroqueles(){
   // Conde 2026-11-07: selector visual -- nombre real en negrilla (ancho x alto), fondo en normal, prefijo gris a la derecha
   tacticalTroquelPicker("in-troquel", TROQUELES_BOLSAS.map(t => ({
     id: t.id,
-    nombre: `<b>Bolsa ${tacticalTroquelNum(t.ancho)} x ${tacticalTroquelNum(t.alto)}</b> x ${tacticalTroquelNum(t.profundo)}`,
+    nombre: `<b>Bolsa ${tacticalTroquelHV(t.ancho, t.alto)}</b> x ${tacticalTroquelNum(t.profundo)}`,
     tags: [t.por2 ? 'Por 2' : 'Una pieza'].concat(t.nota && t.nota.length <= 22 && t.nota !== 'Una sola pieza' ? [t.nota] : []),
     titulo: `Ancho ${t.ancho} cm, alto ${t.alto} cm, fondo ${t.profundo} cm. Tamaño impreso ${t.anchoImpreso}x${t.altoImpreso} cm.${t.nota ? ' ' + t.nota : ''}`
   })));

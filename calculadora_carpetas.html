@@ -363,7 +363,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="tactical-supabase.js?v=20261109b"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
-<script src="precios_tactical.js?v=20261113c"></script>
+<script src="precios_tactical.js?v=20261113d"></script>
 <script src="tactical-avanzado.js?v=20261113o"></script>
 <script src="tactical-ui.js?v=20261109d"></script>
 <script>
@@ -785,7 +785,7 @@ function poblarTroqueles(){
   tacticalTroquelPicker("in-troquel", TROQUELES_CARPETAS.map(t => ({
     id: t.id,
     nombre: `<b>Carpeta con ${t.bolsillos} bolsillo${t.bolsillos>1?'s':''}</b> de ${tacticalTroquelNum(t.profundidadBolsillo)} cm`,
-    tags: ['Armada ' + tacticalTroquelNum(t.ancho) + ' x ' + tacticalTroquelNum(t.alto)].concat(t.nota ? [t.nota] : []),
+    tags: ['Armada ' + tacticalTroquelHVTxt(t.ancho, t.alto)].concat(t.nota ? [t.nota] : []),
     titulo: `Carpeta armada ${t.ancho}x${t.alto} cm, planta de impresión ${t.anchoImpreso}x${t.altoImpreso} cm.`
   })));
   onCambioTroquel();

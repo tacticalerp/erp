@@ -344,7 +344,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="tactical-supabase.js?v=20261109b"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
-<script src="precios_tactical.js?v=20261113c"></script>
+<script src="precios_tactical.js?v=20261113d"></script>
 <script src="tactical-avanzado.js?v=20261113o"></script>
 <script src="tactical-ui.js?v=20261109d"></script>
 <script>
@@ -872,7 +872,7 @@ function poblarTroqueles(){
   tacticalTroquelPicker("in-troquel", TROQUELES_ROMPECABEZAS.map(t => ({
     id: t.id,
     grupo: t.grupo===1 ? 'Barrio · menos de 70 fichas' : 'Campo · 70 fichas o más',
-    nombre: `<b>Rompecabezas de ${t.fichas} fichas</b> <span style="color:#64748b; font-size:.82em;">${tacticalTroquelNum(t.ancho)} x ${tacticalTroquelNum(t.alto)} cm</span>`,
+    nombre: `<b>Rompecabezas de ${t.fichas} fichas</b> <span style="color:#64748b; font-size:.82em;">${tacticalTroquelHV(t.ancho, t.alto)} cm</span>`,
     tags: (t.marcoOpcional ? ['Admite marco'] : []).concat(t.marcoFabrica ? ['Marco de fábrica'] : []),
     titulo: `${t.fichas} fichas, ${t.ancho}x${t.alto} cm`
   })));
