@@ -340,6 +340,7 @@
 <script src="precios_tactical.js?v=20261113d"></script>
 <script src="tactical-avanzado.js?v=20261113p"></script>
 <script src="tactical-ui.js?v=20261109d"></script>
+<script src="troqueles_tactical.js?v=20261114a"></script>
 <script>
 /* ============ CONSTANTES REUTILIZADAS DEL MOTOR DE CUADERNOS (ya validadas) ============ */
 const SUSTRATOS = tacticalSeleccionarSustratos([
@@ -423,27 +424,8 @@ function empaqueUnidadesPorCaja(fichas){
 }
 
 /* Tabla de 19 troqueles — [Docs, índice maestro], con 2 correcciones de despiece confirmadas por Conde 2026-07-24 */
-const TROQUELES_ROMPECABEZAS = [
-  {id:"ROMB-001", grupo:1, fichas:6,    ancho:10,   alto:10,   despiece:100,  bolsa:100, marcoOpcional:true},
-  {id:"ROMB-002", grupo:1, fichas:6,    ancho:18.3, alto:11.7, despiece:100,  bolsa:100},
-  {id:"ROMB-003", grupo:1, fichas:12,   ancho:18,   alto:14,   despiece:100,  bolsa:100},
-  {id:"ROMB-004", grupo:1, fichas:12,   ancho:20.5, alto:16.5, despiece:100,  bolsa:100},
-  {id:"ROMB-005", grupo:1, fichas:12,   ancho:27,   alto:23,   despiece:100,  bolsa:100},
-  {id:"ROMB-006", grupo:1, fichas:21,   ancho:20,   alto:10,   despiece:300,  bolsa:100},
-  {id:"ROMB-007", grupo:1, fichas:24,   ancho:17,   alto:11,   despiece:300,  bolsa:100},
-  {id:"ROMB-008", grupo:1, fichas:24,   ancho:19,   alto:13,   despiece:300,  bolsa:100, marcoFabrica:true},
-  {id:"ROMB-009", grupo:1, fichas:30,   ancho:21.5, alto:17,   despiece:300,  bolsa:150},
-  {id:"ROMB-010", grupo:1, fichas:30,   ancho:28,   alto:20,   despiece:300,  bolsa:150},
-  {id:"ROMB-011", grupo:1, fichas:30,   ancho:30,   alto:22,   despiece:300,  bolsa:150},
-  {id:"ROMB-012", grupo:1, fichas:48,   ancho:21.5, alto:28,   despiece:300,  bolsa:150},
-  {id:"ROMC-001", grupo:2, fichas:70,   ancho:49,   alto:33.5, despiece:500,  bolsa:150}, // corregido de $200
-  {id:"ROMC-002", grupo:2, fichas:208,  ancho:43,   alto:29.5, despiece:600,  bolsa:200}, // corregido de $500
-  {id:"ROMC-003", grupo:2, fichas:252,  ancho:48,   alto:33.5, despiece:700,  bolsa:200},
-  {id:"ROMC-004", grupo:2, fichas:416,  ancho:59,   alto:43,   despiece:800,  bolsa:200},
-  {id:"ROMC-005", grupo:2, fichas:500,  ancho:48,   alto:34,   despiece:950,  bolsa:250},
-  {id:"ROMC-006", grupo:2, fichas:504,  ancho:68,   alto:48.3, despiece:950,  bolsa:250},
-  {id:"ROMC-007", grupo:2, fichas:1000, ancho:68,   alto:48,   despiece:1500, bolsa:250},
-];
+// Conde 2026-11-14: TROQUELES_ROMPECABEZAS ahora vive en troqueles_tactical.js (fuente unica,
+// compartida con el catalogo de fotos del Hub) -- ver el <script src> en el <head>.
 
 /* ============ FUNCIONES DE MOTOR (copiadas 1:1 de motor_cotizacion/calculadora.html) ============ */
 function piezasPorPliego(pa,pal,pw,ph){

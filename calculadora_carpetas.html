@@ -359,6 +359,7 @@
 <script src="precios_tactical.js?v=20261113d"></script>
 <script src="tactical-avanzado.js?v=20261113p"></script>
 <script src="tactical-ui.js?v=20261109d"></script>
+<script src="troqueles_tactical.js?v=20261114a"></script>
 <script>
 /* ============ CONSTANTES REUTILIZADAS DEL MOTOR DE CUADERNOS (ya validadas) ============ */
 // Restringido a >=240g por regla de Carpetas — solo se ofrecen sustratos que cumplen.
@@ -406,19 +407,8 @@ const CARPETA_EMPAQUE_UNIDADES_POR_CAJA = 200; // fijo, confirmado por Conde
 // vendedor) — el cálculo de material/impresión debe usar anchoImpreso/altoImpreso, el "Tamaño
 // Planta" real (carpeta abierta), tomado de Tabla 1 troqueles.xlsx hoja "Carpetas". Antes esta
 // calculadora usaba por error la medida armada para TODO el cálculo — quedaban subcotizadas.
-const TROQUELES_CARPETAS = [
-  {id:"CARP-001", bolsillos:1, profundidadBolsillo:8,   ancho:30,   alto:23,   anchoImpreso:46.5, altoImpreso:38.5},
-  {id:"CARP-002", bolsillos:2, profundidadBolsillo:3.5, ancho:30,   alto:22.5, anchoImpreso:49,   altoImpreso:34},
-  {id:"CARP-003", bolsillos:2, profundidadBolsillo:10,  ancho:32,   alto:22.5, anchoImpreso:56,   altoImpreso:45},
-  {id:"CARP-004", bolsillos:1, profundidadBolsillo:6.5, ancho:30.5, alto:23,   anchoImpreso:47.5, altoImpreso:37},
-  {id:"CARP-005", bolsillos:1, profundidadBolsillo:10,  ancho:30,   alto:22.7, anchoImpreso:47,   altoImpreso:40},
-  {id:"CARP-006", bolsillos:1, profundidadBolsillo:8,   ancho:33,   alto:23,   anchoImpreso:48,   altoImpreso:41},
-  {id:"CARP-007", bolsillos:1, profundidadBolsillo:5,   ancho:29,   alto:22.5, anchoImpreso:47,   altoImpreso:34},
-  {id:"CARP-008", bolsillos:1, profundidadBolsillo:4,   ancho:30.5, alto:23,   anchoImpreso:47.5, altoImpreso:34.5},
-  {id:"CARP-009", bolsillos:2, profundidadBolsillo:10,  ancho:30.5, alto:24.2, anchoImpreso:51,   altoImpreso:40.8},
-  {id:"CARP-010", bolsillos:1, profundidadBolsillo:5,   ancho:28.3, alto:22.2, anchoImpreso:47.5, altoImpreso:33.5},
-  {id:"CARP-011", bolsillos:1, profundidadBolsillo:3,   ancho:29,   alto:22.5, anchoImpreso:69,   altoImpreso:32, nota:"Carpeta de 3 cuerpos"},
-];
+// Conde 2026-11-14: TROQUELES_CARPETAS ahora vive en troqueles_tactical.js (fuente unica,
+// compartida con el catalogo de fotos del Hub) -- ver el <script src> en el <head>.
 
 /* ============ FUNCIONES DE MOTOR (copiadas 1:1 de motor_cotizacion/calculadora.html — Cuadernos) ============ */
 function piezasPorPliego(pa,pal,pw,ph){

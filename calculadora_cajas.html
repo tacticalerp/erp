@@ -359,7 +359,7 @@
 <script src="precios_tactical.js?v=20261113d"></script>
 <script src="tactical-avanzado.js?v=20261113p"></script>
 <script src="tactical-ui.js?v=20261109d"></script>
-<script src="troqueles_tactical.js?v=20261107a"></script>
+<script src="troqueles_tactical.js?v=20261114a"></script>
 <script>
 /* ============ CONSTANTES REUTILIZADAS DEL MOTOR DE CUADERNOS (ya validadas en el hub) ============ */
 // Conde 2026-08-06: "calibres de cote desde los 200 gramos y toda la gama de cartulinas".
@@ -400,33 +400,10 @@ const CAJA_TROQUELADO_COP_MILLAR = 35000; // $35.000 por millar de PLIEGOS proce
 // Ancho/Alto/Largo = medida de la caja ARMADA, solo referencia visual para el vendedor, no entra en ninguna fórmula.
 // cavidades: cuántas cajas terminadas produce UN solo montaje/golpe de troquel (multicavidad DENTRO del troquel,
 // distinto de cuántos montajes caben por pliego). Confirmado por Conde: son 2 o 3 cajas por golpe, no "pasos" de troquelado.
-const TROQUELES_CAJAS = [
-  {id:"CJB1-1",  ancho:7,    alto:1,    largo:15,   anchoImpreso:19.5, altoImpreso:17,   cavidades:1},
-  {id:"CJB1-2",  ancho:12.5, alto:3.7,  largo:20.5, anchoImpreso:32.5, altoImpreso:31.5, cavidades:1},
-  {id:"CJB1-3",  ancho:14.5, alto:4.2,  largo:15,   anchoImpreso:27,   altoImpreso:40.5, cavidades:1},
-  {id:"CJB1-4",  ancho:19.5, alto:1.3,  largo:12.5, anchoImpreso:22.7, altoImpreso:17.5, cavidades:1},
-  {id:"CJB1-5",  ancho:8,    alto:4,    largo:8,    anchoImpreso:25,   altoImpreso:19,   cavidades:1},
-  {id:"CJB1-6",  ancho:7.5,  alto:7.5,  largo:7.5,  anchoImpreso:31,   altoImpreso:25,   cavidades:1},
-  {id:"CJB1-7",  ancho:6.3,  alto:6,    largo:6.3,  anchoImpreso:26,   altoImpreso:21,   cavidades:1},
-  {id:"CJB1-8",  ancho:7,    alto:15.3, largo:7,    anchoImpreso:29.5, altoImpreso:29.5, cavidades:1},
-  {id:"CJB1-9",  ancho:22.5, alto:3,    largo:15,   anchoImpreso:39.5, altoImpreso:35,   cavidades:1},
-  {id:"CJB1-10", ancho:20,   alto:4,    largo:13.5, anchoImpreso:49.5, altoImpreso:34.5, cavidades:1},
-  {id:"CJB1-11", ancho:4.5,  alto:4.7,  largo:4.5,  anchoImpreso:18.5, altoImpreso:21,   cavidades:1},
-  {id:"CJB1-12", ancho:23.7, alto:9,    largo:8,    anchoImpreso:45,   altoImpreso:20,   cavidades:1},
-  {id:"CJB1-13", ancho:5.8,  alto:5.8,  largo:5.8,  anchoImpreso:24.5, altoImpreso:20,   cavidades:1},
-  {id:"CJB1-14", ancho:25,   alto:15,   largo:7.5,  anchoImpreso:66.5, altoImpreso:30.5, cavidades:1},
-  {id:"CJB1-15", ancho:6,    alto:24,   largo:6,    anchoImpreso:50,   altoImpreso:25.5, cavidades:2, nota:"Tubo — 2 cajas por golpe de troquel"},
-  {id:"CJB1-16", ancho:4.3,  alto:9.5,  largo:4.3,  anchoImpreso:28,   altoImpreso:28,   cavidades:1, nota:"El troquel tiene una medida alternativa (5.3cm) y un montaje alterno 22x21cm — se usa la opción de 4.3cm/28x28cm por defecto, confirmar con Conde cuál es la preferida"},
-  {id:"CJB1-17", ancho:9,    alto:2.5,  largo:9,    anchoImpreso:24,   altoImpreso:21.5, cavidades:1},
-  {id:"CJB1-18", ancho:8,    alto:2,    largo:17.8, anchoImpreso:35,   altoImpreso:27,   cavidades:3, nota:"3 cajas por golpe de troquel"},
-  {id:"CJB1-19", ancho:23.5, alto:5.5,  largo:25,   anchoImpreso:67.5, altoImpreso:48.5, cavidades:1},
-  {id:"CJB1-20", ancho:26,   alto:8,    largo:26,   anchoImpreso:77,   altoImpreso:52,   cavidades:1, requiereMaquinaExterna:true, nota:"Excede medio pliego (50x70) — necesita máquina de pliego completo, poco práctica en tiempos. Cotizar manual con proveedor externo."},
-  {id:"CJB1-21", ancho:15.5, alto:4,    largo:11,   anchoImpreso:23,   altoImpreso:20,   cavidades:3, nota:"3 cajas por golpe de troquel (montaje alterno 50x14cm)"},
-  // CJB1-22 (3x7.5x16cm) excluido: la fuente (Tabla 1 troqueles.xlsx) no trae el dato de Tamaño Impreso.
-];
-// Conde 2026-11-07: cajas de 2 piezas (base + tapa) de las fotos del cuaderno de troqueles (troqueles_tactical.js). Quedan pendientes por verificar: CJB1-004 y CJB2-002.
-if(typeof TACTICAL_TROQUELES_CAJAS_NUEVOS !== 'undefined') TROQUELES_CAJAS.push(...TACTICAL_TROQUELES_CAJAS_NUEVOS);
-const TROQUEL_CAJAS_AVISO_2PIEZAS = "Caja de 2 piezas (base + tapa): el tamaño impreso viene de las fotos del cuaderno de troqueles. Confirma que cubre la base y la tapa antes de cotizar.";
+// Conde 2026-11-14: TROQUELES_CAJAS (con las nuevas de 2 piezas ya incluidas) y
+// TROQUEL_CAJAS_AVISO_2PIEZAS ahora viven en troqueles_tactical.js (fuente unica, ya cargado
+// arriba en el <head> -- antes esta calculadora lo cargaba solo por TACTICAL_TROQUELES_CAJAS_NUEVOS
+// y tenia su PROPIA copia del resto del catalogo).
 
 /* ============ FUNCIONES DE MOTOR (copiadas 1:1 de motor_cotizacion/calculadora.html — Cuadernos) ============ */
 function piezasPorPliego(pa,pal,pw,ph){

@@ -154,3 +154,99 @@ const TACTICAL_TROQUELES_CAJAS_NUEVOS = [
   {id:"CJD2-001", ancho:19.5, alto:9,   largo:30,   anchoImpreso:47.5, altoImpreso:37,   cavidades:1, aviso:true, nota2:"4 troqueles"},
   {id:"CJD2-002", ancho:23,   alto:5,   largo:23,   anchoImpreso:35,   altoImpreso:38,   cavidades:1, aviso:true, nota2:"4 troqueles"},
 ];
+
+/* =====================================================================================
+   Conde 2026-11-14: "arregla el hueco del catalogo de troqueles" -- antes cada calculadora
+   (Rompecabezas, Carpetas, Cajas, Bolsas) tenia su PROPIO catalogo de precios repetido en su
+   propio archivo; si cambiabas una medida en una calculadora, el catalogo de este archivo (el de
+   arriba, con fotos) no se enteraba, y viceversa. Ahora el catalogo de precios de cada calculadora
+   vive AQUI (fuente unica) y cada calculadora lo carga con <script src="troqueles_tactical.js">
+   en vez de tener su propia copia -- el motor de cada calculadora sigue leyendo la MISMA variable
+   global de siempre (TROQUELES_ROMPECABEZAS, etc.), solo que ahora viene de un solo lugar.
+   El catalogo de fotos de arriba (TACTICAL_TROQUELES_CATALOGO) sigue siendo un texto armado a
+   mano para mostrar con fotos -- no se autogenera desde estos catalogos porque sus ids no siempre
+   coinciden en formato (ej. aqui "CJB1-001", en el catalogo de precios de Cajas "CJB1-1") y el
+   texto de cada fila tiene redaccion propia (notas, "Por 2", etc.) -- pero al menos ya no hay una
+   SEGUNDA copia de las medidas de precio por ahi sueltas: todas quedan en este mismo archivo.
+   ===================================================================================== */
+const TROQUELES_ROMPECABEZAS = [
+  {id:"ROMB-001", grupo:1, fichas:6,    ancho:10,   alto:10,   despiece:100,  bolsa:100, marcoOpcional:true},
+  {id:"ROMB-002", grupo:1, fichas:6,    ancho:18.3, alto:11.7, despiece:100,  bolsa:100},
+  {id:"ROMB-003", grupo:1, fichas:12,   ancho:18,   alto:14,   despiece:100,  bolsa:100},
+  {id:"ROMB-004", grupo:1, fichas:12,   ancho:20.5, alto:16.5, despiece:100,  bolsa:100},
+  {id:"ROMB-005", grupo:1, fichas:12,   ancho:27,   alto:23,   despiece:100,  bolsa:100},
+  {id:"ROMB-006", grupo:1, fichas:21,   ancho:20,   alto:10,   despiece:300,  bolsa:100},
+  {id:"ROMB-007", grupo:1, fichas:24,   ancho:17,   alto:11,   despiece:300,  bolsa:100},
+  {id:"ROMB-008", grupo:1, fichas:24,   ancho:19,   alto:13,   despiece:300,  bolsa:100, marcoFabrica:true},
+  {id:"ROMB-009", grupo:1, fichas:30,   ancho:21.5, alto:17,   despiece:300,  bolsa:150},
+  {id:"ROMB-010", grupo:1, fichas:30,   ancho:28,   alto:20,   despiece:300,  bolsa:150},
+  {id:"ROMB-011", grupo:1, fichas:30,   ancho:30,   alto:22,   despiece:300,  bolsa:150},
+  {id:"ROMB-012", grupo:1, fichas:48,   ancho:21.5, alto:28,   despiece:300,  bolsa:150},
+  {id:"ROMC-001", grupo:2, fichas:70,   ancho:49,   alto:33.5, despiece:500,  bolsa:150}, // corregido de $200
+  {id:"ROMC-002", grupo:2, fichas:208,  ancho:43,   alto:29.5, despiece:600,  bolsa:200}, // corregido de $500
+  {id:"ROMC-003", grupo:2, fichas:252,  ancho:48,   alto:33.5, despiece:700,  bolsa:200},
+  {id:"ROMC-004", grupo:2, fichas:416,  ancho:59,   alto:43,   despiece:800,  bolsa:200},
+  {id:"ROMC-005", grupo:2, fichas:500,  ancho:48,   alto:34,   despiece:950,  bolsa:250},
+  {id:"ROMC-006", grupo:2, fichas:504,  ancho:68,   alto:48.3, despiece:950,  bolsa:250},
+  {id:"ROMC-007", grupo:2, fichas:1000, ancho:68,   alto:48,   despiece:1500, bolsa:250},
+];
+
+const TROQUELES_CARPETAS = [
+  {id:"CARP-001", bolsillos:1, profundidadBolsillo:8,   ancho:30,   alto:23,   anchoImpreso:46.5, altoImpreso:38.5},
+  {id:"CARP-002", bolsillos:2, profundidadBolsillo:3.5, ancho:30,   alto:22.5, anchoImpreso:49,   altoImpreso:34},
+  {id:"CARP-003", bolsillos:2, profundidadBolsillo:10,  ancho:32,   alto:22.5, anchoImpreso:56,   altoImpreso:45},
+  {id:"CARP-004", bolsillos:1, profundidadBolsillo:6.5, ancho:30.5, alto:23,   anchoImpreso:47.5, altoImpreso:37},
+  {id:"CARP-005", bolsillos:1, profundidadBolsillo:10,  ancho:30,   alto:22.7, anchoImpreso:47,   altoImpreso:40},
+  {id:"CARP-006", bolsillos:1, profundidadBolsillo:8,   ancho:33,   alto:23,   anchoImpreso:48,   altoImpreso:41},
+  {id:"CARP-007", bolsillos:1, profundidadBolsillo:5,   ancho:29,   alto:22.5, anchoImpreso:47,   altoImpreso:34},
+  {id:"CARP-008", bolsillos:1, profundidadBolsillo:4,   ancho:30.5, alto:23,   anchoImpreso:47.5, altoImpreso:34.5},
+  {id:"CARP-009", bolsillos:2, profundidadBolsillo:10,  ancho:30.5, alto:24.2, anchoImpreso:51,   altoImpreso:40.8},
+  {id:"CARP-010", bolsillos:1, profundidadBolsillo:5,   ancho:28.3, alto:22.2, anchoImpreso:47.5, altoImpreso:33.5},
+  {id:"CARP-011", bolsillos:1, profundidadBolsillo:3,   ancho:29,   alto:22.5, anchoImpreso:69,   altoImpreso:32, nota:"Carpeta de 3 cuerpos"},
+];
+
+const TROQUELES_BOLSAS = [
+  {id:"BOLS-001", ancho:33,   alto:25,   profundo:13,  por2:true,  anchoImpreso:47.5, altoImpreso:37},
+  {id:"BOLS-002", ancho:25,   alto:25,   profundo:10,  por2:true,  anchoImpreso:34,   altoImpreso:36},
+  {id:"BOLS-003", ancho:21.5, alto:37,   profundo:9,   por2:true,  anchoImpreso:33,   altoImpreso:46.5},
+  {id:"BOLS-004", ancho:45,   alto:34,   profundo:13,  por2:true,  anchoImpreso:60,   altoImpreso:46},
+  {id:"BOLS-005", ancho:27,   alto:33,   profundo:6,   por2:true,  anchoImpreso:35,   altoImpreso:41},
+  {id:"BOLS-006", ancho:24,   alto:19,   profundo:7,   por2:false, anchoImpreso:63.5, altoImpreso:22.5, nota:"Una sola pieza"},
+  {id:"BOLS-007", ancho:25,   alto:19,   profundo:10,  por2:true,  anchoImpreso:38,   altoImpreso:31,   nota:"Trapecio 25/19.5cm — toma ancho mayor"},
+  {id:"BOLS-008", ancho:33,   alto:20.5, profundo:6,   por2:true,  anchoImpreso:41,   altoImpreso:30.5},
+  {id:"BOLS-009", ancho:30,   alto:33.5, profundo:13,  por2:true,  anchoImpreso:50.5, altoImpreso:42.5},
+  {id:"BOLS-010", ancho:38,   alto:35,   profundo:12,  por2:true,  anchoImpreso:52,   altoImpreso:45},
+  {id:"BOLS-011", ancho:30.5, alto:53.5, profundo:16,  por2:true,  anchoImpreso:48,   altoImpreso:67.5, nota:"Botellera"},
+  {id:"BOLS-012", ancho:24,   alto:32,   profundo:10,  por2:false, anchoImpreso:50,   altoImpreso:70},
+  {id:"BOLS-013", ancho:21.5, alto:30,   profundo:12,  por2:false, anchoImpreso:44,   altoImpreso:69},
+  {id:"BOLS-014", ancho:25,   alto:30,   profundo:8.5, por2:false, anchoImpreso:68.5, altoImpreso:49.5},
+  {id:"BOLS-015", ancho:25,   alto:35,   profundo:8.5, por2:false, anchoImpreso:69,   altoImpreso:50},
+  {id:"BOLS-016", ancho:34.5, alto:25,   profundo:6,   por2:true,  anchoImpreso:56,   altoImpreso:50},
+];
+
+const TROQUELES_CAJAS = [
+  {id:"CJB1-1",  ancho:7,    alto:1,    largo:15,   anchoImpreso:19.5, altoImpreso:17,   cavidades:1},
+  {id:"CJB1-2",  ancho:12.5, alto:3.7,  largo:20.5, anchoImpreso:32.5, altoImpreso:31.5, cavidades:1},
+  {id:"CJB1-3",  ancho:14.5, alto:4.2,  largo:15,   anchoImpreso:27,   altoImpreso:40.5, cavidades:1},
+  {id:"CJB1-4",  ancho:19.5, alto:1.3,  largo:12.5, anchoImpreso:22.7, altoImpreso:17.5, cavidades:1},
+  {id:"CJB1-5",  ancho:8,    alto:4,    largo:8,    anchoImpreso:25,   altoImpreso:19,   cavidades:1},
+  {id:"CJB1-6",  ancho:7.5,  alto:7.5,  largo:7.5,  anchoImpreso:31,   altoImpreso:25,   cavidades:1},
+  {id:"CJB1-7",  ancho:6.3,  alto:6,    largo:6.3,  anchoImpreso:26,   altoImpreso:21,   cavidades:1},
+  {id:"CJB1-8",  ancho:7,    alto:15.3, largo:7,    anchoImpreso:29.5, altoImpreso:29.5, cavidades:1},
+  {id:"CJB1-9",  ancho:22.5, alto:3,    largo:15,   anchoImpreso:39.5, altoImpreso:35,   cavidades:1},
+  {id:"CJB1-10", ancho:20,   alto:4,    largo:13.5, anchoImpreso:49.5, altoImpreso:34.5, cavidades:1},
+  {id:"CJB1-11", ancho:4.5,  alto:4.7,  largo:4.5,  anchoImpreso:18.5, altoImpreso:21,   cavidades:1},
+  {id:"CJB1-12", ancho:23.7, alto:9,    largo:8,    anchoImpreso:45,   altoImpreso:20,   cavidades:1},
+  {id:"CJB1-13", ancho:5.8,  alto:5.8,  largo:5.8,  anchoImpreso:24.5, altoImpreso:20,   cavidades:1},
+  {id:"CJB1-14", ancho:25,   alto:15,   largo:7.5,  anchoImpreso:66.5, altoImpreso:30.5, cavidades:1},
+  {id:"CJB1-15", ancho:6,    alto:24,   largo:6,    anchoImpreso:50,   altoImpreso:25.5, cavidades:2, nota:"Tubo — 2 cajas por golpe de troquel"},
+  {id:"CJB1-16", ancho:4.3,  alto:9.5,  largo:4.3,  anchoImpreso:28,   altoImpreso:28,   cavidades:1, nota:"El troquel tiene una medida alternativa (5.3cm) y un montaje alterno 22x21cm — se usa la opción de 4.3cm/28x28cm por defecto, confirmar con Conde cuál es la preferida"},
+  {id:"CJB1-17", ancho:9,    alto:2.5,  largo:9,    anchoImpreso:24,   altoImpreso:21.5, cavidades:1},
+  {id:"CJB1-18", ancho:8,    alto:2,    largo:17.8, anchoImpreso:35,   altoImpreso:27,   cavidades:3, nota:"3 cajas por golpe de troquel"},
+  {id:"CJB1-19", ancho:23.5, alto:5.5,  largo:25,   anchoImpreso:67.5, altoImpreso:48.5, cavidades:1},
+  {id:"CJB1-20", ancho:26,   alto:8,    largo:26,   anchoImpreso:77,   altoImpreso:52,   cavidades:1, requiereMaquinaExterna:true, nota:"Excede medio pliego (50x70) — necesita máquina de pliego completo, poco práctica en tiempos. Cotizar manual con proveedor externo."},
+  {id:"CJB1-21", ancho:15.5, alto:4,    largo:11,   anchoImpreso:23,   altoImpreso:20,   cavidades:3, nota:"3 cajas por golpe de troquel (montaje alterno 50x14cm)"},
+  // CJB1-22 (3x7.5x16cm) excluido: la fuente (Tabla 1 troqueles.xlsx) no trae el dato de Tamaño Impreso.
+];
+TROQUELES_CAJAS.push(...TACTICAL_TROQUELES_CAJAS_NUEVOS);
+const TROQUEL_CAJAS_AVISO_2PIEZAS = "Caja de 2 piezas (base + tapa): el tamaño impreso viene de las fotos del cuaderno de troqueles. Confirma que cubre la base y la tapa antes de cotizar.";

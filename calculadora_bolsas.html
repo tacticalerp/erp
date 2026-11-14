@@ -387,6 +387,7 @@
 <script src="precios_tactical.js?v=20261113d"></script>
 <script src="tactical-avanzado.js?v=20261113p"></script>
 <script src="tactical-ui.js?v=20261109d"></script>
+<script src="troqueles_tactical.js?v=20261114a"></script>
 <script>
 /* ============ CONSTANTES REUTILIZADAS DEL MOTOR DE CUADERNOS (ya validadas) ============ */
 const SUSTRATOS = tacticalSeleccionarSustratos([
@@ -487,24 +488,8 @@ function costoRefuerzoBolsa(anchoBolsaCm, fuelleBolsaCm, tipoAgarradera, cantida
 
 // Tabla de 16 troqueles — dimensiones armadas de "Copia de Dossier Maestro Absoluto.docx" sección
 // 5.3, tamaño impreso (montaje real de material/impresión) de "Tabla 1 troqueles.xlsx" hoja Bolsas.
-const TROQUELES_BOLSAS = [
-  {id:"BOLS-001", ancho:33,   alto:25,   profundo:13,  por2:true,  anchoImpreso:47.5, altoImpreso:37},
-  {id:"BOLS-002", ancho:25,   alto:25,   profundo:10,  por2:true,  anchoImpreso:34,   altoImpreso:36},
-  {id:"BOLS-003", ancho:21.5, alto:37,   profundo:9,   por2:true,  anchoImpreso:33,   altoImpreso:46.5},
-  {id:"BOLS-004", ancho:45,   alto:34,   profundo:13,  por2:true,  anchoImpreso:60,   altoImpreso:46},
-  {id:"BOLS-005", ancho:27,   alto:33,   profundo:6,   por2:true,  anchoImpreso:35,   altoImpreso:41},
-  {id:"BOLS-006", ancho:24,   alto:19,   profundo:7,   por2:false, anchoImpreso:63.5, altoImpreso:22.5, nota:"Una sola pieza"},
-  {id:"BOLS-007", ancho:25,   alto:19,   profundo:10,  por2:true,  anchoImpreso:38,   altoImpreso:31,   nota:"Trapecio 25/19.5cm — toma ancho mayor"},
-  {id:"BOLS-008", ancho:33,   alto:20.5, profundo:6,   por2:true,  anchoImpreso:41,   altoImpreso:30.5},
-  {id:"BOLS-009", ancho:30,   alto:33.5, profundo:13,  por2:true,  anchoImpreso:50.5, altoImpreso:42.5},
-  {id:"BOLS-010", ancho:38,   alto:35,   profundo:12,  por2:true,  anchoImpreso:52,   altoImpreso:45},
-  {id:"BOLS-011", ancho:30.5, alto:53.5, profundo:16,  por2:true,  anchoImpreso:48,   altoImpreso:67.5, nota:"Botellera"},
-  {id:"BOLS-012", ancho:24,   alto:32,   profundo:10,  por2:false, anchoImpreso:50,   altoImpreso:70},
-  {id:"BOLS-013", ancho:21.5, alto:30,   profundo:12,  por2:false, anchoImpreso:44,   altoImpreso:69},
-  {id:"BOLS-014", ancho:25,   alto:30,   profundo:8.5, por2:false, anchoImpreso:68.5, altoImpreso:49.5},
-  {id:"BOLS-015", ancho:25,   alto:35,   profundo:8.5, por2:false, anchoImpreso:69,   altoImpreso:50},
-  {id:"BOLS-016", ancho:34.5, alto:25,   profundo:6,   por2:true,  anchoImpreso:56,   altoImpreso:50},
-];
+// Conde 2026-11-14: TROQUELES_BOLSAS ahora vive en troqueles_tactical.js (fuente unica,
+// compartida con el catalogo de fotos del Hub) -- ver el <script src> en el <head>.
 
 /* ============ FUNCIONES DE MOTOR (copiadas 1:1 de motor_cotizacion/calculadora.html — Cuadernos) ============ */
 function piezasPorPliego(pa,pal,pw,ph){
