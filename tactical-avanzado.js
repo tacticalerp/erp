@@ -16,8 +16,13 @@
    Los ajustes se guardan POR CANTIDAD (tacticalAvz.porCantidad[cantidad]) porque una misma
    cotización puede llevar hasta 3 cantidades y un descuento conseguido para 3.000 unidades no
    aplica a 1.000. tacticalAvz.ajustes apunta siempre a los de la cantidad que se está viendo. */
+// Conde 2026-11-13 (auditoría): "Versión profesional" NO se recuerda de una herramienta a otra ni
+// de una sesión a la siguiente -- si quedaba guardada en localStorage, la próxima persona que
+// abriera cualquier calculadora en ese navegador (aunque fuera otro día) veía el desglose técnico
+// completo sin haberlo pedido, justo lo que esta sesión buscaba evitar para quien no cotiza a
+// fondo. Cada página arranca siempre en modo sencillo; el usuario la activa si la necesita, y solo
+// para lo que calcule de ahí en adelante en esa misma página.
 window.tacticalAvz = { ajustes:{}, porCantidad:{}, profesional:false, cmpEditando:null, abierto:false, notasAbiertas:{} };
-try{ window.tacticalAvz.profesional = localStorage.getItem('tactical_avz_profesional')==='1'; }catch(e){}
 
 function tacticalAvzAjustesDe(cantidad){
   const P = window.tacticalAvz.porCantidad, k = String(cantidad);
@@ -161,7 +166,6 @@ function tacticalAvzRecalcular(){
 function tacticalAvzToggle(activo){
   window.tacticalAvz.profesional = !!activo;
   if(activo) window.tacticalAvz.abierto = true;   // se activó para ver el detalle: abrir el acordeón de una vez
-  try{ localStorage.setItem('tactical_avz_profesional', activo ? '1' : '0'); }catch(e){}
   tacticalAvzRecalcular();
 }
 function tacticalAvzAjustar(id, valor){
