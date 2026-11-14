@@ -266,7 +266,17 @@
   <div class="panel" style="max-width:700px;">
     <h2 style="margin-top:0;">Base de ventas B2C aprobadas</h2>
     <div class="price-box" id="reportKpis" style="margin-bottom:12px;"></div>
-    <button class="btn primary" id="btnDescargarCSV"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="6 9 12 15 18 9"></polyline></svg>Descargar base de datos (CSV)</button>
+
+    <h3 style="margin:18px 0 6px;">Por mes</h3>
+    <div style="overflow-x:auto;"><table class="searchtbl"><thead><tr><th>Mes</th><th>Pedidos</th><th>Unidades</th><th>Ingresos</th></tr></thead><tbody id="reportPorMes"></tbody></table></div>
+
+    <h3 style="margin:18px 0 6px;">Por tipo de rompecabezas</h3>
+    <div style="overflow-x:auto;"><table class="searchtbl"><thead><tr><th>Tipo</th><th>Unidades</th><th>Ingresos</th></tr></thead><tbody id="reportPorTipo"></tbody></table></div>
+
+    <h3 style="margin:18px 0 6px;">Por comercial</h3>
+    <div style="overflow-x:auto;"><table class="searchtbl"><thead><tr><th>Comercial</th><th>Pedidos</th><th>Unidades</th><th>Ingresos</th></tr></thead><tbody id="reportPorComercial"></tbody></table></div>
+
+    <button class="btn primary" id="btnDescargarCSV" style="margin-top:18px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="6 9 12 15 18 9"></polyline></svg>Descargar base de datos (CSV)</button>
     <div class="note" style="margin-top:10px;">Incluye producto, fichas, cantidad, precio total con descuento aplicado, y datos del cliente de cada pedido aprobado — para análisis de marketing.</div>
   </div>
 </div>
@@ -1333,6 +1343,20 @@ async function eliminarPedidoB2C(id){
 }
 
 /* =====================  REPORTES / DESCARGA CSV  ===================== */
+// Conde 2026-11-13: "que este informe sea mas descriptivo, por mes, tipo de rompecabezas, por
+// comercial, datos menos generales" -- antes solo mostraba 3 totales generales de TODO el
+// histórico. Tipo = forma del rompecabezas (Rectangular/Portarretrato/Corazón/Círculo si es
+// láser, o "Troquel rectangular" si es el troquel clásico) -- se cuenta por ÍTEM, no por pedido,
+// porque un mismo pedido puede traer varios tamaños/formas distintos.
+function tipoRompecabezas(item){
+  if(item.linea === 'laser') return LASER_FORMAS[item.forma] ? LASER_FORMAS[item.forma].label : (item.forma || 'Láser');
+  return 'Troquel rectangular';
+}
+function mesLabel(iso){
+  if(!iso) return 'Sin fecha';
+  const d = new Date(iso);
+  return d.toLocaleDateString('es-CO', {month:'long', year:'numeric'});
+}
 function renderReporte(){
   const db = dbVentas().filter(p=>p.estado==='aprobado');
   const totalVentas = db.reduce((s,p)=>s+(p.total||0),0);
@@ -1342,6 +1366,44 @@ function renderReporte(){
     <div class="line"><span>Unidades vendidas</span><span>${totalUnidades}</span></div>
     <div class="line total"><span>Ingresos totales</span><span>${cop(totalVentas)}</span></div>
   `;
+
+  // --- Por mes (según fecha de aprobación, que es cuando entra a ventas) ---
+  const porMes = {};
+  for(const p of db){
+    const key = mesLabel(p.fechaAprobado || p.fecha);
+    if(!porMes[key]) porMes[key] = {pedidos:0, unidades:0, ingresos:0, orden: p.fechaAprobado||p.fecha||''};
+    porMes[key].pedidos++; porMes[key].unidades += (p.cantidad||0); porMes[key].ingresos += (p.total||0);
+  }
+  const mesesOrdenados = Object.entries(porMes).sort((a,b)=> b[1].orden.localeCompare(a[1].orden));
+  document.getElementById('reportPorMes').innerHTML = mesesOrdenados.length ? mesesOrdenados.map(([mes,d]) => `
+    <tr><td style="text-transform:capitalize;">${mes}</td><td>${d.pedidos}</td><td>${d.unidades}</td><td>${cop(d.ingresos)}</td></tr>
+  `).join('') : `<tr><td colspan="4" style="text-align:center; color:var(--muted);">Sin ventas aprobadas aún.</td></tr>`;
+
+  // --- Por tipo de rompecabezas (por ítem, no por pedido) ---
+  const porTipo = {};
+  for(const p of db){
+    for(const it of pedidoItems(p)){
+      const key = tipoRompecabezas(it);
+      if(!porTipo[key]) porTipo[key] = {unidades:0, ingresos:0};
+      porTipo[key].unidades += (it.cantidad||0); porTipo[key].ingresos += (it.total||0);
+    }
+  }
+  const tiposOrdenados = Object.entries(porTipo).sort((a,b)=> b[1].ingresos - a[1].ingresos);
+  document.getElementById('reportPorTipo').innerHTML = tiposOrdenados.length ? tiposOrdenados.map(([tipo,d]) => `
+    <tr><td>${tipo}</td><td>${d.unidades}</td><td>${cop(d.ingresos)}</td></tr>
+  `).join('') : `<tr><td colspan="3" style="text-align:center; color:var(--muted);">Sin ventas aprobadas aún.</td></tr>`;
+
+  // --- Por comercial ---
+  const porComercial = {};
+  for(const p of db){
+    const key = p.vendedor || 'Sin asignar';
+    if(!porComercial[key]) porComercial[key] = {pedidos:0, unidades:0, ingresos:0};
+    porComercial[key].pedidos++; porComercial[key].unidades += (p.cantidad||0); porComercial[key].ingresos += (p.total||0);
+  }
+  const comercialesOrdenados = Object.entries(porComercial).sort((a,b)=> b[1].ingresos - a[1].ingresos);
+  document.getElementById('reportPorComercial').innerHTML = comercialesOrdenados.length ? comercialesOrdenados.map(([com,d]) => `
+    <tr><td>${com}</td><td>${d.pedidos}</td><td>${d.unidades}</td><td>${cop(d.ingresos)}</td></tr>
+  `).join('') : `<tr><td colspan="4" style="text-align:center; color:var(--muted);">Sin ventas aprobadas aún.</td></tr>`;
 }
 
 document.getElementById('btnDescargarCSV').addEventListener('click', ()=>{
