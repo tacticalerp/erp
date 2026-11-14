@@ -8943,7 +8943,13 @@
           // que no existen ahí), así que para Carátula el "montaje" YA es ancho,alto tal cual -- no
           // hay que volver a sustituirlo.
           let anchoMaterial=ancho, altoMaterial=alto, piezasMaterialNecesarias=nPiezasFisicas, esMontaje=false;
-          const mermaMaterial=(tintasTiro>0||tintasRetiro>0) ? mermaOffsetHojas(nPiezasFisicas,cantTintas) : 0;
+          // Conde 2026-11-14: la Carátula (único caso sin "esMontaje" porque ya llega con su tamaño
+          // de máquina real) estaba usando SIEMPRE la merma de litografía para el material, aunque
+          // se hubiera impreso digital -- la merma digital es bien distinta (mucho más chica). Se
+          // usa la del método que de verdad se eligió (det.via), igual que ya hacen las demás líneas.
+          const mermaMaterial=(tintasTiro>0||tintasRetiro>0)
+            ? (det && det.via==='digital' ? mermaDigitalHojas(esColor) : mermaOffsetHojas(nPiezasFisicas,cantTintas))
+            : 0;
           if(det && linea.rol!=='caratula'){
             if(det.via==='digital'){
               const mermaD=mermaDigitalHojas(esColor);
