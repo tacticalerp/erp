@@ -8708,7 +8708,7 @@
           const resto=nPasadas-(base-1)*1000;
           return resto<=OFFSET_TOLERANCIA_MERMA_MILLAR ? base-1 : base;
         }
-        function costoImpresionOffset(nPiezasFinales,tintasTiro,tintasRetiro,esPolicromia,ancho,alto,cuadriculaUniforme=false,pliegue=false){
+        function costoImpresionOffset(nPiezasFinales,tintasTiro,tintasRetiro,esPolicromia,ancho,alto,cuadriculaUniforme=false,pliegue=false,mermaBloquesCuadricula=0){
           const fraccion=fraccionPliegoOffset(ancho,alto,esPolicromia);
           const [sheetW,sheetH]=OFFSET_FORMATOS_CM[fraccion];
           let piezasPorPasada=piezasPorPliego(ancho,alto,sheetW,sheetH);
@@ -8758,14 +8758,20 @@
           // serán 2 planchas, 3 tintas serán 3 planchas" -- la cuadrícula es una EXCEPCIÓN en la
           // TARIFA (más barata, porque no exige registro al detalle como una foto), no en el número
           // de planchas: sigue siendo 1 por tinta, igual que la litografía normal.
+          // Conde 2026-11-14 (2): "necesito 80 tamaños 50x70 de sobrante, no 80 tamaños del tamaño
+          // final del cuaderno" -- la merma de cuadrícula se cuenta en BLOQUES de medio pliego
+          // (50x70, el corte/plancha completo), no en piezas finales (24x17) como las demás mermas.
+          // Por eso se suma DESPUÉS de dividir entre piezasPorMedioPliego, no antes (nPiezasFinales
+          // llega SIN merma para esta ruta -- ver procesarLineaImpresion).
           const piezasMedioPliego=piezasPorMedioPliegoOffset(ancho,alto,pliegue);
-          const nPasadasMp=Math.ceil(nPiezasFinales/Math.max(piezasMedioPliego,1));
+          const nBloquesSinMerma=Math.ceil(nPiezasFinales/Math.max(piezasMedioPliego,1));
+          const nPasadasMp=nBloquesSinMerma+mermaBloquesCuadricula;
           const millaresMp=millaresConTolerancia(nPasadasMp);
           const costoCtpCuadricula=OFFSET_CTP_COP.medio_pliego*cantTintas;
           const costoMillarCuadricula=RECARGO_TINTA_CUADRICULA_MILLAR_COP*cantTintas*millaresMp;
           return {
             total:costoCtpCuadricula+costoMillarCuadricula, via:"offset (medio pliego, cuadrícula)", fraccion:"medio_pliego",
-            nPlanchas:cantTintas, costoCtpUnitario:OFFSET_CTP_COP.medio_pliego, nPasadas:nPasadasMp,
+            esCuadriculaDet:true, nPlanchas:cantTintas, costoCtpUnitario:OFFSET_CTP_COP.medio_pliego, nPasadas:nPasadasMp, nPasadasSinMerma:nBloquesSinMerma,
             costoPlanchas:costoCtpCuadricula, nMillares:millaresMp,
             costoMillarUnitario:RECARGO_TINTA_CUADRICULA_MILLAR_COP, costoMillares:costoMillarCuadricula,
           };
@@ -8921,13 +8927,18 @@
                 det.nPasadasSinMerma=(det===detDigital)
                   ? Math.ceil(nPiezasFisicas/det.piezasPorClic)
                   : costoImpresionOffset(nPiezasFisicas,tintasTiro,tintasRetiro,esColor,ancho,alto,false,pliegue).nPasadas;
+              } else if(esCuadriculaUniforme){
+                // Conde 2026-11-14: "necesito 80 tamaños 50x70 de sobrante, no 80 tamaños del
+                // tamaño final del cuaderno" -- la merma de cuadrícula se cuenta en BLOQUES de
+                // medio pliego (el corte completo, 50x70), no en piezas finales como las demás
+                // mermas: se pasa aparte (mermaBloquesCuadricula) y la función la suma DESPUÉS de
+                // dividir entre piezasPorMedioPliego, nunca antes.
+                const mermaBloques=mermaCuadricula(cantidadCuadernos,cantTintas);
+                det=costoImpresionOffset(nPiezasFisicas,tintasTiro,tintasRetiro,esColor,ancho,alto,true,pliegue,mermaBloques);
               } else {
-                // Conde 2026-11-14: la merma mínima de una cuadrícula es mucho mayor que la de
-                // litografía normal (ver mermaCuadricula arriba) -- la normal solo aplica si esta
-                // línea NO es cuadrícula (ej. litografía 4x4 normal, como los Insertos).
-                const mermaO=esCuadriculaUniforme ? mermaCuadricula(cantidadCuadernos,cantTintas) : mermaOffsetHojas(nPiezasFisicas,cantTintas);
-                det=costoImpresionOffset(nPiezasFisicas+mermaO,tintasTiro,tintasRetiro,esColor,ancho,alto,esCuadriculaUniforme,pliegue);
-                det.nPasadasSinMerma=costoImpresionOffset(nPiezasFisicas,tintasTiro,tintasRetiro,esColor,ancho,alto,esCuadriculaUniforme,pliegue).nPasadas;
+                const mermaO=mermaOffsetHojas(nPiezasFisicas,cantTintas);
+                det=costoImpresionOffset(nPiezasFisicas+mermaO,tintasTiro,tintasRetiro,esColor,ancho,alto,false,pliegue);
+                det.nPasadasSinMerma=costoImpresionOffset(nPiezasFisicas,tintasTiro,tintasRetiro,esColor,ancho,alto,false,pliegue).nPasadas;
               }
             }
             resultado.costoImpresion=det.total; resultado.detalleImpresion=det;
@@ -8955,6 +8966,16 @@
               const mermaD=mermaDigitalHojas(esColor);
               [anchoMaterial,altoMaterial]=DIGITAL_FORMATOS_CM[det.clase];
               piezasMaterialNecesarias=Math.ceil((nPiezasFisicas+mermaD)/det.piezasPorClic);
+              esMontaje=true;
+            } else if(det.esCuadriculaDet){
+              // Conde 2026-11-14: "revisa si estás confundiendo el tamaño del corte con el tamaño
+              // del área de impresión" -- la cuadrícula empaqueta MUCHAS piezas finales en un solo
+              // BLOQUE de medio pliego (50x70, el corte/plancha completo, no el área útil 49x69.5
+              // de imprimir). El material se compra por esos bloques completos -- nada que ver con
+              // el trimado de 1 pieza por montaje que usa la litografía normal (det.fraccion de
+              // abajo), que sería el tamaño EQUIVOCADO aquí.
+              [anchoMaterial,altoMaterial]=OFFSET_FORMATOS_CM.medio_pliego;
+              piezasMaterialNecesarias=det.nPasadas;
               esMontaje=true;
             } else if(det.fraccion){
               // Conde 2026-08-24: la máquina litográfica alimenta cualquier tamaño intermedio
