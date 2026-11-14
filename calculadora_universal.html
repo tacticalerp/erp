@@ -804,22 +804,29 @@ function uniProcesarComponente(c, p){
   const nPiezas = hojas*p.cantidad;
   const out = {comp:c, nombre:c.nombre, sustratoNombre, gramaje, ancho, alto, hojas, unico, tintasTiro, tintasRetiro, nPiezas};
 
+  // Conde 2026-11-14: "forro y guarda dale la misma merma que el cartón, pues es una pieza para
+  // armar las bases donde el cartón debe cubrirse; si alguna va impresa aplica lo acordado: 20
+  // impresiones en digital, 100 en litografía" (mismo mínimo ya usado en la caja del Cubo Rubik).
+  const esForroOGuarda = p.tapaTipo==='dura' && (c.rol==='forro' || c.rol==='guarda');
+
   if(tintasTiro===0 && tintasRetiro===0){
     // Sin impresión: el papel se corta directo al tamaño de la pieza.
     out.detalleImpresion = null; out.usaDigital = false;
-    out.detalleMaterial = costoMaterialPliegos(ancho, alto, sustratoNombre, gramaje, nPiezas, 0);
-    out.montajeAncho = ancho; out.montajeAlto = alto; out.nPliegosImpresion = nPiezas;
+    const mermaForroGuarda = esForroOGuarda ? mermaTapaCarton(p.cantidad) : 0;
+    out.detalleMaterial = costoMaterialPliegos(ancho, alto, sustratoNombre, gramaje, nPiezas, mermaForroGuarda);
+    out.montajeAncho = ancho; out.montajeAlto = alto; out.nPliegosImpresion = nPiezas+mermaForroGuarda;
   } else {
     const [a,b] = ordenar2(ancho, alto);
     if(a>49 || b>69.5) throw new Error(`"${c.nombre}": la pieza a imprimir (${ancho}x${alto}cm) no cabe en medio pliego (49x69,5cm útiles). ${c.tipo==='cuadernillo'?'En un cuadernillo se imprime el doble del ancho cerrado.':''}`);
-    let impDigital = null, mermaDigital = 0;
+    let impDigital = null, mermaDigital = esForroOGuarda ? 20 : 0;
     if(elegibleDigital(ancho, alto, gramaje, p.cantidad)){
-      mermaDigital = mermaDigitalHojas(cantTintas);
+      mermaDigital = esForroOGuarda ? 20 : mermaDigitalHojas(cantTintas);
       impDigital = costoImpresionDigital(nPiezas+mermaDigital, caras, esColor, ancho, alto, p.cantidad);
     }
+    const mermaOffsetForroGuarda = esForroOGuarda ? 100 : mermaOffsetHojas(nPiezas, cantTintas);
     const impOffset = unico
       ? uniOffsetUnico(hojas, p.cantidad, tintasTiro, tintasRetiro, esPolicromia, ancho, alto)
-      : costoImpresionOffset(nPiezas+mermaOffsetHojas(nPiezas, cantTintas), tintasTiro, tintasRetiro, esPolicromia, ancho, alto);
+      : costoImpresionOffset(nPiezas+mermaOffsetForroGuarda, tintasTiro, tintasRetiro, esPolicromia, ancho, alto);
     const usaDigital = !!(impDigital && impDigital.total < impOffset.total);
     const det = usaDigital ? impDigital : impOffset;
     out.detalleImpresion = det; out.usaDigital = usaDigital;
