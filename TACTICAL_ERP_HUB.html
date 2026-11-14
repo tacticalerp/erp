@@ -8554,25 +8554,44 @@
           const precios = SUSTRATOS[key];
           if(!precios) throw new Error("Sustrato no encontrado: "+sustratoNombre+" "+gramaje+"g");
           const piezasTotales = piezasNecesarias + mermaHojas;
-          let mejores=[];
           const precioMap = {"60x90":precios.p6090, "70x100":precios.p70100};
-          for(const formato of Object.keys(PLIEGOS_CM)){
-            const [pw,ph]=PLIEGOS_CM[formato];
-            const precioPliego = precioMap[formato];
-            if(precioPliego==null) continue;
-            // Conde 2026-08-21: probar también layouts mezclando corte horizontal y vertical en
-            // el mismo pliego (2 franjas), no solo una sola orientación -- puede sacar más piezas
-            // del mismo pliego (ver tacticalMejorLayoutPliego en precios_tactical.js).
-            const layout = tacticalMejorLayoutPliego(pa,pal,pw,ph);
-            const nPorPliego = layout.total;
-            if(nPorPliego===0) continue;
-            const nPliegos = Math.ceil(piezasTotales/nPorPliego);
-            mejores.push([nPliegos*precioPliego, formato, nPorPliego, nPliegos, precioPliego, layout, pw, ph]);
+          function mejorPara(pa,pal){
+            let mejores=[];
+            for(const formato of Object.keys(PLIEGOS_CM)){
+              const [pw,ph]=PLIEGOS_CM[formato];
+              const precioPliego = precioMap[formato];
+              if(precioPliego==null) continue;
+              // Conde 2026-08-21: probar también layouts mezclando corte horizontal y vertical en
+              // el mismo pliego (2 franjas), no solo una sola orientación -- puede sacar más piezas
+              // del mismo pliego (ver tacticalMejorLayoutPliego en precios_tactical.js).
+              const layout = tacticalMejorLayoutPliego(pa,pal,pw,ph);
+              const nPorPliego = layout.total;
+              if(nPorPliego===0) continue;
+              const nPliegos = Math.ceil(piezasTotales/nPorPliego);
+              mejores.push([nPliegos*precioPliego, formato, nPorPliego, nPliegos, precioPliego, layout, pw, ph]);
+            }
+            if(mejores.length===0) return null;
+            mejores.sort((x,y)=>x[0]-y[0]);
+            return mejores[0];
           }
-          if(mejores.length===0) throw new Error(`La pieza ${pa}x${pal}cm no cabe en ningún pliego disponible para ${sustratoNombre} ${gramaje}g`);
-          mejores.sort((x,y)=>x[0]-y[0]);
-          const [costoTotal, formato, nPorPliego, nPliegos, precioPliego, layout, pliegoAncho, pliegoAlto] = mejores[0];
-          const planoCorte = {piezaAncho:pa, piezaAlto:pal, pliegoAncho, pliegoAlto, columnas:layout.principal.columnas, filas:layout.principal.filas, rotado:layout.principal.rotado, piezasPorPliego:nPorPliego, secundaria:layout.secundaria};
+          const original = mejorPara(pa,pal);
+          if(!original) throw new Error(`La pieza ${pa}x${pal}cm no cabe en ningún pliego disponible para ${sustratoNombre} ${gramaje}g`);
+          // Conde 2026-11-14: "que programes los cortes al tamaño que permita el mejor corte sin
+          // que incremente la cantidad de pliegos -- ej. corte a 28x42... da igual si cortamos a
+          // 30x45 (el plástico del plastificado viene de 5 en 5cm)... SOLO en el caso que no
+          // incremente la cantidad de material". Se redondea cada lado hacia ARRIBA al múltiplo de
+          // 5cm más cercano y solo se usa si el costo total con ese tamaño no sale MÁS CARO que el
+          // tamaño exacto (recalculando el mejor pliego de nuevo para el tamaño redondeado -- no
+          // basta con mirar un solo formato, hay que comparar el costo real de ambos).
+          const PASO_CORTE_CM = 5;
+          const paR = Math.ceil(pa/PASO_CORTE_CM)*PASO_CORTE_CM, palR = Math.ceil(pal/PASO_CORTE_CM)*PASO_CORTE_CM;
+          let elegido = original, piezaAnchoFinal = pa, piezaAltoFinal = pal;
+          if(paR!==pa || palR!==pal){
+            const redondeado = mejorPara(paR,palR);
+            if(redondeado && redondeado[0]<=original[0]){ elegido = redondeado; piezaAnchoFinal = paR; piezaAltoFinal = palR; }
+          }
+          const [costoTotal, formato, nPorPliego, nPliegos, precioPliego, layout, pliegoAncho, pliegoAlto] = elegido;
+          const planoCorte = {piezaAncho:piezaAnchoFinal, piezaAlto:piezaAltoFinal, pliegoAncho, pliegoAlto, columnas:layout.principal.columnas, filas:layout.principal.filas, rotado:layout.principal.rotado, piezasPorPliego:nPorPliego, secundaria:layout.secundaria};
           const pliegosNecesarios = Math.ceil(piezasNecesarias/nPorPliego);
   const pliegosSobrante = nPliegos - pliegosNecesarios;
   return {formato, piezasPorPliego:nPorPliego, nPliegos, pliegosNecesarios, pliegosSobrante, precioPliego, costoTotal, planoCorte};
