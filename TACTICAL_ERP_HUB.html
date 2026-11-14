@@ -8790,6 +8790,17 @@
           return base;
         }
         function mermaDigitalHojas(esPolicromia){ return DIGITAL_MERMA_HOJAS[esPolicromia?"policromia":"negro"]; }
+        // Conde 2026-11-14: el cartón de tapa dura no se imprime, pero sí se daña al perforar para
+        // el anillado -- hay que armar tapas adicionales. Datos dados por Conde: ~10 para 100
+        // cuadernos, ~35 para 1.000, ~60 para 2.000, ~75 para 3.000 (el % que representa baja a
+        // medida que sube la cantidad, por eso tramos y no un % fijo). Para más de 3.000 se sigue
+        // el mismo ritmo del último tramo (+15 cada 1.000).
+        const TAPA_CARTON_MERMA_TRAMOS=[[100,10],[1000,35],[2000,60],[3000,75]];
+        function mermaTapaCarton(cantidad){
+          for(const [tope,merma] of TAPA_CARTON_MERMA_TRAMOS){ if(cantidad<=tope) return merma; }
+          const bloquesExtra=Math.ceil((cantidad-3000)/1000);
+          return 75+bloquesExtra*15;
+        }
         function disenoYPreprensa(montoOt){
           if(montoOt<ESCUDO_BAJOS_MONTOS_UMBRAL) return [DISENO_COSTO_REDUCIDO,0];
           return [DISENO_COSTO_NORMAL,25000];
@@ -9036,11 +9047,18 @@
             const cartonPrecio=p.cartonCalibreMm===1.5?CARTON_1_5MM_COP:CARTON_2_0MM_COP;
             const layoutCarton=tacticalMejorLayoutPliego(p.anchoCm,p.altoCm,70,100);
             const nTapasPorPliego=layoutCarton.total;
-            costoTapaCarton=(cartonPrecio/Math.max(nTapasPorPliego,1))*2*p.cantidad;
-            const piezasCartonNecesarias=2*p.cantidad;
+            // Conde 2026-11-14: "SÍ tiene merma -- al perforar para el anillado se dañan tapas y hay
+            // que armar adicionales" -- antes se pedía el cartón exacto (2 x cantidad), sin ningún
+            // margen. mermaTapaCarton() da las unidades de más (ver tramos arriba).
+            const piezasCartonNecesariasSinMerma=2*p.cantidad;
+            const mermaCarton=mermaTapaCarton(p.cantidad);
+            const piezasCartonNecesarias=piezasCartonNecesariasSinMerma+mermaCarton;
+            costoTapaCarton=(cartonPrecio/Math.max(nTapasPorPliego,1))*piezasCartonNecesarias;
             detalleTapaCarton={
               calibreMm: p.cartonCalibreMm||2.0, precioPliego: cartonPrecio,
               nPliegos: Math.ceil(piezasCartonNecesarias/Math.max(nTapasPorPliego,1)),
+              pliegosNecesarios: Math.ceil(piezasCartonNecesariasSinMerma/Math.max(nTapasPorPliego,1)),
+              pliegosSobrante: Math.ceil(piezasCartonNecesarias/Math.max(nTapasPorPliego,1)) - Math.ceil(piezasCartonNecesariasSinMerma/Math.max(nTapasPorPliego,1)),
               planoCorte: {
                 piezaAncho:p.anchoCm, piezaAlto:p.altoCm, pliegoAncho:70, pliegoAlto:100,
                 columnas:layoutCarton.principal.columnas, filas:layoutCarton.principal.filas,
@@ -9148,8 +9166,9 @@
           costoDirecto += tacticalAvzLineaCosto(avz, 'taf', 'Procesos', 'Armado y forrado de tapa', desglose["tapa_armado_forrado"], p.cantidad);
           if(desglose["tapa_carton"]>0){
             const precioCarton = detalleTapaCarton ? detalleTapaCarton.precioPliego : 0;
+            const sobranteTxt = detalleTapaCarton ? ` — ${detalleTapaCarton.pliegosNecesarios} necesarios + ${detalleTapaCarton.pliegosSobrante} de sobrante` : '';
             costoDirecto += precioCarton>0
-              ? avz.linea('car', 'Insumos', `Cartón ${detalleTapaCarton.calibreMm} mm (tapas)`, Math.round(desglose["tapa_carton"]/precioCarton*100)/100, 'pliego', precioCarton, desglose["tapa_carton"])
+              ? avz.linea('car', 'Insumos', `Cartón ${detalleTapaCarton.calibreMm} mm (tapas)${sobranteTxt}`, Math.round(desglose["tapa_carton"]/precioCarton*100)/100, 'pliego', precioCarton, desglose["tapa_carton"])
               : tacticalAvzLineaCosto(avz, 'car', 'Insumos', 'Cartón de tapas', desglose["tapa_carton"], 1);
           }
           costoDirecto += tacticalAvzLineaCosto(avz, 'sem', 'Insumos', 'Tapa semidura: segunda capa y colaminado', desglose["tapa_semidura_segunda_capa"], 1);

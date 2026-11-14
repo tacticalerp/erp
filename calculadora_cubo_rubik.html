@@ -367,8 +367,19 @@ function costoImpresionDigital(nPaginas,caras,esColor,ancho,alto,cantidadUnidade
 
 /* ============ REGLAS PROPIAS DE CUBO RUBIK (confirmadas por Conde 2026-07-24) ============ */
 const CUBO_INSUMO_COP = 3200;
-const CUBO_MERMA_PCT = 0.02;
+const CUBO_MERMA_PCT = 0.02;   // cubos en blanco defectuosos -- distinto a la merma de impresión/corte de abajo
 const CUBO_MARCACION_CARAS_COP = {1:200, 2:400, 3:600, 4:800, 5:900, 6:1000};
+
+// Conde 2026-11-14: "en impresión o en corte siempre hay material adicional porque se dañan algunas
+// hojas en los procesos" -- antes la impresión de las caras y la caja se cotizaban sin ningún
+// margen de merma. Caras del cubo: en digital, "5 hojas en el montaje" (5 pliegos de la línea
+// digital, que caben 42 caras cada uno); en litografía, el mismo mínimo de 100 que ya usan
+// Rompecabezas/Volantes para offset. Caja: en digital, mínimo 20 unidades; en litografía, el mismo
+// mínimo de 100.
+const CUBO_CARAS_MERMA_DIGITAL_PLIEGOS = 5;
+const CUBO_CARAS_MERMA_OFFSET_UND = 100;
+const CUBO_CAJA_MERMA_DIGITAL_UND = 20;
+const CUBO_CAJA_MERMA_OFFSET_UND = 100;
 
 const CUBO_UV_TRAMOS = [[200,50000],[1000,100000],[2000,150000]];
 const CUBO_UV_INCREMENTO_POR_1000 = 50000;
@@ -565,28 +576,35 @@ function precioVentaDesdeSubtotal(subtotal,utilidadPct=0.40,comisionPct=0.03){
    solo digital vs un litográfico fijo) y se elige el más barato para cualquier cantidad -- no son
    rangos fijos de cantidad, es comparación de costo real. */
 function costoImpresionDigitalCuboFormato(totalCaras, formato){
-  // Conde 2026-08-20: la merma de alistamiento (DIGITAL_MERMA_HOJAS) está pensada en TODO el
-  // sistema como piezas extra del producto final, no pliegos extra -- sumarla como pliegos
-  // completos (como se hacía antes) infla la merma real: en un pliego de 42 caras, "+20 pliegos"
-  // son 840 caras extra (140 cubos) solo de calibración. Se suma en caras, como en todo lo demás.
-  const totalCarasConMerma = totalCaras + DIGITAL_MERMA_HOJAS.policromia;
+  // Conde 2026-11-14: "5 hojas en el montaje" de merma (confirmado: a 6 caras/cubo caben 7 cubos
+  // por pliego de 42 caras, igual que antes) -- se suma en caras (5 pliegos x facesPorPliego), como
+  // en todo lo demás trabaja esta merma (piezas finales, no pliegos sueltos).
+  const mermaCaras = CUBO_CARAS_MERMA_DIGITAL_PLIEGOS*formato.facesPorPliego;
+  const totalCarasConMerma = totalCaras + mermaCaras;
   const nPliegos = Math.ceil(totalCarasConMerma/formato.facesPorPliego);
+  const nPliegosSinMerma = Math.ceil(totalCaras/formato.facesPorPliego);
   const costoClics = nPliegos*CUBO_DIGITAL_CLIC_COP.color;
   const costoSemicorte = nPliegos*DIGITAL_SEMICORTE_COP;
   const nPliegosMaterial70x100 = materialCuboPliegos70x100(formato, nPliegos);
-  return { id:formato.id, via:"digital", caraSheetLabel:formato.caraSheetLabel, nPliegos, nPliegosMaterial70x100, costoClics, costoSemicorte, total: costoClics+costoSemicorte };
+  const nPliegosMaterial70x100SinMerma = materialCuboPliegos70x100(formato, nPliegosSinMerma);
+  return { id:formato.id, via:"digital", caraSheetLabel:formato.caraSheetLabel, nPliegos, nPliegosSinMerma,
+    nPliegosMaterial70x100, nPliegosMaterial70x100SinMerma, costoClics, costoSemicorte, total: costoClics+costoSemicorte };
 }
 function costoImpresionLitograficoCuboFormato(totalCaras, formato, cantidad){
-  const nPliegos = Math.ceil(totalCaras/formato.facesPorPliego);
+  // Conde 2026-11-14: litografía también se dañan hojas en el proceso -- mismo mínimo de 100 que
+  // ya usan Rompecabezas/Volantes para offset (antes esta ruta no tenía ninguna merma).
+  const nPliegos = Math.ceil((totalCaras+CUBO_CARAS_MERMA_OFFSET_UND)/formato.facesPorPliego);
+  const nPliegosSinMerma = Math.ceil(totalCaras/formato.facesPorPliego);
   const millares = millaresConTolerancia(nPliegos);
   const nPlanchas = 4; // policromía 4 tintas, igual que siempre en esta línea
   const costoCtp = OFFSET_CTP_COP[formato.fraccion]*nPlanchas;
   const costoMillar = OFFSET_MILLAR_COP[formato.fraccion]*nPlanchas*millares;
   const costoTroquelado = Math.ceil(cantidad/1000)*CUBO_TROQUELADO_COP_MILLAR;
   const nPliegosMaterial70x100 = materialCuboPliegos70x100(formato, nPliegos);
+  const nPliegosMaterial70x100SinMerma = materialCuboPliegos70x100(formato, nPliegosSinMerma);
   return {
     id:formato.id, via:"offset", fraccion:formato.fraccion, caraSheetLabel:formato.caraSheetLabel,
-    nPliegos, nPliegosMaterial70x100, nPlanchas, nMillares:millares, costoCtp, costoMillar, costoTroquelado,
+    nPliegos, nPliegosSinMerma, nPliegosMaterial70x100, nPliegosMaterial70x100SinMerma, nPlanchas, nMillares:millares, costoCtp, costoMillar, costoTroquelado,
     total: costoCtp+costoMillar+costoTroquelado,
   };
 }
@@ -636,7 +654,7 @@ function cotizarCuboRubik(p){
   const cInsumo = avz.linea('ins', 'Insumos', `Cubo (insumo, con ${(CUBO_MERMA_PCT*100).toFixed(0)}% de merma)`, Math.round(p.cantidad*(1+CUBO_MERMA_PCT)*100)/100, 'unidad', CUBO_INSUMO_COP, costoInsumo);
   const cMarcacion = avz.linea('mar', 'Procesos', `Marcación (${p.caras} cara${p.caras>1?'s':''})`, p.cantidad, 'unidad', CUBO_MARCACION_CARAS_COP[p.caras]);
   const cUV = avz.linea('uv', 'Procesos', 'Brillo UV parcial (obligatorio, por tramo)', 1, 'trabajo', costoUV);
-  const cImpresionCubo = avz.linea('imp', 'Procesos', `Impresión de las caras — ${usaDigital?'digital':'litográfica'}, ${detalleImpresionCubo.caraSheetLabel}, ${detalleImpresionCubo.nPliegos} pliegos`, 1, 'trabajo', costoImpresionCuboTotal);
+  const cImpresionCubo = avz.linea('imp', 'Procesos', `Impresión de las caras — ${usaDigital?'digital':'litográfica'}, ${detalleImpresionCubo.caraSheetLabel}, ${detalleImpresionCubo.nPliegos} pliegos (${detalleImpresionCubo.nPliegosSinMerma} necesarios + ${detalleImpresionCubo.nPliegos-detalleImpresionCubo.nPliegosSinMerma} de sobrante)`, 1, 'trabajo', costoImpresionCuboTotal);
 
   let costoCaja = 0, detalleCaja = null;
   if(p.conCaja){
@@ -648,21 +666,27 @@ function cotizarCuboRubik(p){
     const [cajaSustratoNombre, cajaGramajeStr] = CUBO_CAJA_SUSTRATO.split("__");
     const cajaGramaje = parseFloat(cajaGramajeStr);
 
-    // Material (papel) de la caja -- antes no se cobraba aparte; Conde 2026-08-19 pidió también el
-    // plano de corte para la Orden de Producción, lo que exige pasar por costoMaterialPliegos (que
-    // ahora sí calcula columnas/filas, no solo el total de piezas por pliego).
-    const detalleMaterialCaja = costoMaterialPliegos(CUBO_CAJA_ANCHO_CM, CUBO_CAJA_ALTO_CM, cajaSustratoNombre, cajaGramaje, p.cantidad, 0);
-
     // Impresión: compara digital (tarifa general de clic) vs litográfico, igual que ya hace el cubo
     // mismo -- Conde 2026-08-19: "también puede ser digital y calculas el precio según clic que
     // tienes guardado".
-    const impresionCajaOffset = costoImpresionOffset(p.cantidad, tintasCaja, 0, esPolicromiaCaja, CUBO_CAJA_ANCHO_CM, CUBO_CAJA_ALTO_CM);
+    // Conde 2026-11-14: "en impresión o en corte siempre hay material adicional porque se dañan
+    // algunas hojas" -- antes la caja se cotizaba sin ninguna merma. Digital: 20 unidades mínimo;
+    // litografía: el mismo mínimo de 100 que ya usan Rompecabezas/Volantes para offset.
+    const mermaCajaOffset = CUBO_CAJA_MERMA_OFFSET_UND, mermaCajaDigital = CUBO_CAJA_MERMA_DIGITAL_UND;
+    const impresionCajaOffset = costoImpresionOffset(p.cantidad+mermaCajaOffset, tintasCaja, 0, esPolicromiaCaja, CUBO_CAJA_ANCHO_CM, CUBO_CAJA_ALTO_CM);
     let impresionCajaDigital = null;
     if(elegibleDigital(CUBO_CAJA_ANCHO_CM, CUBO_CAJA_ALTO_CM, cajaGramaje, p.cantidad)){
-      impresionCajaDigital = costoImpresionDigital(p.cantidad, 1, esPolicromiaCaja, CUBO_CAJA_ANCHO_CM, CUBO_CAJA_ALTO_CM, p.cantidad);
+      impresionCajaDigital = costoImpresionDigital(p.cantidad+mermaCajaDigital, 1, esPolicromiaCaja, CUBO_CAJA_ANCHO_CM, CUBO_CAJA_ALTO_CM, p.cantidad);
     }
     const usaDigitalCaja = !!(impresionCajaDigital && impresionCajaDigital.total < impresionCajaOffset.total);
     const impresionCajaElegida = usaDigitalCaja ? impresionCajaDigital : impresionCajaOffset;
+    const mermaCajaElegida = usaDigitalCaja ? mermaCajaDigital : mermaCajaOffset;
+
+    // Material (papel) de la caja -- antes no se cobraba aparte; Conde 2026-08-19 pidió también el
+    // plano de corte para la Orden de Producción, lo que exige pasar por costoMaterialPliegos (que
+    // ahora sí calcula columnas/filas, no solo el total de piezas por pliego). La merma es la misma
+    // que se usó para decidir la impresión (arriba), para que el material y la impresión cuadren.
+    const detalleMaterialCaja = costoMaterialPliegos(CUBO_CAJA_ANCHO_CM, CUBO_CAJA_ALTO_CM, cajaSustratoNombre, cajaGramaje, p.cantidad, mermaCajaElegida);
 
     const costoPlastificadoCaja = Math.max(areaCajaM2*p.cantidad*PLASTIFICADO_COP_M2, PLASTIFICADO_PISO_COP);
     const costoTroqueladoCaja = Math.ceil(p.cantidad/1000)*CUBO_TROQUELADO_COP_MILLAR;
@@ -1065,7 +1089,7 @@ async function generarOrdenProduccion(){
     titulo: `Cubo Rubik (${p.caras} cara${p.caras>1?'s':''})`,
     lineasTexto: [
       `Impresión: <strong>${impresionTxt}</strong>`,
-      `Material a pedir: <strong>${r.detalleImpresionCubo.nPliegosMaterial70x100} pliego(s) de Adhesivo P4 70x100cm</strong>`,
+      `Material a pedir: <strong>${r.detalleImpresionCubo.nPliegosMaterial70x100} pliego(s) de Adhesivo P4 70x100cm</strong> (${r.detalleImpresionCubo.nPliegosMaterial70x100SinMerma} necesarios + ${r.detalleImpresionCubo.nPliegosMaterial70x100-r.detalleImpresionCubo.nPliegosMaterial70x100SinMerma} de sobrante)`,
       `Brillo UV: <strong>Screen (serigrafía) total</strong>`,
     ],
   }];
