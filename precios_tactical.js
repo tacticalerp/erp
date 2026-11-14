@@ -1394,7 +1394,7 @@ function tacticalAnilloBloqueOP(p, fontSize){
    El código está en tactical-hub-btn.js (no hace nada en el Hub, ni si la página ya trae su propio botón). */
 (function(){
   if(window.__tacticalHubBtn || document.getElementById('tactical-hub-btn-js')) return;
-  const s = document.createElement('script'); s.id = 'tactical-hub-btn-js'; s.src = 'tactical-hub-btn.js?v=20261017a'; document.head.appendChild(s);
+  const s = document.createElement('script'); s.id = 'tactical-hub-btn-js'; s.src = 'tactical-hub-btn.js?v=20261114a'; document.head.appendChild(s);
 })();
 
 /* ============ DUPLICAR COTIZACIÓN (Conde 2026-10-21) ============
