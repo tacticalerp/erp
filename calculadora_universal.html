@@ -537,6 +537,16 @@ function mermaOffsetHojas(nHojasFisicas,cantTintas){
   if(cantTintas>=2) base*=OFFSET_MERMA_FACTOR_2_MAS_TINTAS;
   return base;
 }
+// Conde 2026-11-14: el cartón de tapa dura (Calendario) no se imprime, pero sí se daña al perforar
+// para el anillado -- hay que armar tapas adicionales. Misma tabla ya confirmada para Cuadernos
+// (Hub): ~10 para 100, ~35 para 1.000, ~60 para 2.000, ~75 para 3.000 (el % baja según sube la
+// cantidad, por eso tramos y no un % fijo). Para más de 3.000 sigue el ritmo del último tramo.
+const TAPA_CARTON_MERMA_TRAMOS=[[100,10],[1000,35],[2000,60],[3000,75]];
+function mermaTapaCarton(cantidad){
+  for(const [tope,merma] of TAPA_CARTON_MERMA_TRAMOS){ if(cantidad<=tope) return merma; }
+  const bloquesExtra=Math.ceil((cantidad-3000)/1000);
+  return 75+bloquesExtra*15;
+}
 // Tiro/Retiro dependiente del tamaño de máquina (mismo criterio ya validado en Cuadernos/Carpetas).
 // Conde 2026-08-06: la merma de ajuste de máquina no empuja a un millar adicional si el excedente
 // sobre el millar completo es de 180 unidades o menos (material de calibración que posiblemente no
@@ -899,10 +909,17 @@ function cotizarUniversal(p){
     const layoutTapa = tacticalMejorLayoutPliego(p.ancho, p.alto, 70, 100);
     const layoutBase = tacticalMejorLayoutPliego(p.ancho, base, 70, 100);
     const tapasPorPliego = Math.max(layoutTapa.total, 1), basesPorPliego = Math.max(layoutBase.total, 1);
-    const pliegosCarton = 2*p.cantidad/tapasPorPliego + 2*p.cantidad/basesPorPliego;
-    costoDirecto += linea('tap:carton', 'Tapas y anillado', `Cartón ${String(calibre).replace('.',',')} mm — por unidad 2 tapas de ${p.ancho}x${p.alto} y 2 bases de ${p.ancho}x${base} (${tapasPorPliego} tapas o ${basesPorPliego} bases por pliego 70x100)`, Math.round(pliegosCarton*100)/100, 'pliego', UNI_CARTON_COP[calibre]);
+    // Conde 2026-11-14: "SÍ tiene merma -- al perforar para el anillado se dañan tapas y hay que
+    // armar adicionales" -- antes se pedía el cartón exacto (2 x cantidad), sin ningún margen.
+    const mermaCarton = mermaTapaCarton(p.cantidad);
+    const piezasTapasSinMerma = 2*p.cantidad, piezasBasesSinMerma = 2*p.cantidad;
+    const piezasTapasConMerma = piezasTapasSinMerma+mermaCarton, piezasBasesConMerma = piezasBasesSinMerma+mermaCarton;
+    const pliegosCarton = piezasTapasConMerma/tapasPorPliego + piezasBasesConMerma/basesPorPliego;
+    const pliegosCartonSinMerma = piezasTapasSinMerma/tapasPorPliego + piezasBasesSinMerma/basesPorPliego;
+    costoDirecto += linea('tap:carton', 'Tapas y anillado', `Cartón ${String(calibre).replace('.',',')} mm — por unidad 2 tapas de ${p.ancho}x${p.alto} y 2 bases de ${p.ancho}x${base} (${tapasPorPliego} tapas o ${basesPorPliego} bases por pliego 70x100) — ${Math.ceil(pliegosCartonSinMerma)} necesarios + ${Math.ceil(pliegosCarton)-Math.ceil(pliegosCartonSinMerma)} de sobrante`, Math.round(pliegosCarton*100)/100, 'pliego', UNI_CARTON_COP[calibre]);
     costoDirecto += linea('tap:armado', 'Tapas y anillado', 'Armado y forrado de base dura', p.cantidad, 'unidad', UNI_ARMADO_CALENDARIO_COP);
-    detalleCarton = { calibreMm:calibre, precioPliego:UNI_CARTON_COP[calibre], nPliegos:Math.ceil(pliegosCarton), baseCm:base, tapasPorPliego, basesPorPliego,
+    detalleCarton = { calibreMm:calibre, precioPliego:UNI_CARTON_COP[calibre], nPliegos:Math.ceil(pliegosCarton),
+      pliegosNecesarios:Math.ceil(pliegosCartonSinMerma), pliegosSobrante:Math.ceil(pliegosCarton)-Math.ceil(pliegosCartonSinMerma), baseCm:base, tapasPorPliego, basesPorPliego,
       planoCorte:{piezaAncho:p.ancho, piezaAlto:p.alto, pliegoAncho:70, pliegoAlto:100, columnas:layoutTapa.principal.columnas, filas:layoutTapa.principal.filas, rotado:layoutTapa.principal.rotado, piezasPorPliego:tapasPorPliego, secundaria:layoutTapa.secundaria} };
   }
   if(p.anillado){
