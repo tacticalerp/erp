@@ -8861,6 +8861,10 @@
               const fraccion=fraccionPliegoOffset(ancho,alto,esColor);
               const mermaO=mermaOffsetHojas(nPiezasFisicas,cantTintas);
               det=costoImpresionOffset(nPiezasFisicas+mermaO,tintasTiro,tintasRetiro,esColor,ancho,alto);
+              // Conde 2026-11-14: cuántas pasadas harían falta SIN la merma de impresión -- la
+              // diferencia es el sobrante real que se muestra en la Orden de Producción (mismo total
+              // de siempre, solo cambia el desglose necesarios/sobrante).
+              det.nPasadasSinMerma=costoImpresionOffset(nPiezasFisicas,tintasTiro,tintasRetiro,esColor,ancho,alto).nPasadas;
               const recargo=OFFSET_RECARGO_FONDO_PLENO_COP[fraccion];
               const planchaExtra=OFFSET_CTP_COP[fraccion];
               det.total+=recargo+planchaExtra; det.nPlanchas+=1; det.costoPlanchas+=planchaExtra;
@@ -8868,6 +8872,9 @@
             } else if(diseno==="unico_por_pagina"){
               const paginasUnicas=hojas*caras;
               det=costoImpresionUnicoPorPagina(paginasUnicas,cantidadCuadernos,ancho,alto,esColor,pliegue);
+              // nPlanchas no depende de la merma (solo de páginas/pliegue) -- la merma solo multiplica
+              // impresionesPorPlancha, así que el sobrante sale de la diferencia de esa parte.
+              det.nPasadasSinMerma=det.nPlanchas*cantidadCuadernos;
             } else {
               const esCuadriculaUniforme=(diseno==="uniforme") && !esColor;
               const elegibleDig=elegibleDigital(ancho,alto,sustrato.gramaje,cantidadCuadernos) && !pliegue;
@@ -8877,9 +8884,13 @@
                 const mermaO=mermaOffsetHojas(nPiezasFisicas,cantTintas);
                 const detOffset=costoImpresionOffset(nPiezasFisicas+mermaO,tintasTiro,tintasRetiro,esColor,ancho,alto,false,pliegue);
                 det=(detDigital!==null && detDigital.total<detOffset.total)?detDigital:detOffset;
+                det.nPasadasSinMerma=(det===detDigital)
+                  ? Math.ceil(nPiezasFisicas/det.piezasPorClic)
+                  : costoImpresionOffset(nPiezasFisicas,tintasTiro,tintasRetiro,esColor,ancho,alto,false,pliegue).nPasadas;
               } else {
                 const mermaO=mermaOffsetHojas(nPiezasFisicas,cantTintas);
                 det=costoImpresionOffset(nPiezasFisicas+mermaO,tintasTiro,tintasRetiro,esColor,ancho,alto,esCuadriculaUniforme,pliegue);
+                det.nPasadasSinMerma=costoImpresionOffset(nPiezasFisicas,tintasTiro,tintasRetiro,esColor,ancho,alto,esCuadriculaUniforme,pliegue).nPasadas;
               }
             }
             resultado.costoImpresion=det.total; resultado.detalleImpresion=det;
@@ -8914,10 +8925,16 @@
               esMontaje=true;
             }
           }
-          // La merma de ajuste de máquina ya quedó incluida en piezasMaterialNecesarias (viene del
-          // nPasadas/piezasPorClic de la impresión, que ya sumó su propia merma) -- pasarla de
-          // nuevo aquí la contaría doble.
-          const rMat=costoMaterialPliegos(anchoMaterial,altoMaterial,sustrato.nombre,sustrato.gramaje,piezasMaterialNecesarias,esMontaje?0:mermaMaterial);
+          // Conde 2026-11-14: antes, cuando la línea se imprime (esMontaje), piezasMaterialNecesarias
+          // ya venía con la merma de impresión sumada y se le pasaba 0 de merma a
+          // costoMaterialPliegos -- el desglose "necesarios + sobrante" de la OP siempre daba 0.
+          // det.nPasadasSinMerma (calculado arriba en cada una de las 4 rutas de impresión) es la
+          // misma cifra SIN esa merma; la diferencia es el sobrante real. Mismo total de siempre
+          // (piezasMaterialNecesarias no cambia), solo se ve bien el desglose.
+          const piezasMaterialNecesariasSinMerma = (esMontaje && det.nPasadasSinMerma!=null) ? det.nPasadasSinMerma : piezasMaterialNecesarias;
+          const rMat=costoMaterialPliegos(anchoMaterial,altoMaterial,sustrato.nombre,sustrato.gramaje,
+            esMontaje?piezasMaterialNecesariasSinMerma:piezasMaterialNecesarias,
+            esMontaje?(piezasMaterialNecesarias-piezasMaterialNecesariasSinMerma):mermaMaterial);
           resultado.costoMaterial=rMat.costoTotal;
           resultado.detalleMaterial=rMat;
 
