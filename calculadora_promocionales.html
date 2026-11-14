@@ -149,30 +149,30 @@
       <h2>0. Datos del Cliente</h2>
       <div class="fila">
         <div class="campo">
-          <label>Cliente:</label>
+          <label for="in-cli-empresa">Cliente:</label>
           <input type="text" id="in-cli-empresa" list="cli-datalist" placeholder="Nombre de la empresa o persona" oninput="autocompletarCliente('empresa')">
           <datalist id="cli-datalist"></datalist>
           <div id="cli-existente-nota" style="display:none; font-size:0.8rem; color:var(--verde); margin-top:2px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>Cliente existente — datos cargados automáticamente</div>
         </div>
-        <div class="campo"><label>Encargado:</label><input type="text" id="in-cli-encargado" placeholder="Persona de contacto"></div>
-        <div class="campo"><label>Teléfono:</label><input type="text" id="in-cli-telefono" placeholder="Ej: 3001234567"></div>
+        <div class="campo"><label for="in-cli-encargado">Encargado:</label><input type="text" id="in-cli-encargado" placeholder="Persona de contacto"></div>
+        <div class="campo"><label for="in-cli-telefono">Teléfono:</label><input type="text" id="in-cli-telefono" placeholder="Ej: 3001234567"></div>
         <div class="campo">
-          <label>Correo:</label>
+          <label for="in-cli-correo">Correo:</label>
           <input type="text" id="in-cli-correo" list="cli-correo-datalist" placeholder="cliente@empresa.com" oninput="autocompletarCliente('correo')">
           <datalist id="cli-correo-datalist"></datalist>
         </div>
       </div>
       <div class="fila">
         <div class="campo">
-          <label>Tipo de Cliente (Contabilidad):</label>
+          <label for="in-cli-tipo">Tipo de Cliente (Contabilidad):</label>
           <select id="in-cli-tipo">
             <option value="">-- Sin definir --</option>
             <option value="corporativo">Corporativo (Factura electrónica)</option>
             <option value="personalizado">Personalizado (Cuenta de Cobro)</option>
           </select>
         </div>
-        <div class="campo"><label>Identificación (NIT / CC):</label><input type="text" id="in-cli-identificacion" placeholder="Ej: 900.123.456-7"></div>
-        <div class="campo"><label>Vendedor a cargo:</label><select id="in-vendedor"></select></div>
+        <div class="campo"><label for="in-cli-identificacion">Identificación (NIT / CC):</label><input type="text" id="in-cli-identificacion" placeholder="Ej: 900.123.456-7"></div>
+        <div class="campo"><label for="in-vendedor">Vendedor a cargo:</label><select id="in-vendedor"></select></div>
       </div>
       <!-- Conde 2026-10-13: "que aquí se pueda adicionar o actualizar los datos del cliente sin necesidad de acudir a otra
            herramienta" -- guarda en el CRM (tabla clientes) sin tener que hacer ni guardar la cotización. -->
@@ -187,7 +187,7 @@
       <h2>1. Producto</h2>
       <div class="fila">
         <div class="campo chico">
-          <label>Distribuidor:</label>
+          <label for="in-distribuidor">Distribuidor:</label>
           <select id="in-distribuidor" onchange="onCambioDistribuidor()">
             <option value="botonpromo">BotonPromo (esferos.com)</option>
             <option value="promos">Promos (catalogospromocionales.com)</option>
@@ -196,19 +196,19 @@
           </select>
         </div>
         <div class="campo">
-          <label>Código o link del producto:</label>
+          <label for="in-productoLink">Código o link del producto:</label>
           <input type="text" id="in-productoLink" placeholder="Ej: MU-90 o https://catalogospromocionales.com/producto-cataprom/...">
         </div>
       </div>
       <div class="fila">
         <div class="campo ancho">
-          <label>Descripción (escribe **así** para resaltar en negrilla en el PDF):</label>
+          <label for="in-descripcion">Descripción (escribe **así** para resaltar en negrilla en el PDF):</label>
           <textarea id="in-descripcion" class="tactical-campo-dictado" rows="1" style="resize:vertical; overflow:hidden; line-height:1.4;" oninput="this.style.height='auto'; this.style.height=(this.scrollHeight+2)+'px';" placeholder="Ej: Botilito Supra en PET 600ml MU-90"></textarea>
         </div>
       </div>
       <div class="fila">
         <div class="campo ancho">
-          <label>Foto de referencia (opcional — elige una foto ya subida a la Fototeca, de cualquier línea):</label>
+          <label for="in-fotoFototeca">Foto de referencia (opcional — elige una foto ya subida a la Fototeca, de cualquier línea):</label>
           <select id="in-fotoFototeca" style="width:100%; box-sizing:border-box;"><option value="">(Sin foto de Fototeca)</option></select>
         </div>
       </div>
@@ -221,14 +221,14 @@
         </div>
       </div>
       <div class="fila">
-        <div class="campo chico"><label>Cantidad:</label><input type="text" inputmode="numeric" id="in-cantidad" value="1" oninput="tacticalFormatearMiles(this); onCambioCantidad();"></div>
-        <div class="campo chico"><label>Costo unitario distribuidor (COP):</label><input type="number" id="in-costoUnitario" value="0" min="0" oninput="onCambioCantidad()"></div>
+        <div class="campo chico"><label for="in-cantidad">Cantidad:</label><input type="text" inputmode="numeric" id="in-cantidad" value="1" oninput="tacticalFormatearMiles(this); onCambioCantidad();"></div>
+        <div class="campo chico"><label for="in-costoUnitario">Costo unitario distribuidor (COP):</label><input type="number" id="in-costoUnitario" value="0" min="0" oninput="onCambioCantidad()"></div>
         <div class="campo chico">
-          <label>Descuento distribuidor (%):</label>
+          <label for="in-descDistribuidorPct">Descuento distribuidor (%):</label>
           <input type="number" id="in-descDistribuidorPct" value="0" min="0" max="100">
           <span id="desc-distribuidor-nota" class="hint"></span>
         </div>
-        <div class="campo chico"><label>Descuento adicional ($ — promos/oferta/pronto pago):</label><input type="number" id="in-descAdicional" value="0" min="0"></div>
+        <div class="campo chico"><label for="in-descAdicional">Descuento adicional ($ — promos/oferta/pronto pago):</label><input type="number" id="in-descAdicional" value="0" min="0"></div>
       </div>
       <div class="fila">
         <div class="campo chico" style="flex-direction:row; align-items:center; gap:6px;">
@@ -243,18 +243,18 @@
       <h2>2. Marcación (logo)</h2>
       <div class="fila">
         <div class="campo chico">
-          <label>Proveedor de marcación:</label>
+          <label for="in-marcaProveedor">Proveedor de marcación:</label>
           <select id="in-marcaProveedor" onchange="onCambioMarcaProveedor()">
             <option value="">-- Sin marcación / manual --</option>
             <option value="promos">Promos (interno)</option>
             <option value="sima">SIMA / TampoScreen</option>
           </select>
         </div>
-        <div class="campo chico"><label>Técnica:</label><select id="in-marcaTecnica"><option value="">--</option></select></div>
-        <div class="campo chico"><label>Número de tintas:</label><input type="number" id="in-marcaTintas" value="1" min="1" max="6"></div>
+        <div class="campo chico"><label for="in-marcaTecnica">Técnica:</label><select id="in-marcaTecnica"><option value="">--</option></select></div>
+        <div class="campo chico"><label for="in-marcaTintas">Número de tintas:</label><input type="number" id="in-marcaTintas" value="1" min="1" max="6"></div>
       </div>
       <div class="fila">
-        <div class="campo chico"><label>Costo TOTAL de marcación (COP — editable):</label><input type="number" id="in-marcaCostoTotal" value="0" min="0"></div>
+        <div class="campo chico"><label for="in-marcaCostoTotal">Costo TOTAL de marcación (COP — editable):</label><input type="number" id="in-marcaCostoTotal" value="0" min="0"></div>
       </div>
       <div class="hint">El costo de marcación se escribe siempre a mano — consulta la tabla de precios de Promos/SIMA según proveedor + técnica + tintas.</div>
     </div>
@@ -262,20 +262,20 @@
     <div class="card">
       <h2>3. Costos adicionales</h2>
       <div class="fila">
-        <div class="campo chico"><label>Sobrante (COP):</label><input type="number" id="in-sobrante" value="0" min="0"></div>
-        <div class="campo chico"><label>Otros (COP):</label><input type="number" id="in-otros" value="0" min="0"></div>
-        <div class="campo chico"><label>Transporte (COP):</label><input type="number" id="in-transporte" value="0" min="0"></div>
-        <div class="campo chico"><label>Diseño (COP):</label><input type="number" id="in-diseno" value="0" min="0"></div>
-        <div class="campo chico"><label>Empaque y revisión (COP):</label><input type="number" id="in-empaque" value="0" min="0"></div>
+        <div class="campo chico"><label for="in-sobrante">Sobrante (COP):</label><input type="number" id="in-sobrante" value="0" min="0"></div>
+        <div class="campo chico"><label for="in-otros">Otros (COP):</label><input type="number" id="in-otros" value="0" min="0"></div>
+        <div class="campo chico"><label for="in-transporte">Transporte (COP):</label><input type="number" id="in-transporte" value="0" min="0"></div>
+        <div class="campo chico"><label for="in-diseno">Diseño (COP):</label><input type="number" id="in-diseno" value="0" min="0"></div>
+        <div class="campo chico"><label for="in-empaque">Empaque y revisión (COP):</label><input type="number" id="in-empaque" value="0" min="0"></div>
       </div>
     </div>
 
     <div class="card">
       <h2>4. Margen y comisión</h2>
       <div class="fila">
-        <div class="campo chico"><label>% Utilidad:</label><input type="number" id="in-margenPct" value="0" min="0" step="0.1"></div>
-        <div class="campo chico"><label>Crédito 30 días (%):</label><input type="number" id="in-creditoPct" value="0" min="0" step="0.1"></div>
-        <div class="campo chico"><label>% Ventas:</label><input type="number" id="in-comisionPct" value="0" min="0" step="0.1"></div>
+        <div class="campo chico"><label for="in-margenPct">% Utilidad:</label><input type="number" id="in-margenPct" value="0" min="0" step="0.1"></div>
+        <div class="campo chico"><label for="in-creditoPct">Crédito 30 días (%):</label><input type="number" id="in-creditoPct" value="0" min="0" step="0.1"></div>
+        <div class="campo chico"><label for="in-comisionPct">% Ventas:</label><input type="number" id="in-comisionPct" value="0" min="0" step="0.1"></div>
       </div>
       <div class="hint">Sin valores por defecto a propósito — en las cotizaciones reales el margen y la comisión varían caso a caso, tú decides cuánto poner.</div>
       <div style="margin-top:10px; border-top:1px solid var(--borde); padding-top:8px;">
@@ -287,7 +287,7 @@
         </div>
       </div>
       <div class="campo" style="margin-top:10px;">
-        <label>Plazo de entrega:</label>
+        <label for="in-plazoEntrega">Plazo de entrega:</label>
         <input type="text" id="in-plazoEntrega" value="A convenir">
       </div>
       <div style="margin-top:10px; border-top:1px solid var(--borde); padding-top:8px;">

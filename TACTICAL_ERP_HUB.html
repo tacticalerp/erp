@@ -1197,12 +1197,12 @@
               <div style="background:#fff; border-radius:10px; padding:22px; max-width:680px; width:100%; max-height:90vh; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.35);">
                 <div style="font-weight:800; font-size:1.05rem; color:#1a202c; margin-bottom:12px;">+ Nuevo cliente</div>
                 <div class="form-grid">
-                            <div class="form-group"><label>Nombre de la Empresa / Cliente:</label><input type="text" id="cli-empresa" list="cot-clientes-datalist" placeholder="Ej: GRÁFICAS JP S.A.S." style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
-                            <div class="form-group"><label>Contacto Principal (Persona):</label><input type="text" id="cli-nombre" placeholder="Ej: JUAN PÉREZ" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
-                            <div class="form-group"><label>WhatsApp de Negocios:</label><input type="text" id="cli-wp" placeholder="Ej: 3001234567"></div>
-                            <div class="form-group"><label>Correo Electrónico:</label><input type="text" id="cli-correo" placeholder="Ej: compras@graficasjp.com"></div>
+                            <div class="form-group"><label for="cli-empresa">Nombre de la Empresa / Cliente:</label><input type="text" id="cli-empresa" list="cot-clientes-datalist" placeholder="Ej: GRÁFICAS JP S.A.S." style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
+                            <div class="form-group"><label for="cli-nombre">Contacto Principal (Persona):</label><input type="text" id="cli-nombre" placeholder="Ej: JUAN PÉREZ" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
+                            <div class="form-group"><label for="cli-wp">WhatsApp de Negocios:</label><input type="text" id="cli-wp" placeholder="Ej: 3001234567"></div>
+                            <div class="form-group"><label for="cli-correo">Correo Electrónico:</label><input type="text" id="cli-correo" placeholder="Ej: compras@graficasjp.com"></div>
                             <div class="form-group">
-                                <label>Clasificación Comercial:</label>
+                                <label for="cli-clase">Clasificación Comercial:</label>
                                 <select id="cli-clase">
                                     <option value="nuevo">Nuevo</option>
                                     <option value="ocasional">Ocasional</option>
@@ -1211,14 +1211,14 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Tipo de Cliente (para Contabilidad):</label>
+                                <label for="cli-tipo">Tipo de Cliente (para Contabilidad):</label>
                                 <select id="cli-tipo">
                                     <option value="">-- Sin definir --</option>
                                     <option value="corporativo">Corporativo (Factura electrónica)</option>
                                     <option value="personalizado">Personalizado (Cuenta de Cobro)</option>
                                 </select>
                             </div>
-                            <div class="form-group"><label>Identificación (NIT / CC):</label><input type="text" id="cli-identificacion" placeholder="Ej: 900.123.456-7"></div>
+                            <div class="form-group"><label for="cli-identificacion">Identificación (NIT / CC):</label><input type="text" id="cli-identificacion" placeholder="Ej: 900.123.456-7"></div>
                             <div class="form-group" style="display:flex; align-items:flex-end;">
                                 <button class="btn-submit" onclick="guardarCliente()">Registrar cliente</button> <button type="button" class="btn-action" onclick="comercialCerrarNuevoCliente()" style="margin-left:8px;">Cancelar</button>
                             </div>
@@ -1336,7 +1336,7 @@
                         </div>
                         <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-top:12px;">
                             <div class="form-group" style="flex:1 1 200px; margin-bottom:0;">
-                                <label>Nombre de la persona nueva:</label>
+                                <label for="personal-nombre-nuevo">Nombre de la persona nueva:</label>
                                 <input type="text" id="personal-nombre-nuevo" placeholder="Ej: Camila" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e0; border-radius:4px;">
                             </div>
                             <button class="btn-add" style="width:auto; padding:10px 16px;" onclick="personalAgregar()">+ Añadir Persona</button>
@@ -1357,7 +1357,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label>ID Máster de la OT (Dejar vacío para trabajos Express):</label>
+                        <label for="inp-ot">ID Máster de la OT (Dejar vacío para trabajos Express):</label>
                         <input type="text" id="inp-ot" list="reproceso-ot-datalist" placeholder="Ej: OT-0001" oninput="actualizarFormularioReceta()">
                         <datalist id="reproceso-ot-datalist"></datalist>
                     </div>
@@ -1365,11 +1365,11 @@
 
                     <div style="display: flex; gap: 15px; flex-wrap: wrap;">
                         <div class="form-group" style="flex: 1; min-width: 140px;">
-                            <label>Responsable del Error:</label>
+                            <label for="sel-responsable">Responsable del Error:</label>
                             <select id="sel-responsable"></select>
                         </div>
                         <div class="form-group" style="flex: 1; min-width: 140px;">
-                            <label>Proveedor Asociado al Insumo:</label>
+                            <label for="sel-proveedor">Proveedor Asociado al Insumo:</label>
                             <select id="sel-proveedor">
                                 <option value="Ninguno">Ninguno (Error Interno de Planta)</option>
                                 <option value="Cuarto Iván policromía">Cuarto Iván policromía</option>
@@ -1388,7 +1388,7 @@
 
                     <div style="display: flex; gap: 15px; flex-wrap: wrap;">
                         <div class="form-group" style="flex: 1; min-width: 140px;">
-                            <label>Etapa de Origen del Daño:</label>
+                            <label for="sel-origen">Etapa de Origen del Daño:</label>
                             <select id="sel-origen">
                                 <option value="Cotización">Cotización</option>
                                 <option value="Diseño">Diseño</option>
@@ -1400,7 +1400,7 @@
                             </select>
                         </div>
                         <div class="form-group" style="flex: 1; min-width: 140px;">
-                            <label>Etapa de Detección:</label>
+                            <label for="sel-deteccion">Etapa de Detección:</label>
                             <select id="sel-deteccion">
                                 <option value="Diseño">Diseño</option>
                                 <option value="Impresión">Impresión</option>
@@ -1420,7 +1420,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label>Observaciones y Acciones Preventivas (Lección Aprendida):</label>
+                        <label for="txt-observaciones">Observaciones y Acciones Preventivas (Lección Aprendida):</label>
                         <textarea id="txt-observaciones" class="tactical-campo-dictado" placeholder="Escriba la acción preventiva para evitar que este error se repita..."></textarea>
                     </div>
 
@@ -1587,32 +1587,32 @@
                     <div id="cot-cliente" class="accordion-content active">
                         <div class="form-grid">
                             <div class="form-group">
-                                <label>Cliente:</label>
+                                <label for="cot-cli-empresa">Cliente:</label>
                                 <input type="text" id="cot-cli-empresa" list="cot-clientes-datalist" placeholder="Nombre de la empresa o persona (si ya existe, selecciónalo de la lista)" oninput="cotAutocompletarCliente('empresa')">
                                 <datalist id="cot-clientes-datalist"></datalist>
                                 <div id="cot-cliente-existente-nota" style="display:none; font-size:0.8rem; color:var(--ganado,#2f855a); margin-top:2px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>Cliente existente — datos cargados automáticamente</div>
                             </div>
-                            <div class="form-group"><label>Encargado:</label><input type="text" id="cot-cli-encargado" placeholder="Persona de contacto"></div>
-                            <div class="form-group"><label>Teléfono:</label><input type="text" id="cot-cli-telefono" placeholder="Ej: 3001234567"></div>
-                            <div class="form-group"><label>Correo:</label><input type="text" id="cot-cli-correo" placeholder="cliente@empresa.com" list="cot-clientes-correo-datalist" oninput="cotAutocompletarCliente('correo')"></div>
+                            <div class="form-group"><label for="cot-cli-encargado">Encargado:</label><input type="text" id="cot-cli-encargado" placeholder="Persona de contacto"></div>
+                            <div class="form-group"><label for="cot-cli-telefono">Teléfono:</label><input type="text" id="cot-cli-telefono" placeholder="Ej: 3001234567"></div>
+                            <div class="form-group"><label for="cot-cli-correo">Correo:</label><input type="text" id="cot-cli-correo" placeholder="cliente@empresa.com" list="cot-clientes-correo-datalist" oninput="cotAutocompletarCliente('correo')"></div>
                             <datalist id="cot-clientes-correo-datalist"></datalist>
                             <div class="form-group">
-                                <label>Tipo de Cliente (Contabilidad):</label>
+                                <label for="cot-cli-tipo">Tipo de Cliente (Contabilidad):</label>
                                 <select id="cot-cli-tipo">
                                     <option value="">-- Sin definir --</option>
                                     <option value="corporativo">Corporativo (Factura electrónica)</option>
                                     <option value="personalizado">Personalizado (Cuenta de Cobro)</option>
                                 </select>
                             </div>
-                            <div class="form-group"><label>Identificación (NIT / CC):</label><input type="text" id="cot-cli-identificacion" placeholder="Ej: 900.123.456-7"></div>
+                            <div class="form-group"><label for="cot-cli-identificacion">Identificación (NIT / CC):</label><input type="text" id="cot-cli-identificacion" placeholder="Ej: 900.123.456-7"></div>
                             <div class="form-group" style="grid-column:1/-1;">
-                                <label>Logo del cliente (para el mockup del cuaderno en el PDF):</label>
+                                <label for="cot-logo-file">Logo del cliente (para el mockup del cuaderno en el PDF):</label>
                                 <input type="file" id="cot-logo-file" accept="image/*" onchange="cotLogoSubir(this)">
                                 <div id="cot-logo-estado" style="font-size:0.8rem; color:var(--peligro,#c53030); margin-top:2px;"></div>
                                 <div id="cot-logo-preview" style="margin-top:6px;"></div>
                             </div>
                             <div class="form-group">
-                                <label>Vendedor a cargo:</label>
+                                <label for="cot-vendedor">Vendedor a cargo:</label>
                                 <select id="cot-vendedor"></select>
                             </div>
                             <!-- Conde 2026-10-13: "que aquí se pueda adicionar o actualizar los datos del cliente sin necesidad de acudir
@@ -1633,7 +1633,7 @@
                     <div id="cot-producto" class="accordion-content">
                         <div class="form-grid">
                             <div class="form-group">
-                                <label>Línea de producto:</label>
+                                <label for="cot-lineaProducto">Línea de producto:</label>
                                 <select id="cot-lineaProducto" onchange="cotOnLineaProductoChange()">
                                     <option value="cuaderno_anillado" selected>Cuaderno Anillado</option>
                                     <option value="escolar">Escolar</option>
@@ -1644,23 +1644,23 @@
                             <!-- Conde 2026-11-13: "lo que se pueda ubicar en el mismo lugar, dejarlo en el mismo lugar" -- orden
                                  Tamaño luego Cantidad, igual que en las demás calculadoras (antes Cantidad iba primero, única
                                  que lo hacía así). -->
-                            <div class="form-group"><label>Ancho (cm):</label><input type="number" id="cot-anchoCm" value="24" step="0.1"></div>
-                            <div class="form-group"><label>Alto (cm):</label><input type="number" id="cot-altoCm" value="17" step="0.1"></div>
-                            <div class="form-group"><label>Cantidad (unidades):</label><input type="text" inputmode="numeric" id="cot-cantidad" value="100" oninput="tacticalFormatearMiles(this)"></div>
-                            <div class="form-group"><label>Cantidad 2 (opcional):</label><input type="text" inputmode="numeric" id="cot-cantidad2" value="" placeholder="ej. 300" oninput="tacticalFormatearMiles(this)"></div>
-                            <div class="form-group"><label>Cantidad 3 (opcional):</label><input type="text" inputmode="numeric" id="cot-cantidad3" value="" placeholder="ej. 500" oninput="tacticalFormatearMiles(this)"></div>
+                            <div class="form-group"><label for="cot-anchoCm">Ancho (cm):</label><input type="number" id="cot-anchoCm" value="24" step="0.1"></div>
+                            <div class="form-group"><label for="cot-altoCm">Alto (cm):</label><input type="number" id="cot-altoCm" value="17" step="0.1"></div>
+                            <div class="form-group"><label for="cot-cantidad">Cantidad (unidades):</label><input type="text" inputmode="numeric" id="cot-cantidad" value="100" oninput="tacticalFormatearMiles(this)"></div>
+                            <div class="form-group"><label for="cot-cantidad2">Cantidad 2 (opcional):</label><input type="text" inputmode="numeric" id="cot-cantidad2" value="" placeholder="ej. 300" oninput="tacticalFormatearMiles(this)"></div>
+                            <div class="form-group"><label for="cot-cantidad3">Cantidad 3 (opcional):</label><input type="text" inputmode="numeric" id="cot-cantidad3" value="" placeholder="ej. 500" oninput="tacticalFormatearMiles(this)"></div>
                             <div class="form-group">
-                                <label>Tipo de tapa:</label>
+                                <label for="cot-tapaTipo">Tipo de tapa:</label>
                                 <select id="cot-tapaTipo" onchange="cotOnTapaTipoChange()">
                                     <option value="dura">Dura</option><option value="semidura">Semidura</option><option value="blanda">Blanda</option>
                                 </select>
                             </div>
                             <div class="form-group" id="cot-cartonCalibreWrap">
-                                <label>Calibre cartón (tapa dura):</label>
+                                <label for="cot-cartonCalibre">Calibre cartón (tapa dura):</label>
                                 <select id="cot-cartonCalibre"><option value="1.5">1.5mm</option><option value="2.0">2.0mm</option></select>
                             </div>
-                            <div class="form-group"><label>Encuadernación:</label><select id="cot-encuadernacionTipo" onchange="cotOnEncuadernacionChange()"></select></div>
-                            <div class="form-group"><label>Hojas del taco:</label><input type="number" id="cot-tacoHojas" value="100" min="1"></div>
+                            <div class="form-group"><label for="cot-encuadernacionTipo">Encuadernación:</label><select id="cot-encuadernacionTipo" onchange="cotOnEncuadernacionChange()"></select></div>
+                            <div class="form-group"><label for="cot-tacoHojas">Hojas del taco:</label><input type="number" id="cot-tacoHojas" value="100" min="1"></div>
                         </div>
                         <div id="cot-anillado2SeccionesWrap" style="display:none;">
                             <div class="checkbox-row" style="padding:10px; background:var(--light-gray); border-radius:6px; border:1px solid #cbd5e0; margin-bottom:10px;">
@@ -1701,9 +1701,9 @@
                     </div>
                     <div id="cot-guardas" class="accordion-content">
                         <div class="form-grid">
-                            <div class="form-group"><label>Cantidad:</label><input type="number" id="cot-guardasCantidad" value="2" min="0"></div>
-                            <div class="form-group"><label>Sustrato:</label><select id="cot-guardasSustrato"></select></div>
-                            <div class="form-group"><label>Tintas (tiro):</label><input type="number" id="cot-guardasTintasTiro" value="0" min="0" max="4"></div>
+                            <div class="form-group"><label for="cot-guardasCantidad">Cantidad:</label><input type="number" id="cot-guardasCantidad" value="2" min="0"></div>
+                            <div class="form-group"><label for="cot-guardasSustrato">Sustrato:</label><select id="cot-guardasSustrato"></select></div>
+                            <div class="form-group"><label for="cot-guardasTintasTiro">Tintas (tiro):</label><input type="number" id="cot-guardasTintasTiro" value="0" min="0" max="4"></div>
                             <div class="form-group" style="display:flex; align-items:flex-end;">
                                 <div class="checkbox-row"><input type="checkbox" id="cot-guardasPlastificado" checked><label for="cot-guardasPlastificado" style="font-weight:normal; margin:0;">Plastificado</label></div>
                             </div>
@@ -1717,13 +1717,13 @@
                     </div>
                     <div id="cot-comercial" class="accordion-content">
                         <div class="form-grid">
-                            <div class="form-group"><label>% Utilidad:</label><input type="number" id="cot-utilidadPct" value="45" step="1"></div>
-                            <div class="form-group"><label>% Ventas:</label><input type="number" id="cot-ventasPct" value="4" step="1"></div>
+                            <div class="form-group"><label for="cot-utilidadPct">% Utilidad:</label><input type="number" id="cot-utilidadPct" value="45" step="1"></div>
+                            <div class="form-group"><label for="cot-ventasPct">% Ventas:</label><input type="number" id="cot-ventasPct" value="4" step="1"></div>
                             <div class="form-group" style="flex-basis:100%;" id="cot-extrasInsumos"></div>
-                            <div class="form-group" style="flex-basis:100%;"><label>Plazo de entrega:</label><input type="text" id="cot-plazoEntrega" value="A convenir"></div>
-                            <div class="form-group" style="flex-basis:100%;"><label>Validez de la oferta:</label><input type="text" id="cot-validezOferta" placeholder="Ej: 30 días calendario desde la fecha de emisión"></div>
-                            <div class="form-group" style="flex-basis:100%;"><label>Condiciones comerciales (editable — una por línea; ajusta forma de pago u otras según el cliente):</label><textarea id="cot-condicionesComerciales" class="tactical-campo-dictado" rows="5" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e0; border-radius:4px; font-family:inherit; font-size:0.9rem;"></textarea></div>
-                            <div class="form-group" style="flex-basis:100%;"><label>Observaciones (opcional — aparecen en el PDF, y queda espacio para agregar más a mano):</label><textarea id="cot-observaciones" class="tactical-campo-dictado" rows="2" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e0; border-radius:4px; font-family:inherit; font-size:0.95rem;"></textarea></div>
+                            <div class="form-group" style="flex-basis:100%;"><label for="cot-plazoEntrega">Plazo de entrega:</label><input type="text" id="cot-plazoEntrega" value="A convenir"></div>
+                            <div class="form-group" style="flex-basis:100%;"><label for="cot-validezOferta">Validez de la oferta:</label><input type="text" id="cot-validezOferta" placeholder="Ej: 30 días calendario desde la fecha de emisión"></div>
+                            <div class="form-group" style="flex-basis:100%;"><label for="cot-condicionesComerciales">Condiciones comerciales (editable — una por línea; ajusta forma de pago u otras según el cliente):</label><textarea id="cot-condicionesComerciales" class="tactical-campo-dictado" rows="5" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e0; border-radius:4px; font-family:inherit; font-size:0.9rem;"></textarea></div>
+                            <div class="form-group" style="flex-basis:100%;"><label for="cot-observaciones">Observaciones (opcional — aparecen en el PDF, y queda espacio para agregar más a mano):</label><textarea id="cot-observaciones" class="tactical-campo-dictado" rows="2" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e0; border-radius:4px; font-family:inherit; font-size:0.95rem;"></textarea></div>
                         </div>
                     </div>
                 </div>
@@ -1739,7 +1739,7 @@
                         <button class="btn-submit" style="background:#64748b; margin-left:8px;" onclick="tacticalNuevaCotizacion('cotizador')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>Nueva cotización (limpiar todo)</button>
                         <div id="cot-resultado-contenido" style="margin-top:15px;"></div>
                         <div class="form-group" style="margin-top:10px;"><label>Descripción para el cliente: <span title="Editable. Útil para distinguir varios cuadernos parecidos dentro de un mismo pedido. Escribe **así** para resaltar en negrilla en el PDF." style="cursor:help; font-weight:normal; color:var(--texto-suave,#5a6472);">ⓘ</span></label><textarea id="cot-descCliente" class="tactical-campo-dictado" rows="1" style="width:100%; box-sizing:border-box; resize:vertical; overflow:hidden; font-family:inherit; font-size:inherit; padding:8px; line-height:1.4;" oninput="this.style.height='auto'; this.style.height=(this.scrollHeight+2)+'px';"></textarea></div>
-                        <div class="form-group" style="margin-top:10px;"><label>Foto para el PDF/comparativa:</label><select id="cot-fotoElegida"></select></div>
+                        <div class="form-group" style="margin-top:10px;"><label for="cot-fotoElegida">Foto para el PDF/comparativa:</label><select id="cot-fotoElegida"></select></div>
                         <div id="card-recomendaciones-cot" style="display:none; margin-top:12px;">
                             <div style="font-weight:bold; color:var(--dark); margin-bottom:6px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Recomendaciones de Producción</div>
                             <div id="recomendaciones-contenido-cot"></div>
@@ -2156,21 +2156,21 @@
                     <div id="cont-docventa" class="accordion-content">
                         <p style="font-size:0.85rem; color:#5f6e84; margin-top:0;">Se llena solo al generar desde una prefactura (arriba), o rellénelo a mano para ventas que no vienen de una cotización/oportunidad.</p>
                         <div class="form-grid">
-                            <div class="form-group"><label>Cliente:</label>
+                            <div class="form-group"><label for="doc-cliente-filtro">Cliente:</label>
                                 <input type="text" id="doc-cliente-filtro" placeholder="Escribe para buscar..." oninput="tacticalFiltrarSelectClientes('doc-cliente-filtro','doc-cliente',true)" style="margin-bottom:4px;">
                                 <select id="doc-cliente" onchange="contAutocompletarTipoDoc()"></select></div>
                             <div class="form-group">
-                                <label>Tipo de Documento:</label>
+                                <label for="doc-tipoDoc">Tipo de Documento:</label>
                                 <select id="doc-tipoDoc" onchange="contSugerirNumeroDoc(); contActualizarTotalDoc();">
                                     <option value="cuenta_cobro">Cuenta de Cobro (se imprime desde el ERP)</option>
                                     <option value="factura">Factura (ya facturada por fuera — DIAN)</option>
                                 </select>
                             </div>
-                            <div class="form-group"><label>N° de Documento:</label><input type="text" id="doc-numero" placeholder="Ej: FV-0001 / CC-0001" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase(); this.dataset.auto=''"></div>
-                            <div class="form-group"><label>Fecha del documento:</label><input type="date" id="doc-fecha"><span style="font-size:0.78rem; color:#5f6e84;">Se puede fechar en el mes pasado (facturas que llegan tarde, cierre de mes).</span></div>
-                            <div class="form-group"><label>Valor Envío (no es ingreso, pass-through transportadora):</label><input type="text" inputmode="numeric" id="doc-valorEnvio" value="0" oninput="contFormatearMiles(this); contRenderAnticiposDoc()"></div>
+                            <div class="form-group"><label for="doc-numero">N° de Documento:</label><input type="text" id="doc-numero" placeholder="Ej: FV-0001 / CC-0001" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase(); this.dataset.auto=''"></div>
+                            <div class="form-group"><label for="doc-fecha">Fecha del documento:</label><input type="date" id="doc-fecha"><span style="font-size:0.78rem; color:#5f6e84;">Se puede fechar en el mes pasado (facturas que llegan tarde, cierre de mes).</span></div>
+                            <div class="form-group"><label for="doc-valorEnvio">Valor Envío (no es ingreso, pass-through transportadora):</label><input type="text" inputmode="numeric" id="doc-valorEnvio" value="0" oninput="contFormatearMiles(this); contRenderAnticiposDoc()"></div>
                             <div class="form-group">
-                                <label>Condición de Pago:</label>
+                                <label for="doc-condicionPago">Condición de Pago:</label>
                                 <select id="doc-condicionPago">
                                     <option value="contado">Contado</option>
                                     <option value="credito1">Crédito 1 día</option>
@@ -2186,7 +2186,7 @@
                                 <label>Valor de la ReteIVA ($): <a href="#" onclick="contReteivaAuto(); return false;" style="font-weight:normal; font-size:0.8rem;">volver al 15% automático</a></label>
                                 <input type="text" inputmode="numeric" id="doc-reteivaValor" value="0" oninput="contFormatearMiles(this); this.dataset.manual='true'; contActualizarTotalDoc()">
                             </div>
-                            <div class="form-group"><label>Vendedor:</label><select id="doc-vendedor"></select></div>
+                            <div class="form-group"><label for="doc-vendedor">Vendedor:</label><select id="doc-vendedor"></select></div>
                         </div>
                         <label style="display:block; font-weight:bold; margin-bottom:5px; font-size:0.88rem; color:var(--secondary);">Ítems del documento (hasta 10):</label>
                         <div class="table-responsive"><table>
@@ -2220,20 +2220,20 @@
                     <div id="cont-notacredito" class="accordion-content">
                         <p style="font-size:0.85rem; color:#5f6e84; margin-top:0;"><strong>Anulación total:</strong> el documento queda "anulada", sale de la cartera por cobrar y la venta se resta en el mes de la Nota. <strong>Nota parcial:</strong> acreditas solo una parte (valor antes de IVA + IVA); la factura sigue viva y lo que el cliente debe baja ese valor. En ambos casos, si te equivocas, eliminar la Nota lo revierte.</p>
                         <div class="form-grid">
-                            <div class="form-group" style="flex-basis:100%;"><label>Factura / Cuenta de cobro a anular:</label>
+                            <div class="form-group" style="flex-basis:100%;"><label for="nc-doc-filtro">Factura / Cuenta de cobro a anular:</label>
                                 <input type="text" id="nc-doc-filtro" placeholder="Escribe el número o el cliente para buscar..." oninput="contNcLlenarSelect()" style="margin-bottom:4px;">
                                 <select id="nc-docventa" onchange="contNcCambioDoc()"></select></div>
-                            <div class="form-group" style="flex-basis:100%;"><label>Tipo de Nota:</label>
+                            <div class="form-group" style="flex-basis:100%;"><label for="nc-tipo">Tipo de Nota:</label>
                                 <select id="nc-tipo" onchange="contNcCambiarTipo()"><option value="total">Anulación total (se anula toda la factura)</option><option value="parcial">Nota parcial (acredita solo una parte del valor)</option></select></div>
                             <div id="nc-parcial-box" style="display:none; flex-basis:100%; flex-wrap:wrap; gap:12px; background:#fffbeb; border:1px solid #f6e05e; border-radius:6px; padding:10px 12px;">
-                                <div class="form-group" style="flex:1; min-width:200px;"><label>Valor a acreditar ANTES de IVA:</label><input type="text" inputmode="numeric" id="nc-bruto" placeholder="Ej: 500.000" oninput="contFormatearMiles(this); contNcParcialCalcIva(); contNcParcialResumen()"></div>
-                                <div class="form-group" style="flex:1; min-width:200px;"><label>IVA a acreditar:</label><input type="text" inputmode="numeric" id="nc-iva" placeholder="0" oninput="contFormatearMiles(this); this.dataset.manual='true'; contNcParcialResumen()"></div>
+                                <div class="form-group" style="flex:1; min-width:200px;"><label for="nc-bruto">Valor a acreditar ANTES de IVA:</label><input type="text" inputmode="numeric" id="nc-bruto" placeholder="Ej: 500.000" oninput="contFormatearMiles(this); contNcParcialCalcIva(); contNcParcialResumen()"></div>
+                                <div class="form-group" style="flex:1; min-width:200px;"><label for="nc-iva">IVA a acreditar:</label><input type="text" inputmode="numeric" id="nc-iva" placeholder="0" oninput="contFormatearMiles(this); this.dataset.manual='true'; contNcParcialResumen()"></div>
                                 <div id="nc-parcial-info" style="flex-basis:100%; font-size:0.86rem; line-height:1.5; color:#4a5568;"></div>
                             </div>
                             <div id="nc-resumen" style="display:none; flex-basis:100%; background:#f1f5f9; border-left:4px solid var(--peligro); border-radius:4px; padding:8px 12px; font-size:0.86rem; line-height:1.5; margin-bottom:8px;"></div>
-                            <div class="form-group"><label>N° de Nota Crédito:</label><input type="text" id="nc-numero" placeholder="Ej: NC-0001" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase(); this.dataset.auto=''"></div>
-                            <div class="form-group"><label>Fecha de la Nota:</label><input type="date" id="nc-fecha"></div>
-                            <div class="form-group" style="flex-basis:100%;"><label>Motivo de la Nota:</label><input type="text" id="nc-motivo" placeholder="Ej: Error en la facturación / el cliente canceló el pedido"></div>
+                            <div class="form-group"><label for="nc-numero">N° de Nota Crédito:</label><input type="text" id="nc-numero" placeholder="Ej: NC-0001" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase(); this.dataset.auto=''"></div>
+                            <div class="form-group"><label for="nc-fecha">Fecha de la Nota:</label><input type="date" id="nc-fecha"></div>
+                            <div class="form-group" style="flex-basis:100%;"><label for="nc-motivo">Motivo de la Nota:</label><input type="text" id="nc-motivo" placeholder="Ej: Error en la facturación / el cliente canceló el pedido"></div>
                         </div>
                         <button class="btn-submit" id="nc-btn-generar" style="margin-top:12px;" onclick="contGuardarNotaCredito()">Generar Nota Crédito y anular la factura</button>
                         <div class="card-grid" id="lista-notascredito"></div>
@@ -2246,23 +2246,23 @@
                     </div>
                     <div id="cont-ingreso" class="accordion-content">
                         <div class="form-grid">
-                            <div class="form-group" style="flex-basis:100%;"><label>Documento(s) de Venta a cobrar (Ctrl/Cmd+clic para elegir varios del MISMO cliente):</label><select id="ing-docventa" multiple size="5" onchange="contAutocompletarIngresoDesdeDocs()"></select></div>
+                            <div class="form-group" style="flex-basis:100%;"><label for="ing-docventa">Documento(s) de Venta a cobrar (Ctrl/Cmd+clic para elegir varios del MISMO cliente):</label><select id="ing-docventa" multiple size="5" onchange="contAutocompletarIngresoDesdeDocs()"></select></div>
                             <div class="form-group" style="flex-basis:100%; flex-direction:row; align-items:center; gap:8px;">
                                 <input type="checkbox" id="ing-reteivaRecibida" onchange="contAutocompletarIngresoDesdeDocs()" style="width:auto; margin:0;">
                                 <label for="ing-reteivaRecibida" style="margin:0; cursor:pointer;">El cliente pagó también la ReteIVA (no la retuvo) — autocompleta el valor bruto en vez del neto</label>
                             </div>
-                            <div class="form-group" style="flex-basis:100%;"><label>Cliente (solo si este abono NO tiene factura asociada — deja los documentos de arriba sin marcar):</label>
+                            <div class="form-group" style="flex-basis:100%;"><label for="ing-cliente-filtro">Cliente (solo si este abono NO tiene factura asociada — deja los documentos de arriba sin marcar):</label>
                                 <input type="text" id="ing-cliente-filtro" placeholder="Escribe para buscar..." oninput="tacticalFiltrarSelectClientes('ing-cliente-filtro','ing-cliente',true)" style="margin-bottom:4px;">
                                 <select id="ing-cliente"></select></div>
-                            <div class="form-group"><label>N° de Comprobante:</label><input type="text" id="ing-numero" placeholder="Ej: IN-0001" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase(); this.dataset.auto=''"></div>
-                            <div class="form-group"><label>Fecha del comprobante:</label><input type="date" id="ing-fecha"><span style="font-size:0.78rem; color:#5f6e84;">Se puede fechar en el mes pasado (abonos que caen tarde, cierre de mes).</span></div>
-                            <div class="form-group"><label>Valor Recibido:</label><input type="text" inputmode="numeric" id="ing-valor" value="0" oninput="contFormatearMiles(this)"></div>
+                            <div class="form-group"><label for="ing-numero">N° de Comprobante:</label><input type="text" id="ing-numero" placeholder="Ej: IN-0001" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase(); this.dataset.auto=''"></div>
+                            <div class="form-group"><label for="ing-fecha">Fecha del comprobante:</label><input type="date" id="ing-fecha"><span style="font-size:0.78rem; color:#5f6e84;">Se puede fechar en el mes pasado (abonos que caen tarde, cierre de mes).</span></div>
+                            <div class="form-group"><label for="ing-valor">Valor Recibido:</label><input type="text" inputmode="numeric" id="ing-valor" value="0" oninput="contFormatearMiles(this)"></div>
                             <div class="form-group">
-                                <label>Medio de Pago:</label>
+                                <label for="ing-medioPago">Medio de Pago:</label>
                                 <select id="ing-medioPago"><option value="banco">Banco / Transferencia</option><option value="efectivo">Efectivo</option></select>
                             </div>
-                            <div class="form-group"><label>Concepto:</label><input type="text" id="ing-concepto" placeholder="Ej: Pago factura CC-0004" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
-                            <div class="form-group"><label>Referencia del soporte (banco al que ingresó el dinero):</label><input type="text" id="ing-referencia" placeholder="Ej: Bancolombia #123456" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
+                            <div class="form-group"><label for="ing-concepto">Concepto:</label><input type="text" id="ing-concepto" placeholder="Ej: Pago factura CC-0004" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
+                            <div class="form-group"><label for="ing-referencia">Referencia del soporte (banco al que ingresó el dinero):</label><input type="text" id="ing-referencia" placeholder="Ej: Bancolombia #123456" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
                             <div style="display:flex; gap:8px; margin-top:12px;">
                                 <button class="btn-submit" id="ing-btn-guardar" style="margin-top:0; flex:1;" onclick="contGuardarIngreso()">+ Registrar Comprobante de Ingreso</button>
                                 <button class="btn-action" id="ing-btn-cancelar-edicion" style="display:none;" onclick="cancelarEdicionIngreso()">Cancelar edición</button>
@@ -2278,17 +2278,17 @@
                     </div>
                     <div id="cont-cxp" class="accordion-content">
                         <div class="form-grid">
-                            <div class="form-group"><label>Proveedor:</label><input type="text" id="cxp-proveedor" list="cxp-proveedores-datalist" placeholder="Ej: PAPELES DEL NORTE SAS" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"><datalist id="cxp-proveedores-datalist"></datalist></div>
-                            <div class="form-group"><label>N° Factura del Proveedor:</label><input type="text" id="cxp-numFactura" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
+                            <div class="form-group"><label for="cxp-proveedor">Proveedor:</label><input type="text" id="cxp-proveedor" list="cxp-proveedores-datalist" placeholder="Ej: PAPELES DEL NORTE SAS" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"><datalist id="cxp-proveedores-datalist"></datalist></div>
+                            <div class="form-group"><label for="cxp-numFactura">N° Factura del Proveedor:</label><input type="text" id="cxp-numFactura" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
                             <div class="form-group">
-                                <label>Categoría:</label>
+                                <label for="cxp-categoria">Categoría:</label>
                                 <select id="cxp-categoria" onchange="contLlenarSubcategorias()">
                                     <option value="fijo">Gasto Fijo</option>
                                     <option value="variable">Gasto Variable</option>
                                 </select>
                             </div>
-                            <div class="form-group"><label>Subcategoría:</label><select id="cxp-subcategoria"></select></div>
-                            <div class="form-group"><label>Fecha de Vencimiento:</label><input type="text" id="cxp-fechaVenc" placeholder="AAAA-MM-DD"></div>
+                            <div class="form-group"><label for="cxp-subcategoria">Subcategoría:</label><select id="cxp-subcategoria"></select></div>
+                            <div class="form-group"><label for="cxp-fechaVenc">Fecha de Vencimiento:</label><input type="text" id="cxp-fechaVenc" placeholder="AAAA-MM-DD"></div>
                         </div>
                         <label style="display:block; font-weight:bold; margin-bottom:5px; font-size:0.88rem; color:var(--secondary);">Ítems de la factura de compra (hasta 10):</label>
                         <div class="table-responsive"><table>
@@ -2312,21 +2312,21 @@
                     </div>
                     <div id="cont-egreso" class="accordion-content">
                         <div class="form-grid">
-                            <div class="form-group" style="flex-basis:100%;"><label>Cuenta(s) por Pagar a pagar (opcional — Ctrl/Cmd+clic para elegir varias del MISMO proveedor):</label><select id="egr-cxp" multiple size="5" onchange="contAutocompletarEgresoDesdeCxp()"></select><span style="font-size:0.78rem; color:#5f6e84;">Anticipos a proveedores o pagos que no vienen de una factura ya registrada: deja este campo sin marcar y llena beneficiario, monto y concepto.</span></div>
-                            <div class="form-group"><label>N° de Comprobante:</label><input type="text" id="egr-numero" placeholder="Ej: EG-0001" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase(); this.dataset.auto=''"></div>
-                            <div class="form-group"><label>Fecha del comprobante:</label><input type="date" id="egr-fecha"><span style="font-size:0.78rem; color:#5f6e84;">Se puede fechar en el mes pasado (pagos que caen tarde, cierre de mes).</span></div>
-                            <div class="form-group"><label>Beneficiario:</label><input type="text" id="egr-beneficiario" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
-                            <div class="form-group"><label>Concepto:</label><input type="text" id="egr-concepto" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
-                            <div class="form-group"><label>Monto:</label><input type="text" inputmode="numeric" id="egr-monto" value="0" oninput="contFormatearMiles(this)"></div>
+                            <div class="form-group" style="flex-basis:100%;"><label for="egr-cxp">Cuenta(s) por Pagar a pagar (opcional — Ctrl/Cmd+clic para elegir varias del MISMO proveedor):</label><select id="egr-cxp" multiple size="5" onchange="contAutocompletarEgresoDesdeCxp()"></select><span style="font-size:0.78rem; color:#5f6e84;">Anticipos a proveedores o pagos que no vienen de una factura ya registrada: deja este campo sin marcar y llena beneficiario, monto y concepto.</span></div>
+                            <div class="form-group"><label for="egr-numero">N° de Comprobante:</label><input type="text" id="egr-numero" placeholder="Ej: EG-0001" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase(); this.dataset.auto=''"></div>
+                            <div class="form-group"><label for="egr-fecha">Fecha del comprobante:</label><input type="date" id="egr-fecha"><span style="font-size:0.78rem; color:#5f6e84;">Se puede fechar en el mes pasado (pagos que caen tarde, cierre de mes).</span></div>
+                            <div class="form-group"><label for="egr-beneficiario">Beneficiario:</label><input type="text" id="egr-beneficiario" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
+                            <div class="form-group"><label for="egr-concepto">Concepto:</label><input type="text" id="egr-concepto" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
+                            <div class="form-group"><label for="egr-monto">Monto:</label><input type="text" inputmode="numeric" id="egr-monto" value="0" oninput="contFormatearMiles(this)"></div>
                             <div class="form-group">
-                                <label>Categoría:</label>
+                                <label for="egr-categoria">Categoría:</label>
                                 <select id="egr-categoria"><option value="fijo">Gasto Fijo</option><option value="variable">Gasto Variable</option></select>
                             </div>
                             <div class="form-group">
-                                <label>Medio de Pago:</label>
+                                <label for="egr-medioPago">Medio de Pago:</label>
                                 <select id="egr-medioPago"><option value="banco">Banco / Transferencia</option><option value="efectivo">Efectivo</option></select>
                             </div>
-                            <div class="form-group"><label>Referencia del soporte:</label><input type="text" id="egr-referencia" placeholder="Ej: Copia factura proveedor + comprobante banco" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
+                            <div class="form-group"><label for="egr-referencia">Referencia del soporte:</label><input type="text" id="egr-referencia" placeholder="Ej: Copia factura proveedor + comprobante banco" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
                             <div style="display:flex; gap:8px; margin-top:12px;">
                                 <button class="btn-submit" id="egr-btn-guardar" style="margin-top:0; flex:1;" onclick="contGuardarEgreso()">+ Registrar Comprobante de Egreso</button>
                                 <button class="btn-action" id="egr-btn-cancelar-edicion" style="display:none;" onclick="cancelarEdicionEgreso()">Cancelar edición</button>
@@ -2393,12 +2393,12 @@
                         <div class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Nueva ficha — Servicio Express (sin cotización previa)</div>
                         <div class="form-grid" style="margin-top:10px;">
                             <div class="form-group">
-                                <label>Cliente:</label>
+                                <label for="kb-cliente">Cliente:</label>
                                 <input type="text" id="kb-cliente" list="kb-cliente-datalist" placeholder="Nombre de la empresa o persona">
                                 <datalist id="kb-cliente-datalist"></datalist>
                             </div>
                             <div class="form-group">
-                                <label>Línea:</label>
+                                <label for="kb-linea">Línea:</label>
                                 <select id="kb-linea">
                                     <option value="cuadernos">Cuadernos/Agendas</option>
                                     <option value="rompecabezas">Rompecabezas</option>
@@ -2411,9 +2411,9 @@
                                     <option value="manual" selected>Otro / Maquila externa</option>
                                 </select>
                             </div>
-                            <div class="form-group"><label>Descripción:</label><input type="text" id="kb-descripcion" class="tactical-campo-dictado" placeholder="Ej: Corte láser 50 llaveros MDF"></div>
-                            <div class="form-group"><label>Cantidad:</label><input type="text" inputmode="numeric" id="kb-cantidad" value="1" oninput="tacticalFormatearMiles(this)"></div>
-                            <div class="form-group"><label>Fecha de entrega (opcional):</label><input type="date" id="kb-fechaEntrega"></div>
+                            <div class="form-group"><label for="kb-descripcion">Descripción:</label><input type="text" id="kb-descripcion" class="tactical-campo-dictado" placeholder="Ej: Corte láser 50 llaveros MDF"></div>
+                            <div class="form-group"><label for="kb-cantidad">Cantidad:</label><input type="text" inputmode="numeric" id="kb-cantidad" value="1" oninput="tacticalFormatearMiles(this)"></div>
+                            <div class="form-group"><label for="kb-fechaEntrega">Fecha de entrega (opcional):</label><input type="date" id="kb-fechaEntrega"></div>
                         </div>
                         <div style="display:flex; gap:10px;">
                             <button class="btn-submit" onclick="crearFichaManual()">Crear ficha</button>
@@ -2531,16 +2531,16 @@
                     </div>
                     <div id="corte-datos" class="accordion-content active">
                         <div class="form-grid">
-                            <div class="form-group"><label>Material:</label><select id="corte-material" onchange="corteCambiarMaterial()"></select></div>
-                            <div class="form-group"><label>Lámina:</label><select id="corte-lamina" onchange="corteCambiarLamina()"></select></div>
-                            <div class="form-group"><label>Ancho de la lámina (cm):</label><input type="text" inputmode="decimal" id="corte-W" oninput="corteCalcular()"></div>
-                            <div class="form-group"><label>Largo de la lámina (cm):</label><input type="text" inputmode="decimal" id="corte-H" oninput="corteCalcular()"></div>
+                            <div class="form-group"><label for="corte-material">Material:</label><select id="corte-material" onchange="corteCambiarMaterial()"></select></div>
+                            <div class="form-group"><label for="corte-lamina">Lámina:</label><select id="corte-lamina" onchange="corteCambiarLamina()"></select></div>
+                            <div class="form-group"><label for="corte-W">Ancho de la lámina (cm):</label><input type="text" inputmode="decimal" id="corte-W" oninput="corteCalcular()"></div>
+                            <div class="form-group"><label for="corte-H">Largo de la lámina (cm):</label><input type="text" inputmode="decimal" id="corte-H" oninput="corteCalcular()"></div>
                         </div>
                         <div class="form-grid">
-                            <div class="form-group"><label>Ancho de la pieza (cm):</label><input type="text" inputmode="decimal" id="corte-w" value="50" oninput="corteCalcular()"></div>
-                            <div class="form-group"><label>Largo de la pieza (cm):</label><input type="text" inputmode="decimal" id="corte-h" value="30" oninput="corteCalcular()"></div>
-                            <div class="form-group"><label>Cantidad de piezas que necesito:</label><input type="text" inputmode="numeric" id="corte-q" value="100" oninput="corteCalcular()"></div>
-                            <div class="form-group"><label>Margen del borde de la lámina (cm):</label><input type="text" inputmode="decimal" id="corte-mg" value="0" oninput="corteCalcular()"></div>
+                            <div class="form-group"><label for="corte-w">Ancho de la pieza (cm):</label><input type="text" inputmode="decimal" id="corte-w" value="50" oninput="corteCalcular()"></div>
+                            <div class="form-group"><label for="corte-h">Largo de la pieza (cm):</label><input type="text" inputmode="decimal" id="corte-h" value="30" oninput="corteCalcular()"></div>
+                            <div class="form-group"><label for="corte-q">Cantidad de piezas que necesito:</label><input type="text" inputmode="numeric" id="corte-q" value="100" oninput="corteCalcular()"></div>
+                            <div class="form-group"><label for="corte-mg">Margen del borde de la lámina (cm):</label><input type="text" inputmode="decimal" id="corte-mg" value="0" oninput="corteCalcular()"></div>
                         </div>
                         <div class="checkbox-row" style="margin-bottom:6px;"><input type="checkbox" id="corte-rot" checked onchange="corteCalcular()"><label for="corte-rot" style="font-weight:normal; margin:0;">Puedo girar la pieza 90° (desmarca si el material tiene veta o dibujo que debe ir en un solo sentido)</label></div>
                         <p class="corte-intro" style="font-size:0.78rem; color:#64748b; margin:6px 0 0;">Las láminas de la lista son medidas de ejemplo -- si la tuya es distinta, elige "Otra medida..." y escribe el ancho y el largo.</p>
@@ -9289,19 +9289,19 @@
           html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;"><strong style="color:var(--primary);">${opciones.titulo||prefix}</strong>`;
           if(mostrarQuitar) html += `<button type="button" style="background:none; border:none; color:var(--peligro); font-weight:bold; cursor:pointer;" onclick="cotQuitarInserto('${prefix}')">${ticon('trash')}Quitar</button>`;
           html += `</div><div class="form-grid" style="margin-bottom:8px;">`;
-          if(mostrarNombre) html += `<div class="form-group"><label>Nombre</label><input type="text" id="${prefix}_nombre" value="${opciones.nombreDefault||'Insertos'}"></div>`;
-          if(mostrarHojas) html += `<div class="form-group"><label>Hojas por cuaderno</label><input type="number" id="${prefix}_hojas" value="${opciones.hojasDefault||1}" min="1"></div>`;
-          html += `<div class="form-group"><label>Sustrato</label><select id="${prefix}_sustrato">${cotSustratoOptionsHtml()}</select></div>`;
-          html += `<div class="form-group"><label>Tintas tiro</label><input type="number" id="${prefix}_tintasTiro" value="${opciones.tintasTiroDefault!=null?opciones.tintasTiroDefault:4}" min="0" max="4"></div>`;
-          html += `<div class="form-group"><label>Tintas retiro</label><input type="number" id="${prefix}_tintasRetiro" value="${opciones.tintasRetiroDefault!=null?opciones.tintasRetiroDefault:0}" min="0" max="4"></div>`;
+          if(mostrarNombre) html += `<div class="form-group"><label for="${prefix}_nombre">Nombre</label><input type="text" id="${prefix}_nombre" value="${opciones.nombreDefault||'Insertos'}"></div>`;
+          if(mostrarHojas) html += `<div class="form-group"><label for="${prefix}_hojas">Hojas por cuaderno</label><input type="number" id="${prefix}_hojas" value="${opciones.hojasDefault||1}" min="1"></div>`;
+          html += `<div class="form-group"><label for="${prefix}_sustrato">Sustrato</label><select id="${prefix}_sustrato">${cotSustratoOptionsHtml()}</select></div>`;
+          html += `<div class="form-group"><label for="${prefix}_tintasTiro">Tintas tiro</label><input type="number" id="${prefix}_tintasTiro" value="${opciones.tintasTiroDefault!=null?opciones.tintasTiroDefault:4}" min="0" max="4"></div>`;
+          html += `<div class="form-group"><label for="${prefix}_tintasRetiro">Tintas retiro</label><input type="number" id="${prefix}_tintasRetiro" value="${opciones.tintasRetiroDefault!=null?opciones.tintasRetiroDefault:0}" min="0" max="4"></div>`;
           if(mostrarDiseno){
-            html += `<div class="form-group"><label>Diseño</label><select id="${prefix}_diseno">
+            html += `<div class="form-group"><label for="${prefix}_diseno">Diseño</label><select id="${prefix}_diseno">
               <option value="uniforme" ${disenoDefault==="uniforme"?"selected":""}>Páginas iguales</option>
               <option value="unico_por_pagina" ${disenoDefault==="unico_por_pagina"?"selected":""}>Páginas diferentes</option>
             </select></div>`;
           }
           if(mostrarIntercalado){
-            html += `<div class="form-group"><label>Colocación</label><select id="${prefix}_intercalado">
+            html += `<div class="form-group"><label for="${prefix}_intercalado">Colocación</label><select id="${prefix}_intercalado">
               <option value="seguidos" ${intercaladoDefault==="seguidos"?"selected":""}>Seguidos</option>
               <option value="intercalados" ${intercaladoDefault==="intercalados"?"selected":""}>Intercalados (+50% alce)</option>
             </select></div>`;

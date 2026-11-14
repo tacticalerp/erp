@@ -153,30 +153,30 @@
       <h2>0. Datos del Cliente</h2>
       <div class="fila">
         <div class="campo">
-          <label>Cliente:</label>
+          <label for="in-cli-empresa">Cliente:</label>
           <input type="text" id="in-cli-empresa" list="cli-datalist" placeholder="Nombre de la empresa o persona" oninput="autocompletarCliente('empresa')">
           <datalist id="cli-datalist"></datalist>
           <div id="cli-existente-nota" style="display:none; font-size:0.8rem; color:var(--verde); margin-top:2px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>Cliente existente — datos cargados automáticamente</div>
         </div>
-        <div class="campo"><label>Encargado:</label><input type="text" id="in-cli-encargado" placeholder="Persona de contacto"></div>
-        <div class="campo"><label>Teléfono:</label><input type="text" id="in-cli-telefono" placeholder="Ej: 3001234567"></div>
+        <div class="campo"><label for="in-cli-encargado">Encargado:</label><input type="text" id="in-cli-encargado" placeholder="Persona de contacto"></div>
+        <div class="campo"><label for="in-cli-telefono">Teléfono:</label><input type="text" id="in-cli-telefono" placeholder="Ej: 3001234567"></div>
         <div class="campo">
-          <label>Correo:</label>
+          <label for="in-cli-correo">Correo:</label>
           <input type="text" id="in-cli-correo" list="cli-correo-datalist" placeholder="cliente@empresa.com" oninput="autocompletarCliente('correo')">
           <datalist id="cli-correo-datalist"></datalist>
         </div>
       </div>
       <div class="fila">
         <div class="campo">
-          <label>Tipo de Cliente (Contabilidad):</label>
+          <label for="in-cli-tipo">Tipo de Cliente (Contabilidad):</label>
           <select id="in-cli-tipo">
             <option value="">-- Sin definir --</option>
             <option value="corporativo">Corporativo (Factura electrónica)</option>
             <option value="personalizado">Personalizado (Cuenta de Cobro)</option>
           </select>
         </div>
-        <div class="campo"><label>Identificación (NIT / CC):</label><input type="text" id="in-cli-identificacion" placeholder="Ej: 900.123.456-7"></div>
-        <div class="campo"><label>Vendedor a cargo:</label><select id="in-vendedor"></select></div>
+        <div class="campo"><label for="in-cli-identificacion">Identificación (NIT / CC):</label><input type="text" id="in-cli-identificacion" placeholder="Ej: 900.123.456-7"></div>
+        <div class="campo"><label for="in-vendedor">Vendedor a cargo:</label><select id="in-vendedor"></select></div>
       </div>
       <!-- Conde 2026-10-13: "que aquí se pueda adicionar o actualizar los datos del cliente sin necesidad de acudir a otra
            herramienta" -- guarda en el CRM (tabla clientes) sin tener que hacer ni guardar la cotización. -->
@@ -191,34 +191,34 @@
       <h2>1. Troquel y cantidad</h2>
       <div class="fila">
         <div class="campo" style="flex:1 1 320px;">
-          <label>Referencia de troquel:</label>
+          <label for="in-troquel">Referencia de troquel:</label>
           <select id="in-troquel" onchange="onCambioTroquel()"></select>
           <div class="hint" id="hint-troquel"></div>
         </div>
         <div class="campo chico">
-          <label>Cantidad de bolsas:</label>
+          <label for="in-cantidad">Cantidad de bolsas:</label>
           <input type="text" inputmode="numeric" id="in-cantidad" value="500" oninput="tacticalFormatearMiles(this)">
         </div>
         <div class="campo chico">
-          <label>Cantidad 2 (opcional):</label>
+          <label for="in-cantidad2">Cantidad 2 (opcional):</label>
           <input type="text" inputmode="numeric" id="in-cantidad2" value="" placeholder="ej. 1.000" oninput="tacticalFormatearMiles(this)">
         </div>
         <div class="campo chico">
-          <label>Cantidad 3 (opcional):</label>
+          <label for="in-cantidad3">Cantidad 3 (opcional):</label>
           <input type="text" inputmode="numeric" id="in-cantidad3" value="" placeholder="ej. 2.000" oninput="tacticalFormatearMiles(this)">
         </div>
       </div>
       <div class="fila" id="fila-troquelPersonalizado" style="display:none;">
         <div class="campo chico">
-          <label>Ancho a imprimir (cm):</label>
+          <label for="in-troquelPersAncho">Ancho a imprimir (cm):</label>
           <input type="number" id="in-troquelPersAncho" value="0" min="0" step="0.5" onchange="onCambioTroquelPersonalizado()">
         </div>
         <div class="campo chico">
-          <label>Alto a imprimir (cm):</label>
+          <label for="in-troquelPersAlto">Alto a imprimir (cm):</label>
           <input type="number" id="in-troquelPersAlto" value="0" min="0" step="0.5" onchange="onCambioTroquelPersonalizado()">
         </div>
         <div class="campo">
-          <label>¿Es troquel a 2 partes o a 1 parte?</label>
+          <label for="in-troquelPersPartes">¿Es troquel a 2 partes o a 1 parte?</label>
           <select id="in-troquelPersPartes" onchange="onCambioTroquelPersonalizado()">
             <option value="2">A 2 partes (como "Bolsa Por 2")</option>
             <option value="1">A 1 parte (una sola pieza)</option>
@@ -227,18 +227,18 @@
       </div>
       <div class="fila" id="fila-troquelPersonalizadoBolsa" style="display:none;">
         <div class="campo chico">
-          <label>Ancho de la bolsa armada (cm):</label>
+          <label for="in-troquelPersAnchoBolsa">Ancho de la bolsa armada (cm):</label>
           <input type="number" id="in-troquelPersAnchoBolsa" value="0" min="0" step="0.5">
         </div>
         <div class="campo chico">
-          <label>Fuelle de la bolsa armada (cm):</label>
+          <label for="in-troquelPersFuelleBolsa">Fuelle de la bolsa armada (cm):</label>
           <input type="number" id="in-troquelPersFuelleBolsa" value="0" min="0" step="0.5">
         </div>
         <div class="hint">Para calcular el cartón de refuerzo de la base (ancho-1 x fuelle-1).</div>
       </div>
       <div class="fila" id="fila-caras-bolsa" style="display:none;">
         <div class="campo">
-          <label>Este troquel es de 2 partes — ¿las 2 caras son iguales o diferentes?</label>
+          <label for="in-carasIguales">Este troquel es de 2 partes — ¿las 2 caras son iguales o diferentes?</label>
           <select id="in-carasIguales">
             <option value="si">Iguales (mismo diseño en ambas caras — 1 juego de planchas)</option>
             <option value="no">Diferentes (arte distinto por cara — duplica planchas CtP)</option>
@@ -251,18 +251,18 @@
       <h2>2. Sustrato e impresión</h2>
       <div class="fila">
         <div class="campo">
-          <label>Papel/Sustrato:</label>
+          <label for="in-sustrato">Papel/Sustrato:</label>
           <select id="in-sustrato"></select>
           <div class="hint"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>No usar cartulinas/papeles gruesos — se rompen en el plegado. Digital solo elegible hasta 240gr.</div>
         </div>
       </div>
       <div class="fila">
         <div class="campo chico">
-          <label>Tintas tiro:</label>
+          <label for="in-tintasTiro">Tintas tiro:</label>
           <input type="number" id="in-tintasTiro" value="4" min="0" max="4">
         </div>
         <div class="campo chico">
-          <label>Tintas retiro:</label>
+          <label for="in-tintasRetiro">Tintas retiro:</label>
           <input type="number" id="in-tintasRetiro" value="0" min="0" max="4">
         </div>
       </div>
@@ -284,7 +284,7 @@
       <h2>3. Agarradera y armado</h2>
       <div class="fila">
         <div class="campo">
-          <label>Tipo de agarradera:</label>
+          <label for="in-agarradera">Tipo de agarradera:</label>
           <select id="in-agarradera">
             <option value="corona">Cordón (corona) — $700/u</option>
             <option value="entorchado">Papel entorchado — $550/u</option>
@@ -293,7 +293,7 @@
       </div>
       <div class="fila">
         <div class="campo chico">
-          <label>Costo de pegue/armado (COP/unidad):</label>
+          <label for="in-costoPegue">Costo de pegue/armado (COP/unidad):</label>
           <input type="number" id="in-costoPegue" value="950" min="0">
           <div class="hint">Se autocompleta según el troquel (doble $950 / sencilla $750) — editable si necesitas personalizarlo.</div>
         </div>
@@ -304,7 +304,7 @@
       <h2>4. Troquel — uso</h2>
       <div class="fila">
         <div class="campo">
-          <label>¿El troquel ya existe en el banco, o hay que fabricarlo?</label>
+          <label for="in-troquelNuevo">¿El troquel ya existe en el banco, o hay que fabricarlo?</label>
           <select id="in-troquelNuevo" onchange="onCambioTroquelNuevo()">
             <option value="existente">Usar troquel existente (banco) — desgaste cuchilla $30.000</option>
             <option value="nuevo">Crear troquel nuevo</option>
@@ -313,7 +313,7 @@
       </div>
       <div class="fila" id="fila-troquelManual" style="display:none;">
         <div class="campo chico">
-          <label>Costo troquel nuevo (COP, manual):</label>
+          <label for="in-costoUsoTroquel">Costo troquel nuevo (COP, manual):</label>
           <input type="number" id="in-costoUsoTroquel" value="0" min="0">
         </div>
       </div>
@@ -323,17 +323,17 @@
       <h2>5. Condiciones comerciales</h2>
       <div class="fila">
         <div class="campo chico">
-          <label>% Utilidad:</label>
+          <label for="in-utilidadPct">% Utilidad:</label>
           <input type="number" id="in-utilidadPct" value="40" step="1">
         </div>
         <div class="campo chico">
-          <label>% Ventas:</label>
+          <label for="in-comisionPct">% Ventas:</label>
           <input type="number" id="in-comisionPct" value="3" step="0.5">
         </div>
       </div>
       <div id="in-extrasInsumos"></div>
       <div class="campo" style="margin-top:10px;">
-        <label>Plazo de entrega:</label>
+        <label for="in-plazoEntrega">Plazo de entrega:</label>
         <input type="text" id="in-plazoEntrega" value="A convenir">
       </div>
       <div style="margin-top:10px; border-top:1px solid var(--borde); padding-top:8px;">
@@ -356,7 +356,7 @@
       <div id="resultado-contenido"><div class="placeholder">Completa el formulario y presiona Calcular.</div></div>
       <div class="campo" style="margin-top:10px;"><label>Descripción para el cliente: <span title="Editable. Escribe **así** para resaltar en negrilla en el PDF." style="cursor:help; font-weight:normal; color:var(--texto-suave,#5a6472);">ⓘ</span></label><textarea id="in-descCliente" class="tactical-campo-dictado" rows="1" style="width:100%; box-sizing:border-box; resize:vertical; overflow:hidden; font-family:inherit; font-size:inherit; padding:8px; line-height:1.4;" oninput="this.style.height='auto'; this.style.height=(this.scrollHeight+2)+'px';"></textarea></div>
       <div class="campo" style="margin-top:10px;">
-        <label>Variante de foto (opcional -- solo si creaste variantes en la Fototeca para esta línea):</label>
+        <label for="in-varianteFoto">Variante de foto (opcional -- solo si creaste variantes en la Fototeca para esta línea):</label>
         <select id="in-varianteFoto" style="width:100%; box-sizing:border-box;"><option value="">(Automática de la línea)</option></select>
       </div>
       <div class="campo" style="margin-top:10px;">
