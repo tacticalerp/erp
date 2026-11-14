@@ -66,6 +66,17 @@ function tacticalAvzCrear(ajustes){
 function tacticalAvzEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function tacticalAvzCop(n){ return "$" + Math.round(n).toLocaleString("es-CO"); }
 function tacticalAvzNum(n){ return (Math.round(n*100)/100).toLocaleString('es-CO'); }
+// Conde 2026-11-14: "me gustaria la primera palabra en negrilla con el monto $ tambien en
+// negrilla" -- en el desglose de costos en celular, el renglón se parte en 2 líneas (texto arriba,
+// precio abajo) y con varios insumos seguidos es difícil ver a cuál precio pertenece cada uno.
+// Resaltando la primera palabra del concepto (la clave: "Caratula", "Taco", "Cartón"...) y el monto
+// en negrilla, el ojo agrupa cada par texto-precio sin necesidad de rediseñar la tabla.
+function tacticalAvzConceptoNegrilla(texto){
+  texto = texto || '';
+  const idx = texto.indexOf(' ');
+  if(idx < 0) return `<strong>${tacticalAvzEsc(texto)}</strong>`;
+  return `<strong>${tacticalAvzEsc(texto.slice(0, idx))}</strong>${tacticalAvzEsc(texto.slice(idx))}`;
+}
 
 // Conde 2026-11-13: "que los datos queden en un acordeón que se expanda al hacer clic pero que no
 // se visualicen de inmediato, pues esa información confunde a los que no saben a profundidad de
@@ -95,6 +106,11 @@ function tacticalAvzTablaHtml(lineas, pro){
   if(pro) h += `<tr style="font-weight:bold;"><td>Insumo / proceso</td><td class="num">Cantidad</td><td class="num">Unitario</td><td class="num">Valor</td><td class="num" title="Escribe un precio unitario distinto solo para esta cotización">Nuevo unitario</td><td></td></tr>`;
   const cols = pro ? 6 : 2;
   let grupo = null;
+  // Conde 2026-11-14: "analizando sería bueno una división más clara... algo sutil pero efectivo"
+  // -- franjas alternas muy tenues entre renglones de insumo, para que el precio de cada uno se
+  // distinga del de al lado (clave en celular, donde el texto y el precio quedan en líneas
+  // separadas). No se cuenta en los renglones de total/subtotal/grupo, que ya tienen su propio estilo.
+  let idxFila = 0;
   // En la versión profesional los renglones se juntan por grupo (Insumos, Procesos, Generales) dentro
   // de cada tramo entre totales, para que no se repitan los títulos de grupo.
   let ordenadas = lineas || [];
@@ -118,15 +134,17 @@ function tacticalAvzTablaHtml(lineas, pro){
       grupo = null; return;
     }
     if(l.tipo==='fijo'){
-      h += pro ? `<tr><td colspan="3">${E(l.concepto)}</td><td class="num">${C(l.valor)}</td><td colspan="2"></td></tr>`
-               : `<tr><td>${E(l.concepto)}</td><td class="num">${C(l.valor)}</td></tr>`;
+      const fondoFijo = (idxFila++ % 2) ? ' style="background:#f3f6f9;"' : '';
+      h += pro ? `<tr${fondoFijo}><td colspan="3">${E(l.concepto)}</td><td class="num">${C(l.valor)}</td><td colspan="2"></td></tr>`
+               : `<tr${fondoFijo}><td>${E(l.concepto)}</td><td class="num">${C(l.valor)}</td></tr>`;
       return;
     }
     if(pro && l.grupo!==grupo){ grupo = l.grupo; h += `<tr class="detalle"><td colspan="${cols}" style="font-weight:600;">${E(grupo)}</td></tr>`; }
     const marca = l.ajustado ? ` <span style="color:#b45309; font-weight:600;">(ajustado)</span>` : '';
-    const fondo = l.ajustado ? ' style="background:#fff7e6;"' : '';
+    const zebra = (idxFila++ % 2) ? '#f3f6f9' : '';
+    const fondo = l.ajustado ? ' style="background:#fff7e6;"' : (zebra ? ` style="background:${zebra};"` : '');
     if(!pro){
-      h += `<tr${fondo}><td>${E(l.concepto)}${marca}</td><td class="num">${l.ajustado?`<s style="color:var(--texto-suave,#5a6472);">${C(l.base)}</s> `:''}${C(l.valor)}</td></tr>`;
+      h += `<tr${fondo}><td>${tacticalAvzConceptoNegrilla(l.concepto)}${marca}</td><td class="num">${l.ajustado?`<s style="color:var(--texto-suave,#5a6472);">${C(l.base)}</s> `:''}<strong>${C(l.valor)}</strong></td></tr>`;
       return;
     }
     const a = l.ajuste;
@@ -143,7 +161,7 @@ function tacticalAvzTablaHtml(lineas, pro){
     // porque ahí la cantidad y la unidad sí son información real.
     const cantidadTexto = (l.cantidad===1 && l.unidad==='trabajo') ? '' : `${tacticalAvzNum(l.cantidad)} <span style="color:var(--texto-suave,#5a6472);">${E(l.unidad)}</span>`;
     h += `<tr${fondo}>
-      <td>${E(l.concepto)}${marca}${notaPreview}</td>
+      <td>${tacticalAvzConceptoNegrilla(l.concepto)}${marca}${notaPreview}</td>
       <td class="num">${cantidadTexto}</td>
       <td class="num">${l.ajustado?`<s style="color:var(--texto-suave,#5a6472);">${C(l.unitarioBase)}</s> `:''}${C(l.unitario)}</td>
       <td class="num">${l.ajustado?`<s style="color:var(--texto-suave,#5a6472);">${C(l.base)}</s> `:''}<strong>${C(l.valor)}</strong></td>
