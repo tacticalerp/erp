@@ -144,7 +144,7 @@ function tacticalAvzTablaHtml(lineas, pro){
     const zebra = (idxFila++ % 2) ? '#f3f6f9' : '';
     const fondo = l.ajustado ? ' style="background:#fff7e6;"' : (zebra ? ` style="background:${zebra};"` : '');
     if(!pro){
-      h += `<tr${fondo}><td>${tacticalAvzConceptoNegrilla(l.concepto)}${marca}</td><td class="num">${l.ajustado?`<s style="color:var(--texto-suave,#5a6472);">${C(l.base)}</s> `:''}<strong>${C(l.valor)}</strong></td></tr>`;
+      h += `<tr${fondo}><td>${tacticalAvzConceptoNegrilla(l.concepto)}${marca}</td><td class="num">${l.ajustado?`<s style="color:var(--texto-suave,#5a6472);">${C(l.base)}</s> `:''}<span class="tactical-avz-valor-cel">${C(l.valor)}</span></td></tr>`;
       return;
     }
     const a = l.ajuste;
@@ -746,7 +746,13 @@ function tacticalAvzFichaTecnica(p, r, reglas){
   if(typeof document==='undefined' || document.getElementById('tactical-avz-estilo')) return;
   const st = document.createElement('style');
   st.id = 'tactical-avz-estilo';
-  st.textContent = '.tactical-avz-tabla td.num{ text-align:right; white-space:nowrap; }';
+  // Conde 2026-11-14: "deja los números en negrilla de los insumos solo para pantalla de
+  // celular, en pantalla grande confunden con los datos importantes como subtotal y demás"
+  // -- en celular (texto y precio en líneas separadas) la negrilla ayuda a ubicar el precio de
+  // cada insumo; en pantalla grande compite visualmente con Subtotal/Costo directo total, que
+  // ya son los números que de verdad deben resaltar.
+  st.textContent = '.tactical-avz-tabla td.num{ text-align:right; white-space:nowrap; }'
+    + '@media (max-width: 680px){ .tactical-avz-valor-cel{ font-weight: 700; } }';
   (document.head || document.documentElement).appendChild(st);
 })();
 
