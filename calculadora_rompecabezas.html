@@ -344,7 +344,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="tactical-supabase.js?v=20261109b"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
-<script src="precios_tactical.js?v=20261113b"></script>
+<script src="precios_tactical.js?v=20261113c"></script>
 <script src="tactical-avanzado.js?v=20261113o"></script>
 <script src="tactical-ui.js?v=20261109d"></script>
 <script>
@@ -1772,7 +1772,7 @@ async function iniciarOAgregarPedido(){
   refrescarBannerPedido();
   alert(mensajePedido);
 }
-function cerrarPedido(){
+async function cerrarPedido(){
   const pd = pedidoActivo();
   pedidoCancelarEdicionLinea();
   if(!pd || pd.lineas.length===0){ window.tacticalPedidoBorradorCache = null; tacticalEliminarPedidoBorrador(); refrescarBannerPedido(); return; }
@@ -1790,7 +1790,11 @@ function cerrarPedido(){
   // suelen ser variaciones del mismo producto (tamaños, por ejemplo), no productos distintos para
   // sumar. El total en el CRM (montoTotal arriba) siempre queda igual; esto solo decide si el PDF
   // que ve el cliente muestra o no un TOTAL consolidado al final.
-  const mostrarTotal = pd.lineas.length <= 1 ? true : confirm(`Este pedido tiene ${pd.lineas.length} productos.\n\n¿El PDF debe mostrar un TOTAL que sume todas las líneas?\n\nAceptar = sí, un solo total al final.\nCancelar = no, cada producto queda solo con su propio precio (útil cuando son variaciones del mismo producto, ej. tamaños distintos).`);
+  const mostrarTotal = pd.lineas.length <= 1 ? true : await tacticalConfirmarFlotante({
+    icono:'file', color:'#2563eb', titulo:'¿Cómo va el total en el PDF?',
+    mensaje:`Este pedido tiene ${pd.lineas.length} productos. Útil separarlos cuando son variaciones del mismo producto (ej. tamaños distintos).`,
+    textoBoton:'Un total para todo', textoBotonNo:'Cada producto por separado',
+  });
   const cliPd = db_clientes.find(c=>c.id===pd.idCli) || {empresa:pd.nombreCli, nombre:'', wp:'', correo:''};
   // Conde 2026-09-25: si alguna línea del pedido tenía "Extra / Ajuste adicional", se separa en su
   // propia fila del PDF (mismo criterio que guardarCotizacionClick).

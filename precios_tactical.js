@@ -120,7 +120,7 @@ function tacticalConfirmarFlotante(opts){
         <div style="font-weight:800; font-size:1.05rem; color:#1a202c; margin-bottom:6px;">${opts.titulo}</div>
         <div style="font-size:0.85rem; color:#5f6e84; margin-bottom:18px;">${opts.mensaje||''}</div>
         <div style="display:flex; gap:8px;">
-          <button type="button" id="tactical-confirmar-flotante-no" style="flex:1; padding:10px; border:1px solid #cbd5e0; background:#fff; color:#4a5568; border-radius:6px; font-weight:700; cursor:pointer;">Cancelar</button>
+          <button type="button" id="tactical-confirmar-flotante-no" style="flex:1; padding:10px; border:1px solid #cbd5e0; background:#fff; color:#4a5568; border-radius:6px; font-weight:700; cursor:pointer;">${opts.textoBotonNo||'Cancelar'}</button>
           <button type="button" id="tactical-confirmar-flotante-si" style="flex:1; padding:10px; border:none; background:${opts.color}; color:#fff; border-radius:6px; font-weight:700; cursor:pointer;">${opts.textoBoton||'Confirmar'}</button>
         </div>
       </div>`;
