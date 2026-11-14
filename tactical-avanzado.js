@@ -752,7 +752,13 @@ function tacticalAvzFichaTecnica(p, r, reglas){
   // cada insumo; en pantalla grande compite visualmente con Subtotal/Costo directo total, que
   // ya son los números que de verdad deben resaltar.
   st.textContent = '.tactical-avz-tabla td.num{ text-align:right; white-space:nowrap; }'
-    + '@media (max-width: 680px){ .tactical-avz-valor-cel{ font-weight: 700; } }';
+    + '@media (max-width: 680px){ .tactical-avz-valor-cel{ font-weight: 700; } }'
+    + '.tactical-avz-cant-campo{ width:0; flex:1 1 0; min-width:0; padding:7px 4px; }'
+    // Conde 2026-11-14: "para celular quiero que sí se expanda el recuadro de las cantidades,
+    // pues queda muy pequeño en pantalla chica" -- en celular las 3 cantidades (si están
+    // activas) se acomodan en 2 filas (2 + 1), con campos más grandes, en vez de 3 columnas
+    // angostas en una sola fila.
+    + '@media (max-width: 480px){ .tactical-avz-cant-fila{ flex-wrap:wrap; } .tactical-avz-cant-campo{ flex:1 1 48%; width:auto; min-width:0; font-size:16px; padding:9px 8px; } }';
   (document.head || document.documentElement).appendChild(st);
 })();
 
@@ -784,9 +790,7 @@ function tacticalAvzEnvolverCantidadesExtra(id2, id3){
   fila.style.cssText = 'display:flex; gap:4px;';
   el1.parentNode.insertBefore(fila, el1);
   fila.appendChild(el1);
-  [el1, el2, el3].forEach(el => {
-    el.style.width = '0'; el.style.flex = '1 1 0'; el.style.minWidth = '0'; el.style.padding = '7px 4px';
-  });
+  [el1, el2, el3].forEach(el => el.classList.add('tactical-avz-cant-campo'));
   if(!el2.placeholder) el2.placeholder = 'Cant. 2';
   if(!el3.placeholder) el3.placeholder = 'Cant. 3';
   el2.title = 'Cantidad 2 (opcional)'; el3.title = 'Cantidad 3 (opcional)';
