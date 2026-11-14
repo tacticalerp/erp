@@ -217,7 +217,7 @@ function tacticalAvzExtrasHtml(){
   return `<div style="margin-top:10px; border-top:1px solid var(--borde); padding-top:8px;">
     <label style="font-weight:600; font-size:0.85rem;">Insumos extra <span title="Algo puntual que no está en el catálogo (clisés, estampado, troquel especial, etc.) -- se cobra y se marca igual que cualquier otro insumo de fabricación, y sale en la Orden de Producción." style="cursor:help; font-weight:normal; color:var(--texto-suave,#5a6472);">ⓘ</span></label>
     <div>${filas}</div>
-    <button type="button" data-ui="none" onclick="tacticalAvzExtraAgregar()" style="margin-top:6px;">+ Agregar insumo extra</button>
+    <button type="button" data-ui="none" onclick="tacticalAvzExtraAgregar()" style="margin-top:6px; background:var(--azul,#1e3a5f); color:#fff; font-weight:600; padding:7px 14px; border:none; border-radius:4px;">+ Agregar insumo extra</button>
   </div>`;
 }
 function tacticalAvzExtrasRedibujar(){
