@@ -262,10 +262,50 @@ function tacticalAvzInsumos(lineas){
 function tacticalAvzInsumosTextos(insumos){
   return (insumos||[]).map(i => `${tacticalAvzEsc(i.concepto)}: <strong>${tacticalAvzNum(i.cantidad)} ${tacticalAvzEsc(i.unidad)}</strong>`);
 }
+// Conde 2026-11-14: "quiero que para ese listado sea en casillas... una columna papel/material,
+// otra cantidad, otra tamaño pliego, otra corte". El concepto de las líneas de papel ya trae ese
+// detalle embebido como texto ("Taco — papel Bond 70g (pliego 70x100) — ... — corte a 50x70cm");
+// esto lo separa en columnas sin tocar cómo se arma el texto en cada calculadora.
+function tacticalAvzParsearInsumo(i){
+  const texto = i.concepto || '';
+  let material = '', pliego = '', corte = '';
+  const mPapel = texto.match(/^(.*?)\s*—\s*papel\s+([^(]+?)\s*\(pliego\s+([^)]+)\)/i);
+  if(mPapel){
+    const clave = mPapel[1].trim();
+    material = clave ? `${clave} — ${mPapel[2].trim()}` : mPapel[2].trim();
+    pliego = mPapel[3].trim();
+  }
+  const mCorte = texto.match(/corte a\s*([\d.,]+\s*x\s*[\d.,]+)\s*cm/i);
+  if(mCorte) corte = mCorte[1].replace(/\s+/g, '') + ' cm';
+  if(!material) material = texto;
+  return { material, pliego, corte };
+}
+function tacticalAvzInsumosTablaHtml(insumos){
+  if(!insumos || !insumos.length) return '';
+  const E = tacticalAvzEsc;
+  const filas = insumos.map(i => {
+    const { material, pliego, corte } = tacticalAvzParsearInsumo(i);
+    return `<tr>
+      <td style="padding:2px 6px; border-bottom:1px solid #e2e8f0; color:#4a5568;">${E(material)}</td>
+      <td style="padding:2px 6px; border-bottom:1px solid #e2e8f0; color:#4a5568; text-align:right; white-space:nowrap;"><strong>${tacticalAvzNum(i.cantidad)} ${E(i.unidad)}</strong></td>
+      <td style="padding:2px 6px; border-bottom:1px solid #e2e8f0; color:#4a5568; white-space:nowrap;">${E(pliego)}</td>
+      <td style="padding:2px 6px; border-bottom:1px solid #e2e8f0; color:#4a5568; white-space:nowrap;">${E(corte)}</td>
+    </tr>`;
+  }).join('');
+  return `<table style="width:100%; border-collapse:collapse; font-size:inherit;">
+    <tr>
+      <th style="text-align:left; padding:2px 6px; border-bottom:2px solid #cbd5e0;">Papel / material</th>
+      <th style="text-align:right; padding:2px 6px; border-bottom:2px solid #cbd5e0;">Cantidad</th>
+      <th style="text-align:left; padding:2px 6px; border-bottom:2px solid #cbd5e0;">Tamaño pliego</th>
+      <th style="text-align:left; padding:2px 6px; border-bottom:2px solid #cbd5e0;">Corte</th>
+    </tr>
+    ${filas}
+  </table>`;
+}
 // Bloque listo para tacticalOPDocumentoHtml (null si no hay insumos).
 function tacticalAvzBloqueInsumosOP(lineas){
   const ins = tacticalAvzInsumos(lineas);
-  return ins.length ? { titulo:'Insumos y procesos de esta orden (cantidades a pedir o programar)', lineasTexto: tacticalAvzInsumosTextos(ins) } : null;
+  return ins.length ? { titulo:'Insumos y procesos de esta orden (cantidades a pedir o programar)', lineasTexto: [tacticalAvzInsumosTablaHtml(ins)] } : null;
 }
 // Para la OP que arma el Hub desde la ficha del Kanban (recibe la lista ya guardada en la ficha).
 // Bloque completo (con título) para órdenes de producción que se arman como HTML directo (Cuadernos en el Hub).
@@ -274,8 +314,8 @@ function tacticalAvzInsumosOPBloqueHtml(lineas){
   if(!ins.length) return '';
   const F = (typeof TACTICAL_OP_FONT_SIZE!=='undefined') ? TACTICAL_OP_FONT_SIZE : '12px';
   return `<div style="border:1px solid #d7dee5; border-radius:3px; padding:4px 9px; margin-bottom:6px; break-inside:avoid; font-size:${F};">
-    <div style="font-weight:bold;">Insumos y procesos de esta orden (cantidades a pedir o programar)</div>
-    ${tacticalAvzInsumosTextos(ins).map(t => `<div style="color:#4a5568; line-height:1.25;">${t}</div>`).join('')}</div>`;
+    <div style="font-weight:bold; margin-bottom:3px;">Insumos y procesos de esta orden (cantidades a pedir o programar)</div>
+    ${tacticalAvzInsumosTablaHtml(ins)}</div>`;
 }
 function tacticalAvzInsumosOPHtml(insumos){
   if(!insumos || !insumos.length) return '';
