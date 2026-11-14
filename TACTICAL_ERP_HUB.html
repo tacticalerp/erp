@@ -5618,8 +5618,13 @@
         function bjEsc(t){ return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
         function bjNombreUsuario(){ const p = window.tacticalUsuarioPerfil; return p && p.nombre ? String(p.nombre).split(' ')[0] : 'Asesor'; }
         function bjTel(c){ const d = String(c || ''); return d.length === 12 && d.startsWith('57') ? `+57 ${d.slice(2,5)} ${d.slice(5,8)} ${d.slice(8)}` : (d ? '+' + d : ''); }
-        function bjNombreChat(c){ return c.nombre || bjTel(c.phone); }
-        function bjIni(c){ const n = c.nombre; return n ? n.split(' ').map(x => x[0]).slice(0,2).join('').toUpperCase() : '#'; }
+        // Un cliente con nombre de usuario de WhatsApp (@nombre) puede escribir SIN que llegue su número: el chat se identifica
+        // por @usuario / nombre del perfil, y el número aparece cuando el cliente lo da (el bot se lo pide antes de un pedido).
+        function bjEsFono(k){ return /^\d{8,15}$/.test(String(k || '')); }
+        function bjTelDe(c){ return c.tel ? bjTel(c.tel) : (bjEsFono(c.phone) ? bjTel(c.phone) : ''); }
+        function bjNombreChat(c){ return c.nombre || c.perfilNombre || (c.usuario ? '@' + c.usuario : '') || bjTelDe(c) || 'Cliente sin número'; }
+        function bjIdTexto(c){ return [bjTelDe(c), c.usuario ? '@' + c.usuario : ''].filter(Boolean).join(' · ') || 'sin número todavía (usa nombre de usuario de WhatsApp)'; }
+        function bjIni(c){ const n = c.nombre || c.perfilNombre || c.usuario; return n ? n.replace(/^@/, '').split(' ').map(x => x[0]).slice(0,2).join('').toUpperCase() : '#'; }
         function bjColor(c){ return BJ_COLORES[parseInt(String(c.phone).slice(-2) || '0', 10) % 6]; }
         function bjHora(ts){ return new Date(ts).toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit', hour12:false}); }
         function bjDiaTxt(ts){
@@ -5735,7 +5740,7 @@
             if(bjF.tipo && c.tipo !== bjF.tipo) return false;
             if(bjF.etq && !(c.etiquetas || []).includes(bjF.etq)) return false;
             if(bjF.tam){ const [a, b] = bjF.tam.split('-').map(Number); if(!c.fichas || c.fichas < a || c.fichas > b) return false; }
-            if(q && !(`${c.nombre || ''} ${c.phone}`.toLowerCase().includes(q))) return false;
+            if(q && !(`${c.nombre || ''} ${c.perfilNombre || ''} ${c.usuario || ''} ${c.tel || ''} ${c.phone}`.toLowerCase().includes(q))) return false;
             return true;
           };
           const lista = bjChats.filter(c => okF(c) && (bjFiltro === 'todas' || (bjFiltro === 'noleidos' ? c.noleidos : bjFiltro === 'vencer' ? (bjRest(c) > 0 && bjRest(c) < 3 * 3600e3) : c.estado === bjFiltro)));
@@ -5804,7 +5809,7 @@
           else entrada = `<div class="bloqueo"><span>${c.estado === 'bot' ? '🤖 El bot atiende este chat.' : '🔔 Este chat necesita a una persona.'} Para escribirle tú, toma el chat: el bot se pausa solo.</span><button class="bt v" onclick="bjTomar()">Tomar este chat</button></div>`;
           h.innerHTML = `
             <div class="ch"><span class="volver" onclick="bjCerrar()">←</span><div class="av" style="background:${bjColor(c)}">${bjEsc(bjIni(c))}</div>
-              <div class="info" onclick="bjTogglePanel()"><b>${bjEsc(bjNombreChat(c))}</b><small>${bjTel(c.phone)} · toca para ver datos del pedido</small></div>
+              <div class="info" onclick="bjTogglePanel()"><b>${bjEsc(bjNombreChat(c))}</b><small>${bjEsc(bjIdTexto(c))} · toca para ver datos del pedido</small></div>
               <div class="acc">${tomado ? '<button class="bt g" onclick="bjDevolver()">Devolver al bot</button><button class="bt g" onclick="bjResolver()">✓ Resuelto</button>' : ''}<button class="bt g" onclick="bjAbrirEtiquetas()">🏷 Etiquetas</button><button class="bt g" onclick="bjTogglePanel()">Pedido / lead</button></div></div>
             <div class="banda" id="banda"></div>
             <div class="msgs" id="msgs">${bjHtmlMensajes(c)}</div>${entrada}`;
@@ -5887,7 +5892,7 @@
           const fila = (a, b) => `<div class="fila"><span>${bjEsc(a)}</span><span>${bjEsc(b)}</span></div>`;
           const cop = n => n == null ? '—' : '$' + Math.round(n).toLocaleString('es-CO');
           let h = `<div class="ph"><span onclick="bjTogglePanel()">✕</span>Datos del cliente</div>
-            <div class="sec"><div style="display:flex;gap:12px;align-items:center"><div class="av" style="background:${bjColor(c)};margin:0">${bjEsc(bjIni(c))}</div><div><b style="font-size:1rem">${bjEsc(bjNombreChat(c))}</b><div style="color:var(--wa-sub)">${bjTel(c.phone)}</div></div></div></div>`;
+            <div class="sec"><div style="display:flex;gap:12px;align-items:center"><div class="av" style="background:${bjColor(c)};margin:0">${bjEsc(bjIni(c))}</div><div><b style="font-size:1rem">${bjEsc(bjNombreChat(c))}</b><div style="color:var(--wa-sub)">${bjEsc(bjIdTexto(c))}</div></div></div></div>${bjTelDe(c) ? '' : '<div class="sec"><h4>Sin número todavía</h4><p style="margin:0">Este cliente escribe con un nombre de usuario de WhatsApp y su número no llega. El bot se lo pedirá antes de registrar un pedido; también puedes pedírselo tú.</p></div>'}`;
           if(d && d.pedido){
             const ped = d.pedido;
             h += `<div class="sec"><h4>Pedido</h4>${fila('Estado', ped.estado)}${ped.items.map(i => fila(`${i.fichas} fichas · ${i.medida || ''} cm`, 'x' + i.cantidad)).join('')}
@@ -6208,7 +6213,7 @@
               const cantidadTxt = p.cantidadAprox ? ` (~${p.cantidadAprox} unidades)` : '';
               return `<div class="data-card" style="border-left:4px solid #dd6b20;">
                 <div class="card-title">${botwaEsc(p.nombre) || 'Sin nombre'} <span style="font-size:0.7rem; font-weight:normal; color:#dd6b20; background:#fff3e0; padding:2px 6px; border-radius:10px;">Lead — asesor</span></div>
-                <p style="margin:4px 0; font-size:0.9em; color:#64748b;">${botwaEsc(p.cel)}</p>
+                <p style="margin:4px 0; font-size:0.9em; color:#64748b;">${botwaEsc(p.celContacto || (/^\d+$/.test(String(p.cel)) ? p.cel : 'sin número (usuario de WhatsApp)'))}</p>
                 <p style="margin:4px 0; font-size:0.9em;">${botwaEsc(p.motivo) || 'El bot no pudo resolverlo y pidió pasarlo a un asesor.'}${botwaEsc(cantidadTxt)} — falta contactar y cerrar manualmente.</p>
                 <div style="display:flex; gap:8px; margin-top:10px;">
                   <button class="btn-action" onclick="botwaMarcarContactado('${p.id}')">${ticon('phone')}Ya lo contacté</button>
@@ -6224,7 +6229,7 @@
             const etiquetaIman = p.iman ? `<span style="font-size:0.7rem; font-weight:bold; color:#fff; background:#2b6cb0; padding:2px 6px; border-radius:10px; margin-left:6px;">CON IMÁN x${p.cantidadIman||1}</span>` : '';
             return `<div class="data-card"${p.express ? ' style="border-left:4px solid #c53030;"' : ''}>
               <div class="card-title">${botwaEsc(p.nombre)}${etiquetaExpress}${etiquetaIman}</div>
-              <p style="margin:4px 0; font-size:0.9em; color:#64748b;">${botwaEsc(p.cel)}</p>
+              <p style="margin:4px 0; font-size:0.9em; color:#64748b;">${botwaEsc(p.celContacto || (/^\d+$/.test(String(p.cel)) ? p.cel : 'sin número (usuario de WhatsApp)'))}</p>
               <p style="margin:4px 0; font-size:0.9em;">${medioTxt}</p>
               ${p.frase ? `<p style="margin:4px 0; font-size:0.9em;">Frase: <b>«${botwaEsc(p.frase)}»</b> — tipografía ${botwaEsc(p.tipografia)}</p>` : ''}
               <p style="margin:4px 0; font-weight:bold;">${totalTxt}</p>
@@ -6264,9 +6269,11 @@
           const decision = await tacticalPreguntarDisenoOImpresion(p.nombre, tacticalResumenItemsRompecabezas(itemsBot));
           if(!decision) return;
 
-          let cli = db_clientes.find(c => c.wp === p.cel);
+          const celCRM = p.celContacto || (/^\d+$/.test(String(p.cel)) ? p.cel : '');
+          if(!celCRM && !confirm('Este pedido es de un cliente con nombre de usuario de WhatsApp y NO tiene número de celular de contacto. ¿Aprobarlo igual? (el cliente quedará en el CRM sin celular)')) return;
+          let cli = celCRM ? db_clientes.find(c => c.wp === celCRM) : null;
           if(!cli){
-            cli = { id: crypto.randomUUID(), empresa: p.nombre, nombre: p.nombre, wp: p.cel, correo:'', clase:'nuevo', ltv:0, tipo:'personalizado', identificacion:'' };
+            cli = { id: crypto.randomUUID(), empresa: p.nombre, nombre: p.nombre, wp: celCRM, correo:'', clase:'nuevo', ltv:0, tipo:'personalizado', identificacion:'' };
             db_clientes.push(cli);
           }
           cli.ltv += (p.total||0);
@@ -6308,9 +6315,10 @@
 
           // Solo se registra como lead en el CRM (clase 'nuevo') -- no hay ficha de Kanban todavía
           // porque no es una venta cerrada, falta que el asesor cotice y el cliente confirme.
-          let cli = db_clientes.find(c => c.wp === p.cel);
+          const celCRM = p.celContacto || (/^\d+$/.test(String(p.cel)) ? p.cel : '');
+          let cli = celCRM ? db_clientes.find(c => c.wp === celCRM) : null;
           if(!cli){
-            cli = { id: crypto.randomUUID(), empresa: nombreLead, nombre: nombreLead, wp: p.cel, correo:'', clase:'nuevo', ltv:0, tipo:'personalizado', identificacion:'' };
+            cli = { id: crypto.randomUUID(), empresa: nombreLead, nombre: nombreLead, wp: celCRM, correo:'', clase:'nuevo', ltv:0, tipo:'personalizado', identificacion:'' };
             db_clientes.push(cli);
             tacticalSyncClientes(db_clientes);
           }
