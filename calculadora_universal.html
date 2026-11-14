@@ -449,7 +449,9 @@ function costoMaterialPliegos(pa,pal,sustratoNombre,gramaje,piezasNecesarias,mer
   mejores.sort((x,y)=>x[0]-y[0]);
   const [costoTotal, formato, nPorPliego, nPliegos, precioPliego, layout, pliegoAncho, pliegoAlto] = mejores[0];
   const planoCorte = {piezaAncho:pa, piezaAlto:pal, pliegoAncho, pliegoAlto, columnas:layout.principal.columnas, filas:layout.principal.filas, rotado:layout.principal.rotado, piezasPorPliego:nPorPliego, secundaria:layout.secundaria};
-  return {formato, piezasPorPliego:nPorPliego, nPliegos, precioPliego, costoTotal, planoCorte};
+  const pliegosNecesarios = Math.ceil(piezasNecesarias/nPorPliego);
+  const pliegosSobrante = nPliegos - pliegosNecesarios;
+  return {formato, piezasPorPliego:nPorPliego, nPliegos, pliegosNecesarios, pliegosSobrante, precioPliego, costoTotal, planoCorte};
 }
 
 // Conde 2026-08-20: plano de impresión para la Orden de Producción -- muestra cómo caben las
@@ -878,7 +880,7 @@ function cotizarUniversal(p){
   let costoDirecto = 0;
   partes.forEach((pt, i) => {
     const m = pt.detalleMaterial;
-    costoDirecto += linea(`mat:${i}`, pt.nombre, `Papel ${pt.sustratoNombre} ${pt.gramaje}g`, m.nPliegos, `pliego ${m.formato}`, m.precioPliego);
+    costoDirecto += linea(`mat:${i}`, pt.nombre, `Papel ${pt.sustratoNombre} ${pt.gramaje}g — ${m.pliegosNecesarios} necesarios + ${m.pliegosSobrante} de sobrante`, m.nPliegos, `pliego ${m.formato}`, m.precioPliego);
     const d = pt.detalleImpresion;
     if(d){
       if(pt.usaDigital){

@@ -8568,7 +8568,9 @@
           mejores.sort((x,y)=>x[0]-y[0]);
           const [costoTotal, formato, nPorPliego, nPliegos, precioPliego, layout, pliegoAncho, pliegoAlto] = mejores[0];
           const planoCorte = {piezaAncho:pa, piezaAlto:pal, pliegoAncho, pliegoAlto, columnas:layout.principal.columnas, filas:layout.principal.filas, rotado:layout.principal.rotado, piezasPorPliego:nPorPliego, secundaria:layout.secundaria};
-          return {formato, piezasPorPliego:nPorPliego, nPliegos, precioPliego, costoTotal, planoCorte};
+          const pliegosNecesarios = Math.ceil(piezasNecesarias/nPorPliego);
+  const pliegosSobrante = nPliegos - pliegosNecesarios;
+  return {formato, piezasPorPliego:nPorPliego, nPliegos, pliegosNecesarios, pliegosSobrante, precioPliego, costoTotal, planoCorte};
         }
         // Conde 2026-08-20: plano de impresión para la Orden de Producción -- muestra cómo caben
         // las piezas DENTRO del pliego de IMPRESIÓN (octavo/cuarto/medio_pliego o el formato
@@ -9114,7 +9116,7 @@
             const d = detalleLineas[clave], id = 'L'+(nLin++);
             const papel = d.sustrato ? `${d.sustrato.nombre} ${d.sustrato.gramaje}g` : '';
             let parcial = 0;
-            if(d.detalleMaterial && d.costoMaterial>0) parcial += avz.linea(id+':mat', 'Insumos', `${clave} — papel ${papel} (pliego ${d.detalleMaterial.formato})`, d.detalleMaterial.nPliegos, 'pliego', d.detalleMaterial.precioPliego, d.costoMaterial);
+            if(d.detalleMaterial && d.costoMaterial>0) parcial += avz.linea(id+':mat', 'Insumos', `${clave} — papel ${papel} (pliego ${d.detalleMaterial.formato}) — ${d.detalleMaterial.pliegosNecesarios} necesarios + ${d.detalleMaterial.pliegosSobrante} de sobrante`, d.detalleMaterial.nPliegos, 'pliego', d.detalleMaterial.precioPliego, d.costoMaterial);
             const di = d.detalleImpresion;
             if(di && d.costoImpresion>0){
               parcial += (di.via==='digital' && di.nClics>0)

@@ -2,9 +2,9 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "erp-static",
-      "runtimeExecutable": "C:\\Users\\claro\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
-      "runtimeArgs": ["-m", "http.server", "8791", "--bind", "127.0.0.1"],
+      "name": "erp-node",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["C:\\Users\\claro\\AppData\\Local\\Temp\\claude\\aabd07695a9a3a92\\042f50f2-7198-41d7-a054-75d7a199f53b\\scratchpad\\build\\servidor.js", "C:\\Users\\claro\\Desktop\\IA COTIZADORA TACTICAL\\archivos datos ERP", "8791"],
       "port": 8791
     }
   ]

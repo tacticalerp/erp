@@ -546,7 +546,9 @@ function costoMaterialPliegos(pa,pal,sustratoNombre,gramaje,piezasNecesarias,mer
   mejores.sort((x,y)=>x[0]-y[0]);
   const [costoTotal, formato, nPorPliego, nPliegos, precioPliego, layout, pliegoAncho, pliegoAlto] = mejores[0];
   const planoCorte = {piezaAncho:pa, piezaAlto:pal, pliegoAncho, pliegoAlto, columnas:layout.principal.columnas, filas:layout.principal.filas, rotado:layout.principal.rotado, piezasPorPliego:nPorPliego, secundaria:layout.secundaria};
-  return {formato, piezasPorPliego:nPorPliego, nPliegos, precioPliego, costoTotal, planoCorte};
+  const pliegosNecesarios = Math.ceil(piezasNecesarias/nPorPliego);
+  const pliegosSobrante = nPliegos - pliegosNecesarios;
+  return {formato, piezasPorPliego:nPorPliego, nPliegos, pliegosNecesarios, pliegosSobrante, precioPliego, costoTotal, planoCorte};
 }
 
 // Conde 2026-08-20: plano de impresión para la Orden de Producción -- muestra cómo caben las
@@ -799,7 +801,7 @@ function cotizarBolsa(p){
     piezasConMerma = piezasBase + (usaDigital ? mermaDigitalHojas(cantTintas) : mermaOffset);
   }
 
-  const detalleMaterial = costoMaterialPliegos(anchoMontaje, altoMontaje, sustratoNombre, gramaje, piezasConMerma, 0);
+  const detalleMaterial = costoMaterialPliegos(anchoMontaje, altoMontaje, sustratoNombre, gramaje, piezasBase, piezasConMerma-piezasBase);
 
   const areaM2 = (anchoMontaje*altoMontaje)/10000;
   const costoPlastificado = p.plastificado ? Math.max(areaM2*p.cantidad*PLASTIFICADO_COP_M2, PLASTIFICADO_PISO_COP) : 0;
@@ -817,7 +819,7 @@ function cotizarBolsa(p){
   // Conde 2026-11-13: desglose renglón por renglón (cantidad, unitario, valor) como la tabla de Litoplan;
   // en la "versión profesional" cada renglón se puede ajustar solo para esta cotización (p.ajustes).
   const avz = tacticalAvzCrear(p.ajustes);
-  let costoDirecto = avz.linea('mat', 'Insumos', `Material ${tacticalAvzNombreSustrato(p)} (pliego ${detalleMaterial.formato})`, detalleMaterial.nPliegos, 'pliego', detalleMaterial.precioPliego, detalleMaterial.costoTotal);
+  let costoDirecto = avz.linea('mat', 'Insumos', `Material ${tacticalAvzNombreSustrato(p)} (pliego ${detalleMaterial.formato}) — ${detalleMaterial.pliegosNecesarios} necesarios + ${detalleMaterial.pliegosSobrante} de sobrante`, detalleMaterial.nPliegos, 'pliego', detalleMaterial.precioPliego, detalleMaterial.costoTotal);
   costoDirecto += tacticalAvzLineaImpresion(avz, detalleImpresion, p.tintasTiro, p.tintasRetiro);
   costoDirecto += tacticalAvzLineaCosto(avz, 'pla', 'Procesos', 'Plastificado', costoPlastificado, 1);
   costoDirecto += tacticalAvzLineaCosto(avz, 'bas', 'Insumos', 'Base en cartulina', costoBaseCartulina, 1);

@@ -531,7 +531,9 @@ function costoMaterialPliegos(pa,pal,sustratoNombre,gramaje,piezasNecesarias,mer
   mejores.sort((x,y)=>x[0]-y[0]);
   const [costoTotal, formato, nPorPliego, nPliegos, precioPliego, layout, pliegoAncho, pliegoAlto] = mejores[0];
   const planoCorte = {piezaAncho:pa, piezaAlto:pal, pliegoAncho, pliegoAlto, columnas:layout.principal.columnas, filas:layout.principal.filas, rotado:layout.principal.rotado, piezasPorPliego:nPorPliego, secundaria:layout.secundaria};
-  return {formato, piezasPorPliego:nPorPliego, nPliegos, precioPliego, costoTotal, planoCorte};
+  const pliegosNecesarios = Math.ceil(piezasNecesarias/nPorPliego);
+  const pliegosSobrante = nPliegos - pliegosNecesarios;
+  return {formato, piezasPorPliego:nPorPliego, nPliegos, pliegosNecesarios, pliegosSobrante, precioPliego, costoTotal, planoCorte};
 }
 
 // Conde 2026-08-20: plano de impresión para la Orden de Producción -- muestra cómo caben las
@@ -890,7 +892,7 @@ function cotizarVolante(p){
   const txtImpresion = dI.via==="digital"
     ? `Impresión digital (hoja ${String(dI.clase).replace('_',' ')}, ${p.tintasTiro}x${p.tintasRetiro}, descuento ${(dI.descuentoPct*100).toFixed(0)}%)`
     : `Impresión offset (${dI.fraccion}), ${p.tintasTiro}x${p.tintasRetiro} — ${dI.nPlanchas} plancha(s), ${dI.nMillares} millar(es)${dI.recargoRetiro?', retiro con las mismas planchas +30%':''}`;
-  const cMaterial = avz.linea('mat', 'Insumos', `Papel ${sustratoNombre} ${gramaje}g (pliego ${detalleMaterial.formato})`, detalleMaterial.nPliegos, 'pliego', detalleMaterial.precioPliego, detalleMaterial.costoTotal);
+  const cMaterial = avz.linea('mat', 'Insumos', `Papel ${sustratoNombre} ${gramaje}g (pliego ${detalleMaterial.formato}) — ${detalleMaterial.pliegosNecesarios} necesarios + ${detalleMaterial.pliegosSobrante} de sobrante`, detalleMaterial.nPliegos, 'pliego', detalleMaterial.precioPliego, detalleMaterial.costoTotal);
   const cImpresion = (dI.via==="digital" && dI.nClics>0)
     ? avz.linea('imp', 'Procesos', txtImpresion, dI.nClics, 'clic', dI.total/dI.nClics, dI.total)
     : avz.linea('imp', 'Procesos', txtImpresion, 1, 'trabajo', dI.total);
@@ -1008,7 +1010,7 @@ function cotizarIman(p){
   // Conde 2026-11-13: desglose renglón por renglón (cantidad, unitario, valor); en la "versión
   // profesional" cada renglón se puede ajustar solo para esta cotización (p.ajustes).
   const avz = tacticalAvzCrear(p.ajustes);
-  let costoDirecto = avz.linea('mat', 'Insumos', `Adhesivo ${sustratoNombre} ${gramaje}g (pliego ${detalleMaterial.formato})`, detalleMaterial.nPliegos, 'pliego', detalleMaterial.precioPliego, detalleMaterial.costoTotal);
+  let costoDirecto = avz.linea('mat', 'Insumos', `Adhesivo ${sustratoNombre} ${gramaje}g (pliego ${detalleMaterial.formato}) — ${detalleMaterial.pliegosNecesarios} necesarios + ${detalleMaterial.pliegosSobrante} de sobrante`, detalleMaterial.nPliegos, 'pliego', detalleMaterial.precioPliego, detalleMaterial.costoTotal);
   costoDirecto += tacticalAvzLineaImpresion(avz, detalleImpresion, p.tintasTiro, 0);
   costoDirecto += avz.linea('lam', 'Insumos', `Lámina de imán C5 ${IMAN_LAMINA_CM.ancho}x${IMAN_LAMINA_CM.alto} cm (${piezasPorLamina} pieza(s) por lámina)`, nLaminas, 'lámina', IMAN_LAMINA_PRECIO_COP);
   costoDirecto += p.corteTipo==='laser'

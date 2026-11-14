@@ -485,7 +485,9 @@ function costoMaterialPliegos(pa,pal,sustratoNombre,gramaje,piezasNecesarias,mer
   mejores.sort((x,y)=>x[0]-y[0]);
   const [costoTotal, formato, nPorPliego, nPliegos, precioPliego, layout, pliegoAncho, pliegoAlto] = mejores[0];
   const planoCorte = {piezaAncho:pa, piezaAlto:pal, pliegoAncho, pliegoAlto, columnas:layout.principal.columnas, filas:layout.principal.filas, rotado:layout.principal.rotado, piezasPorPliego:nPorPliego, secundaria:layout.secundaria};
-  return {formato, piezasPorPliego:nPorPliego, nPliegos, precioPliego, costoTotal, planoCorte};
+  const pliegosNecesarios = Math.ceil(piezasNecesarias/nPorPliego);
+  const pliegosSobrante = nPliegos - pliegosNecesarios;
+  return {formato, piezasPorPliego:nPorPliego, nPliegos, pliegosNecesarios, pliegosSobrante, precioPliego, costoTotal, planoCorte};
 }
 
 function claseFormatoDigital(ancho,alto){
@@ -749,7 +751,7 @@ function cotizarRompecabezas(p){
   // Igual que el plastificado, la mano de obra del colaminado se paga sobre TODAS las piezas
   // de backing que pasan por el proceso (incluida su propia merma), no solo la cantidad pedida.
   const costoColaminadoManoObra = Math.max(areaM2*piezasColaminado*COLAMINADO_COP_M2, COLAMINADO_PISO_COP);
-  const detalleBacking = costoMaterialPliegos(anchoMontaje, altoMontaje, backNombre, parseFloat(backGramajeStr), piezasColaminado, 0);
+  const detalleBacking = costoMaterialPliegos(anchoMontaje, altoMontaje, backNombre, parseFloat(backGramajeStr), p.cantidad, mermaColaminadoUnd);
   const costoBackingMaterial = detalleBacking.costoTotal;
   const backingEtiqueta = esLineaMacro ? "Maule C22" : "Cartón 1.5mm";
   const costoColaminado = costoColaminadoManoObra + costoBackingMaterial;
@@ -758,7 +760,7 @@ function cotizarRompecabezas(p){
   if(conMarco){
     const anchoBase = anchoTroquelReal + 2, altoBase = altoTroquelReal + 2;
     const piezasBase = Math.ceil(p.cantidad * (1+MARCO_BASE_MERMA_PCT));
-    detalleBaseMarco = costoMaterialPliegos(anchoBase, altoBase, MARCO_BASE_SUSTRATO, MARCO_BASE_GRAMAJE, piezasBase, 0);
+    detalleBaseMarco = costoMaterialPliegos(anchoBase, altoBase, MARCO_BASE_SUSTRATO, MARCO_BASE_GRAMAJE, p.cantidad, piezasBase-p.cantidad);
     costoBaseMarco = detalleBaseMarco.costoTotal;
   }
 
@@ -790,7 +792,7 @@ function cotizarRompecabezas(p){
   const txtImpresion = dI.via==="digital"
     ? `Impresión digital (hoja ${String(dI.clase).replace('_',' ')}, ${dI.piezasPorClic} rompecabezas por clic, descuento ${(dI.descuentoPct*100).toFixed(0)}%)`
     : `Impresión offset (${dI.fraccion}) — ${dI.nPlanchas} plancha(s), ${dI.nMillares} millar(es)`;
-  const cMaterial = avz.linea('mat', 'Insumos', `Papel impreso ${susNombre} ${susGram}g (pliego ${detalleMaterial.formato})`, detalleMaterial.nPliegos, 'pliego', detalleMaterial.precioPliego, detalleMaterial.costoTotal);
+  const cMaterial = avz.linea('mat', 'Insumos', `Papel impreso ${susNombre} ${susGram}g (pliego ${detalleMaterial.formato}) — ${detalleMaterial.pliegosNecesarios} necesarios + ${detalleMaterial.pliegosSobrante} de sobrante`, detalleMaterial.nPliegos, 'pliego', detalleMaterial.precioPliego, detalleMaterial.costoTotal);
   const cImpresion = (dI.via==="digital" && dI.nClics>0)
     ? avz.linea('imp', 'Procesos', txtImpresion, dI.nClics, 'clic', dI.total/dI.nClics, dI.total)
     : avz.linea('imp', 'Procesos', txtImpresion, 1, 'trabajo', dI.total);
