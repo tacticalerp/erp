@@ -1535,7 +1535,7 @@
                 <div class="hub-card active-card" onclick="location.href='calculadora_universal.html'">
                     <div>
                         <div class="card-header">
-                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>Calculadora Universal (catálogos, calendarios, tacos, sobres, tarjetas, etiquetas)</h3>
+                            <h3 class="card-title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>Calculadora Universal <span style="font-size:12px; font-weight:normal; color:#5a6472;">(catálogos, calendarios, tacos, sobres, tarjetas, etiquetas)</span></h3>
                         </div>
                     </div>
                     <div class="card-footer">Abrir calculadora ➔</div>
@@ -1641,9 +1641,14 @@
                                     <option value="libretas">Libretas</option>
                                 </select>
                             </div>
-                            <div class="form-group"><label>Cantidad (unidades):</label><input type="text" inputmode="numeric" id="cot-cantidad" value="100" oninput="tacticalFormatearMiles(this)"></div>
+                            <!-- Conde 2026-11-13: "lo que se pueda ubicar en el mismo lugar, dejarlo en el mismo lugar" -- orden
+                                 Tamaño luego Cantidad, igual que en las demás calculadoras (antes Cantidad iba primero, única
+                                 que lo hacía así). -->
                             <div class="form-group"><label>Ancho (cm):</label><input type="number" id="cot-anchoCm" value="24" step="0.1"></div>
                             <div class="form-group"><label>Alto (cm):</label><input type="number" id="cot-altoCm" value="17" step="0.1"></div>
+                            <div class="form-group"><label>Cantidad (unidades):</label><input type="text" inputmode="numeric" id="cot-cantidad" value="100" oninput="tacticalFormatearMiles(this)"></div>
+                            <div class="form-group"><label>Cantidad 2 (opcional):</label><input type="text" inputmode="numeric" id="cot-cantidad2" value="" placeholder="ej. 300" oninput="tacticalFormatearMiles(this)"></div>
+                            <div class="form-group"><label>Cantidad 3 (opcional):</label><input type="text" inputmode="numeric" id="cot-cantidad3" value="" placeholder="ej. 500" oninput="tacticalFormatearMiles(this)"></div>
                             <div class="form-group">
                                 <label>Tipo de tapa:</label>
                                 <select id="cot-tapaTipo" onchange="cotOnTapaTipoChange()">
@@ -1736,7 +1741,7 @@
                         <button class="btn-submit" onclick="cotCalcular()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="8" y1="11" x2="8" y2="11"></line><line x1="12" y1="11" x2="12" y2="11"></line><line x1="16" y1="11" x2="16" y2="11"></line><line x1="8" y1="15" x2="8" y2="15"></line><line x1="12" y1="15" x2="12" y2="15"></line><line x1="16" y1="15" x2="16" y2="19"></line><line x1="8" y1="19" x2="8" y2="19"></line><line x1="12" y1="19" x2="12" y2="19"></line></svg>Calcular Cotización</button>
                         <button class="btn-submit" style="background:#64748b; margin-left:8px;" onclick="tacticalNuevaCotizacion('cotizador')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>Nueva cotización (limpiar todo)</button>
                         <div id="cot-resultado-contenido" style="margin-top:15px;"></div>
-                        <div class="form-group" style="margin-top:10px;"><label>Descripción para el cliente (editable — útil para distinguir varios cuadernos parecidos dentro de un mismo pedido). Tip: escribe <strong>**así**</strong> para resaltar en negrilla en el PDF:</label><textarea id="cot-descCliente" class="tactical-campo-dictado" rows="1" style="width:100%; box-sizing:border-box; resize:vertical; overflow:hidden; font-family:inherit; font-size:inherit; padding:8px; line-height:1.4;" oninput="this.style.height='auto'; this.style.height=(this.scrollHeight+2)+'px';"></textarea></div>
+                        <div class="form-group" style="margin-top:10px;"><label>Descripción para el cliente: <span title="Editable. Útil para distinguir varios cuadernos parecidos dentro de un mismo pedido. Escribe **así** para resaltar en negrilla en el PDF." style="cursor:help; font-weight:normal; color:var(--texto-suave,#5a6472);">ⓘ</span></label><textarea id="cot-descCliente" class="tactical-campo-dictado" rows="1" style="width:100%; box-sizing:border-box; resize:vertical; overflow:hidden; font-family:inherit; font-size:inherit; padding:8px; line-height:1.4;" oninput="this.style.height='auto'; this.style.height=(this.scrollHeight+2)+'px';"></textarea></div>
                         <div class="form-group" style="margin-top:10px;"><label>Foto para el PDF/comparativa:</label><select id="cot-fotoElegida"></select></div>
                         <div id="card-recomendaciones-cot" style="display:none; margin-top:12px;">
                             <div style="font-weight:bold; color:var(--dark); margin-bottom:6px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Recomendaciones de Producción</div>
@@ -2694,6 +2699,7 @@
     <script src="tactical-supabase.js?v=20261109b"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
     <script src="precios_tactical.js?v=20261113b"></script>
+<script src="tactical-avanzado.js?v=20261113m"></script>
 <script src="tactical-ui.js?v=20261109d"></script>
     <script src="troqueles_tactical.js?v=20261107a"></script>
     <script src="precios_promocionales.js?v=20260919a"></script>
@@ -4634,7 +4640,7 @@
 
             if(estado === 'ganado') {
                 if(opcionElegida){
-                    opp = { ...opp, desc: `${opp.nombreCli} — ${opcionElegida.titulo}`, monto: Math.round(opcionElegida.resultado.precioFinalTotal), cantidad: opcionElegida.params.cantidad, cotParams: opcionElegida.params, cotResultado: opcionElegida.resultado };
+                    opp = { ...opp, desc: `${opp.nombreCli} — ${opcionElegida.titulo}`, monto: Math.round(opcionElegida.resultado.precioFinalTotal), cantidad: opcionElegida.params.cantidad, cotParams: opcionElegida.params, cotResultado: opcionElegida.resultado, ...(opcionElegida.fichaTecnica||{}) };
                     db_opps[idx] = opp;
                 }
                 let cli = db_clientes.find(c => c.id === opp.idCli);
@@ -4851,7 +4857,7 @@
           const ficha = {
             id: crypto.randomUUID(), ot: opp.ot || null,
             idCli: opp.idCli, nombreCli: opp.nombreCli, titulo: opp.desc,
-            columna: 'aprobada', lineas: opp.lineas || [{linea:opp.linea||'manual', desc:opp.desc, cantidad:opp.cantidad, maquina:opp.maquina, material:opp.material, nPliegos:opp.nPliegos, planoCorte:opp.planoCorte, planoCorteLineas:opp.planoCorteLineas, recomendaciones:opp.recomendaciones, fotoUrl:opp.fotoUrl, videoUrl:opp.videoUrl}],
+            columna: 'aprobada', lineas: opp.lineas || [{linea:opp.linea||'manual', desc:opp.desc, cantidad:opp.cantidad, maquina:opp.maquina, material:opp.material, nPliegos:opp.nPliegos, planoCorte:opp.planoCorte, planoCorteLineas:opp.planoCorteLineas, insumos:opp.insumos, recomendaciones:opp.recomendaciones, fotoUrl:opp.fotoUrl, videoUrl:opp.videoUrl}],
             checklist: generarChecklistParaFicha(opp), urgente:false, fechaEntrega: fechaEntrega || '',
             fechaCreacion: new Date().toISOString(), responsable:'', origen:'automatica',
             // Conde 2026-08-27: para el tablero "Comercial" (Productos aprobados por vendedor) --
@@ -5134,6 +5140,7 @@
                   </div>
                   ${planosHtml || '<div style="color:#64748b;">Sin plano de corte guardado para esta línea (cotización anterior a esta función, o proviene de una comparativa).</div>'}
                 </div>
+                ${typeof tacticalAvzInsumosOPHtml==='function' ? tacticalAvzInsumosOPHtml(linea.insumos) : ''}
                 ${recsHtmlLinea}
               </div>`;
           }).join('');
@@ -8265,6 +8272,15 @@
         function verPDFComparativoGuardado(opp){
           const cli = db_clientes.find(c => c.id === opp.idCli) || {empresa: opp.nombreCli, nombre:'', wp:'', correo:''};
           const fecha = fechaDeRegistro(opp) || new Date();
+          // Conde 2026-11-13: cotización de varias cantidades del mismo producto -> una sola descripción y tabla de cantidades y precios.
+          if(opp.multiCantidad && typeof tacticalCantPdfHtml === 'function'){
+            const cotGuardada = db_cotizaciones.find(c => c.idOpp === opp.id) || {};
+            document.getElementById('print-area').innerHTML = tacticalCantPdfHtml({ ot: opp.ot, cli, fecha, titulo: opp.tituloComun, descripcion: opp.descComun, opciones: opp.opcionesComparativa,
+              vendedor: opp.vendedor, plazo: cotGuardada.plazoEntrega, condiciones: cotGuardada.condicionesComerciales || [], fotoUrl: opp.fotoUrl, videoUrl: opp.videoUrl });
+            document.getElementById('print-area').style.display = 'block';
+            tacticalImprimirConTitulo(`${cli.empresa||'Cliente'} - ${opp.ot||''}`);
+            return;
+          }
           const fechaStr = fecha.toLocaleDateString('es-CO', {year:'numeric', month:'long', day:'numeric'});
           const validoHasta = fechaMasDias(fecha, 30);
           // Conde 2026-08-21: no repetir la misma foto/video en cada opción si son el mismo producto
@@ -9087,16 +9103,58 @@
           }
           costoArmado+=LIMPIEZA_COP_UNIDAD[p.lineaProducto]*p.cantidad;
           desglose["armado_encuadernacion"]=costoArmado;
-          const costoDirecto=Object.values(desglose).reduce((a,b)=>a+b,0);
-          const [disenoCop] = disenoYPreprensa(costoDirecto);
+          // Conde 2026-11-13: desglose renglón por renglón (cantidad, unitario, valor) como la tabla de
+          // Litoplan. En la "versión profesional" cada renglón se puede ajustar solo para esta cotización
+          // (p.ajustes). Las cifras salen del mismo "desglose" de siempre: sin ajustes, el costo directo
+          // es exactamente la misma suma.
+          const avz = tacticalAvzCrear(p.ajustes);
+          let costoDirecto = 0, nLin = 0;
+          for(const clave of Object.keys(detalleLineas)){
+            if(clave==="Guardas") continue;   // las guardas van en un solo renglón más abajo (incluye su plastificado)
+            const d = detalleLineas[clave], id = 'L'+(nLin++);
+            const papel = d.sustrato ? `${d.sustrato.nombre} ${d.sustrato.gramaje}g` : '';
+            let parcial = 0;
+            if(d.detalleMaterial && d.costoMaterial>0) parcial += avz.linea(id+':mat', 'Insumos', `${clave} — papel ${papel} (pliego ${d.detalleMaterial.formato})`, d.detalleMaterial.nPliegos, 'pliego', d.detalleMaterial.precioPliego, d.costoMaterial);
+            const di = d.detalleImpresion;
+            if(di && d.costoImpresion>0){
+              parcial += (di.via==='digital' && di.nClics>0)
+                ? avz.linea(id+':imp', 'Procesos', `${clave} — impresión digital ${d.tintasTiro}x${d.tintasRetiro}`, di.nClics, 'clic', d.costoImpresion/di.nClics, d.costoImpresion)
+                : avz.linea(id+':imp', 'Procesos', `${clave} — impresión ${di.via}, ${d.tintasTiro}x${d.tintasRetiro}`, 1, 'trabajo', d.costoImpresion);
+            }
+            parcial += tacticalAvzLineaCosto(avz, id+':aca', 'Procesos', `${clave} — acabados`, d.costoAcabados, 1);
+            // Si el total de la línea no es exactamente material + impresión + acabados, la diferencia queda visible en su propio renglón.
+            const baseLinea = (d.detalleMaterial && d.costoMaterial>0 ? d.costoMaterial : 0) + (di && d.costoImpresion>0 ? d.costoImpresion : 0) + (d.costoAcabados>0 ? d.costoAcabados : 0);
+            const resto = desglose["linea_"+clave] - baseLinea;
+            if(Math.abs(resto)>0.5) parcial += avz.linea(id+':otr', 'Procesos', `${clave} — otros`, 1, 'trabajo', resto);
+            costoDirecto += parcial;
+          }
+          costoDirecto += tacticalAvzLineaCosto(avz, 'lev', 'Procesos', 'Levante (armar taco e insertos)', desglose["levante"], p.cantidad);
+          costoDirecto += tacticalAvzLineaCosto(avz, 'taf', 'Procesos', 'Armado y forrado de tapa', desglose["tapa_armado_forrado"], p.cantidad);
+          if(desglose["tapa_carton"]>0){
+            const precioCarton = detalleTapaCarton ? detalleTapaCarton.precioPliego : 0;
+            costoDirecto += precioCarton>0
+              ? avz.linea('car', 'Insumos', `Cartón ${detalleTapaCarton.calibreMm} mm (tapas)`, Math.round(desglose["tapa_carton"]/precioCarton*100)/100, 'pliego', precioCarton, desglose["tapa_carton"])
+              : tacticalAvzLineaCosto(avz, 'car', 'Insumos', 'Cartón de tapas', desglose["tapa_carton"], 1);
+          }
+          costoDirecto += tacticalAvzLineaCosto(avz, 'sem', 'Insumos', 'Tapa semidura: segunda capa y colaminado', desglose["tapa_semidura_segunda_capa"], 1);
+          costoDirecto += tacticalAvzLineaCosto(avz, 'gua', 'Insumos', 'Guardas (papel, impresión y plastificado)', desglose["guardas"], p.cantidad);
+          costoDirecto += tacticalAvzLineaCosto(avz, 'arm', 'Procesos', 'Encuadernación, refile y limpieza', desglose["armado_encuadernacion"], p.cantidad);
+          for(const k of Object.keys(desglose)){
+            if(k.startsWith("linea_") || ["levante","tapa_armado_forrado","tapa_carton","tapa_semidura_segunda_capa","guardas","armado_encuadernacion"].includes(k)) continue;
+            costoDirecto += tacticalAvzLineaCosto(avz, 'x_'+k, 'Procesos', k, desglose[k], 1);
+          }
+          avz.total('Costo directo total', costoDirecto, 'tDirecto');
+          const disenoCop = avz.linea('dis', 'Generales', 'Diseño / Ajuste', 1, 'trabajo', disenoYPreprensa(costoDirecto)[0]);
           const fondoSeguridadPct = tramoFondoSeguridad(costoDirecto, p.lineaProducto);
-          const fondoSeguridadCop = costoDirecto*fondoSeguridadPct;
-          const empaqueCop = costoEmpaque(p.cantidad, catClave, p.lineaProducto);
-          const sherpaCop = costoSherpa(totalPaginasInsertos);
+          const fondoSeguridadCop = avz.linea('fondo', 'Generales', `Fondo de Seguridad (${(fondoSeguridadPct*100).toFixed(1)}% del costo directo, automático)`, 1, 'trabajo', costoDirecto*fondoSeguridadPct);
+          const empaqueCop = avz.linea('emp', 'Generales', 'Empaque', 1, 'trabajo', costoEmpaque(p.cantidad, catClave, p.lineaProducto));
+          const sherpaCop = avz.linea('she', 'Generales', 'Sherpa (muestra de color)', 1, 'trabajo', costoSherpa(totalPaginasInsertos));
           const subtotalPreTransporte = costoDirecto+disenoCop+fondoSeguridadCop+empaqueCop+sherpaCop;
-          let transporteCop = costoTransporte(subtotalPreTransporte, p.lineaProducto);
-          if(p.lineaProducto==="agenda_ejecutiva") transporteCop *= TRANSPORTE_AGENDA_EJECUTIVA_FACTOR;
+          let transporteBase = costoTransporte(subtotalPreTransporte, p.lineaProducto);
+          if(p.lineaProducto==="agenda_ejecutiva") transporteBase *= TRANSPORTE_AGENDA_EJECUTIVA_FACTOR;
+          const transporteCop = avz.linea('tra', 'Generales', 'Transporte', 1, 'envío', transporteBase);
           const subtotal = subtotalPreTransporte+transporteCop;
+          avz.total('Subtotal', subtotal, 'tSub');
           // Conde 2026-09-25: "Extra / Ajuste adicional" -- algo puntual que pide el cliente y no
           // está en el catálogo. Se cobra como si fuera un producto completo: Conde escribe
           // directamente el valor de venta, y entra al total ANTES del IVA para que el 19%
@@ -9115,7 +9173,7 @@
           const gananciaTotal = precioVenta - subtotal; // utilidad + comisión en pesos (sin IVA, que no es ganancia)
           const gananciaUnitaria = gananciaTotal/p.cantidad;
           return {
-            aplicaIva,
+            aplicaIva, lineas: avz.lineas, nAjustes: avz.nAjustes(),
             desgloseDirecto:desglose, detalleLineas, costoDirectoTotal:costoDirecto, costoDirectoUnitario:costoDirecto/p.cantidad,
             disenoCop, fondoSeguridadCop, fondoSeguridadPct, empaqueCop, sherpaCop, transporteCop, subtotal,
             utilidadPct:p.utilidadPct, ventasPct:p.ventasPct, precioVentaTotal:precioVenta, precioVentaUnitario,
@@ -9344,6 +9402,7 @@
             const anchoCm = parseFloat(document.getElementById("cot-anchoCm").value);
             const altoCm = parseFloat(document.getElementById("cot-altoCm").value);
             const cantidad = tacticalLeerNumeroFormateado("cot-cantidad");
+            tacticalAvzUsarCantidad(cantidad);   // los ajustes de la versión profesional son por cantidad
             const tapaTipo = document.getElementById("cot-tapaTipo").value;
             const cartonCalibreMm = parseFloat(document.getElementById("cot-cartonCalibre").value);
             const encuadernacionTipo = document.getElementById("cot-encuadernacionTipo").value;
@@ -9374,10 +9433,11 @@
               extraValorUnitario: parseFloat(document.getElementById("cot-extraValorUnitario").value)||0,
               logoUrl: cotLogoCliente.url, mockupColor: cotLogoCliente.color,
             };
+            p.ajustes = tacticalAvzCopiaAjustes(p.cantidad);
             const r = cotizarCuaderno(p);
             cotUltimoResultado = r; cotUltimoParams = p;
             cotUltimoOT = null;
-            { const dc = document.getElementById('cot-descCliente'); dc.value = cotDescripcionProducto(p); dc.style.height='auto'; dc.style.height=(dc.scrollHeight+2)+'px'; }
+            { const dc = document.getElementById('cot-descCliente'); dc.value = cotDescripcionTecnica(p); dc.style.height='auto'; dc.style.height=(dc.scrollHeight+2)+'px'; }
             const notaOt = document.getElementById('cot-ot-nota');
             if(notaOt) notaOt.style.display = 'none';
             cotRenderResultado(r, p);
@@ -9420,21 +9480,54 @@
           tapa_semidura_segunda_capa: "Segunda capa + colaminado (semidura)", guardas: "Guardas",
           levante: "Levante manual (hojas único por página)", armado_encuadernacion: "Armado / encuadernación",
         };
+        /* ============ HASTA 3 CANTIDADES + DESCRIPCIÓN TÉCNICA (Conde 2026-11-13) ============
+           La lógica compartida (cálculo por cantidad, ventana comparadora, PDF, guardado) vive en
+           tactical-avanzado.js; aquí se le dicen los nombres propios del cotizador de Cuadernos. */
+        // Descripción técnica automática para el cliente (sin cantidad ni precios); editable antes de guardar.
+        function cotDescripcionTecnica(p){
+          const n = v => String(v).replace('.', ',');
+          const nombresLinea = {escolar:"Cuaderno escolar", cuaderno_anillado:"Cuaderno anillado", agenda_ejecutiva:"Agenda ejecutiva", libretas:"Libreta"};
+          const nombresEnc = {anillo_doble_o:"anillo doble O", hotmelt:"hotmelt", colbon:"colbón"};
+          const etiquetaAcabado = t => { const a = COT_ACABADOS_DISPONIBLES.find(x => x.tipo===t); return (a ? a.label : String(t).replace(/_/g,' ')).toLowerCase(); };
+          const enc = p.encuadernacionTipo ? `, encuadernación ${nombresEnc[p.encuadernacionTipo] || String(p.encuadernacionTipo).replace(/_/g,' ')}` : '';
+          let txt = `${nombresLinea[p.lineaProducto] || 'Cuaderno'} de ${n(p.anchoCm)} x ${n(p.altoCm)} cm, tapa ${p.tapaTipo}${p.tapaTipo==='dura' && p.cartonCalibreMm ? ` en cartón de ${n(p.cartonCalibreMm)} mm` : ''}${enc}.`;
+          (p.lineasImpresion||[]).forEach(l => {
+            const papel = l.sustrato ? ` en ${l.sustrato.nombre} ${l.sustrato.gramaje} g` : '';
+            const tintas = (l.tintasTiro||l.tintasRetiro) ? `, ${l.tintasTiro||0}x${l.tintasRetiro||0} tintas` : ', sin impresión';
+            const acab = (l.acabados||[]).length ? `, ${l.acabados.map(a => etiquetaAcabado(a.tipo)).join(', ')}` : '';
+            txt += ` ${l.nombre || 'Línea'}: ${l.hojasPorCuaderno} hoja${l.hojasPorCuaderno>1?'s':''}${papel}${tintas}${acab}.`;
+          });
+          return txt;
+        }
+        window.tacticalCantCfg = {
+          linea: 'cuadernos', claseTabla: 'doc-table',
+          cotizar: p => cotizarCuaderno(p),
+          tituloComun: p => cotDescripcionProducto(p).replace(/^\S+\s/, ''),
+          estado: () => ({p: cotUltimoParams, r: cotUltimoResultado}),
+          recalcular: () => cotCalcular(),
+          ids: {cant2:'cot-cantidad2', cant3:'cot-cantidad3', empresa:'cot-cli-empresa', encargado:'cot-cli-encargado', telefono:'cot-cli-telefono', correo:'cot-cli-correo',
+                tipo:'cot-cli-tipo', identificacion:'cot-cli-identificacion', vendedor:'cot-vendedor', desc:'cot-descCliente'},
+          fn: {
+            siguienteOT: () => cotObtenerOT(),
+            otBase: x => cotOtBase(x),
+            sufijo: b => cotSiguienteSufijoOT(b),
+            editandoId: () => cotEditandoId,
+            editandoOt: () => (typeof cotEditandoOtOriginal!=='undefined' ? cotEditandoOtOriginal : ''),
+            cancelarEdicion: () => cotCancelarEdicion(),
+            condiciones: () => document.getElementById('cot-condicionesComerciales').value.split('\n').map(l=>l.trim()).filter(Boolean),
+            plazo: () => document.getElementById('cot-plazoEntrega').value.trim(),
+            foto: () => cotFotoElegidaUrl(),
+            video: () => cotVideoElegidoUrl(),
+            mayusculas: true,
+            // Cuadernos guarda su desglose en la tabla de cotizaciones del Hub (no en la de las demás calculadoras).
+            guardarDesglose: reg => { const c = {...reg, fecha: new Date().toISOString(), fotoUrl: cotFotoElegidaUrl(), videoUrl: cotVideoElegidoUrl()}; db_cotizaciones.push(c); tacticalSyncCotizacion(c); return true; },
+            despues: () => cotRefrescarDatalistClientes(),
+          },
+        };
+
         function cotRenderResultado(r, p){
           let filas = `<table class="doc-table">`;
-          for(const clave of Object.keys(r.desgloseDirecto)){
-            const valor = r.desgloseDirecto[clave];
-            let etiqueta = COT_ETIQUETAS_DESGLOSE[clave] || (clave.startsWith("linea_") ? "Línea: "+clave.slice(6) : clave);
-            if(valor===0 && ["tapa_armado_forrado","tapa_carton","tapa_semidura_segunda_capa","levante"].includes(clave)) continue;
-            filas += `<tr><td>${etiqueta}</td><td style="text-align:right;">${cotFormatoCop(valor)}</td></tr>`;
-          }
-          filas += `<tr style="font-weight:bold;"><td>Costo directo total</td><td style="text-align:right;">${cotFormatoCop(r.costoDirectoTotal)}</td></tr>`;
-          filas += `<tr><td>Diseño / Ajuste</td><td style="text-align:right;">${cotFormatoCop(r.disenoCop)}</td></tr>`;
-          filas += `<tr><td>Fondo de Seguridad (${(r.fondoSeguridadPct*100).toFixed(1)}%)</td><td style="text-align:right;">${cotFormatoCop(r.fondoSeguridadCop)}</td></tr>`;
-          filas += `<tr><td>Empaque</td><td style="text-align:right;">${cotFormatoCop(r.empaqueCop)}</td></tr>`;
-          filas += `<tr><td>Sherpa (muestra de color)</td><td style="text-align:right;">${cotFormatoCop(r.sherpaCop)}</td></tr>`;
-          filas += `<tr><td>Transporte</td><td style="text-align:right;">${cotFormatoCop(r.transporteCop)}</td></tr>`;
-          filas += `<tr style="font-weight:bold; border-top:2px solid #cbd5e0;"><td>Subtotal</td><td style="text-align:right;">${cotFormatoCop(r.subtotal)}</td></tr>`;
+          filas += `</table>` + tacticalAvzHtml(r.lineas) + `<table class="doc-table">`;
           if(r.extraCantidad > 0){
             filas += `<tr><td>${cotTextoConNegrilla(r.extraDescripcion||'Extra adicional')} (${r.extraCantidad} x ${cotFormatoCop(r.extraValorUnitario)})</td><td style="text-align:right;">${cotFormatoCop(r.extraSubtotal)}</td></tr>`;
           }
@@ -9451,6 +9544,7 @@
           filas += `<tr style="color:#5f6e84; font-size:0.85rem;"><td style="padding-left:12px;">↳ Ganancia por unidad</td><td style="text-align:right;">${cotFormatoCop(r.gananciaUnitaria)}</td></tr>`;
           filas += `</table>`;
           document.getElementById("cot-resultado-contenido").innerHTML = filas;
+          tacticalCantRender(document.getElementById("cot-resultado-contenido"));
         }
 
         /* ---- GUARDAR COTIZACIÓN: CRM + PDF CLIENTE ---- */
@@ -9707,6 +9801,7 @@
 
           showView('cotizador');
           initCotizador();
+          tacticalCantCargar(p);   // cantidades 2 y 3 y ajustes de precio de cada cantidad
 
           document.getElementById('cot-cli-empresa').value = cot.cliente.empresa || '';
           document.getElementById('cot-cli-encargado').value = cot.cliente.encargado || '';
@@ -10178,10 +10273,10 @@
             const original = db_opps.find(o => o.id === cotEditandoId);
             const otBase = cotOtBase((original && original.ot) || cotEditandoOtOriginal || '');
             ot = otBase ? (otBase + '-' + cotSiguienteSufijoOT(otBase)) : await cotObtenerOT();
-            opp = { id: crypto.randomUUID(), idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc, vendedor, monto: Math.round(r.precioFinalTotal), etapa: 'cot', linea: 'cuadernos', cantidad: p.cantidad, planoCorteLineas, fecha: new Date().toISOString(), ot };
+            opp = { id: crypto.randomUUID(), idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc, vendedor, monto: Math.round(r.precioFinalTotal), etapa: 'cot', linea: 'cuadernos', cantidad: p.cantidad, planoCorteLineas, insumos: tacticalAvzInsumos(r.lineas), fecha: new Date().toISOString(), ot };
             db_opps.push(opp);
           } else {
-            opp = { id: crypto.randomUUID(), idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc, vendedor, monto: Math.round(r.precioFinalTotal), etapa: 'cot', linea: 'cuadernos', cantidad: p.cantidad, planoCorteLineas, fecha: new Date().toISOString() };
+            opp = { id: crypto.randomUUID(), idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc, vendedor, monto: Math.round(r.precioFinalTotal), etapa: 'cot', linea: 'cuadernos', cantidad: p.cantidad, planoCorteLineas, insumos: tacticalAvzInsumos(r.lineas), fecha: new Date().toISOString() };
             db_opps.push(opp);
             ot = await cotObtenerOT();
             opp.ot = ot;
@@ -10693,6 +10788,7 @@
               </div>`;
           }
 
+          bloques += tacticalAvzInsumosOPBloqueHtml(r.lineas);
           const recsAplicablesOP = RECOMENDACIONES_PRODUCCION_COT.filter(reg=>reg.aplica(r,p)).map(reg=>reg.texto);
           const recsHtmlOP = recsAplicablesOP.length ? `
             <div class="doc-section-title" style="font-size:${TACTICAL_OP_FONT_SIZE}; padding:3px 9px; margin:6px 0 4px;">${ticon('alert')}Recomendaciones de Producción</div>
@@ -11396,7 +11492,7 @@
           if(o){
             const otSeguro = (o.ot || '').replace(/'/g, '');
             acc.push(comercialBtnIcono('printer', '#4a5568', 'Ver PDF', `verPDFCotizacionGuardada('${o.id}')`));
-            if((o.linea === 'cuadernos' || o.linea === 'manual' || LINEA_A_CALCULADORA_ARCHIVO[o.linea]) && !(o.opcionesComparativa && o.opcionesComparativa.length > 1))
+            if((o.linea === 'cuadernos' || o.linea === 'manual' || LINEA_A_CALCULADORA_ARCHIVO[o.linea]) && !(o.opcionesComparativa && o.opcionesComparativa.length > 1 && !o.multiCantidad))
               acc.push(comercialBtnIcono('copy', '#059669', 'Duplicar cotización (número nuevo, la original no cambia)', `tacticalAbrirDuplicado('${o.id}','${o.linea}','${otSeguro}')`));
             if(o.etapa && (o.linea === 'cuadernos' || LINEA_A_CALCULADORA_ARCHIVO[o.linea]))
               acc.push(comercialBtnIcono('edit', '#d97706', 'Nueva versión (editar sin borrar esta)', `tacticalAbrirEdicionCotizacion('${o.id}','${o.linea}','${otSeguro}')`));

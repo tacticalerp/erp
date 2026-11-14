@@ -211,6 +211,14 @@
           <label>Cantidad:</label>
           <input type="text" inputmode="numeric" id="in-cantidad" value="1000" oninput="tacticalFormatearMiles(this)">
         </div>
+        <div class="campo chico">
+          <label>Cantidad 2 (opcional):</label>
+          <input type="text" inputmode="numeric" id="in-cantidad2" value="" placeholder="ej. 2.000" oninput="tacticalFormatearMiles(this)">
+        </div>
+        <div class="campo chico">
+          <label>Cantidad 3 (opcional):</label>
+          <input type="text" inputmode="numeric" id="in-cantidad3" value="" placeholder="ej. 3.000" oninput="tacticalFormatearMiles(this)">
+        </div>
       </div>
       <div class="hint" id="hint-tamano"></div>
     </div>
@@ -383,7 +391,7 @@
     <div class="card">
       <h2>Resultado</h2>
       <div id="resultado-contenido"><div class="placeholder">Completa el formulario y presiona Calcular.</div></div>
-      <div class="campo" style="margin-top:10px;"><label>Descripción para el cliente (editable — escribe **así** para resaltar en negrilla en el PDF):</label><textarea id="in-descCliente" class="tactical-campo-dictado" rows="1" style="width:100%; box-sizing:border-box; resize:vertical; overflow:hidden; font-family:inherit; font-size:inherit; padding:8px; line-height:1.4;" oninput="this.style.height='auto'; this.style.height=(this.scrollHeight+2)+'px';"></textarea></div>
+      <div class="campo" style="margin-top:10px;"><label>Descripción para el cliente: <span title="Editable. Escribe **así** para resaltar en negrilla en el PDF." style="cursor:help; font-weight:normal; color:var(--texto-suave,#5a6472);">ⓘ</span></label><textarea id="in-descCliente" class="tactical-campo-dictado" rows="1" style="width:100%; box-sizing:border-box; resize:vertical; overflow:hidden; font-family:inherit; font-size:inherit; padding:8px; line-height:1.4;" oninput="this.style.height='auto'; this.style.height=(this.scrollHeight+2)+'px';"></textarea></div>
       <div class="campo" style="margin-top:10px;">
         <label>Variante de foto (opcional -- solo si creaste variantes en la Fototeca para esta línea):</label>
         <select id="in-varianteFoto" style="width:100%; box-sizing:border-box;"><option value="">(Automática de la línea)</option></select>
@@ -414,6 +422,7 @@
 <script src="tactical-supabase.js?v=20261109b"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
 <script src="precios_tactical.js?v=20261113b"></script>
+<script src="tactical-avanzado.js?v=20261113m"></script>
 <script src="tactical-ui.js?v=20261109d"></script>
 <script>
 /* ============ CONSTANTES REUTILIZADAS DEL MOTOR DE CUADERNOS (ya validadas) ============ */
@@ -873,15 +882,37 @@ function cotizarVolante(p){
 
   const extraDesc = (p.extraDesc||'').trim();
   const extraCosto = p.extraCosto||0;
-  const costoDirecto = detalleMaterial.costoTotal + detalleImpresion.total + costoRefile + costoEmpaque + costoPlegadoTotal + costoPlastificado + acabadosCustomCosto.costoTotal + extraCosto;
+  // Conde 2026-11-13: desglose renglón por renglón (cantidad, unitario, valor) como la tabla de
+  // Litoplan; en la "versión profesional" cada renglón se puede ajustar solo para esta cotización.
+  // avz.linea() devuelve el valor ya ajustado, así que todo lo que sigue se recalcula sobre él.
+  const avz = tacticalAvzCrear(p.ajustes);
+  const dI = detalleImpresion;
+  const txtImpresion = dI.via==="digital"
+    ? `Impresión digital (hoja ${String(dI.clase).replace('_',' ')}, ${p.tintasTiro}x${p.tintasRetiro}, descuento ${(dI.descuentoPct*100).toFixed(0)}%)`
+    : `Impresión offset (${dI.fraccion}), ${p.tintasTiro}x${p.tintasRetiro} — ${dI.nPlanchas} plancha(s), ${dI.nMillares} millar(es)${dI.recargoRetiro?', retiro con las mismas planchas +30%':''}`;
+  const cMaterial = avz.linea('mat', 'Insumos', `Papel ${sustratoNombre} ${gramaje}g (pliego ${detalleMaterial.formato})`, detalleMaterial.nPliegos, 'pliego', detalleMaterial.precioPliego, detalleMaterial.costoTotal);
+  const cImpresion = (dI.via==="digital" && dI.nClics>0)
+    ? avz.linea('imp', 'Procesos', txtImpresion, dI.nClics, 'clic', dI.total/dI.nClics, dI.total)
+    : avz.linea('imp', 'Procesos', txtImpresion, 1, 'trabajo', dI.total);
+  const cRefile = costoRefile>0 ? avz.linea('ref', 'Procesos', `Refile guillotina${p.cantidad>VOLANTE_REFILE_DESCUENTO_CANTIDAD_UMBRAL?' (con 40% descuento por volumen)':''}`, 1, 'trabajo', costoRefile) : 0;
+  const cEmpaque = costoEmpaque>0 ? avz.linea('emq', 'Procesos', 'Empaque comercial', 1, 'trabajo', costoEmpaque) : 0;
+  const cPlegado = costoPlegadoTotal>0 ? avz.linea('ple', 'Procesos', `Plegado (${p.secciones===3?'Tríptico':'Díptico'})`, Math.ceil(p.cantidad/1000), 'millar', VOLANTE_PLEGADO_COP_MILLAR) : 0;
+  const cPlastificado = costoPlastificado>0 ? avz.linea('pla', 'Procesos', `Plastificado (${p.carasPlastificado} cara${p.carasPlastificado>1?'s':''})`, 1, 'trabajo', costoPlastificado) : 0;
+  let cAcabados = 0;
+  acabadosCustomCosto.lineas.forEach((a, i) => { cAcabados += avz.linea('cus'+i, 'Procesos', a.nombre, 1, 'trabajo', a.costo); });
+  const cExtra = extraCosto>0 ? avz.linea('ext', 'Procesos', extraDesc||'Proceso adicional', 1, 'trabajo', extraCosto) : 0;
+  const costoDirecto = cMaterial + cImpresion + cRefile + cEmpaque + cPlegado + cPlastificado + cAcabados + cExtra;
+  avz.total('Costo directo total', costoDirecto, 'tDirecto');
 
-  const disenoCop = disenoYPreprensa(costoDirecto);
+  const disenoCop = avz.linea('dis', 'Generales', 'Diseño / Preprensa', 1, 'trabajo', disenoYPreprensa(costoDirecto));
   const fondoSeguridadPct = tramoFondoSeguridad(costoDirecto);
-  const fondoSeguridadCop = costoDirecto*fondoSeguridadPct;
-  const sherpaCop = SHERPA_BASE_COP;
-  const transporte = costoTransporteComercial(tamano.clase, p.cantidad);
+  const fondoSeguridadCop = avz.linea('fondo', 'Generales', `Fondo de Seguridad (${(fondoSeguridadPct*100).toFixed(1)}% del costo directo, automático)`, 1, 'trabajo', costoDirecto*fondoSeguridadPct);
+  const sherpaCop = avz.linea('she', 'Generales', 'Sherpa (muestra de color)', 1, 'trabajo', SHERPA_BASE_COP);
+  const transporteBase = costoTransporteComercial(tamano.clase, p.cantidad);
+  const transporte = {via: transporteBase.via, total: avz.linea('tra', 'Generales', 'Transporte', 1, 'envío', transporteBase.total)};
 
   const subtotal = costoDirecto + disenoCop + fondoSeguridadCop + sherpaCop + transporte.total;
+  avz.total('Subtotal', subtotal, 'tSub');
 
   // Conde 2026-09-25: "Extra / Ajuste adicional al CLIENTE" -- distinto del "Proceso adicional"
   // de arriba (ese es costo interno, se marca con utilidad/comisión). Este es un cargo puntual que
@@ -903,7 +934,7 @@ function cotizarVolante(p){
   const gananciaUnitaria = gananciaTotal/p.cantidad;
 
   return {
-    aplicaIva,
+    aplicaIva, lineas: avz.lineas, nAjustes: avz.nAjustes(),
     tamano, usaDigital, detalleImpresion, detalleMaterial,
     esPlegable:p.esPlegable, secciones:p.secciones, gramaje,
     tintasTiro:p.tintasTiro, tintasRetiro:p.tintasRetiro,
@@ -974,15 +1005,26 @@ function cotizarIman(p){
 
   const extraDesc = (p.extraDesc||'').trim();
   const extraCosto = p.extraCosto||0;
-  const costoDirecto = detalleMaterial.costoTotal + detalleImpresion.total + costoLaminaIman + costoCorte + extraCosto;
+  // Conde 2026-11-13: desglose renglón por renglón (cantidad, unitario, valor); en la "versión
+  // profesional" cada renglón se puede ajustar solo para esta cotización (p.ajustes).
+  const avz = tacticalAvzCrear(p.ajustes);
+  let costoDirecto = avz.linea('mat', 'Insumos', `Adhesivo ${sustratoNombre} ${gramaje}g (pliego ${detalleMaterial.formato})`, detalleMaterial.nPliegos, 'pliego', detalleMaterial.precioPliego, detalleMaterial.costoTotal);
+  costoDirecto += tacticalAvzLineaImpresion(avz, detalleImpresion, p.tintasTiro, 0);
+  costoDirecto += avz.linea('lam', 'Insumos', `Lámina de imán C5 ${IMAN_LAMINA_CM.ancho}x${IMAN_LAMINA_CM.alto} cm (${piezasPorLamina} pieza(s) por lámina)`, nLaminas, 'lámina', IMAN_LAMINA_PRECIO_COP);
+  costoDirecto += p.corteTipo==='laser'
+    ? avz.linea('cor', 'Procesos', 'Corte láser', p.cantidad, 'pieza', IMAN_CORTE_LASER_COP_PIEZA)
+    : tacticalAvzLineaCosto(avz, 'cor', 'Procesos', 'Troquel (se fabrica desde cero)', costoCorte, 1, 'troquel');
+  costoDirecto += tacticalAvzLineaCosto(avz, 'ext', 'Procesos', extraDesc||'Proceso adicional', extraCosto, 1);
+  avz.total('Costo directo total', costoDirecto, 'tDirecto');
 
-  const disenoCop = disenoYPreprensa(costoDirecto);
+  const disenoCop = avz.linea('dis', 'Generales', 'Diseño / Preprensa', 1, 'trabajo', disenoYPreprensa(costoDirecto));
   const fondoSeguridadPct = tramoFondoSeguridad(costoDirecto);
-  const fondoSeguridadCop = costoDirecto*fondoSeguridadPct;
-  const sherpaCop = SHERPA_BASE_COP;
-  const transporte = {via:"moto", total:VOLANTE_TRANSPORTE_MOTO_COP};
+  const fondoSeguridadCop = avz.linea('fondo', 'Generales', `Fondo de Seguridad (${(fondoSeguridadPct*100).toFixed(1)}% del costo directo, automático)`, 1, 'trabajo', costoDirecto*fondoSeguridadPct);
+  const sherpaCop = avz.linea('she', 'Generales', 'Sherpa (muestra de color)', 1, 'trabajo', SHERPA_BASE_COP);
+  const transporte = {via:"moto", total: avz.linea('tra', 'Generales', 'Transporte', 1, 'envío', VOLANTE_TRANSPORTE_MOTO_COP)};
 
   const subtotal = costoDirecto + disenoCop + fondoSeguridadCop + sherpaCop + transporte.total;
+  avz.total('Subtotal', subtotal, 'tSub');
 
   // Conde 2026-09-25: "Extra / Ajuste adicional al CLIENTE" -- ver nota en cotizarVolante.
   const extraCargoCantidad = p.extraCargoCantidad||0;
@@ -1002,7 +1044,7 @@ function cotizarIman(p){
 
   return {
     aplicaIva,
-    esIman:true, usaDigital, detalleImpresion, detalleMaterial, gramaje, tintasTiro:p.tintasTiro,
+    esIman:true, lineas: avz.lineas, nAjustes: avz.nAjustes(), usaDigital, detalleImpresion, detalleMaterial, gramaje, tintasTiro:p.tintasTiro,
     piezasPorLamina, nLaminas, costoLaminaIman, detalleCorte, costoCorte,
     extraDesc, extraCosto, costoDirecto, disenoCop, fondoSeguridadPct, fondoSeguridadCop, sherpaCop, transporte,
     subtotal, precioVentaTotal, precioVentaUnitario, ivaTotal, precioFinalTotal,
@@ -1156,7 +1198,10 @@ function renderVolMultiItems(){
     if(box) box.innerHTML = tacticalRenderAcabadosCustomHtml('volantes', `multiitem-acab-${item.id}`);
   });
 }
-function cotizarVolanteMultiItem(items, cantidad, utilidadPct, comisionPct, extraDesc, extraCosto, tipoCliente, extraCargoDescripcion, extraCargoCantidad, extraCargoValorUnitario){
+function cotizarVolanteMultiItem(items, cantidad, utilidadPct, comisionPct, extraDesc, extraCosto, tipoCliente, extraCargoDescripcion, extraCargoCantidad, extraCargoValorUnitario, ajustes){
+  // Conde 2026-11-13: desglose renglón por renglón, agrupado por ítem del kit; en la "versión profesional"
+  // cada renglón se puede ajustar solo para esta cotización (ajustes).
+  const avz = tacticalAvzCrear(ajustes);
   let costoDirectoTotal = 0;
   const detallesItems = items.map(item => {
     const r = cotizarVolante({
@@ -1169,24 +1214,35 @@ function cotizarVolanteMultiItem(items, cantidad, utilidadPct, comisionPct, extr
     const areaM2 = (item.ancho*item.alto)/10000;
     const acabadosCosto = tacticalCostoAcabadosCustom(acabadosSel, areaM2, cantidad);
     const costoTroquel = item.llevaTroquel ? (item.costoTroquelManual||0) : 0;
-    const costoItemDirecto = r.costoDirecto + acabadosCosto.costoTotal + costoTroquel;
+    const nombreItem = item.nombre||'Ítem sin nombre';
+    // Los renglones directos del ítem (papel, impresión, refile, etc.) salen del motor de un volante normal.
+    let costoItemDirecto = 0;
+    for(const l of r.lineas){
+      if(l.tipo==='total') break;
+      if(l.tipo==='linea') costoItemDirecto += avz.linea(`${item.id}:${l.id}`, nombreItem, l.concepto, l.cantidad, l.unidad, l.unitario, l.valor);
+    }
+    acabadosCosto.lineas.forEach((a, k) => { costoItemDirecto += tacticalAvzLineaCosto(avz, `${item.id}:acab${k}`, nombreItem, a.nombre, a.costo, 1); });
+    costoItemDirecto += tacticalAvzLineaCosto(avz, `${item.id}:troq`, nombreItem, 'Troquel nuevo', costoTroquel, 1, 'troquel');
     costoDirectoTotal += costoItemDirecto;
     return { nombre: item.nombre||'Ítem sin nombre', item, resultado: r, acabadosCosto, costoTroquel, costoItemDirecto };
   });
   // Conde 2026-08-28: el "comodín" de proceso adicional aplica UNA sola vez al kit completo, no
   // por ítem (cada ítem ya tiene sus propios acabados/troquel arriba si hace falta algo puntual).
   extraDesc = (extraDesc||'').trim(); extraCosto = extraCosto||0;
-  costoDirectoTotal += extraCosto;
+  costoDirectoTotal += tacticalAvzLineaCosto(avz, 'ext', 'Procesos', extraDesc||'Proceso adicional', extraCosto, 1);
+  avz.total('Costo directo total', costoDirectoTotal, 'tDirecto');
 
-  const disenoCop = disenoYPreprensa(costoDirectoTotal);
+  const disenoCop = avz.linea('dis', 'Generales', 'Diseño / Preprensa', 1, 'trabajo', disenoYPreprensa(costoDirectoTotal));
   const fondoSeguridadPct = tramoFondoSeguridad(costoDirectoTotal);
-  const fondoSeguridadCop = costoDirectoTotal*fondoSeguridadPct;
-  const sherpaCop = SHERPA_BASE_COP;
+  const fondoSeguridadCop = avz.linea('fondo', 'Generales', `Fondo de Seguridad (${(fondoSeguridadPct*100).toFixed(1)}% del costo directo, automático)`, 1, 'trabajo', costoDirectoTotal*fondoSeguridadPct);
+  const sherpaCop = avz.linea('she', 'Generales', 'Sherpa (muestra de color)', 1, 'trabajo', SHERPA_BASE_COP);
   const itemMayor = items.reduce((max,i)=> (i.ancho*i.alto > max.ancho*max.alto ? i : max), items[0]);
   const tamanoTransporte = claseTamanoComercial(itemMayor.ancho, itemMayor.alto);
-  const transporte = costoTransporteComercial(tamanoTransporte ? tamanoTransporte.clase : 'carta', cantidad);
+  const transporteBase = costoTransporteComercial(tamanoTransporte ? tamanoTransporte.clase : 'carta', cantidad);
+  const transporte = {via: transporteBase.via, total: avz.linea('tra', 'Generales', 'Transporte', 1, 'envío', transporteBase.total)};
 
   const subtotal = costoDirectoTotal + disenoCop + fondoSeguridadCop + sherpaCop + transporte.total;
+  avz.total('Subtotal', subtotal, 'tSub');
 
   // Conde 2026-09-25: "Extra / Ajuste adicional al CLIENTE" -- ver nota en cotizarVolante.
   extraCargoCantidad = extraCargoCantidad||0;
@@ -1205,7 +1261,7 @@ function cotizarVolanteMultiItem(items, cantidad, utilidadPct, comisionPct, extr
   const gananciaUnitaria = gananciaTotal/cantidad;
 
   return {
-    esMultiItem: true, detallesItems, extraDesc, extraCosto, costoDirecto: costoDirectoTotal,
+    esMultiItem: true, lineas: avz.lineas, nAjustes: avz.nAjustes(), detallesItems, extraDesc, extraCosto, costoDirecto: costoDirectoTotal,
     disenoCop, fondoSeguridadPct, fondoSeguridadCop, sherpaCop, transporte,
     subtotal, precioVentaTotal, precioVentaUnitario, aplicaIva, ivaTotal, precioFinalTotal,
     gananciaTotal, gananciaUnitaria, cantidad,
@@ -1227,27 +1283,13 @@ function calcularMultiItem(){
     const extraCargoDescripcion = document.getElementById("in-extraCargoDesc").value.trim();
     const extraCargoCantidad = parseFloat(document.getElementById("in-extraCargoCantidad").value)||0;
     const extraCargoValorUnitario = parseFloat(document.getElementById("in-extraCargoValorUnitario").value)||0;
-    const r = cotizarVolanteMultiItem(volMultiItems, cantidad, utilidadPct, comisionPct, extraDesc, extraCosto, tipoCliente, extraCargoDescripcion, extraCargoCantidad, extraCargoValorUnitario);
+    tacticalAvzUsarCantidad(cantidad);   // los ajustes de la versión profesional son por cantidad
+    const ajustes = tacticalAvzCopiaAjustes(cantidad);
+    const r = cotizarVolanteMultiItem(volMultiItems, cantidad, utilidadPct, comisionPct, extraDesc, extraCosto, tipoCliente, extraCargoDescripcion, extraCargoCantidad, extraCargoValorUnitario, ajustes);
     document.getElementById("recomendaciones-contenido").innerHTML = '';
 
     let filas = `<table class="resultado-tabla">`;
-    r.detallesItems.forEach(d => {
-      filas += `<tr class="grupo"><td colspan="2">${d.nombre} (${d.item.ancho}x${d.item.alto}cm)</td></tr>`;
-      filas += `<tr class="detalle"><td colspan="2">Material: ${cop(d.resultado.detalleMaterial.costoTotal)} — Impresión: ${cop(d.resultado.detalleImpresion.total)}</td></tr>`;
-      if(d.item.plastificado) filas += `<tr class="detalle"><td colspan="2">Plastificado: ${cop(d.resultado.costoPlastificado)}</td></tr>`;
-      d.acabadosCosto.lineas.forEach(a => { filas += `<tr class="detalle"><td colspan="2">${a.nombre}: ${cop(a.costo)}</td></tr>`; });
-      if(d.item.llevaTroquel) filas += `<tr class="detalle"><td colspan="2">Troquel nuevo: ${cop(d.costoTroquel)}</td></tr>`;
-      filas += `<tr><td>Subtotal ${d.nombre}</td><td class="num">${cop(d.costoItemDirecto)}</td></tr>`;
-    });
-    if(r.extraCosto>0){
-      filas += `<tr><td>${r.extraDesc||'Proceso adicional'}</td><td class="num">${cop(r.extraCosto)}</td></tr>`;
-    }
-    filas += `<tr class="sub"><td>Costo directo total</td><td class="num">${cop(r.costoDirecto)}</td></tr>`;
-    filas += `<tr><td>Diseño / Preprensa</td><td class="num">${cop(r.disenoCop)}</td></tr>`;
-    filas += `<tr><td>Fondo de Seguridad (${(r.fondoSeguridadPct*100).toFixed(1)}%)</td><td class="num">${cop(r.fondoSeguridadCop)}</td></tr>`;
-    filas += `<tr><td>Sherpa (muestra de color)</td><td class="num">${cop(r.sherpaCop)}</td></tr>`;
-    filas += `<tr><td>Transporte (${r.transporte.via})</td><td class="num">${cop(r.transporte.total)}</td></tr>`;
-    filas += `<tr class="sub"><td>Subtotal</td><td class="num">${cop(r.subtotal)}</td></tr>`;
+    filas += `</table>` + tacticalAvzHtml(r.lineas) + `<table class="resultado-tabla">`;
     if(r.extraCargoCantidad > 0){
       filas += `<tr><td>${cotTextoConNegrilla(r.extraCargoDescripcion||'Extra adicional')} (${r.extraCargoCantidad} x ${cop(r.extraCargoValorUnitario)})</td><td class="num">${cop(r.extraCargoSubtotal)}</td></tr>`;
     }
@@ -1265,7 +1307,8 @@ function calcularMultiItem(){
     filas += `</table>`;
     cont.innerHTML = filas;
     ultimoResultado = r;
-    ultimoParams = { cantidad, utilidadPct, comisionPct, items: volMultiItems.map(i=>({...i})), extraCargoDescripcion, extraCargoCantidad, extraCargoValorUnitario };
+    ultimoParams = { modoCalc:'kit', ajustes, cantidad, utilidadPct, comisionPct, items: volMultiItems.map(i=>({...i})), extraDesc, extraCosto, tipoCliente, extraCargoDescripcion, extraCargoCantidad, extraCargoValorUnitario };
+    tacticalCantRender(cont);
     // Conde 2026-09-17: "vi un OT repetido/duplicado en 2 cotizaciones distintas" -- guardar una
     // cotización, cambiar el formulario para OTRO producto (sin pasar por "Nueva cotización") y
     // volver a guardar reusaba el mismo ultimoOT porque nunca se limpiaba solo. Cuadernos (Hub) ya
@@ -1273,7 +1316,7 @@ function calcularMultiItem(){
     // de cero saca su propio número -- se replica el mismo criterio acá.
     ultimoOT = null;
     const campoDescCli = document.getElementById("in-descCliente");
-    campoDescCli.value = `${cantidad} Kit (${r.detallesItems.map(d=>d.nombre).join(' + ')})`;
+    campoDescCli.value = volDescripcionTecnicaKit(r);
     campoDescCli.style.height = 'auto'; campoDescCli.style.height = (campoDescCli.scrollHeight+2)+'px';
     document.getElementById("cot-ot-nota").style.display = "none";
   } catch(err){
@@ -1336,6 +1379,8 @@ function calcular(saltarSugerencia){
       extraCargoCantidad: parseFloat(document.getElementById("in-extraCargoCantidad").value)||0,
       extraCargoValorUnitario: parseFloat(document.getElementById("in-extraCargoValorUnitario").value)||0,
     };
+    tacticalAvzUsarCantidad(p.cantidad);   // los ajustes de la versión profesional son por cantidad
+    p.ajustes = tacticalAvzCopiaAjustes(p.cantidad);
     const r = cotizarVolante(p);
 
     if(!saltarSugerencia){
@@ -1365,33 +1410,7 @@ function calcular(saltarSugerencia){
 
     let filas = `<table class="resultado-tabla">`;
     filas += `<tr class="detalle"><td colspan="2">Tamaño "${r.tamano.clase}" — ${p.ancho}x${p.alto}cm</td></tr>`;
-    filas += `<tr><td>Material (${r.detalleMaterial.formato}, ${r.detalleMaterial.nPliegos} pliegos)</td><td class="num">${cop(r.detalleMaterial.costoTotal)}</td></tr>`;
-    filas += `<tr><td>Impresión — ${viaImpresionTxt}</td><td class="num">${cop(r.detalleImpresion.total)}</td></tr>`;
-    if(r.detalleImpresion.via==="offset" && r.detalleImpresion.retiroJob){
-      filas += `<tr class="detalle"><td colspan="2">↳ Tiro: ${cop(r.detalleImpresion.tiroJob.total)} + Retiro (juego propio): ${cop(r.detalleImpresion.retiroJob.total)}</td></tr>`;
-    } else if(r.detalleImpresion.via==="offset" && r.detalleImpresion.recargoRetiro){
-      filas += `<tr class="detalle"><td colspan="2">↳ Incluye recargo +30% por retiro policromía (mismas planchas)</td></tr>`;
-    }
-    filas += `<tr><td>Refile guillotina${p.cantidad>VOLANTE_REFILE_DESCUENTO_CANTIDAD_UMBRAL?' (con 40% descuento por volumen)':''}</td><td class="num">${cop(r.costoRefile)}</td></tr>`;
-    filas += `<tr><td>Empaque comercial${p.cantidad<VOLANTE_EMPAQUE_CANTIDAD_MINIMA?' (no aplica, <1.000u)':''}</td><td class="num">${cop(r.costoEmpaque)}</td></tr>`;
-    if(r.esPlegable){
-      filas += `<tr><td>Plegado (${r.secciones===3?'Tríptico':'Díptico'})</td><td class="num">${cop(r.costoPlegadoTotal)}</td></tr>`;
-    }
-    if(r.plastificado){
-      filas += `<tr><td>Plastificado (${r.carasPlastificado} cara${r.carasPlastificado>1?'s':''}, $950/m²)</td><td class="num">${cop(r.costoPlastificado)}</td></tr>`;
-    }
-    r.acabadosCustomLineas.forEach(a => {
-      filas += `<tr><td>${a.nombre}</td><td class="num">${cop(a.costo)}</td></tr>`;
-    });
-    if(r.extraCosto>0){
-      filas += `<tr><td>${r.extraDesc||'Proceso adicional'}</td><td class="num">${cop(r.extraCosto)}</td></tr>`;
-    }
-    filas += `<tr class="sub"><td>Costo directo total</td><td class="num">${cop(r.costoDirecto)}</td></tr>`;
-    filas += `<tr><td>Diseño / Preprensa</td><td class="num">${cop(r.disenoCop)}</td></tr>`;
-    filas += `<tr><td>Fondo de Seguridad (${(r.fondoSeguridadPct*100).toFixed(1)}%)</td><td class="num">${cop(r.fondoSeguridadCop)}</td></tr>`;
-    filas += `<tr><td>Sherpa (muestra de color)</td><td class="num">${cop(r.sherpaCop)}</td></tr>`;
-    filas += `<tr><td>Transporte (${r.transporte.via})</td><td class="num">${cop(r.transporte.total)}</td></tr>`;
-    filas += `<tr class="sub"><td>Subtotal</td><td class="num">${cop(r.subtotal)}</td></tr>`;
+    filas += `</table>` + tacticalAvzHtml(r.lineas) + `<table class="resultado-tabla">`;
     if(r.extraCargoCantidad > 0){
       filas += `<tr><td>${cotTextoConNegrilla(r.extraCargoDescripcion||'Extra adicional')} (${r.extraCargoCantidad} x ${cop(r.extraCargoValorUnitario)})</td><td class="num">${cop(r.extraCargoSubtotal)}</td></tr>`;
     }
@@ -1409,6 +1428,7 @@ function calcular(saltarSugerencia){
     filas += `</table>`;
     cont.innerHTML = filas;
     ultimoResultado = r; ultimoParams = p;
+    tacticalCantRender(cont);
     // Conde 2026-09-17: "vi un OT repetido/duplicado en 2 cotizaciones distintas" -- guardar una
     // cotización, cambiar el formulario para OTRO producto (sin pasar por "Nueva cotización") y
     // volver a guardar reusaba el mismo ultimoOT porque nunca se limpiaba solo. Cuadernos (Hub) ya
@@ -1416,7 +1436,7 @@ function calcular(saltarSugerencia){
     // de cero saca su propio número -- se replica el mismo criterio acá.
     ultimoOT = null;
     const campoDescCli = document.getElementById("in-descCliente");
-    campoDescCli.value = `${p.cantidad} ${p.esPlegable?'Plegable':'Volante/Afiche'} ${p.ancho}x${p.alto}cm`;
+    campoDescCli.value = volDescripcionTecnica(p, r);
     campoDescCli.style.height = 'auto'; campoDescCli.style.height = (campoDescCli.scrollHeight+2)+'px';
     document.getElementById("cot-ot-nota").style.display = "none";
   } catch(err){
@@ -1424,6 +1444,57 @@ function calcular(saltarSugerencia){
     ultimoResultado = null; ultimoParams = null;
   }
 }
+
+/* ============ HASTA 3 CANTIDADES + DESCRIPCIÓN TÉCNICA (Conde 2026-11-13) ============
+   Aplica a los 3 modos (Volante/Afiche/Plegable, Imán y Kit multi-ítem). La
+   lógica compartida (cálculo por cantidad, ventana comparadora, PDF, guardado) vive en tactical-avanzado.js. */
+function volTituloComun(p){ return `${p.esPlegable?'Plegable':'Volante/Afiche'} ${p.ancho}x${p.alto}cm`; }
+// Descripción técnica automática para el cliente (sin cantidad ni precios); editable antes de guardar.
+function volDescripcionTecnica(p, r){
+  const n = v => String(v).replace('.', ',');
+  const [nombreSus, gramajeSus] = String(p.sustrato||'__').split('__');
+  const producto = p.esPlegable ? `Plegable ${p.secciones===3?'tríptico':'díptico'}` : 'Volante / afiche';
+  return `${producto} de ${n(p.ancho)} x ${n(p.alto)} cm. Impreso a ${p.tintasTiro}x${p.tintasRetiro} tintas en ${nombreSus} ${gramajeSus} g`
+    + (p.plastificado ? `, plastificado por ${p.carasPlastificado} cara${p.carasPlastificado>1?'s':''}` : '')
+    + (r.acabadosCustomLineas && r.acabadosCustomLineas.length ? `, ${r.acabadosCustomLineas.map(a => a.nombre.toLowerCase()).join(', ')}` : '')
+    + `. Refilado${p.esPlegable ? ' y plegado' : ''}.`;
+}
+function volDescripcionTecnicaIman(p, r){
+  const n = v => String(v).replace('.', ',');
+  const [nombreSus, gramajeSus] = String(p.sustrato||'__').split('__');
+  return `Imán publicitario de ${n(p.ancho)} x ${n(p.alto)} cm. Impreso a ${p.tintasTiro}x0 tintas en ${nombreSus} ${gramajeSus} g, montado sobre lámina de imán C5 y cortado ${p.corteTipo==='laser' ? 'con láser' : 'con troquel'}.`;
+}
+function volDescripcionTecnicaKit(r){
+  const n = v => String(v).replace('.', ',');
+  const partes = r.detallesItems.map(d => {
+    const it = d.item;
+    const [nombreSus, gramajeSus] = String(it.sustrato||'__').split('__');
+    return `${d.nombre}: ${n(it.ancho)} x ${n(it.alto)} cm, ${it.tintasTiro}x${it.tintasRetiro||0} tintas en ${nombreSus} ${gramajeSus} g`
+      + (it.plastificado ? ', plastificado' : '') + (it.esPlegable ? ', plegado' : '') + (it.llevaTroquel ? ', troquelado' : '');
+  });
+  return `Kit de ${r.detallesItems.length} pieza${r.detallesItems.length>1?'s':''}. ${partes.join('. ')}.`;
+}
+// Una sola configuración para los 3 modos de esta calculadora; p.modoCalc dice cuál se calculó.
+window.tacticalCantCfg = {
+  linea: 'volantes',
+  cotizar: p => p.modoCalc==='iman' ? cotizarIman(p)
+    : (p.modoCalc==='kit' ? cotizarVolanteMultiItem(p.items, p.cantidad, p.utilidadPct, p.comisionPct, p.extraDesc, p.extraCosto, p.tipoCliente, p.extraCargoDescripcion, p.extraCargoCantidad, p.extraCargoValorUnitario, p.ajustes)
+    : cotizarVolante(p)),
+  tituloComun: (p, r) => p.modoCalc==='iman' ? `Imán ${p.ancho}x${p.alto}cm`
+    : (p.modoCalc==='kit' ? `Kit (${r.detallesItems.map(d=>d.nombre).join(' + ')})` : volTituloComun(p)),
+  // Para reabrir la cotización en el modo correcto (Volante, Imán o Kit).
+  paramsGuardar: p => ({...p, modoProducto: document.getElementById('in-tipoProducto').value}),
+  fichaTecnica: (p, r) => {
+    if(p.modoCalc==='kit') return { maquina:'otro', material: r.detallesItems.map(d=>d.nombre).join(' + ') };
+    const d = r.detalleImpresion;
+    const [nombreSus, gramajeSus] = String(p.sustrato||'__').split('__');
+    return {
+      maquina: d ? (d.via==='digital' ? 'digital' : (d.fraccion||'otro')) : 'otro',
+      material: `${nombreSus} ${gramajeSus}g`, nPliegos: r.detalleMaterial.nPliegos, planoCorte: r.detalleMaterial.planoCorte,
+      recomendaciones: RECOMENDACIONES_PRODUCCION.filter(reg => reg.aplica(r)).map(reg => typeof reg.texto==='function' ? reg.texto(r) : reg.texto),
+    };
+  },
+};
 
 function calcularIman(){
   const cont = document.getElementById("resultado-contenido");
@@ -1445,6 +1516,9 @@ function calcularIman(){
       extraCargoCantidad: parseFloat(document.getElementById("in-extraCargoCantidad").value)||0,
       extraCargoValorUnitario: parseFloat(document.getElementById("in-extraCargoValorUnitario").value)||0,
     };
+    p.modoCalc = 'iman';
+    tacticalAvzUsarCantidad(p.cantidad);   // los ajustes de la versión profesional son por cantidad
+    p.ajustes = tacticalAvzCopiaAjustes(p.cantidad);
     const r = cotizarIman(p);
     document.getElementById("recomendaciones-contenido").innerHTML = '';
 
@@ -1457,19 +1531,7 @@ function calcularIman(){
 
     let filas = `<table class="resultado-tabla">`;
     filas += `<tr class="detalle"><td colspan="2">Imán ${p.ancho}x${p.alto}cm</td></tr>`;
-    filas += `<tr><td>Adhesivo (${r.detalleMaterial.formato}, ${r.detalleMaterial.nPliegos} pliegos)</td><td class="num">${cop(r.detalleMaterial.costoTotal)}</td></tr>`;
-    filas += `<tr><td>Impresión — ${viaImpresionTxt}</td><td class="num">${cop(r.detalleImpresion.total)}</td></tr>`;
-    filas += `<tr><td>Lámina Imán C5 (${r.piezasPorLamina} pieza(s)/lámina, ${r.nLaminas} lámina(s))</td><td class="num">${cop(r.costoLaminaIman)}</td></tr>`;
-    filas += `<tr><td>${viaCorteTxt}</td><td class="num">${cop(r.costoCorte)}</td></tr>`;
-    if(r.extraCosto>0){
-      filas += `<tr><td>${r.extraDesc||'Proceso adicional'}</td><td class="num">${cop(r.extraCosto)}</td></tr>`;
-    }
-    filas += `<tr class="sub"><td>Costo directo total</td><td class="num">${cop(r.costoDirecto)}</td></tr>`;
-    filas += `<tr><td>Diseño / Preprensa</td><td class="num">${cop(r.disenoCop)}</td></tr>`;
-    filas += `<tr><td>Fondo de Seguridad (${(r.fondoSeguridadPct*100).toFixed(1)}%)</td><td class="num">${cop(r.fondoSeguridadCop)}</td></tr>`;
-    filas += `<tr><td>Sherpa (muestra de color)</td><td class="num">${cop(r.sherpaCop)}</td></tr>`;
-    filas += `<tr><td>Transporte (${r.transporte.via})</td><td class="num">${cop(r.transporte.total)}</td></tr>`;
-    filas += `<tr class="sub"><td>Subtotal</td><td class="num">${cop(r.subtotal)}</td></tr>`;
+    filas += `</table>` + tacticalAvzHtml(r.lineas) + `<table class="resultado-tabla">`;
     if(r.extraCargoCantidad > 0){
       filas += `<tr><td>${cotTextoConNegrilla(r.extraCargoDescripcion||'Extra adicional')} (${r.extraCargoCantidad} x ${cop(r.extraCargoValorUnitario)})</td><td class="num">${cop(r.extraCargoSubtotal)}</td></tr>`;
     }
@@ -1487,6 +1549,7 @@ function calcularIman(){
     filas += `</table>`;
     cont.innerHTML = filas;
     ultimoResultado = r; ultimoParams = p;
+    tacticalCantRender(cont);
     // Conde 2026-09-17: "vi un OT repetido/duplicado en 2 cotizaciones distintas" -- guardar una
     // cotización, cambiar el formulario para OTRO producto (sin pasar por "Nueva cotización") y
     // volver a guardar reusaba el mismo ultimoOT porque nunca se limpiaba solo. Cuadernos (Hub) ya
@@ -1494,7 +1557,7 @@ function calcularIman(){
     // de cero saca su propio número -- se replica el mismo criterio acá.
     ultimoOT = null;
     const campoDescCli = document.getElementById("in-descCliente");
-    campoDescCli.value = `${p.cantidad} Imán ${p.ancho}x${p.alto}cm`;
+    campoDescCli.value = volDescripcionTecnicaIman(p, r);
     campoDescCli.style.height = 'auto'; campoDescCli.style.height = (campoDescCli.scrollHeight+2)+'px';
     document.getElementById("cot-ot-nota").style.display = "none";
   } catch(err){
@@ -1842,6 +1905,8 @@ async function generarOrdenProduccion(){
       });
     }
   }
+  const bloqueInsumos = tacticalAvzBloqueInsumosOP(r.lineas);
+  if(bloqueInsumos) bloques.push(bloqueInsumos);
   const html = tacticalOPDocumentoHtml({
     logoB64: TACTICAL_LOGO_B64, ot: ultimoOT, cliente: nombreClienteOP,
     fechaEntrega: new Date(fechaEntregaOP+'T00:00:00').toLocaleDateString('es-CO', {day:'numeric', month:'long', year:'numeric'}),
@@ -1905,7 +1970,7 @@ async function guardarCotizacionClick(){
     }
   }
   const recomendaciones = RECOMENDACIONES_PRODUCCION.filter(reg=>reg.aplica(ultimoResultado)).map(reg=>typeof reg.texto==='function'?reg.texto(ultimoResultado):reg.texto);
-  const opp = { id: crypto.randomUUID(), ot, idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'volantes', cantidad: ultimoParams.cantidad, maquina, material, nPliegos, planoCorte, recomendaciones, fotoUrl: fotoParaCotizacion('volantes'), videoUrl: videoParaCotizacion('volantes') };
+  const opp = { id: crypto.randomUUID(), ot, idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'volantes', cantidad: ultimoParams.cantidad, maquina, material, nPliegos, planoCorte, recomendaciones, insumos: tacticalAvzInsumos(ultimoResultado.lineas), fotoUrl: fotoParaCotizacion('volantes'), videoUrl: videoParaCotizacion('volantes') };
   db_opps.push(opp);
   const oppGuardadoOk = await tacticalSyncOpps(db_opps);
 
@@ -1946,6 +2011,7 @@ async function guardarCotizacionClick(){
 // AHÍ se repueblan los campos de ese modo (los otros 2 quedan escondidos, no hace falta tocarlos).
 function cargarCotizacionGuardada(cot){
   const p = cot.params;
+  tacticalCantCargar(p);
   document.getElementById('in-cli-empresa').value = cot.cliente.empresa || '';
   document.getElementById('in-cli-encargado').value = cot.cliente.encargado || '';
   document.getElementById('in-cli-telefono').value = cot.cliente.telefono || '';

@@ -197,6 +197,15 @@
           <input type="text" inputmode="numeric" id="in-cantidad" value="100" oninput="tacticalFormatearMiles(this); actualizarSugerenciaMoto();">
           <div class="hint">Mínimo de venta: 50 unidades.</div>
         </div>
+        <div class="campo chico">
+          <label>Cantidad 2 (opcional):</label>
+          <input type="text" inputmode="numeric" id="in-cantidad2" value="" placeholder="ej. 2.000" oninput="tacticalFormatearMiles(this)">
+        </div>
+        <div class="campo chico">
+          <label>Cantidad 3 (opcional):</label>
+          <input type="text" inputmode="numeric" id="in-cantidad3" value="" placeholder="ej. 3.000" oninput="tacticalFormatearMiles(this)">
+          <div class="hint">Para cotizar y comparar hasta 3 cantidades.</div>
+        </div>
       </div>
       <div class="fila" id="fila-marco" style="display:none;">
         <div class="checkbox-row">
@@ -305,7 +314,7 @@
     <div class="card">
       <h2>Resultado</h2>
       <div id="resultado-contenido"><div class="placeholder">Completa el formulario y presiona Calcular.</div></div>
-      <div class="campo" style="margin-top:10px;"><label>Descripción para el cliente (editable — escribe **así** para resaltar en negrilla en el PDF):</label><textarea id="in-descCliente" class="tactical-campo-dictado" rows="1" style="width:100%; box-sizing:border-box; resize:vertical; overflow:hidden; font-family:inherit; font-size:inherit; padding:8px; line-height:1.4;" oninput="this.style.height='auto'; this.style.height=(this.scrollHeight+2)+'px';"></textarea></div>
+      <div class="campo" style="margin-top:10px;"><label>Descripción para el cliente: <span title="Editable. Escribe **así** para resaltar en negrilla en el PDF." style="cursor:help; font-weight:normal; color:var(--texto-suave,#5a6472);">ⓘ</span></label><textarea id="in-descCliente" class="tactical-campo-dictado" rows="1" style="width:100%; box-sizing:border-box; resize:vertical; overflow:hidden; font-family:inherit; font-size:inherit; padding:8px; line-height:1.4;" oninput="this.style.height='auto'; this.style.height=(this.scrollHeight+2)+'px';"></textarea></div>
       <div class="campo" style="margin-top:10px;">
         <label>Variante de foto (opcional -- solo si creaste variantes en la Fototeca para esta línea):</label>
         <select id="in-varianteFoto" style="width:100%; box-sizing:border-box;"><option value="">(Automática de la línea)</option></select>
@@ -336,6 +345,7 @@
 <script src="tactical-supabase.js?v=20261109b"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
 <script src="precios_tactical.js?v=20261113b"></script>
+<script src="tactical-avanzado.js?v=20261113m"></script>
 <script src="tactical-ui.js?v=20261109d"></script>
 <script>
 /* ============ CONSTANTES REUTILIZADAS DEL MOTOR DE CUADERNOS (ya validadas) ============ */
@@ -770,20 +780,46 @@ function cotizarRompecabezas(p){
 
   const costoAyudante = troquel.fichas>=AYUDANTE_ARMADO_FICHAS_MINIMO ? Math.ceil(p.cantidad/100)*AYUDANTE_ARMADO_COP_POR_100 : 0;
 
-  const costoDirecto = detalleMaterial.costoTotal + detalleImpresion.total + costoPlastificado + costoColaminado
-    + costoBaseMarco + costoDespiece + costoBolsa + costoTroqueladoServicio + costoUsoTroquel + costoAyudante;
+  // Conde 2026-11-13: desglose renglón por renglón (cantidad, unitario, valor) como la tabla de
+  // Litoplan. En la "versión profesional" cada renglón se puede ajustar solo para esta cotización
+  // (p.ajustes); el valor que devuelve avz.linea() ya viene con el ajuste aplicado, así que todo lo
+  // que sigue (fondo de seguridad, transporte, utilidad, IVA) se recalcula sobre el costo ajustado.
+  const avz = tacticalAvzCrear(p.ajustes);
+  const [susNombre, susGram] = String(p.sustrato||'').split('__');
+  const dI = detalleImpresion;
+  const txtImpresion = dI.via==="digital"
+    ? `Impresión digital (hoja ${String(dI.clase).replace('_',' ')}, ${dI.piezasPorClic} rompecabezas por clic, descuento ${(dI.descuentoPct*100).toFixed(0)}%)`
+    : `Impresión offset (${dI.fraccion}) — ${dI.nPlanchas} plancha(s), ${dI.nMillares} millar(es)`;
+  const cMaterial = avz.linea('mat', 'Insumos', `Papel impreso ${susNombre} ${susGram}g (pliego ${detalleMaterial.formato})`, detalleMaterial.nPliegos, 'pliego', detalleMaterial.precioPliego, detalleMaterial.costoTotal);
+  const cImpresion = (dI.via==="digital" && dI.nClics>0)
+    ? avz.linea('imp', 'Procesos', txtImpresion, dI.nClics, 'clic', dI.total/dI.nClics, dI.total)
+    : avz.linea('imp', 'Procesos', txtImpresion, 1, 'trabajo', dI.total);
+  const cPlastificado = avz.linea('pla', 'Procesos', 'Plastificado (obligatorio)', 1, 'trabajo', costoPlastificado);
+  const cBacking = avz.linea('bak', 'Insumos', `Backing del colaminado ${backingEtiqueta}`, detalleBacking.nPliegos, 'pliego', detalleBacking.precioPliego, costoBackingMaterial);
+  const cColaminadoMO = avz.linea('col', 'Procesos', 'Colaminado: mano de obra + pegante', 1, 'trabajo', costoColaminadoManoObra);
+  const cBaseMarco = conMarco ? avz.linea('mar', 'Insumos', 'Base para marco (Cartón C14)', detalleBaseMarco.nPliegos, 'pliego', detalleBaseMarco.precioPliego, costoBaseMarco) : 0;
+  const cDespiece = avz.linea('des', 'Procesos', 'Despiece', p.cantidad, 'unidad', troquel.despiece);
+  const cBolsa = avz.linea('bol', 'Insumos', 'Bolsa / empaque individual', p.cantidad, 'unidad', troquel.bolsa);
+  const cTroquelado = avz.linea('tro', 'Procesos', 'Troquelado (servicio de máquina)', 1, 'trabajo', costoTroqueladoServicio);
+  const cUsoTroquel = avz.linea('uso', 'Procesos', `Uso del troquel (${p.troquelEsNuevo?'nuevo, manual':'desgaste cuchilla '+p.complejidadDesgaste})`, 1, 'troquel', costoUsoTroquel);
+  const cAyudante = costoAyudante>0 ? avz.linea('ayu', 'Procesos', 'Ayudante de armado (línea Macro)', Math.ceil(p.cantidad/100), 'x 100 u', AYUDANTE_ARMADO_COP_POR_100) : 0;
 
-  const disenoCop = disenoYPreprensa(costoDirecto) * (esFichaChica ? 0.5 : 1);
+  const costoDirecto = cMaterial + cImpresion + cPlastificado + cBacking + cColaminadoMO
+    + cBaseMarco + cDespiece + cBolsa + cTroquelado + cUsoTroquel + cAyudante;
+  avz.total('Costo directo total', costoDirecto, 'tDirecto');
+
+  const disenoCop = avz.linea('dis', 'Generales', 'Diseño / Preprensa', 1, 'trabajo', disenoYPreprensa(costoDirecto) * (esFichaChica ? 0.5 : 1));
   // Conde 2026-07-24: el % de Fondo de Seguridad se duplica para rompecabezas de línea Macro (>=70 fichas).
   const fondoSeguridadPct = tramoFondoSeguridad(costoDirecto) * (esLineaMacro ? 2 : 1);
-  const fondoSeguridadCop = costoDirecto*fondoSeguridadPct;
-  const sherpaCop = costoSherpa(troquel.fichas, 0);
+  const fondoSeguridadCop = avz.linea('fondo', 'Generales', `Fondo de Seguridad (${(fondoSeguridadPct*100).toFixed(1)}% del costo directo, automático)`, 1, 'trabajo', costoDirecto*fondoSeguridadPct);
+  const sherpaCop = avz.linea('she', 'Generales', 'Sherpa (muestra de color)', 1, 'trabajo', costoSherpa(troquel.fichas, 0));
   const unidadesPorCaja = empaqueUnidadesPorCaja(troquel.fichas);
-  const empaqueCop = costoEmpaque(p.cantidad, unidadesPorCaja);
+  const empaqueCop = avz.linea('emp', 'Generales', `Empaque (caja para despachar las bolsas, ${unidadesPorCaja}u/caja)`, 1, 'trabajo', costoEmpaque(p.cantidad, unidadesPorCaja));
 
   const subtotalPreTransporte = costoDirecto + disenoCop + fondoSeguridadCop + sherpaCop + empaqueCop;
-  const transporteCop = costoTransporte(subtotalPreTransporte, p.cabeEnMoto);
+  const transporteCop = avz.linea('tra', 'Generales', `Transporte${p.cabeEnMoto?' (moto, fijo)':''}`, 1, 'envío', costoTransporte(subtotalPreTransporte, p.cabeEnMoto));
   const subtotal = subtotalPreTransporte + transporteCop;
+  avz.total('Subtotal', subtotal, 'tSub');
 
   // Conde 2026-09-25: "Extra / Ajuste adicional" -- algo puntual que pide el cliente y no está
   // en el catálogo. Se cobra como si fuera un producto completo: Conde escribe directamente el
@@ -807,9 +843,10 @@ function cotizarRompecabezas(p){
     aplicaIva,
     troquel, conMarco, piezasFisicasImpresion, piezasColaminado, usaDigital, anchoMontaje, altoMontaje,
     detalleMaterial, detalleImpresion, detalleBaseMarco,
-    costoPlastificado, costoColaminado, costoColaminadoManoObra, costoBackingMaterial, detalleBacking, backingEtiqueta,
-    costoBaseMarco, costoDespiece, costoBolsa,
-    costoTroqueladoServicio, costoUsoTroquel, costoAyudante, costoDirecto,
+    costoPlastificado: cPlastificado, costoColaminado: cBacking+cColaminadoMO, costoColaminadoManoObra: cColaminadoMO, costoBackingMaterial: cBacking, detalleBacking, backingEtiqueta,
+    costoBaseMarco: cBaseMarco, costoDespiece: cDespiece, costoBolsa: cBolsa,
+    costoTroqueladoServicio: cTroquelado, costoUsoTroquel: cUsoTroquel, costoAyudante: cAyudante, costoDirecto,
+    lineas: avz.lineas, nAjustes: avz.nAjustes(),
     disenoCop, fondoSeguridadPct, fondoSeguridadCop, sherpaCop, empaqueCop, unidadesPorCaja, transporteCop,
     subtotal, precioVentaTotal, precioVentaUnitario, ivaTotal, precioFinalTotal,
     gananciaTotal, gananciaUnitaria,
@@ -943,9 +980,11 @@ function calcular(){
   const cont = document.getElementById("resultado-contenido");
   try{
     const cantidad = tacticalLeerNumeroFormateado("in-cantidad");
+    tacticalAvzUsarCantidad(cantidad);   // los ajustes de la versión profesional son por cantidad
     const p = {
       troquelId: document.getElementById("in-troquel").value,
       cantidad,
+      ajustes: tacticalAvzCopiaAjustes(),
       usarMarco: document.getElementById("in-marco").checked,
       sustrato: document.getElementById("in-sustrato").value,
       troquelEsNuevo: document.getElementById("in-troquelNuevo").value === "nuevo",
@@ -979,28 +1018,7 @@ function calcular(){
 
     let filas = avisoMinimo + `<table class="resultado-tabla">`;
     filas += `<tr class="detalle"><td colspan="2">Troquel ${r.troquel.id} — montaje ${r.anchoMontaje}x${r.altoMontaje}cm — ${r.piezasFisicasImpresion} tamaños a imprimir (merma de ${r.usaDigital?'30':'100'}u incluida) — ${r.piezasColaminado} tamaños de backing a colaminar</td></tr>`;
-    filas += `<tr><td>Material impreso (${r.detalleMaterial.formato}, ${r.detalleMaterial.nPliegos} pliegos)</td><td class="num">${cop(r.detalleMaterial.costoTotal)}</td></tr>`;
-    filas += `<tr><td>Impresión — ${viaImpresionTxt}</td><td class="num">${cop(r.detalleImpresion.total)}</td></tr>`;
-    filas += `<tr><td>Plastificado (obligatorio, $950/m²)</td><td class="num">${cop(r.costoPlastificado)}</td></tr>`;
-    filas += `<tr><td>Colaminado — backing ${r.backingEtiqueta}${r.detalleBacking?` (${r.detalleBacking.nPliegos} pliegos, ${r.piezasColaminado} tamaños)`:''}</td><td class="num">${cop(r.costoBackingMaterial)}</td></tr>`;
-    filas += `<tr class="detalle"><td colspan="2">↳ Mano de obra + pegante del colaminado ($900/m², mínimo $30.000): ${cop(r.costoColaminadoManoObra)}</td></tr>`;
-    if(r.conMarco){
-      filas += `<tr><td>Base para marco (Cartón C14, ${r.detalleBaseMarco.nPliegos} pliegos)</td><td class="num">${cop(r.costoBaseMarco)}</td></tr>`;
-    }
-    filas += `<tr><td>Despiece (${cop(r.troquel.despiece)}/u)</td><td class="num">${cop(r.costoDespiece)}</td></tr>`;
-    filas += `<tr><td>Bolsa/empaque (${cop(r.troquel.bolsa)}/u)</td><td class="num">${cop(r.costoBolsa)}</td></tr>`;
-    filas += `<tr><td>Troquelado (servicio de máquina)</td><td class="num">${cop(r.costoTroqueladoServicio)}</td></tr>`;
-    filas += `<tr><td>Uso del troquel (${p.troquelEsNuevo?"nuevo, manual":"desgaste cuchilla "+p.complejidadDesgaste})</td><td class="num">${cop(r.costoUsoTroquel)}</td></tr>`;
-    if(r.costoAyudante>0){
-      filas += `<tr><td>Ayudante de armado (línea Macro)</td><td class="num">${cop(r.costoAyudante)}</td></tr>`;
-    }
-    filas += `<tr class="sub"><td>Costo directo total</td><td class="num">${cop(r.costoDirecto)}</td></tr>`;
-    filas += `<tr><td>Diseño / Preprensa</td><td class="num">${cop(r.disenoCop)}</td></tr>`;
-    filas += `<tr><td>Fondo de Seguridad (${(r.fondoSeguridadPct*100).toFixed(1)}%)</td><td class="num">${cop(r.fondoSeguridadCop)}</td></tr>`;
-    filas += `<tr><td>Sherpa (muestra de color)</td><td class="num">${cop(r.sherpaCop)}</td></tr>`;
-    filas += `<tr><td>Empaque (caja para despachar las bolsas, ${r.unidadesPorCaja}u/caja)</td><td class="num">${cop(r.empaqueCop)}</td></tr>`;
-    filas += `<tr><td>Transporte${p.cabeEnMoto?' (moto, fijo)':''}</td><td class="num">${cop(r.transporteCop)}</td></tr>`;
-    filas += `<tr class="sub"><td>Subtotal</td><td class="num">${cop(r.subtotal)}</td></tr>`;
+    filas += `</table>` + tacticalAvzHtml(r.lineas) + `<table class="resultado-tabla">`;
     if(r.extraCantidad > 0){
       filas += `<tr><td>${cotTextoConNegrilla(r.extraDescripcion||'Extra adicional')} (${r.extraCantidad} x ${cop(r.extraValorUnitario)})</td><td class="num">${cop(r.extraSubtotal)}</td></tr>`;
     }
@@ -1022,6 +1040,7 @@ function calcular(){
     filas += `</table>`;
     cont.innerHTML = filas;
     ultimoResultado = r; ultimoParams = p;
+    tacticalCantRender(cont);
     // Conde 2026-09-17: "vi un OT repetido/duplicado en 2 cotizaciones distintas" -- guardar una
     // cotización, cambiar el formulario para OTRO producto (sin pasar por "Nueva cotización") y
     // volver a guardar reusaba el mismo ultimoOT porque nunca se limpiaba solo. Cuadernos (Hub) ya
@@ -1029,7 +1048,7 @@ function calcular(){
     // de cero saca su propio número -- se replica el mismo criterio acá.
     ultimoOT = null;
     const campoDescCli = document.getElementById("in-descCliente");
-    campoDescCli.value = `${p.cantidad} Rompecabezas${tacticalDescTroquel("rompecabezas",r.troquel)}`;
+    campoDescCli.value = rompeDescripcionTecnica(p, r);
     campoDescCli.style.height = 'auto'; campoDescCli.style.height = (campoDescCli.scrollHeight+2)+'px';
     document.getElementById("cot-ot-nota").style.display = "none";
   } catch(err){
@@ -1038,6 +1057,42 @@ function calcular(){
     ultimoResultado = null; ultimoParams = null;
   }
 }
+
+/* ============ HASTA 3 CANTIDADES + DESCRIPCIÓN TÉCNICA (Conde 2026-11-13) ============
+   La lógica de varias cantidades (cálculo por cantidad, ventana comparadora, PDF y guardado) es
+   compartida y vive en tactical-avanzado.js; aquí solo va lo propio de Rompecabezas. */
+function rompeTituloComun(p, r){ return `Rompecabezas${tacticalDescTroquel("rompecabezas", r.troquel)}`; }
+// Descripción técnica automática para el cliente (sin cantidad ni precios). Queda en el campo
+// "Descripción para el cliente", donde se puede editar antes de guardar.
+function rompeDescripcionTecnica(p, r){
+  const n = v => String(v).replace('.', ',');
+  const [nombreSus, gramajeSus] = String(p.sustrato||'__').split('__');
+  const t = r.troquel;
+  const medida = (t.ancho && t.alto) ? `, ${n(t.ancho)} x ${n(t.alto)} cm` : '';
+  return `Rompecabezas de ${t.fichas} fichas${medida}${r.conMarco ? ', con marco perimetral' : ''}. `
+    + `Impreso en ${nombreSus} ${gramajeSus} g, plastificado y colaminado sobre ${r.backingEtiqueta}. `
+    + `Troquelado, despiezado y empacado en bolsa individual.`;
+}
+window.tacticalCantCfg = {
+  linea: 'rompecabezas',
+  cotizar: p => cotizarRompecabezas(p),
+  // La sugerencia de moto depende de la cantidad (misma regla del formulario); en la cantidad principal se respeta lo que marcó el usuario.
+  paramsPara: (p, c) => {
+    const t = TROQUELES_ROMPECABEZAS.find(x => x.id===p.troquelId);
+    if(t) p.cabeEnMoto = t.fichas<=UMBRAL_FICHAS_CHICO && c<TRANSPORTE_MOTO_CANTIDAD_MAX;
+    return p;
+  },
+  tituloComun: rompeTituloComun,
+  fichaTecnica: (p, r) => {
+    const d = r.detalleImpresion;
+    const [nombreSus, gramajeSus] = String(p.sustrato||'__').split('__');
+    return {
+      maquina: d ? (d.via==='digital' ? 'digital' : (d.fraccion||'otro')) : 'otro',
+      material: `${nombreSus} ${gramajeSus}g`, nPliegos: r.detalleMaterial.nPliegos, planoCorte: r.detalleMaterial.planoCorte,
+      recomendaciones: RECOMENDACIONES_PRODUCCION.filter(reg => reg.aplica(r)).map(reg => reg.texto),
+    };
+  },
+};
 
 function ajustarPrecioManualRompecabezas(valorTexto){
   if(!ultimoResultado || !ultimoParams) return;
@@ -1376,6 +1431,8 @@ async function generarOrdenProduccion(){
       planoCorte: r.detalleBaseMarco.planoCorte,
     });
   }
+  const bloqueInsumos = tacticalAvzBloqueInsumosOP(r.lineas);
+  if(bloqueInsumos) bloques.push(bloqueInsumos);
   const html = tacticalOPDocumentoHtml({
     logoB64: TACTICAL_LOGO_B64, ot: ultimoOT, cliente: nombreClienteOP,
     fechaEntrega: new Date(fechaEntregaOP+'T00:00:00').toLocaleDateString('es-CO', {day:'numeric', month:'long', year:'numeric'}),
@@ -1442,7 +1499,7 @@ async function guardarCotizacionClick(){
   ];
   if(ultimoResultado.detalleBaseMarco) planoCorteLineas.push({clave:'Base de marco', planoCorte: ultimoResultado.detalleBaseMarco.planoCorte});
   const recomendaciones = RECOMENDACIONES_PRODUCCION.filter(reg=>reg.aplica(ultimoResultado)).map(reg=>reg.texto);
-  const opp = { id: crypto.randomUUID(), ot, idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'rompecabezas', cantidad: ultimoParams.cantidad, maquina, material, nPliegos, planoCorte: ultimoResultado.detalleMaterial.planoCorte, planoCorteLineas, recomendaciones, fotoUrl: fotoParaCotizacion('rompecabezas'), videoUrl: videoParaCotizacion('rompecabezas') };
+  const opp = { id: crypto.randomUUID(), ot, idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'rompecabezas', cantidad: ultimoParams.cantidad, maquina, material, nPliegos, planoCorte: ultimoResultado.detalleMaterial.planoCorte, planoCorteLineas, recomendaciones, insumos: tacticalAvzInsumos(ultimoResultado.lineas), fotoUrl: fotoParaCotizacion('rompecabezas'), videoUrl: videoParaCotizacion('rompecabezas') };
   db_opps.push(opp);
   const oppGuardadoOk = await tacticalSyncOpps(db_opps);
 
@@ -1481,6 +1538,7 @@ async function guardarCotizacionClick(){
 // cotCargarCotizacionGuardada() de Cuadernos en el Hub.
 function cargarCotizacionGuardada(cot){
   const p = cot.params;
+  tacticalCantCargar(p);
   document.getElementById('in-cli-empresa').value = cot.cliente.empresa || '';
   document.getElementById('in-cli-encargado').value = cot.cliente.encargado || '';
   document.getElementById('in-cli-telefono').value = cot.cliente.telefono || '';

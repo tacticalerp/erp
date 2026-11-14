@@ -205,6 +205,14 @@
           <label>Cantidad:</label>
           <input type="text" inputmode="numeric" id="in-cantidad" value="500" oninput="tacticalFormatearMiles(this)">
         </div>
+        <div class="campo chico">
+          <label>Cantidad 2 (opcional):</label>
+          <input type="text" inputmode="numeric" id="in-cantidad2" value="" placeholder="ej. 1.000" oninput="tacticalFormatearMiles(this)">
+        </div>
+        <div class="campo chico">
+          <label>Cantidad 3 (opcional):</label>
+          <input type="text" inputmode="numeric" id="in-cantidad3" value="" placeholder="ej. 2.000" oninput="tacticalFormatearMiles(this)">
+        </div>
       </div>
       <div class="hint">Tamaño del producto terminado (cerrado, como lo recibe el cliente).</div>
     </div>
@@ -317,7 +325,7 @@
     <div class="card">
       <h2>Resultado</h2>
       <div id="resultado-contenido"><div class="placeholder">Completa el formulario y presiona Calcular.</div></div>
-      <div class="campo" style="margin-top:10px;"><label>Descripción para el cliente (editable — escribe **así** para resaltar en negrilla en el PDF):</label><textarea id="in-descCliente" class="tactical-campo-dictado" rows="1" style="width:100%; box-sizing:border-box; resize:vertical; overflow:hidden; font-family:inherit; font-size:inherit; padding:8px; line-height:1.4;" oninput="this.style.height='auto'; this.style.height=(this.scrollHeight+2)+'px';"></textarea></div>
+      <div class="campo" style="margin-top:10px;"><label>Descripción para el cliente: <span title="Editable. Escribe **así** para resaltar en negrilla en el PDF." style="cursor:help; font-weight:normal; color:var(--texto-suave,#5a6472);">ⓘ</span></label><textarea id="in-descCliente" class="tactical-campo-dictado" rows="1" style="width:100%; box-sizing:border-box; resize:vertical; overflow:hidden; font-family:inherit; font-size:inherit; padding:8px; line-height:1.4;" oninput="this.style.height='auto'; this.style.height=(this.scrollHeight+2)+'px';"></textarea></div>
       <div class="campo" style="margin-top:10px;">
         <label>Variante de foto (opcional -- solo si creaste variantes en la Fototeca para esta línea):</label>
         <select id="in-varianteFoto" style="width:100%; box-sizing:border-box;"><option value="">(Automática de la línea)</option></select>
@@ -348,6 +356,7 @@
 <script src="tactical-supabase.js?v=20261109b"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
 <script src="precios_tactical.js?v=20261113b"></script>
+<script src="tactical-avanzado.js?v=20261113m"></script>
 <script src="tactical-ui.js?v=20261109d"></script>
 <script>
 /* ============ CONSTANTES REUTILIZADAS DEL MOTOR DE CUADERNOS (ya validadas) ============ */
@@ -861,20 +870,9 @@ function cotizarUniversal(p){
   if(!(p.cantidad>0)) throw new Error("Escribe la cantidad.");
   if(!(p.ancho>0) || !(p.alto>0)) throw new Error("Escribe el ancho y el alto del producto.");
   if(!p.componentes || p.componentes.length===0) throw new Error("Agrega al menos una parte al producto.");
-  const ajustes = p.ajustes || {};
-  const lineas = [];
-  function linea(id, grupo, concepto, cantidad, unidad, unitario, valorForzado){
-    const l = {id, grupo, concepto, cantidad, unidad, unitario, valor:(valorForzado!=null?valorForzado:cantidad*unitario), ajustable:true};
-    l.base = l.valor; l.unitarioBase = l.unitario;
-    const a = ajustes[id];
-    if(a && a.valor!=null && !isNaN(a.valor)){
-      if(a.tipo==='unit'){ l.unitario = a.valor; l.valor = l.cantidad*a.valor; }
-      else { l.valor = l.base*(1+a.valor/100); l.unitario = l.cantidad ? l.valor/l.cantidad : l.valor; }
-      l.ajustado = true; l.ajuste = a;
-    }
-    lineas.push(l);
-    return l.valor;
-  }
+  const avz = tacticalAvzCrear(p.ajustes);
+  const lineas = avz.lineas;
+  const linea = (id, grupo, concepto, cantidad, unidad, unitario, valorForzado) => avz.linea(id, grupo, concepto, cantidad, unidad, unitario, valorForzado);
 
   const partes = p.componentes.map(c => uniProcesarComponente(c, p));
   let costoDirecto = 0;
@@ -954,14 +952,16 @@ function cotizarUniversal(p){
   const extraCosto = p.extraCosto||0;
   if(extraCosto>0) costoDirecto += linea('ext', 'Terminados', extraDesc||'Proceso adicional', 1, 'trabajo', extraCosto);
 
+  avz.total('Costo directo total', costoDirecto, 'tDirecto');
   const disenoCop = linea('gen:diseno', 'Generales', 'Diseño / Preprensa', 1, 'trabajo', disenoYPreprensa(costoDirecto));
   const fondoSeguridadPct = tramoFondoSeguridad(costoDirecto);
-  const fondoSeguridadCop = costoDirecto*fondoSeguridadPct;
+  const fondoSeguridadCop = avz.linea('fondo', 'Generales', `Fondo de Seguridad (${(fondoSeguridadPct*100).toFixed(1)}% del costo directo, automático)`, 1, 'trabajo', costoDirecto*fondoSeguridadPct);
   const sherpaCop = linea('gen:sherpa', 'Generales', 'Sherpa (muestra de color)', 1, 'trabajo', SHERPA_BASE_COP);
   const transporteBase = costoTransporteComercial(tamano.clase, p.cantidad);
   const transporteCop = linea('gen:transporte', 'Generales', `Transporte (${transporteBase.via})`, 1, 'envío', transporteBase.total);
   const transporte = {via:transporteBase.via, total:transporteCop};
   const subtotal = costoDirecto + disenoCop + fondoSeguridadCop + sherpaCop + transporteCop;
+  avz.total('Subtotal (costo total del trabajo)', subtotal, 'tSub');
 
   const extraCargoCantidad = p.extraCargoCantidad||0;
   const extraCargoValorUnitario = p.extraCargoValorUnitario||0;
@@ -976,7 +976,7 @@ function cotizarUniversal(p){
 
   return {
     esUniversal:true, plantilla:p.plantilla, aplicaIva, partes, lineas, tamano, tapaTipo:p.tapaTipo||'ninguna', detalleCarton, anillo,
-    nAjustes: lineas.filter(l => l.ajustado).length,
+    nAjustes: avz.nAjustes(),
     // Campos con el mismo nombre que usa el resto de la página (guardar, pedido, Kanban): los de la parte principal.
     usaDigital: principal.usaDigital, detalleImpresion: principal.detalleImpresion, detalleMaterial: principal.detalleMaterial,
     gramaje: Math.max(...partes.map(pt => pt.gramaje)),
@@ -1019,8 +1019,6 @@ function cotTextoConNegrilla(txt){
 
 /* ============ UI — CALCULADORA UNIVERSAL ============ */
 let uniComp = [];             // partes del producto (lo que se ve en "2. Partes del producto")
-let uniAjustes = {};          // ajustes del modo avanzado, solo para esta cotización: {idLinea:{tipo,valor,nota}}
-let uniAvanzadoAbierto = false;
 
 function uniEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function uniOpcionesSustrato(sel){
@@ -1040,7 +1038,7 @@ function uniAplicarPlantilla(){
   document.getElementById('in-alto').value = pl.alto;
   document.getElementById('in-cantidad').value = pl.cantidad.toLocaleString('es-CO');
   uniComp = pl.componentes.map(c => ({...c, sustrato: uniSustratoValido(c.sustrato)}));
-  uniAjustes = {};
+  tacticalAvzReiniciar();
   uniRenderComponentes();
   uniRenderTerminados(pl.terminados);
   document.getElementById('in-costoTroquel').value = 0;
@@ -1074,7 +1072,7 @@ function uniOnCambioTapa(){
       {nombre:'Forro de tapa dura (una pieza)', rol:'forro', tipo:'hojas', hojas:1, unico:false, sustrato:uniSustratoValido('Propalcote__150'), tintasTiro:impresa?4:1, tintasRetiro:impresa?1:0, plast:0},
       {nombre:'Guarda (plastificada)', rol:'guarda', tipo:'hojas', hojas:1, unico:false, sustrato:uniSustratoValido('Propalcote__150'), tintasTiro:0, tintasRetiro:0, plast:1});
   }
-  uniAjustes = {};
+  tacticalAvzReiniciar();
   uniTapasSyncCampos();
   uniRenderComponentes();
 }
@@ -1098,7 +1096,7 @@ function uniAgregarComponente(){
 }
 function uniQuitarComponente(i){
   if(uniComp.length<=1){ alert('El producto debe tener al menos una parte.'); return; }
-  uniComp.splice(i,1); uniAjustes = {};
+  uniComp.splice(i,1); tacticalAvzReiniciar();
   uniRenderComponentes();
 }
 function uniSetComp(i, campo, valor, redibujar){
@@ -1152,7 +1150,6 @@ function uniLeerParams(){
     baseCm: parseFloat(document.getElementById('in-baseCm').value)||UNI_BASE_CALENDARIO_CM,
     anillado: uniTapasVisibles() && document.getElementById('in-anillado').checked,
     anilladoLado: document.getElementById('in-anilladoLado').value,
-    ajustes: JSON.parse(JSON.stringify(uniAjustes)),
     extraDesc: document.getElementById("in-extraDesc").value,
     extraCosto: parseFloat(document.getElementById("in-extraCosto").value)||0,
     utilidadPct: parseFloat(document.getElementById("in-utilidadPct").value)/100,
@@ -1162,51 +1159,42 @@ function uniLeerParams(){
     extraCargoCantidad: parseFloat(document.getElementById("in-extraCargoCantidad").value)||0,
     extraCargoValorUnitario: parseFloat(document.getElementById("in-extraCargoValorUnitario").value)||0,
   };
+  tacticalAvzUsarCantidad(p.cantidad);   // los ajustes de la versión profesional son por cantidad
+  p.ajustes = tacticalAvzCopiaAjustes(p.cantidad);
   // Campos que el resto de la página espera con estos nombres (parte principal).
   p.sustrato = p.componentes[0] ? p.componentes[0].sustrato : '';
   p.tintasTiro = Math.max(0, ...p.componentes.map(c => c.tintasTiro||0));
   return p;
 }
 
-/* ---- MODO AVANZADO: ajustar un renglón solo para esta cotización ---- */
-function uniAjustar(id, tipo, valor){
-  const v = parseFloat(valor);
-  if(valor==='' || isNaN(v)){ delete uniAjustes[id]; }
-  else { uniAjustes[id] = {tipo, valor:v, nota:(uniAjustes[id] && uniAjustes[id].nota) || ''}; }
-  calcular(true);
+/* ============ HASTA 3 CANTIDADES + DESCRIPCIÓN TÉCNICA (Conde 2026-11-13) ============
+   El desglose editable, la comparación de cantidades, el PDF y el guardado son compartidos (tactical-avanzado.js). */
+function uniTituloComun(p){
+  const pl = UNI_PLANTILLAS[p.plantilla] || UNI_PLANTILLAS.otro;
+  return `${pl.corto} ${p.ancho}x${p.alto}cm`;
 }
-function uniAjustarNota(id, nota){ if(uniAjustes[id]) uniAjustes[id].nota = nota; if(ultimoParams && ultimoParams.ajustes && ultimoParams.ajustes[id]) ultimoParams.ajustes[id].nota = nota; }
-function uniRestablecer(id){ delete uniAjustes[id]; calcular(true); }
-function uniRestablecerTodo(){ uniAjustes = {}; calcular(true); }
-
-function uniTablaAvanzadaHtml(r){
-  let h = `<table class="resultado-tabla" style="font-size:0.82rem;"><tr style="font-weight:bold;"><td>Renglón</td><td class="num">Cant.</td><td class="num">Unitario</td><td class="num">Valor</td><td class="num" title="Escribe un precio unitario distinto solo para esta cotización">Nuevo unitario</td><td class="num" title="Sube o baja este renglón en porcentaje (ej. 50 = +50%)">Ajuste %</td><td></td></tr>`;
-  let grupo = '';
-  r.lineas.forEach(l => {
-    if(l.grupo!==grupo){ grupo = l.grupo; h += `<tr class="sub"><td colspan="7">${uniEsc(grupo)}</td></tr>`; }
-    const a = l.ajuste;
-    const cant = (Math.round(l.cantidad*100)/100).toLocaleString('es-CO');
-    h += `<tr${l.ajustado?' style="background:#fff7e6;"':''}>
-      <td>${uniEsc(l.concepto)}${l.ajustado?` <span style="color:#b45309; font-weight:600;">(ajustado)</span>`:''}</td>
-      <td class="num">${cant} <span style="color:var(--texto-suave);">${l.unidad}</span></td>
-      <td class="num">${l.ajustado?`<s style="color:var(--texto-suave);">${cop(l.unitarioBase)}</s> `:''}${cop(l.unitario)}</td>
-      <td class="num">${l.ajustado?`<s style="color:var(--texto-suave);">${cop(l.base)}</s> `:''}<strong>${cop(l.valor)}</strong></td>
-      <td class="num"><input type="number" style="width:86px;" value="${a&&a.tipo==='unit'?a.valor:''}" placeholder="$" onchange="uniAjustar('${l.id}','unit',this.value)"></td>
-      <td class="num"><input type="number" style="width:60px;" value="${a&&a.tipo==='pct'?a.valor:''}" placeholder="%" onchange="uniAjustar('${l.id}','pct',this.value)"></td>
-      <td>${l.ajustado?`<button type="button" data-ui="none" title="Volver al precio de lista" onclick="uniRestablecer('${l.id}')" style="padding:2px 8px;">↺</button>`:''}</td>
-    </tr>`;
-    if(l.ajustado){
-      h += `<tr style="background:#fff7e6;"><td colspan="7"><input type="text" style="width:100%; box-sizing:border-box; font-size:0.8rem;" placeholder="Motivo del ajuste (opcional, ej. tinta especial, muchos insertos)" value="${uniEsc(a.nota||'')}" oninput="uniAjustarNota('${l.id}',this.value)"></td></tr>`;
-    }
+// Descripción técnica automática para el cliente (sin cantidad ni precios); editable antes de guardar.
+function uniDescripcionTecnica(p, r){
+  const n = v => String(v).replace('.', ',');
+  const pl = UNI_PLANTILLAS[p.plantilla] || UNI_PLANTILLAS.otro;
+  let txt = `${pl.corto} de ${n(p.ancho)} x ${n(p.alto)} cm.`;
+  r.partes.forEach(pt => {
+    const c = pt.comp;
+    const cuanto = c.tipo==='cuadernillo' ? `${c.paginas} páginas` : `${pt.hojas} hoja${pt.hojas>1?'s':''}`;
+    const tintas = (pt.tintasTiro||pt.tintasRetiro) ? `${pt.tintasTiro}x${pt.tintasRetiro} tintas` : 'sin impresión';
+    txt += ` ${pt.nombre}: ${cuanto} en ${pt.sustratoNombre} ${pt.gramaje} g, ${tintas}${pt.carasPlastificado>0 ? `, plastificado ${pt.carasPlastificado} cara${pt.carasPlastificado>1?'s':''}` : ''}.`;
   });
-  h += `<tr class="sub"><td colspan="3">Costo directo total</td><td class="num">${cop(r.costoDirecto)}</td><td colspan="3"></td></tr>`;
-  h += `<tr><td colspan="3">Fondo de Seguridad (${(r.fondoSeguridadPct*100).toFixed(1)}% del costo directo, automático)</td><td class="num">${cop(r.fondoSeguridadCop)}</td><td colspan="3"></td></tr>`;
-  h += `<tr class="sub"><td colspan="3">Subtotal (costo total del trabajo)</td><td class="num">${cop(r.subtotal)}</td><td colspan="3"></td></tr>`;
-  h += `</table>`;
-  if(r.nAjustes>0) h += `<div style="margin-top:6px;"><button type="button" data-ui="cancel" onclick="uniRestablecerTodo()">Quitar todos los ajustes (${r.nAjustes})</button></div>`;
-  h += `<div class="hint" style="margin-top:6px;">Los ajustes aplican solo a esta cotización y se guardan con ella. Los precios de lista se cambian en el Panel de Precios.</div>`;
-  return h;
+  if(r.detalleCarton) txt += ` Base dura en cartón de ${n(r.detalleCarton.calibreMm)} mm.`;
+  if(r.anillo) txt += ` Anillado doble O.`;
+  if(r.terminados.length) txt += ` Terminados: ${r.terminados.map(t => t.replace(/\s*\(.*\)$/, '').toLowerCase()).join(', ')}.`;
+  return txt;
 }
+window.tacticalCantCfg = {
+  linea: 'universal',
+  cotizar: p => cotizarUniversal(p),
+  tituloComun: uniTituloComun,
+  fichaTecnica: (p, r) => tacticalAvzFichaTecnica(p, r, RECOMENDACIONES_PRODUCCION),
+};
 
 function calcular(){
   const cont = document.getElementById("resultado-contenido");
@@ -1225,7 +1213,7 @@ function calcular(){
     if(r.terminados.length) filas += `<tr class="detalle"><td colspan="2">↳ Terminados: ${r.terminados.map(uniEsc).join(', ')}</td></tr>`;
     if(r.detalleCarton) filas += `<tr class="detalle"><td colspan="2">↳ Tapa dura: cartón ${String(r.detalleCarton.calibreMm).replace('.',',')} mm, ${r.detalleCarton.nPliegos} pliego(s) 70x100</td></tr>`;
     if(r.anillo) filas += `<tr class="detalle"><td colspan="2">↳ Anillado doble O: ${r.anillo.elegido?r.anillo.elegido+' mm':'calibre fuera de tabla'}, perforado ${r.anillo.perforado.replace('x',':')}, ${r.anillo.loops} loops, ${r.anillo.tirasTotal} tiras (incluye ${r.anillo.sobrante} de sobrante)</td></tr>`;
-    filas += `<tr class="sub"><td>Costo total del trabajo${r.nAjustes>0?` <span style="color:#b45309;">(${r.nAjustes} renglón(es) ajustado(s) a mano)</span>`:''}</td><td class="num">${cop(r.subtotal)}</td></tr>`;
+    filas += `</table>` + tacticalAvzHtml(r.lineas) + `<table class="resultado-tabla">`;
     if(r.extraCargoCantidad > 0){
       filas += `<tr><td>${cotTextoConNegrilla(r.extraCargoDescripcion||'Extra adicional')} (${r.extraCargoCantidad} x ${cop(r.extraCargoValorUnitario)})</td><td class="num">${cop(r.extraCargoSubtotal)}</td></tr>`;
     }
@@ -1241,14 +1229,12 @@ function calcular(){
     filas += `<tr style="font-weight:bold; color:var(--verde); border-top:2px solid var(--verde);"><td>Ganancia total del pedido (utilidad+comisión, sin IVA)</td><td class="num">${cop(r.gananciaTotal)}</td></tr>`;
     filas += `<tr class="detalle"><td colspan="2">↳ Ganancia por unidad: ${cop(r.gananciaUnitaria)}</td></tr>`;
     filas += `</table>`;
-    filas += `<details id="uni-avanzado" style="margin-top:12px;"${uniAvanzadoAbierto?' open':''} ontoggle="uniAvanzadoAbierto=this.open">
-      <summary style="cursor:pointer; font-weight:600; color:var(--azul);">Modo avanzado — ver y ajustar el desglose de costos</summary>
-      <div style="margin-top:8px; overflow-x:auto;">${uniTablaAvanzadaHtml(r)}</div></details>`;
     cont.innerHTML = filas;
     ultimoResultado = r; ultimoParams = p;
+    tacticalCantRender(cont);
     ultimoOT = null; // recalcular = cotización nueva, saca su propio número (mismo criterio que las demás calculadoras)
     const campoDescCli = document.getElementById("in-descCliente");
-    campoDescCli.value = uniTituloDe(p);
+    campoDescCli.value = uniDescripcionTecnica(p, r);
     campoDescCli.style.height = 'auto'; campoDescCli.style.height = (campoDescCli.scrollHeight+2)+'px';
     document.getElementById("cot-ot-nota").style.display = "none";
   } catch(err){
@@ -1293,6 +1279,8 @@ async function generarOrdenProduccion(){
     return out;
   });
   if(r.detalleCarton) bloques.push({ titulo:`Cartón de tapas (${p.ancho}x${p.alto}cm)`, lineasTexto:[`Cartón <strong>${String(r.detalleCarton.calibreMm).replace('.',',')} mm</strong> — <strong>${r.detalleCarton.nPliegos} pliego(s) 70x100</strong> — por unidad: 2 tapas de ${p.ancho}x${p.alto}cm y 2 bases de ${p.ancho}x${r.detalleCarton.baseCm}cm`], planoCorte:r.detalleCarton.planoCorte });
+  const bloqueInsumos = tacticalAvzBloqueInsumosOP(r.lineas);
+  if(bloqueInsumos) bloques.push(bloqueInsumos);
   const html = tacticalOPDocumentoHtml({
     logoB64: TACTICAL_LOGO_B64, ot: ultimoOT, cliente: nombreClienteOP,
     fechaEntrega: new Date(fechaEntregaOP+'T00:00:00').toLocaleDateString('es-CO', {day:'numeric', month:'long', year:'numeric'}),
@@ -1604,7 +1592,7 @@ async function guardarCotizacionClick(){
     planoCorte = ultimoResultado.detalleMaterial.planoCorte || null;
   }
   const recomendaciones = RECOMENDACIONES_PRODUCCION.filter(reg=>reg.aplica(ultimoResultado)).map(reg=>typeof reg.texto==='function'?reg.texto(ultimoResultado):reg.texto);
-  const opp = { id: crypto.randomUUID(), ot, idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'universal', cantidad: ultimoParams.cantidad, maquina, material, nPliegos, planoCorte, recomendaciones, fotoUrl: fotoParaCotizacion('universal'), videoUrl: videoParaCotizacion('universal') };
+  const opp = { id: crypto.randomUUID(), ot, idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'universal', cantidad: ultimoParams.cantidad, maquina, material, nPliegos, planoCorte, recomendaciones, insumos: tacticalAvzInsumos(ultimoResultado.lineas), fotoUrl: fotoParaCotizacion('universal'), videoUrl: videoParaCotizacion('universal') };
   db_opps.push(opp);
   const oppGuardadoOk = await tacticalSyncOpps(db_opps);
 
@@ -1677,7 +1665,7 @@ function cargarCotizacionGuardada(cot){
   document.getElementById('in-anillado').checked = !!p.anillado;
   document.getElementById('in-anilladoLado').value = p.anilladoLado || 'ancho';
   uniTapasSyncCampos();
-  uniAjustes = JSON.parse(JSON.stringify(p.ajustes||{}));
+  tacticalCantCargar(p);
 
   calcular(true);
   if(ultimoResultado){

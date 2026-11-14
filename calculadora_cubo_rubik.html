@@ -195,6 +195,14 @@
           <input type="text" inputmode="numeric" id="in-cantidad" value="200" oninput="tacticalFormatearMiles(this)">
         </div>
         <div class="campo chico">
+          <label>Cantidad 2 (opcional):</label>
+          <input type="text" inputmode="numeric" id="in-cantidad2" value="" placeholder="ej. 500" oninput="tacticalFormatearMiles(this)">
+        </div>
+        <div class="campo chico">
+          <label>Cantidad 3 (opcional):</label>
+          <input type="text" inputmode="numeric" id="in-cantidad3" value="" placeholder="ej. 1.000" oninput="tacticalFormatearMiles(this)">
+        </div>
+        <div class="campo chico">
           <label>Caras a marcar:</label>
           <select id="in-caras">
             <option value="1">1 cara — $200/u</option>
@@ -268,7 +276,7 @@
     <div class="card">
       <h2>Resultado</h2>
       <div id="resultado-contenido"><div class="placeholder">Completa el formulario y presiona Calcular.</div></div>
-      <div class="campo" style="margin-top:10px;"><label>Descripción para el cliente (editable — escribe **así** para resaltar en negrilla en el PDF):</label><textarea id="in-descCliente" class="tactical-campo-dictado" rows="1" style="width:100%; box-sizing:border-box; resize:vertical; overflow:hidden; font-family:inherit; font-size:inherit; padding:8px; line-height:1.4;" oninput="this.style.height='auto'; this.style.height=(this.scrollHeight+2)+'px';"></textarea></div>
+      <div class="campo" style="margin-top:10px;"><label>Descripción para el cliente: <span title="Editable. Escribe **así** para resaltar en negrilla en el PDF." style="cursor:help; font-weight:normal; color:var(--texto-suave,#5a6472);">ⓘ</span></label><textarea id="in-descCliente" class="tactical-campo-dictado" rows="1" style="width:100%; box-sizing:border-box; resize:vertical; overflow:hidden; font-family:inherit; font-size:inherit; padding:8px; line-height:1.4;" oninput="this.style.height='auto'; this.style.height=(this.scrollHeight+2)+'px';"></textarea></div>
       <div class="campo" style="margin-top:10px;">
         <label>Variante de foto (opcional -- solo si creaste variantes en la Fototeca para esta línea):</label>
         <select id="in-varianteFoto" style="width:100%; box-sizing:border-box;"><option value="">(Automática de la línea)</option></select>
@@ -299,6 +307,7 @@
 <script src="tactical-supabase.js?v=20261109b"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
 <script src="precios_tactical.js?v=20261113b"></script>
+<script src="tactical-avanzado.js?v=20261113m"></script>
 <script src="tactical-ui.js?v=20261109d"></script>
 <script>
 /* ============ CONSTANTES REUTILIZADAS DEL MOTOR YA VALIDADO ============ */
@@ -626,6 +635,14 @@ function cotizarCuboRubik(p){
   const usaDigital = detalleImpresionCubo.via === "digital";
   const costoImpresionCuboTotal = detalleImpresionCubo.total;
 
+  // Conde 2026-11-13: desglose renglón por renglón (cantidad, unitario, valor) como la tabla de Litoplan;
+  // en la "versión profesional" cada renglón se puede ajustar solo para esta cotización (p.ajustes).
+  const avz = tacticalAvzCrear(p.ajustes);
+  const cInsumo = avz.linea('ins', 'Insumos', `Cubo (insumo, con ${(CUBO_MERMA_PCT*100).toFixed(0)}% de merma)`, Math.round(p.cantidad*(1+CUBO_MERMA_PCT)*100)/100, 'unidad', CUBO_INSUMO_COP, costoInsumo);
+  const cMarcacion = avz.linea('mar', 'Procesos', `Marcación (${p.caras} cara${p.caras>1?'s':''})`, p.cantidad, 'unidad', CUBO_MARCACION_CARAS_COP[p.caras]);
+  const cUV = avz.linea('uv', 'Procesos', 'Brillo UV parcial (obligatorio, por tramo)', 1, 'trabajo', costoUV);
+  const cImpresionCubo = avz.linea('imp', 'Procesos', `Impresión de las caras — ${usaDigital?'digital':'litográfica'}, ${detalleImpresionCubo.caraSheetLabel}, ${detalleImpresionCubo.nPliegos} pliegos`, 1, 'trabajo', costoImpresionCuboTotal);
+
   let costoCaja = 0, detalleCaja = null;
   if(p.conCaja){
     const areaCajaM2 = (CUBO_CAJA_ANCHO_CM*CUBO_CAJA_ALTO_CM)/10000;
@@ -655,23 +672,29 @@ function cotizarCuboRubik(p){
     const costoPlastificadoCaja = Math.max(areaCajaM2*p.cantidad*PLASTIFICADO_COP_M2, PLASTIFICADO_PISO_COP);
     const costoTroqueladoCaja = Math.ceil(p.cantidad/1000)*CUBO_TROQUELADO_COP_MILLAR;
     const costoPegadoCajaTotal = costoPegadoCaja(p.cantidad);
-    costoCaja = detalleMaterialCaja.costoTotal + impresionCajaElegida.total + costoPlastificadoCaja + costoTroqueladoCaja + costoPegadoCajaTotal;
+    costoCaja = avz.linea('cjm', 'Insumos', `Caja — cartulina ${cajaSustratoNombre} ${cajaGramaje}g (pliego ${detalleMaterialCaja.formato})`, detalleMaterialCaja.nPliegos, 'pliego', detalleMaterialCaja.precioPliego, detalleMaterialCaja.costoTotal)
+      + avz.linea('cji', 'Procesos', `Caja — impresión ${usaDigitalCaja?'digital':'litográfica'} ${tintasCaja}x0`, 1, 'trabajo', impresionCajaElegida.total)
+      + avz.linea('cjp', 'Procesos', 'Caja — plastificado 1 cara', 1, 'trabajo', costoPlastificadoCaja)
+      + avz.linea('cjt', 'Procesos', 'Caja — troquelado', Math.ceil(p.cantidad/1000), 'millar', CUBO_TROQUELADO_COP_MILLAR)
+      + avz.linea('cjg', 'Procesos', 'Caja — pegado', 1, 'trabajo', costoPegadoCajaTotal);
     detalleCaja = {
       detalleMaterialCaja, usaDigitalCaja, impresionCajaElegida,
       costoPlastificadoCaja, costoTroqueladoCaja, costoPegadoCajaTotal, tintasCaja,
     };
   }
 
-  const costoDirecto = costoInsumo + costoMarcacion + costoUV + costoImpresionCuboTotal + costoCaja;
+  const costoDirecto = cInsumo + cMarcacion + cUV + cImpresionCubo + costoCaja;
+  avz.total('Costo directo total', costoDirecto, 'tDirecto');
 
-  const disenoCop = disenoYPreprensa(costoDirecto);
+  const disenoCop = avz.linea('dis', 'Generales', 'Diseño / Preprensa', 1, 'trabajo', disenoYPreprensa(costoDirecto));
   const fondoSeguridadPct = tramoFondoSeguridad(costoDirecto);
-  const fondoSeguridadCop = costoDirecto*fondoSeguridadPct;
-  const sherpaCop = SHERPA_BASE_COP;
-  const empaqueCop = costoEmpaqueCubo(p.cantidad);
-  const costoTransporte = costoTransporteCubo(p.cantidad);
+  const fondoSeguridadCop = avz.linea('fondo', 'Generales', `Fondo de Seguridad (${(fondoSeguridadPct*100).toFixed(1)}% del costo directo, automático)`, 1, 'trabajo', costoDirecto*fondoSeguridadPct);
+  const sherpaCop = avz.linea('she', 'Generales', 'Sherpa (muestra de color)', 1, 'trabajo', SHERPA_BASE_COP);
+  const empaqueCop = avz.linea('emp', 'Generales', `Empaque (${EMPAQUE_UNIDADES_POR_CAJA} u. por caja)`, 1, 'trabajo', costoEmpaqueCubo(p.cantidad));
+  const costoTransporte = avz.linea('tra', 'Generales', 'Transporte (por volumen de cubos)', 1, 'envío', costoTransporteCubo(p.cantidad));
 
   const subtotal = costoDirecto + disenoCop + fondoSeguridadCop + sherpaCop + empaqueCop + costoTransporte;
+  avz.total('Subtotal', subtotal, 'tSub');
 
   // Conde 2026-09-25: "Extra / Ajuste adicional" -- algo puntual que pide el cliente y no está
   // en el catálogo. Se cobra como si fuera un producto completo: Conde escribe directamente el
@@ -693,8 +716,8 @@ function cotizarCuboRubik(p){
 
   return {
     aplicaIva,
-    costoInsumo, costoMarcacion, costoUV, usaDigital, detalleImpresionCubo,
-    costoImpresionCubo: costoImpresionCuboTotal,
+    costoInsumo: cInsumo, costoMarcacion: cMarcacion, costoUV: cUV, usaDigital, detalleImpresionCubo,
+    costoImpresionCubo: cImpresionCubo, lineas: avz.lineas, nAjustes: avz.nAjustes(),
     conCaja: p.conCaja, costoCaja, detalleCaja, costoDirecto,
     disenoCop, fondoSeguridadPct, fondoSeguridadCop, sherpaCop, empaqueCop, costoTransporte,
     subtotal, precioVentaTotal, precioVentaUnitario, ivaTotal, precioFinalTotal,
@@ -741,6 +764,8 @@ function calcular(){
       extraCantidad: parseFloat(document.getElementById("in-extraCantidad").value)||0,
       extraValorUnitario: parseFloat(document.getElementById("in-extraValorUnitario").value)||0,
     };
+    tacticalAvzUsarCantidad(p.cantidad);   // los ajustes de la versión profesional son por cantidad
+    p.ajustes = tacticalAvzCopiaAjustes(p.cantidad);
     const r = cotizarCuboRubik(p);
     renderRecomendaciones(r);
 
@@ -749,26 +774,7 @@ function calcular(){
       : `Litográfico — ${r.detalleImpresionCubo.caraSheetLabel}, ${r.detalleImpresionCubo.nPliegos} pliegos, ${r.detalleImpresionCubo.nPlanchas} plancha(s), ${r.detalleImpresionCubo.nMillares} millar(es) + troquelado ${cop(r.detalleImpresionCubo.costoTroquelado)}`;
 
     let filas = `<table class="resultado-tabla">`;
-    filas += `<tr><td>Insumo cubo (con 2% merma)</td><td class="num">${cop(r.costoInsumo)}</td></tr>`;
-    filas += `<tr><td>Marcación (${p.caras} cara${p.caras>1?'s':''})</td><td class="num">${cop(r.costoMarcacion)}</td></tr>`;
-    filas += `<tr><td>Brillo UV Parcial (obligatorio, por tramo)</td><td class="num">${cop(r.costoUV)}</td></tr>`;
-    filas += `<tr><td>Impresión — ${viaTxt}</td><td class="num">${cop(r.costoImpresionCubo)}</td></tr>`;
-    if(r.conCaja){
-      filas += `<tr class="grupo"><td colspan="2">Caja de empaque (26x23cm, Cote 300gr, ${r.detalleCaja.tintasCaja}x0)</td></tr>`;
-      filas += `<tr class="detalle"><td colspan="2">Material: ${cop(r.detalleCaja.detalleMaterialCaja.costoTotal)} (${r.detalleCaja.detalleMaterialCaja.nPliegos} pliego(s) ${r.detalleCaja.detalleMaterialCaja.formato})</td></tr>`;
-      filas += `<tr class="detalle"><td colspan="2">Impresión — ${r.detalleCaja.usaDigitalCaja?'Digital':'Litográfico'}: ${cop(r.detalleCaja.impresionCajaElegida.total)}</td></tr>`;
-      filas += `<tr class="detalle"><td colspan="2">Plastificado 1 cara: ${cop(r.detalleCaja.costoPlastificadoCaja)}</td></tr>`;
-      filas += `<tr class="detalle"><td colspan="2">Troquelado: ${cop(r.detalleCaja.costoTroqueladoCaja)}</td></tr>`;
-      filas += `<tr class="detalle"><td colspan="2">Pegado: ${cop(r.detalleCaja.costoPegadoCajaTotal)}</td></tr>`;
-      filas += `<tr><td>Subtotal caja</td><td class="num">${cop(r.costoCaja)}</td></tr>`;
-    }
-    filas += `<tr class="sub"><td>Costo directo total</td><td class="num">${cop(r.costoDirecto)}</td></tr>`;
-    filas += `<tr><td>Diseño / Preprensa</td><td class="num">${cop(r.disenoCop)}</td></tr>`;
-    filas += `<tr><td>Fondo de Seguridad (${(r.fondoSeguridadPct*100).toFixed(1)}%)</td><td class="num">${cop(r.fondoSeguridadCop)}</td></tr>`;
-    filas += `<tr><td>Sherpa (muestra de color)</td><td class="num">${cop(r.sherpaCop)}</td></tr>`;
-    filas += `<tr><td>Empaque (${EMPAQUE_UNIDADES_POR_CAJA}u/caja)</td><td class="num">${cop(r.empaqueCop)}</td></tr>`;
-    filas += `<tr><td>Transporte (Ruta 2, por volumen de cubos)</td><td class="num">${cop(r.costoTransporte)}</td></tr>`;
-    filas += `<tr class="sub"><td>Subtotal</td><td class="num">${cop(r.subtotal)}</td></tr>`;
+    filas += `</table>` + tacticalAvzHtml(r.lineas) + `<table class="resultado-tabla">`;
     if(r.extraCantidad > 0){
       filas += `<tr><td>${cotTextoConNegrilla(r.extraDescripcion||'Extra adicional')} (${r.extraCantidad} x ${cop(r.extraValorUnitario)})</td><td class="num">${cop(r.extraSubtotal)}</td></tr>`;
     }
@@ -786,6 +792,7 @@ function calcular(){
     filas += `</table>`;
     cont.innerHTML = filas;
     ultimoResultado = r; ultimoParams = p;
+    tacticalCantRender(cont);
     // Conde 2026-09-17: "vi un OT repetido/duplicado en 2 cotizaciones distintas" -- guardar una
     // cotización, cambiar el formulario para OTRO producto (sin pasar por "Nueva cotización") y
     // volver a guardar reusaba el mismo ultimoOT porque nunca se limpiaba solo. Cuadernos (Hub) ya
@@ -793,7 +800,7 @@ function calcular(){
     // de cero saca su propio número -- se replica el mismo criterio acá.
     ultimoOT = null;
     const campoDescCli = document.getElementById("in-descCliente");
-    campoDescCli.value = `${p.cantidad} Cubo Rubik (${p.caras} caras)${p.conCaja?` con caja ${p.tintasCaja}x0`:''}`;
+    campoDescCli.value = cuboDescripcionTecnica(p, r);
     campoDescCli.style.height = 'auto'; campoDescCli.style.height = (campoDescCli.scrollHeight+2)+'px';
     document.getElementById("cot-ot-nota").style.display = "none";
   } catch(err){
@@ -1098,6 +1105,8 @@ async function generarOrdenProduccion(){
       planoCorte: planoImpresionCaja,
     });
   }
+  const bloqueInsumos = tacticalAvzBloqueInsumosOP(r.lineas);
+  if(bloqueInsumos) bloques.push(bloqueInsumos);
   const html = tacticalOPDocumentoHtml({
     logoB64: TACTICAL_LOGO_B64, ot: ultimoOT, cliente: nombreClienteOP,
     fechaEntrega: new Date(fechaEntregaOP+'T00:00:00').toLocaleDateString('es-CO', {day:'numeric', month:'long', year:'numeric'}),
@@ -1150,7 +1159,7 @@ async function guardarCotizacionClick(){
   // clasifica la máquina de impresión (digital vs litográfico en Cuarto de Pliego).
   const maquina = ultimoResultado.usaDigital ? 'digital' : 'cuarto';
   const recomendaciones = RECOMENDACIONES_PRODUCCION.filter(reg=>reg.aplica(ultimoResultado)).map(reg=>reg.texto);
-  const opp = { id: crypto.randomUUID(), ot, idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'cubo_rubik', cantidad: ultimoParams.cantidad, maquina, material: null, nPliegos: null, recomendaciones, fotoUrl: fotoParaCotizacion(ultimoParams.conCaja ? 'cubo_rubik_con_caja' : 'cubo_rubik_sin_caja'), videoUrl: videoParaCotizacion(ultimoParams.conCaja ? 'cubo_rubik_con_caja' : 'cubo_rubik_sin_caja') };
+  const opp = { insumos: tacticalAvzInsumos(ultimoResultado.lineas), id: crypto.randomUUID(), ot, idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'cubo_rubik', cantidad: ultimoParams.cantidad, maquina, material: null, nPliegos: null, recomendaciones, fotoUrl: fotoParaCotizacion(ultimoParams.conCaja ? 'cubo_rubik_con_caja' : 'cubo_rubik_sin_caja'), videoUrl: videoParaCotizacion(ultimoParams.conCaja ? 'cubo_rubik_con_caja' : 'cubo_rubik_sin_caja') };
   db_opps.push(opp);
   const oppGuardadoOk = await tacticalSyncOpps(db_opps);
 
@@ -1184,8 +1193,27 @@ async function guardarCotizacionClick(){
 
 // Conde 2026-08-27: reabre una cotización guardada (viene del Buscador de Cotizaciones del Hub, vía
 // ?ot=... en la URL -- ver tacticalCargarEdicionDesdeURL más abajo).
+/* ============ HASTA 3 CANTIDADES + DESCRIPCIÓN TÉCNICA (Conde 2026-11-13) ============
+   La lógica compartida (cálculo por cantidad, ventana comparadora, PDF, guardado) vive en tactical-avanzado.js. */
+function cuboTituloComun(p){ return `Cubo Rubik (${p.caras} cara${p.caras>1?'s':''})${p.conCaja?' con caja':''}`; }
+// Descripción técnica automática para el cliente (sin cantidad ni precios); editable antes de guardar.
+function cuboDescripcionTecnica(p, r){
+  return `Cubo Rubik con ${p.caras} cara${p.caras>1?'s marcadas':' marcada'}, impresa${p.caras>1?'s':''} y con brillo UV parcial.`
+    + (p.conCaja ? ` Incluye caja individual impresa a ${p.tintasCaja}x0 tintas, plastificada, troquelada y pegada.` : '');
+}
+window.tacticalCantCfg = {
+  linea: 'cubo_rubik',
+  cotizar: p => cotizarCuboRubik(p),
+  tituloComun: cuboTituloComun,
+  fichaTecnica: (p, r) => ({
+    maquina: r.usaDigital ? 'digital' : ((r.detalleImpresionCubo && r.detalleImpresionCubo.fraccion) || 'otro'),
+    recomendaciones: RECOMENDACIONES_PRODUCCION.filter(reg => reg.aplica(r, p)).map(reg => typeof reg.texto==='function' ? reg.texto(r, p) : reg.texto),
+  }),
+};
+
 function cargarCotizacionGuardada(cot){
   const p = cot.params;
+  tacticalCantCargar(p);
   document.getElementById('in-cli-empresa').value = cot.cliente.empresa || '';
   document.getElementById('in-cli-encargado').value = cot.cliente.encargado || '';
   document.getElementById('in-cli-telefono').value = cot.cliente.telefono || '';
