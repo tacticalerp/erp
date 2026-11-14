@@ -185,6 +185,72 @@ function tacticalAvzRestablecer(id){ delete window.tacticalAvz.ajustes[id]; tact
 function tacticalAvzRestablecerTodo(){ Object.keys(window.tacticalAvz.ajustes).forEach(k => delete window.tacticalAvz.ajustes[k]); tacticalAvzRecalcular(); }
 function tacticalAvzToggleNota(id){ window.tacticalAvz.notasAbiertas[id] = !window.tacticalAvz.notasAbiertas[id]; tacticalAvzRecalcular(); }
 
+/* ---- INSUMOS EXTRA (ítems personalizados que el usuario anexa) ----
+   Conde 2026-11-13: "que en el modo profesional pueda anexar item y los pueda personalizar
+   completamente y que esos item aparezcan como adicionales en la orden de producción ej. carátula
+   estampada 2 clisé de 40.000, y 2 tirajes de estampado de 100.000, esto reemplazaría todos donde
+   esté la opción de extra, se suprime esa ventana". Conde: "esos extra son un insumo más, se
+   programan igual que el papel, la impresión o cualquier otro insumo de fabricación, así lo
+   trabajo en Litoplan" -- por eso NO es un cargo aparte con su propio IVA como el viejo "Extra al
+   cliente": entra al costo directo como cualquier otro renglón (avz.linea), se marca con la
+   utilidad/comisión de siempre, y por lo mismo aparece en la tabla de insumos (versión
+   profesional) y en la Orden de Producción -- nunca como línea aparte del PDF del cliente.
+   Siempre disponible (no hace falta activar "Versión profesional" para usarlo; ver
+   tacticalAvzExtrasMontar). Uso dentro del motor de una calculadora:
+     let costoExtras = 0;
+     (p.extras||[]).forEach((ex,i) => costoExtras += avz.linea('extra'+i, 'Procesos', ex.desc, ex.cantidad, ex.unidad||'u', ex.unitario));
+     const costoDirecto = ... + costoExtras;
+   Al leer los params: extras: tacticalAvzExtrasLeer(). Al recargar una cotización guardada (editar
+   o duplicar): tacticalAvzExtrasCargar(p.extras). */
+window.tacticalAvz.extras = [];
+window.tacticalAvz.extrasContId = null;
+let tacticalAvzExtrasSeq = 0;
+function tacticalAvzExtrasHtml(){
+  const E = tacticalAvzEsc;
+  const filas = window.tacticalAvz.extras.map(e => `
+    <div class="fila" style="margin-top:6px;">
+      <div class="campo" style="flex:2;"><input type="text" placeholder="Descripción (ej. Clisé de estampado)" value="${E(e.desc)}" oninput="tacticalAvzExtraEditar('${e.id}','desc',this.value)"></div>
+      <div class="campo chico"><input type="number" placeholder="Cant." min="0" value="${e.cantidad||''}" oninput="tacticalAvzExtraEditar('${e.id}','cantidad',this.value)"></div>
+      <div class="campo chico"><input type="number" placeholder="Valor unitario" value="${e.unitario||''}" oninput="tacticalAvzExtraEditar('${e.id}','unitario',this.value)"></div>
+      <button type="button" data-ui="none" title="Quitar" onclick="tacticalAvzExtraQuitar('${e.id}')" style="padding:4px 10px; align-self:center;">✕</button>
+    </div>`).join('');
+  return `<div style="margin-top:10px; border-top:1px solid var(--borde); padding-top:8px;">
+    <label style="font-weight:600; font-size:0.85rem;">Insumos extra <span title="Algo puntual que no está en el catálogo (clisés, estampado, troquel especial, etc.) -- se cobra y se marca igual que cualquier otro insumo de fabricación, y sale en la Orden de Producción." style="cursor:help; font-weight:normal; color:var(--texto-suave,#5a6472);">ⓘ</span></label>
+    <div>${filas}</div>
+    <button type="button" data-ui="none" onclick="tacticalAvzExtraAgregar()" style="margin-top:6px;">+ Agregar insumo extra</button>
+  </div>`;
+}
+function tacticalAvzExtrasRedibujar(){
+  const cont = window.tacticalAvz.extrasContId && document.getElementById(window.tacticalAvz.extrasContId);
+  if(cont) cont.innerHTML = tacticalAvzExtrasHtml();
+}
+function tacticalAvzExtrasMontar(contId){
+  window.tacticalAvz.extrasContId = contId;
+  window.tacticalAvz.extras = [];
+  tacticalAvzExtrasRedibujar();
+}
+function tacticalAvzExtraAgregar(){
+  window.tacticalAvz.extras.push({id:'avzex'+(++tacticalAvzExtrasSeq), desc:'', cantidad:1, unitario:0});
+  tacticalAvzExtrasRedibujar();
+}
+function tacticalAvzExtraQuitar(id){
+  window.tacticalAvz.extras = window.tacticalAvz.extras.filter(e => e.id!==id);
+  tacticalAvzExtrasRedibujar();
+}
+// No redibuja la lista al escribir (perdería el foco) -- solo al agregar/quitar/cargar.
+function tacticalAvzExtraEditar(id, campo, valor){
+  const e = window.tacticalAvz.extras.find(x => x.id===id);
+  if(!e) return;
+  e[campo] = (campo==='cantidad'||campo==='unitario') ? (parseFloat(valor)||0) : valor;
+}
+function tacticalAvzExtrasLeer(){
+  return window.tacticalAvz.extras.filter(e => e.cantidad>0 && (e.desc||'').trim()).map(e => ({desc:e.desc.trim(), cantidad:e.cantidad, unitario:e.unitario}));
+}
+function tacticalAvzExtrasCargar(lista){
+  window.tacticalAvz.extras = (lista||[]).map(e => ({id:'avzex'+(++tacticalAvzExtrasSeq), desc:e.desc||'', cantidad:e.cantidad||1, unitario:e.unitario||0}));
+  tacticalAvzExtrasRedibujar();
+}
+
 /* ---- LISTA DE INSUMOS PARA LA ORDEN DE PRODUCCIÓN ----
    Conde 2026-11-13: "es indispensable tener el listado de insumos para la orden de producción".
    Sale del mismo desglose: insumos y procesos con su cantidad y unidad, SIN precios (la OP la ve
@@ -586,6 +652,14 @@ function tacticalAvzLineaImpresion(avz, d, tintasTiro, tintasRetiro){
 function tacticalAvzLineaCosto(avz, id, grupo, concepto, costo, cantidad, unidad){
   if(!(costo>0)) return 0;
   return cantidad>1 ? avz.linea(id, grupo, concepto, cantidad, unidad||'unidad', costo/cantidad, costo) : avz.linea(id, grupo, concepto, 1, unidad||'trabajo', costo);
+}
+// Renglones de "Insumos extra" (ver tacticalAvzExtrasLeer arriba): cada item entra como un renglón
+// más del desglose ('extra0', 'extra1'...), para que la versión profesional lo pueda ajustar igual
+// que cualquier otro insumo. Llamar antes de avz.total('Costo directo total', ...).
+function tacticalAvzLineaExtras(avz, extras){
+  let total = 0;
+  (extras||[]).forEach((ex,i) => { total += avz.linea('extra'+i, 'Procesos', ex.desc, ex.cantidad, ex.unidad||'u', ex.unitario); });
+  return total;
 }
 function tacticalAvzFichaTecnica(p, r, reglas){
   const d = r.detalleImpresion, mat = r.detalleMaterial || {};
