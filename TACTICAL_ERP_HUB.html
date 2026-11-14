@@ -8754,14 +8754,18 @@
           };
           if(recargoRetiro) detalleNormal.recargoRetiro=recargoRetiro;
           if(!cuadriculaUniforme) return detalleNormal;
+          // Conde 2026-11-14: "por cada tinta siempre se necesita una plancha, así que 2 tintas
+          // serán 2 planchas, 3 tintas serán 3 planchas" -- la cuadrícula es una EXCEPCIÓN en la
+          // TARIFA (más barata, porque no exige registro al detalle como una foto), no en el número
+          // de planchas: sigue siendo 1 por tinta, igual que la litografía normal.
           const piezasMedioPliego=piezasPorMedioPliegoOffset(ancho,alto,pliegue);
           const nPasadasMp=Math.ceil(nPiezasFinales/Math.max(piezasMedioPliego,1));
           const millaresMp=millaresConTolerancia(nPasadasMp);
-          const costoCtpCuadricula=OFFSET_CTP_COP.medio_pliego;
-          const costoMillarCuadricula=RECARGO_TINTA_CUADRICULA_MILLAR_COP*millaresMp;
+          const costoCtpCuadricula=OFFSET_CTP_COP.medio_pliego*cantTintas;
+          const costoMillarCuadricula=RECARGO_TINTA_CUADRICULA_MILLAR_COP*cantTintas*millaresMp;
           return {
             total:costoCtpCuadricula+costoMillarCuadricula, via:"offset (medio pliego, cuadrícula)", fraccion:"medio_pliego",
-            nPlanchas:1, costoCtpUnitario:OFFSET_CTP_COP.medio_pliego, nPasadas:nPasadasMp,
+            nPlanchas:cantTintas, costoCtpUnitario:OFFSET_CTP_COP.medio_pliego, nPasadas:nPasadasMp,
             costoPlanchas:costoCtpCuadricula, nMillares:millaresMp,
             costoMillarUnitario:RECARGO_TINTA_CUADRICULA_MILLAR_COP, costoMillares:costoMillarCuadricula,
           };
@@ -8790,6 +8794,18 @@
           return base;
         }
         function mermaDigitalHojas(esPolicromia){ return DIGITAL_MERMA_HOJAS[esPolicromia?"policromia":"negro"]; }
+        // Conde 2026-11-14: la cuadrícula (diseño repetitivo, sin registro al detalle) tiene su
+        // propia merma mínima, mucho mayor que la litografía normal -- "mínimo 100 tamaños, si son
+        // 500 cuadernos serán 140, si son 1.000 serán 200" (tramos por CANTIDAD DE CUADERNOS, no por
+        // piezas físicas), "y esa cantidad se incrementa un 20% si es una cuadrícula a 2 o 3 tintas"
+        // (1 tinta se queda en el tramo base).
+        const CUADRICULA_MERMA_TRAMOS=[[499,100],[999,140],[Infinity,200]];
+        function mermaCuadricula(cantidadCuadernos,cantTintas){
+          let base=CUADRICULA_MERMA_TRAMOS[CUADRICULA_MERMA_TRAMOS.length-1][1];
+          for(const [tope,merma] of CUADRICULA_MERMA_TRAMOS){ if(cantidadCuadernos<=tope){ base=merma; break; } }
+          if(cantTintas>=2) base*=1.2;
+          return base;
+        }
         // Conde 2026-11-14: el cartón de tapa dura no se imprime, pero sí se daña al perforar para
         // el anillado -- hay que armar tapas adicionales. Datos dados por Conde: ~10 para 100
         // cuadernos, ~35 para 1.000, ~60 para 2.000, ~75 para 3.000 (el % que representa baja a
@@ -8887,7 +8903,14 @@
               // impresionesPorPlancha, así que el sobrante sale de la diferencia de esa parte.
               det.nPasadasSinMerma=det.nPlanchas*cantidadCuadernos;
             } else {
-              const esCuadriculaUniforme=(diseno==="uniforme") && !esColor;
+              // Conde 2026-11-14: "la cuadrícula máximo la hemos impreso a 4 tintas... en caso que
+              // sean 4 tintas sí se cobra lo de una policromía normal, porque en los demás casos es
+              // usual que los colores no requieran registro al detalle (ej. logo en un color y
+              // cuadrícula en otro); ya al ser 4 tintas lo más probable es que lleve una foto" -- la
+              // cuadrícula aplica de 1 a 3 tintas (antes solo aplicaba a 0-1); a 4 tintas (policromía)
+              // ya no es cuadrícula, es litografía normal.
+              const esPolicromiaLinea = tintasTiro>=4 || tintasRetiro>=4;
+              const esCuadriculaUniforme=(diseno==="uniforme") && !esPolicromiaLinea;
               const elegibleDig=elegibleDigital(ancho,alto,sustrato.gramaje,cantidadCuadernos) && !pliegue;
               if(elegibleDig && !esCuadriculaUniforme){
                 const mermaD=mermaDigitalHojas(esColor);
@@ -8899,7 +8922,10 @@
                   ? Math.ceil(nPiezasFisicas/det.piezasPorClic)
                   : costoImpresionOffset(nPiezasFisicas,tintasTiro,tintasRetiro,esColor,ancho,alto,false,pliegue).nPasadas;
               } else {
-                const mermaO=mermaOffsetHojas(nPiezasFisicas,cantTintas);
+                // Conde 2026-11-14: la merma mínima de una cuadrícula es mucho mayor que la de
+                // litografía normal (ver mermaCuadricula arriba) -- la normal solo aplica si esta
+                // línea NO es cuadrícula (ej. litografía 4x4 normal, como los Insertos).
+                const mermaO=esCuadriculaUniforme ? mermaCuadricula(cantidadCuadernos,cantTintas) : mermaOffsetHojas(nPiezasFisicas,cantTintas);
                 det=costoImpresionOffset(nPiezasFisicas+mermaO,tintasTiro,tintasRetiro,esColor,ancho,alto,esCuadriculaUniforme,pliegue);
                 det.nPasadasSinMerma=costoImpresionOffset(nPiezasFisicas,tintasTiro,tintasRetiro,esColor,ancho,alto,esCuadriculaUniforme,pliegue).nPasadas;
               }
