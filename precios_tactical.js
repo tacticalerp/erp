@@ -564,9 +564,12 @@ function tacticalPdfTablaProductosHtml(lineas, opts){
 // producto + referencia) para que las fichas de producción sean escaneables de un vistazo; si el
 // usuario escribió una descripción propia en el campo editable, se agrega después del guion, visible
 // solo al expandir la tarjeta (Conde 2026-08-13).
+// Conde 2026-11-23: "si se edita la descripción del producto, borra el predeterminado (235 Producto 70x50cm...) porque confunde al
+// cliente". Ahora: si la persona escribió su propia descripción se usa SOLO esa (PDF, CRM y Kanban); si el campo quedó vacío o igual
+// al texto automático, se usa el automático.
 function tacticalTituloCorto(auto, textoLargo){
   const largo = (textoLargo||'').trim();
-  return (largo && largo !== auto) ? `${auto} — ${largo}` : auto;
+  return (largo && largo !== auto) ? largo : auto;
 }
 
 // Fototeca de Productos: foto fija de referencia por línea (o variante), subida una sola vez

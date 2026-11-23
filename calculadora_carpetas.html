@@ -357,7 +357,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="tactical-supabase.js?v=20261109b"></script>
 <script src="tactical-bot.js?v=20260904a"></script>
-<script src="precios_tactical.js?v=20261113d"></script>
+<script src="precios_tactical.js?v=20261123a"></script>
 <script src="tactical-avanzado.js?v=20261123a"></script>
 <script src="tactical-ui.js?v=20261109d"></script>
 <script src="troqueles_tactical.js?v=20261114a"></script>
@@ -1307,6 +1307,11 @@ function cargarCotizacionGuardada(cot){
       const campoDescCli2 = document.getElementById('in-descCliente');
       campoDescCli2.value = cot.desc.slice(corto.length+3);
       campoDescCli2.style.height = 'auto'; campoDescCli2.style.height = (campoDescCli2.scrollHeight+2)+'px';
+    } else if(cot.desc && cot.desc !== corto){
+      // Conde 2026-11-23: desde ahora, si la descripción se editó, se guarda SOLO el texto escrito (sin "corto — "): se recupera tal cual.
+      const campoDescCli3 = document.getElementById('in-descCliente');
+      campoDescCli3.value = cot.desc;
+      campoDescCli3.style.height = 'auto'; campoDescCli3.style.height = (campoDescCli3.scrollHeight+2)+'px';
     }
   }
 
