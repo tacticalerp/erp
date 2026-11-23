@@ -220,32 +220,31 @@
     <div class="card">
       <h2>2. Partes del producto</h2>
       <p class="hint" style="margin:0 0 10px;">Cada parte lleva su propio papel y sus tintas. El sistema escoge solo la máquina (digital o litográfica) y el montaje más económico.</p>
+      <div id="card-uni-tapas" style="display:none; border:1px solid #cbd5e0; border-radius:8px; padding:10px 12px; margin:0 0 12px; background:#f8fafc;">
+        <div style="font-weight:700; color:#1e3a5f; margin-bottom:6px;">Tapas y anillado</div>
+        <div class="fila">
+          <div class="campo"><label for="in-tapaTipo">Tapa:</label>
+            <select id="in-tapaTipo" onchange="uniOnCambioTapa()">
+              <option value="blanda">Tapa blanda (cartulina)</option>
+              <option value="dura">Tapa dura (cartón forrado + guardas)</option>
+              <option value="ninguna">Sin tapa</option>
+            </select></div>
+          <div class="campo chico" id="campo-tapaImpresa"><label for="in-tapaImpresa">Tapa impresa:</label>
+            <select id="in-tapaImpresa" onchange="uniOnCambioTapa()"><option value="1">Sí</option><option value="0">No, sin impresión</option></select></div>
+          <div class="campo chico" id="campo-cartonCalibre" style="display:none;"><label for="in-cartonCalibre">Cartón:</label>
+            <select id="in-cartonCalibre"><option value="1.5">1,5 mm</option><option value="2">2,0 mm</option></select></div>
+          <div class="campo chico" id="campo-baseCm" style="display:none;"><label for="in-baseCm">Base (cm):</label>
+            <input type="number" id="in-baseCm" value="3.5" step="0.1" min="1"></div>
+        </div>
+        <div class="fila">
+          <div class="checkbox-row"><input type="checkbox" id="in-anillado" checked><label for="in-anillado" style="font-weight:normal;">Lleva anillado doble O (el calibre y el perforado 3:1 o 2:1 se calculan solos)</label></div>
+          <div class="campo chico"><label for="in-anilladoLado">Anillado por:</label>
+            <select id="in-anilladoLado"><option value="ancho">Arriba (a lo ancho)</option><option value="alto">Al lado (a lo alto)</option></select></div>
+        </div>
+        <div class="hint">La tapa aparece abajo, en la lista de partes: ahí puedes cambiarle el papel, las tintas o el plastificado. En tapa dura (calendario de base) se suman solos el cartón (2 tapas + 2 bases), el forro en una sola pieza, la guarda y el armado.</div>
+      </div>
       <div id="uni-componentes"></div>
       <button type="button" class="btn-add" onclick="uniAgregarComponente()">+ Agregar parte</button>
-    </div>
-
-    <div class="card" id="card-uni-tapas" style="display:none;">
-      <h2>2b. Tapas y anillado</h2>
-      <div class="fila">
-        <div class="campo"><label for="in-tapaTipo">Tapa:</label>
-          <select id="in-tapaTipo" onchange="uniOnCambioTapa()">
-            <option value="blanda">Tapa blanda (cartulina)</option>
-            <option value="dura">Tapa dura (cartón forrado + guardas)</option>
-            <option value="ninguna">Sin tapa</option>
-          </select></div>
-        <div class="campo chico" id="campo-tapaImpresa"><label for="in-tapaImpresa">Tapa impresa:</label>
-          <select id="in-tapaImpresa" onchange="uniOnCambioTapa()"><option value="1">Sí</option><option value="0">No, sin impresión</option></select></div>
-        <div class="campo chico" id="campo-cartonCalibre" style="display:none;"><label for="in-cartonCalibre">Cartón:</label>
-          <select id="in-cartonCalibre"><option value="1.5">1,5 mm</option><option value="2">2,0 mm</option></select></div>
-        <div class="campo chico" id="campo-baseCm" style="display:none;"><label for="in-baseCm">Base (cm):</label>
-          <input type="number" id="in-baseCm" value="3.5" step="0.1" min="1"></div>
-      </div>
-      <div class="fila">
-        <div class="checkbox-row"><input type="checkbox" id="in-anillado" checked><label for="in-anillado" style="font-weight:normal;">Lleva anillado doble O (el calibre y el perforado 3:1 o 2:1 se calculan solos)</label></div>
-        <div class="campo chico"><label for="in-anilladoLado">Anillado por:</label>
-          <select id="in-anilladoLado"><option value="ancho">Arriba (a lo ancho)</option><option value="alto">Al lado (a lo alto)</option></select></div>
-      </div>
-      <div class="hint">La tapa aparece arriba como una parte más: ahí puedes cambiarle el papel, las tintas o el plastificado. En tapa dura (calendario de base) se suman solos el cartón (2 tapas + 2 bases), el forro en una sola pieza, la guarda y el armado.</div>
     </div>
 
     <div class="card">
