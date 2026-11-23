@@ -5495,7 +5495,7 @@
   .badge{background:var(--wa-accent); color:#fff; border-radius:11px; min-width:20px; height:20px; font-size:.72rem; display:flex; align-items:center; justify-content:center; padding:0 6px; font-weight:700}
   .etq{display:flex; gap:4px; margin-top:3px; flex-wrap:wrap}
   .e{font-size:.66rem; font-weight:700; padding:1px 7px; border-radius:9px; color:#fff}
-  .e.as{background:var(--red)} .e.co{background:#2b6cb0} .e.pg{background:#dd6b20} .e.bo{background:#8696a0} .e.ok{background:#1fa855}
+  .e.as{background:var(--red)} .e.co{background:#2b6cb0} .e.pg{background:#dd6b20} .e.bo{background:#8696a0} .e.pb{background:#6b46c1} .e.ok{background:#1fa855}
   /* ===== chat ===== */
   .chat{display:flex; flex-direction:column; min-height:0; background:var(--wa-chat); position:relative}
   .ch{background:var(--wa-bg); padding:8px 14px; display:flex; align-items:center; gap:12px; height:59px; border-bottom:1px solid var(--wa-line)}
@@ -5604,7 +5604,7 @@
           ['foto','Pedir la foto','¿Me envías la foto que quieres usar? Mientras más nítida, mejor queda tu rompecabezas.'],
           ['gracias','Gracias','¡Gracias por escribirnos! Cualquier cosa me avisas por aquí 😊']
         ];
-        const BJ_ETQ = { asesor:['Necesita asesor','as'], conasesor:['Con asesor','co'], pago:['Pago por verificar','pg'], bot:['Atiende el bot','bo'] };
+        const BJ_ETQ = { asesor:['Necesita asesor','as'], conasesor:['Con asesor','co'], pago:['Pago por verificar','pg'], bot:['Atiende el bot','bo'], posiblebot:['Posible bot / IA','pb'] };
         const BJ_COLORES = ['#6a7175','#a35fd0','#d9822b','#1f8a70','#3b82c4','#c0392b'];
         let bjRoot = null, bjChats = [], bjSel = null, bjFiltro = 'todas', bjF = {prod:'', tam:'', tipo:'', etq:''}, bjFabierto = false;
         let bjPanel = false, bjModo = 'resp', bjMsgs = [], bjDatos = null, bjTimer = null, bjError = '', bjEstadoRender = '';
@@ -5715,7 +5715,7 @@
         }
         function bjPintar(){ bjPintarChips(); bjPintarLista(); }
         function bjPintarChips(){
-          const defs = [['todas','Todos'],['noleidos','No leídos'],['vencer','Por vencer'],['asesor','Necesitan asesor'],['pago','Pagos'],['conasesor','Con asesor'],['bot','Bot']];
+          const defs = [['todas','Todos'],['noleidos','No leídos'],['vencer','Por vencer'],['asesor','Necesitan asesor'],['pago','Pagos'],['conasesor','Con asesor'],['bot','Bot'],['posiblebot','Posibles bots']];
           const cuenta = k => k === 'vencer' ? bjChats.filter(c => bjRest(c) > 0 && bjRest(c) < 3 * 3600e3).length
             : k === 'noleidos' ? bjChats.filter(c => c.noleidos).length : bjChats.filter(c => c.estado === k).length;
           bjQ('chips').innerHTML = defs.map(([k, t]) => {
@@ -5806,7 +5806,8 @@
           if(vencida) entrada = `<div class="bloqueo"><span>⏱ Pasaron más de 24 h desde el último mensaje del cliente. WhatsApp solo permite enviarle una <b>plantilla aprobada</b>.</span>${tomado ? '<button class="bt v" onclick="bjAbrirPlantillas()">Enviar plantilla</button>' : '<button class="bt v" onclick="bjTomar()">Tomar este chat</button>'}</div>`;
           else if(tomado) entrada = `<div class="modo"><span class="${bjModo === 'resp' ? 'on' : ''}" onclick="bjModo='resp';bjPintarChat()">Responder al cliente</span><span class="n ${bjModo === 'nota' ? 'on' : ''}" onclick="bjModo='nota';bjPintarChat()">Nota interna</span><span class="ayuda-r" id="estado-env"></span><span class="ayuda-r" onclick="bjAbrirEditorRapidas()">✎ Respuestas rápidas</span></div>
             <div class="ent"><div class="rapidas" id="rap"></div><span class="ico" title="Adjuntar foto o documento" onclick="bjQ('arch').click()">📎</span><input type="file" id="arch" style="display:none" accept="image/jpeg,image/png,image/webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt" onchange="bjArchivoElegido(this)"><textarea id="txt" rows="1" placeholder="${bjModo === 'nota' ? 'Nota interna (el cliente no la ve)' : 'Escribe un mensaje o / para respuestas rápidas'}" oninput="bjRap()" onkeydown="if(event.key==='Enter'&&!event.shiftKey&&window.innerWidth>900){event.preventDefault();bjEnviar();}"></textarea><button class="env" onclick="bjEnviar()">➤</button></div>`;
-          else entrada = `<div class="bloqueo"><span>${c.estado === 'bot' ? '🤖 El bot atiende este chat.' : '🔔 Este chat necesita a una persona.'} Para escribirle tú, toma el chat: el bot se pausa solo.</span><button class="bt v" onclick="bjTomar()">Tomar este chat</button></div>`;
+          else if(c.estado === 'posiblebot') entrada = `<div class="bloqueo"><span>🤖 <b>Posible bot o IA.</b> El bot dejó de contestar para no gastar tokens. Si en realidad es una persona, confírmalo y el bot vuelve a atenderla.</span><button class="bt v" onclick="bjNoEsBot()">No es un bot</button><button class="bt g" onclick="bjTomar()">Tomar este chat</button></div>`;
+          else entrada = `<div class="bloqueo"><span>${c.estado === 'bot' ? '🤖 El bot atiende este chat.' : '🔔 Este chat necesita a una persona.'} Para escribirle tú, toma el chat: el bot se pausa solo.</span>${c.estado === 'bot' ? '<button class="bt g" onclick="bjEsBot()" title="Si quien escribe es otro bot, una IA o una respuesta automática">🤖 Es un bot/IA</button>' : ''}<button class="bt v" onclick="bjTomar()">Tomar este chat</button></div>`;
           h.innerHTML = `
             <div class="ch"><span class="volver" onclick="bjCerrar()">←</span><div class="av" style="background:${bjColor(c)}">${bjEsc(bjIni(c))}</div>
               <div class="info" onclick="bjTogglePanel()"><b>${bjEsc(bjNombreChat(c))}</b><small>${bjEsc(bjIdTexto(c))} · toca para ver datos del pedido</small></div>
@@ -5933,6 +5934,8 @@
           try { bjMsgs = await bjApi(`/api/conversaciones/${bjSel}/mensajes`); } catch(e){}
           bjPintarLista(); bjPintarChips(); bjPintarChat(); bjRefrescarDatos();
         }
+        async function bjNoEsBot(){ if(await bjAccion('no-es-bot')) await bjRecargarTodo(); }
+        async function bjEsBot(){ if(confirm('¿Marcar este chat como bot/IA? El bot dejará de contestarle (puedes revertirlo con "No es un bot").') && await bjAccion('es-bot')) await bjRecargarTodo(); }
         async function bjTomar(){ if(await bjAccion('tomar')) await bjRecargarTodo(); }
         async function bjDevolver(){ if(confirm('¿Devolver este chat al bot? El bot volverá a contestarle al cliente.') && await bjAccion('devolver')) await bjRecargarTodo(); }
         async function bjResolver(){ if(confirm('¿Marcar este chat como resuelto? El bot vuelve a atenderlo y se cierran los casos pendientes de este cliente.') && await bjAccion('resolver')) await bjRecargarTodo(); }
@@ -6065,6 +6068,7 @@
           try {
             const a = await bjApi('/api/almacenamiento');
             let rb = null; try { rb = await bjApi('/api/respaldos'); } catch(_){}
+            let gs = null; try { gs = await bjApi('/api/gasto'); } catch(_){}
             const v = a.volumen, d = a.disco, sp = a.supabase;
             const barra = (pct, color) => `<div style="background:#e9edef;border-radius:6px;height:10px;margin:4px 0 8px"><div style="width:${Math.min(100, pct)}%;background:${color};height:10px;border-radius:6px"></div></div>`;
             const col = pct => pct >= 80 ? '#c53030' : pct >= 60 ? '#dd6b20' : '#1fa855';
@@ -6078,6 +6082,8 @@
               ${fila('Contexto del bot + pedidos', bjMB(d.contextoDelBot.bytes + d.pedidos.bytes))}
               <h3 style="font-size:.92rem;margin:12px 0 2px">Fotos en Supabase (bucket del bot)</h3>
               ${sp ? `${barra(sp.usadoBytes / sp.presupuestoBytes * 100, col(sp.usadoBytes / sp.presupuestoBytes * 100))}<div style="font-size:.85rem">${bjMB(sp.usadoBytes)} de ${bjMB(sp.presupuestoBytes)} de presupuesto (el plan gratis trae 1 GB de almacenamiento en total, compartido con el resto del ERP). Retención: 30 días; 180 si el pedido se aprobó.</div>` : '<p class="sub">No se pudo consultar Supabase.</p>'}
+              <h3 style="font-size:.92rem;margin:12px 0 2px">Gasto de IA (tokens) — estimado</h3>
+              ${gs ? `<div style="font-size:.85rem">Hoy: <b>US$ ${gs.hoy.usd.toFixed(2)}</b> en ${gs.hoy.llamadas} llamadas al modelo (aviso por correo si pasa de US$ ${gs.topeUsd}).<br><span style="color:#667781">Últimos días: ${gs.ultimosDias.map(d => d.fecha.slice(5) + ' US$ ' + d.usd.toFixed(2)).join(' · ') || '—'}</span></div>` : '<p class="sub">Aún no hay datos de gasto.</p>'}
               <h3 style="font-size:.92rem;margin:12px 0 2px">Respaldo de chats y pedidos</h3>
               <p class="sub" style="margin-bottom:6px">Cada semana se guarda una copia comprimida de los chats, el contexto del bot, los pedidos y las etiquetas en Supabase (se conservan las últimas 8). Las fotos no se incluyen: ya están en Supabase.</p>
               ${rb && rb.length ? `<div style="font-size:.85rem">Último respaldo: <b>${new Date(rb[0].creado || Date.now()).toLocaleString('es-CO')}</b>${rb[0].bytes ? ' · ' + bjMB(rb[0].bytes) : ''} · ${rb.length} guardado(s)</div>` : '<div style="font-size:.85rem;color:#c53030">Todavía no hay respaldos. Se hace el primero automáticamente, o puedes hacerlo ahora.</div>'}
@@ -6108,7 +6114,7 @@
           } catch(_){}
         }
         function bjAvisar(){
-          const total = bjChats.reduce((n, c) => n + (c.phone === bjSel && document.getElementById('view-bandeja').classList.contains('active-view') ? 0 : (c.noleidos || 0)), 0);
+          const total = bjChats.reduce((n, c) => n + (c.estado === 'posiblebot' || (c.phone === bjSel && document.getElementById('view-bandeja').classList.contains('active-view')) ? 0 : (c.noleidos || 0)), 0);
           const badge = document.getElementById('bj-card-badge');
           if(badge){ badge.textContent = total; badge.style.display = total ? 'inline-block' : 'none'; }
           if(bjTituloOriginal === null) bjTituloOriginal = document.title.replace(/^\(\d+\)\s*/, '');
