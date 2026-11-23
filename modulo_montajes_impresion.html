@@ -37,6 +37,9 @@
   .thumb{position:relative;}
   .thumb .x{position:absolute;top:2px;right:2px;width:22px;height:22px;line-height:18px;padding:0;border:1px solid #94a3b8;border-radius:50%;background:#fff;color:#b91c1c;font-weight:700;cursor:pointer;font-size:12px;}
   .thumb .x:hover{background:#fee2e2;}
+  .thumb .rep{position:absolute;top:28px;right:2px;min-width:22px;height:22px;line-height:18px;padding:0 4px;border:1px solid #94a3b8;border-radius:11px;background:#fff;color:#1e3a5f;font-weight:700;cursor:pointer;font-size:11px;}
+  .thumb .rep:hover{background:#dbeafe;}
+  .thumb .copia{display:inline-block;margin-left:3px;padding:0 5px;border-radius:8px;background:#dbeafe;color:#1e3a5f;font-weight:700;}
   .thumb img{width:100%;height:100px;object-fit:contain;background:#f1f5f9;display:block;}
   .thumb .nom{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;color:#334155;}
   .thumb.t{border-color:#2563eb;} .thumb.r{border-color:#d97706;}
@@ -390,6 +393,37 @@ function trasQuitar(){
   preflightCorrer();
 }
 function poolPorId(id){ return S.pool.find(p=>p.id===+id) || null; }
+/* Conde 2026-11-23: "en ocasiones tengo la misma página 3 veces y debo tenerla 3 veces en el archivo". Repetir una página = poner copias de
+   esa misma página del archivo justo después de ella en el orden del montaje (como si el PDF la trajera repetida). No toca el archivo. */
+function vecesPagina(p){ return S.pool.filter(q=>q.fid===p.fid && q.pidx===p.pidx).length; }
+function refrescarSelectsTaco(){
+  const vt = $('selT').value, vr = $('selR').value;
+  const opts = S.pool.map(p=>'<option value="'+p.id+'">'+esc(etiquetaPool(p))+(p.copia?' (copia)':'')+'</option>').join('');
+  $('selT').innerHTML = opts; $('selR').innerHTML = opts;
+  if(poolPorId(vt)) $('selT').value = vt; if(poolPorId(vr)) $('selR').value = vr;
+}
+function repetirPagina(id){
+  const p = poolPorId(id); if(!p) return;
+  const actual = vecesPagina(p);
+  const resp = prompt('¿Cuántas veces debe aparecer la página '+(p.pidx+1)+' de «'+p.nombre+'» en el montaje?\n(Ahora aparece '+actual+' '+(actual===1?'vez':'veces')+'. Escribe 1 para dejarla una sola vez.)', String(Math.max(2, actual+1)));
+  if(resp === null) return;
+  const n = parseInt(resp, 10);
+  if(!(n >= 1 && n <= 60)){ alert('Escribe un número entre 1 y 60.'); return; }
+  const mismas = S.pool.filter(q=>q.fid===p.fid && q.pidx===p.pidx);
+  if(n > mismas.length){
+    const ultima = mismas[mismas.length-1], pos = S.pool.indexOf(ultima);
+    const copias = []; for(let k = mismas.length; k < n; k++) copias.push({ ...ultima, id:S.nextId++, copia:true });
+    S.pool.splice(pos+1, 0, ...copias);
+  } else if(n < mismas.length){
+    // se quitan primero las copias (de la última hacia atrás); la original se conserva
+    const sobran = mismas.length - n;
+    const quitar = mismas.slice().reverse().sort((a,b)=>(b.copia?1:0)-(a.copia?1:0)).slice(0, sobran).map(q=>q.id);
+    S.pool = S.pool.filter(q=>!quitar.includes(q.id));
+  }
+  refrescarSelectsTaco();
+  recalcular();
+  if(typeof tacticalAviso === 'function') tacticalAviso('La página '+(p.pidx+1)+' ahora aparece '+n+' '+(n===1?'vez':'veces')+' en el montaje.', 'ok');
+}
 function etiquetaPool(p){
   const t = piezaMm(p);
   return p.nombre + ' · pág. ' + (p.pidx+1) + ' (' + fmt(t.w) + '×' + fmt(t.h) + ' mm)';
@@ -417,7 +451,7 @@ function renderPool(){
   $('pool').innerHTML = S.pool.map(p=>{
     const cls = taco ? (p.id===tid ? 't' : (p.id===rid ? 'r' : '')) : '';
     const tag = taco ? (p.id===tid ? ' · TIRO' : (p.id===rid ? ' · RETIRO' : '')) : '';
-    return '<div class="thumb '+cls+'" style="position:relative" draggable="true" ondragstart="event.dataTransfer.setData(\'text/plain\',\'pag:'+p.id+'\')">'+(p.pf ? '<span class="sem '+p.pf+'" title="Revisión del archivo: '+({rojo:'hay errores',amarillo:'hay avisos',verde:'sin observaciones'}[p.pf])+'"></span>' : '')+'<button class="x" title="Quitar solo esta página" onclick="quitarPagina('+p.id+')">✕</button>'+(p.thumb?'<img src="'+p.thumb+'">':'<div style="height:100px"></div>')+'<div class="nom">'+esc(p.nombre)+'</div><div>pág. '+(p.pidx+1)+tag+'</div></div>';
+    return '<div class="thumb '+cls+'" style="position:relative" draggable="true" ondragstart="event.dataTransfer.setData(\'text/plain\',\'pag:'+p.id+'\')">'+(p.pf ? '<span class="sem '+p.pf+'" title="Revisión del archivo: '+({rojo:'hay errores',amarillo:'hay avisos',verde:'sin observaciones'}[p.pf])+'"></span>' : '')+'<button class="x" title="Quitar solo esta página" onclick="quitarPagina('+p.id+')">✕</button><button class="rep" title="Repetir esta página: que aparezca varias veces en el montaje sin tenerla repetida en el archivo" onclick="repetirPagina('+p.id+')">'+(vecesPagina(p)>1?'×'+vecesPagina(p):'⧉')+'</button>'+(p.thumb?'<img src="'+p.thumb+'">':'<div style="height:100px"></div>')+'<div class="nom">'+esc(p.nombre)+'</div><div>pág. '+(p.pidx+1)+(p.copia?'<span class="copia">copia</span>':'')+tag+'</div></div>';
   }).join('');
 }
 
@@ -1122,6 +1156,8 @@ function menuCelda(ev, clave){
   const b = (txt, fn)=>{ const e = document.createElement('button'); e.type = 'button'; e.className = 'btn gris'; e.style.cssText = 'text-align:left;padding:6px 10px;'; e.textContent = txt; e.onclick = ()=>{ cerrarMenuCelda(); fn(); }; m.appendChild(e); };
   if(man){ b('Cambiar por otra página…', ()=>elegirPagina({ clientX:ev.clientX, clientY:ev.clientY }, man.hh, man.i)); b(man.giro ? 'Quitar el giro de 180°' : 'Girar 180°', ()=>manAccion(man.hh, man.i, 'giro')); b('Quitar de esta posición', ()=>manAccion(man.hh, man.i, 'quitar')); document.body.appendChild(m); return; }
   if(!ov.blanco) b(ov.giro ? 'Quitar el giro de 180°' : 'Girar 180°', ()=>{ CAMBIOS[clave] = { ...ov, giro:!ov.giro }; recalcular(); });
+  { const c = (S.plan && S.plan.hojas || []).flatMap(hp=>hp.celdas||[]).find(x=>x.clave===clave);
+    if(c && c.src && !ov.blanco) b('Repetir esta página…', ()=>repetirPagina(c.src.id)); }
   b(ov.blanco ? 'Volver a poner la página' : 'Dejar en blanco', ()=>{ CAMBIOS[clave] = { ...ov, blanco:!ov.blanco }; recalcular(); });
   document.body.appendChild(m);
 }
