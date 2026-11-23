@@ -758,7 +758,13 @@ function tacticalAvzFichaTecnica(p, r, reglas){
     // pues queda muy pequeño en pantalla chica" -- en celular las 3 cantidades (si están
     // activas) se acomodan en 2 filas (2 + 1), con campos más grandes, en vez de 3 columnas
     // angostas en una sola fila.
-    + '@media (max-width: 480px){ .tactical-avz-cant-fila{ flex-wrap:wrap; } .tactical-avz-cant-campo{ flex:1 1 48%; width:auto; min-width:0; font-size:16px; padding:9px 8px; } }';
+    + '@media (max-width: 480px){ .tactical-avz-cant-fila{ flex-wrap:wrap; } .tactical-avz-cant-campo{ flex:1 1 48%; width:auto; min-width:0; font-size:16px; padding:9px 8px; } }'
+    // Conde 2026-11-23: "quiero que el botón de whap para enviar cotizaciones por whapp esté en
+    // todas las calculadoras para el formato de celular" -- el botón vive en el HTML de cada
+    // calculadora (y de Cuadernos en el Hub), pero solo se muestra en celular: en pantalla
+    // grande ya está "Guardar y Generar PDF Cliente" + el botón flotante genérico de WhatsApp.
+    + '.tactical-wa-enviar-btn{ display:none; }'
+    + '@media (max-width: 680px){ .tactical-wa-enviar-btn{ display:flex; align-items:center; justify-content:center; } }';
   (document.head || document.documentElement).appendChild(st);
 })();
 
