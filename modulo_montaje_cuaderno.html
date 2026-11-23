@@ -309,7 +309,7 @@
   <div id="pResumen" style="margin-top:10px;font-weight:700;font-size:13.5px;color:#1e3a5f;"></div>
   <div id="pVista" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;"></div>
   <div class="row2"><button class="btn rojo" onclick="descargarPrueba()">Descargar PDF de prueba (tamaño real)</button> <button class="btn rojo" title="Una imagen JPG en CMYK por hoja, a 250 ppp: pesa mucho menos que el PDF y no se atasca en la impresora. La conversión de color es aproximada (sin perfil ICC)." onclick="descargarPrueba('jpg')">Descargar JPG CMYK de prueba (250 ppp)</button><span id="msgPrueba" style="font-size:12.5px;font-weight:700;"></span></div>
-  <p class="hint" style="margin-top:6px">En automático se prueba, de menor a mayor, 22×28, 25×35, 45×30 y 50×33 cm (horizontal o vertical) y cada sección usa el más pequeño donde cabe sin reducirse, para no gastar papel de 50×33 en piezas chicas. Siempre quedan libres 4 mm como mínimo por todos los lados del papel (el margen que escribas abajo nunca baja de 0,4 cm). Se respeta la pinza de la impresora digital (5 mm del lado largo del papel, en rojo claro en la vista previa): ahí no se coloca nada. Siempre que se pueda sale a tamaño real y se juntan 2 páginas por hoja; solo si una pieza excede el máximo de impresión (50×33, por ejemplo una caja de 60×45) se reduce, y entonces el resumen y el PDF lo avisan en rojo con el porcentaje. Las medidas de arriba (ancho y alto) solo se usan con «Medida fija».</p>
+  <p class="hint" style="margin-top:6px">Los PDF y .ai se insertan como <b>vectores</b> (no pierden calidad) y las fotos con su <b>resolución original</b>. En automático se prueba, de menor a mayor, 22×28, 25×35, 45×30 y 50×33 cm (horizontal o vertical) y cada sección usa el más pequeño donde cabe sin reducirse, para no gastar papel de 50×33 en piezas chicas. Siempre quedan libres 4 mm como mínimo por todos los lados del papel (el margen que escribas abajo nunca baja de 0,4 cm). Se respeta la pinza de la impresora digital (5 mm del lado largo del papel, en rojo claro en la vista previa): ahí no se coloca nada. Siempre que se pueda sale a tamaño real y se juntan 2 páginas por hoja; solo si una pieza excede el máximo de impresión (50×33, por ejemplo una caja de 60×45) se reduce, y entonces el resumen y el PDF lo avisan en rojo con el porcentaje. Las medidas de arriba (ancho y alto) solo se usan con «Medida fija».</p>
 
     </div>
   </details>
@@ -954,7 +954,7 @@ function cargarImagen(src){
 const LADO_MAX_PX = 1700; // suficiente para la vista del cliente sin llenar la memoria con PDFs de 40 páginas
 
 // Convierte cada página de un PDF ya abierto en una miniatura del montaje (sirve para PDF en memoria y para PDF leídos por partes del disco)
-async function leerPaginasPdf(pdf, nombre, colores, prog){
+async function leerPaginasPdf(pdf, nombre, colores, prog, fuente){
   let nuevos = 0;
   for(let n=1; n<=pdf.numPages; n++){
     prog.textContent = `Leyendo ${nombre}: página ${n} de ${pdf.numPages}…`;
@@ -967,7 +967,8 @@ async function leerPaginasPdf(pdf, nombre, colores, prog){
     await pag.render({ canvasContext:cx, viewport:vp }).promise;
     const dataUrl = cv.toDataURL('image/jpeg', 0.88);
     agregarAlPool({ nombre: pdf.numPages>1 ? `${nombre} · pág ${n}` : nombre, archivo:nombre, dataUrl, w:cv.width, h:cv.height,
-      cmW: v1.width/72*2.54, cmH: v1.height/72*2.54, esPdf:true, color: colores ? colores[n-1] : null, img: await cargarImagen(dataUrl) });
+      cmW: v1.width/72*2.54, cmH: v1.height/72*2.54, esPdf:true, color: colores ? colores[n-1] : null, img: await cargarImagen(dataUrl),
+      fuente: fuente ? Object.assign({}, fuente, { pagina:n }) : null });   // original para la prueba de impresión (vector, sin perder calidad)
     nuevos++;
     pag.cleanup();
   }
@@ -986,7 +987,7 @@ async function ingerirArchivos(files){
         prog.textContent = 'Revisando colores de '+f.name+'…';
         const colores = await analizarColorPdf(buf);
         const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buf.slice(0)) }).promise;
-        nuevos += await leerPaginasPdf(pdf, f.name, colores, prog);
+        nuevos += await leerPaginasPdf(pdf, f.name, colores, prog, { tipo:'pdf', buf });
       } else if(['jpg','jpeg','png','webp'].includes(ext)){
         prog.textContent = 'Leyendo '+f.name+'…';
         const colorImg = modoColorImagen(new Uint8Array(await f.arrayBuffer()), ext);
@@ -998,7 +999,8 @@ async function ingerirArchivos(files){
         const dataUrl = cv.toDataURL('image/jpeg', 0.9);
         URL.revokeObjectURL(url);
         agregarAlPool({ nombre:f.name, archivo:f.name, dataUrl, w:cv.width, h:cv.height, pxOrigW:im.naturalWidth, pxOrigH:im.naturalHeight,
-          cmW:null, cmH:null, esPdf:false, color: colorImg, img: await cargarImagen(dataUrl) });
+          cmW:null, cmH:null, esPdf:false, color: colorImg, img: await cargarImagen(dataUrl),
+          fuente: { tipo:'img', blob:f, ext } });   // foto original (resolución completa) para la prueba de impresión
         nuevos++;
       } else {
         alert('No puedo leer "'+f.name+'". Usa PDF, .ai (con compatibilidad PDF), JPG o PNG.');
@@ -1030,13 +1032,15 @@ async function dividirPagina(id){
   const it = S.pool[i];
   const mitad = Math.floor(it.w/2);
   const partes = [];
+  const r0 = it.recorte || { x0:0, x1:1 }, span = r0.x1 - r0.x0;
   for(const [nom,x0,ancho] of [['izquierda',0,mitad],['derecha',mitad,it.w-mitad]]){
     const cv = document.createElement('canvas'); cv.width = ancho; cv.height = it.h;
     cv.getContext('2d').drawImage(it.img, x0,0,ancho,it.h, 0,0,ancho,it.h);
     const dataUrl = cv.toDataURL('image/jpeg', 0.9);
     partes.push({ id:nuevoId(), nombre:it.nombre+' ('+nom+')', archivo:it.archivo, dataUrl, w:ancho, h:it.h,
       cmW: it.cmW ? it.cmW*ancho/it.w : null, cmH: it.cmH, esPdf:it.esPdf, color: it.color, pxOrigW: it.pxOrigW ? Math.round(it.pxOrigW*ancho/it.w) : undefined, pxOrigH: it.pxOrigH,
-      img: await cargarImagen(dataUrl) });
+      img: await cargarImagen(dataUrl),
+      fuente: it.fuente || null, recorte: { x0: r0.x0 + span*x0/it.w, x1: r0.x0 + span*(x0+ancho)/it.w } });
   }
   S.slots.forEach(s=>{ if(s.poolId===id) s.poolId=null; });
   S.pool.splice(i,1,...partes);
@@ -1729,7 +1733,7 @@ async function ingerirDesdeEstacion(i){
       prog.textContent = 'Abriendo '+a.nombre+' desde el disco (por partes)…';
       // el PDF se lee por partes directamente del disco: no se carga entero en la memoria del navegador
       const pdf = await pdfjsLib.getDocument({ url:E.urlArchivo(a.ruta), rangeChunkSize:2*1024*1024, disableAutoFetch:true, disableStream:true }).promise;
-      const n = await leerPaginasPdf(pdf, a.nombre, null, prog);
+      const n = await leerPaginasPdf(pdf, a.nombre, null, prog, { tipo:'pdf', url:E.urlArchivo(a.ruta) });
       prog.textContent = `Listo: ${n} página(s) de ${a.nombre}. (En archivos leídos desde la estación todavía no se revisa RGB/CMYK.)`;
       renderPool(); renderSlots(); dibujarMontaje();
     } else {
@@ -1855,7 +1859,7 @@ async function guardarProyecto(){
   const msg = document.getElementById('msgGuardar');
   try{
     msg.style.color = '#1e3a5f'; msg.textContent = 'Guardando el proyecto…';
-    const copia = JSON.parse(JSON.stringify(S, (k, v)=> (k==='img' ? undefined : v)));
+    const copia = JSON.parse(JSON.stringify(S, (k, v)=> (k==='img' || k==='fuente' ? undefined : v)));
     const datos = { version:1, guardado:new Date().toISOString(), S:copia };
     const blob = new Blob([JSON.stringify(datos)], { type:'application/json' });
     const nombre = nombreArchivo().replace('montaje_','proyecto_') + '.montaje.json';
@@ -2063,6 +2067,7 @@ async function descargarPrueba(formato){
   let logoUrl = null;
   if(logoImg){ const c = document.createElement('canvas'); c.width = logoImg.naturalWidth; c.height = logoImg.naturalHeight; c.getContext('2d').drawImage(logoImg,0,0); logoUrl = c.toDataURL('image/png'); }
   const recorta = (t, maxW)=>{ while(doc.getTextWidth(t) > maxW && t.length > 6) t = t.slice(0,-2); return t; };
+  const piezasPrueba = [];
   for(let n=0; n<pl.hojas.length; n++){
     const h = pl.hojas[n]; msg.style.color = '#1e3a5f'; msg.textContent = `Armando hoja ${n+1} de ${pl.hojas.length}…`;
     await new Promise(r=>setTimeout(r,20));
@@ -2082,10 +2087,7 @@ async function descargarPrueba(formato){
     for(let i=0; i<h.slots.length; i++){
       const sl = h.slots[i], dm = h.dms[i], w = anchos[i], hh = dm.h*esc*mm, it = S.pool.find(q=>q.id===sl.poolId);
       if(it){
-        const wpx = Math.max(2, Math.round(dm.w*esc/2.54*DPI_PRUEBA)), hpx = Math.max(2, Math.round(dm.h*esc/2.54*DPI_PRUEBA));
-        const cv = document.createElement('canvas'); cv.width = wpx; cv.height = hpx;
-        dibujarImagenEnCaja(cv.getContext('2d'), it.img, 0, 0, wpx, hpx, sl.fit);
-        doc.addImage(cv.toDataURL('image/jpeg', 0.93), 'JPEG', x, yTop, w, hh);
+        piezasPrueba.push({ pagina:n, x, y:yTop, w, h:hh, it, fit:sl.fit });   // se pone después, con su archivo original (ver componerPruebaOriginales)
       } else if(sl.blanco){
         doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(139,149,163); doc.text('HOJA EN BLANCO', x+w/2, yTop+hh/2, { align:'center', baseline:'middle' });
       }
@@ -2120,18 +2122,119 @@ async function descargarPrueba(formato){
     doc.text(`Hoja ${n+1} de ${pl.hojas.length}`, W-m, H-m+3, { align:'right' });
   }
   const base = nombreArchivo().replace('montaje_','prueba_impresion_');
+  let bytes, calidad;
+  try{
+    msg.style.color = '#1e3a5f'; msg.textContent = 'Insertando los archivos originales (vectores y fotos a resolución completa)…';
+    const r = await componerPruebaOriginales(doc, piezasPrueba, msg);
+    bytes = r.bytes; calidad = r.resumen;
+  } catch(e){
+    console.error(e); msg.style.color = '#b91c1c'; msg.textContent = 'No se pudo armar la prueba: '+(e.message||e); return;
+  }
   if(formato==='jpg'){
-    try{ const n = await pdfAJpgs(doc, base, 250, msg); msg.style.color = '#1a7d3f'; msg.textContent = `Listo: ${n} JPG CMYK a 250 ppp, tamaño real (${resumenPapeles(pl)}).${n>1?' Si el navegador pide permiso para varias descargas, acéptalo.':''}`; }
+    try{ const n = await pdfAJpgs(bytes, base, 250, msg); msg.style.color = '#1a7d3f'; msg.textContent = `Listo: ${n} JPG CMYK a 250 ppp, tamaño real (${resumenPapeles(pl)}).${n>1?' Si el navegador pide permiso para varias descargas, acéptalo.':''}`; }
     catch(e){ console.error(e); msg.style.color = '#b91c1c'; msg.textContent = 'No se pudo generar el JPG: '+(e.message||e); }
     return;
   }
-  bajar(doc.output('blob'), base+'.pdf');
-  msg.style.color = '#1a7d3f'; msg.textContent = `Listo: PDF de prueba de ${pl.hojas.length} hoja(s) a tamaño real (${resumenPapeles(pl)}).`;
+  bajar(new Blob([bytes], { type:'application/pdf' }), base+'.pdf');
+  msg.style.color = '#1a7d3f'; msg.textContent = `Listo: PDF de prueba de ${pl.hojas.length} hoja(s) a tamaño real (${resumenPapeles(pl)}). ${calidad}`;
+}
+
+/* ---- Calidad de la prueba (Conde 2026-11-23: "la resolución se baja, aun los vectores pierden calidad") ----
+   Antes cada pieza se convertía en imagen dos veces (al cargarla, 1700 px; y en la prueba, 150 ppp). Ahora:
+   - PDF / .ai: la página ORIGINAL se inserta como vector (pdf-lib embedPage): textos y trazos sin pérdida, a cualquier tamaño.
+   - Fotos JPG/PNG: el archivo ORIGINAL a resolución completa, sin volver a comprimir (WebP se pasa a PNG sin pérdida).
+   - Proyectos reabiertos (no guardan los originales): se usa la imagen de la vista previa, sin recomprimirla otra vez.
+   Las piezas van DEBAJO de lo que dibuja jsPDF (títulos, cotas, marcos y anillos), igual que antes. */
+async function componerPruebaOriginales(doc, piezas, msg){
+  const PL = window.PDFLib; if(!PL) throw new Error('pdf-lib no está cargado');
+  const K = 72/25.4;                                               // mm -> puntos
+  const out = await PL.PDFDocument.create();
+  const sobre = await PL.PDFDocument.load(doc.output('arraybuffer'));
+  const capas = await out.embedPages(sobre.getPages());
+  const cacheDocs = new Map(), cacheEmb = new Map();
+  const cuenta = { vector:0, foto:0, previa:0 };
+  async function bytesDe(fuente){
+    if(fuente.buf instanceof ArrayBuffer) return fuente.buf;
+    if(typeof fuente.url === 'string') return await (await fetch(fuente.url)).arrayBuffer();
+    if(fuente.blob instanceof Blob) return await fuente.blob.arrayBuffer();
+    return null;
+  }
+  async function obtener(it){
+    const f = it.fuente;
+    try{
+      if(f && f.tipo === 'pdf'){
+        const clave = 'pdf:' + (f.url || it.archivo) + '#' + f.pagina;
+        if(cacheEmb.has(clave)) return cacheEmb.get(clave);
+        const claveDoc = f.url || f.buf;
+        let src = cacheDocs.get(claveDoc);
+        if(!src){ const b = await bytesDe(f); if(!b) throw new Error('sin bytes'); src = await PL.PDFDocument.load(b, { ignoreEncryption:true, updateMetadata:false }); cacheDocs.set(claveDoc, src); }
+        const pg = src.getPage(f.pagina - 1);
+        if(((pg.getRotation().angle % 360) + 360) % 360 !== 0) throw new Error('página rotada');
+        const cb = pg.getCropBox();
+        const emb = await out.embedPage(pg, { left:cb.x, bottom:cb.y, right:cb.x + cb.width, top:cb.y + cb.height });
+        const r = { tipo:'pagina', obj:emb, w:cb.width, h:cb.height, recorte:true, clase:'vector' };
+        cacheEmb.set(clave, r); return r;
+      }
+      if(f && f.tipo === 'img' && f.blob instanceof Blob){
+        const clave = 'img:' + it.archivo + ':' + f.blob.size;
+        if(cacheEmb.has(clave)) return cacheEmb.get(clave);
+        let emb; const ext = (f.ext || '').toLowerCase();
+        if(ext === 'jpg' || ext === 'jpeg') emb = await out.embedJpg(await f.blob.arrayBuffer());
+        else if(ext === 'png') emb = await out.embedPng(await f.blob.arrayBuffer());
+        else {   // webp u otro: a PNG sin pérdida, a resolución completa
+          const url = URL.createObjectURL(f.blob); const im = await cargarImagen(url); URL.revokeObjectURL(url);
+          const cv = document.createElement('canvas'); cv.width = im.naturalWidth; cv.height = im.naturalHeight; cv.getContext('2d').drawImage(im, 0, 0);
+          const png = await new Promise(ok => cv.toBlob(ok, 'image/png'));
+          emb = await out.embedPng(await png.arrayBuffer());
+        }
+        const r = { tipo:'imagen', obj:emb, w:emb.width, h:emb.height, recorte:true, clase:'foto' };
+        cacheEmb.set(clave, r); return r;
+      }
+    } catch(e){ console.warn('Prueba: se usa la vista previa para', it.nombre, '-', e.message || e); }
+    // sin original: la imagen de la vista previa tal cual (sin volver a comprimir)
+    const clave = 'prev:' + it.id;
+    if(cacheEmb.has(clave)) return cacheEmb.get(clave);
+    const b = await (await fetch(it.dataUrl)).arrayBuffer();
+    const emb = /^data:image\/png/i.test(it.dataUrl) ? await out.embedPng(b) : await out.embedJpg(b);
+    const r = { tipo:'imagen', obj:emb, w:emb.width, h:emb.height, recorte:false, clase:'previa' };
+    cacheEmb.set(clave, r); return r;
+  }
+  const paginas = sobre.getPages();
+  for(let i = 0; i < paginas.length; i++){
+    const { width:Wp, height:Hp } = paginas[i].getSize();
+    const pg = out.addPage([Wp, Hp]);
+    const deEsta = piezas.filter(p => p.pagina === i);
+    for(const p of deEsta){
+      if(msg) msg.textContent = 'Insertando archivos originales: hoja ' + (i+1) + ' de ' + paginas.length + '…';
+      const s = await obtener(p.it);
+      cuenta[s.clase]++;
+      const box = { x: p.x*K, y: Hp - (p.y + p.h)*K, w: p.w*K, h: p.h*K };
+      const rc = (s.recorte && p.it.recorte) ? p.it.recorte : { x0:0, x1:1 };
+      const visW = s.w * (rc.x1 - rc.x0), visH = s.h;
+      const ar = visW / visH, cr = box.w / box.h;
+      let dw, dh;
+      if(p.fit === 'cover'){ if(ar > cr){ dh = box.h; dw = dh*ar; } else { dw = box.w; dh = dw/ar; } }
+      else { if(ar > cr){ dw = box.w; dh = dw/ar; } else { dh = box.h; dw = dh*ar; } }
+      const cx = box.x + (box.w - dw)/2, cy = box.y + (box.h - dh)/2, k = dw / visW;
+      pg.drawRectangle({ x:box.x, y:box.y, width:box.w, height:box.h, color:PL.rgb(1,1,1) });
+      const clip = p.fit === 'cover' ? box : { x:cx, y:cy, w:dw, h:dh };
+      pg.pushOperators(PL.pushGraphicsState(), PL.rectangle(clip.x, clip.y, clip.w, clip.h), PL.clip(), PL.endPath());
+      const opts = { x: cx - rc.x0*s.w*k, y: cy, width: s.w*k, height: s.h*k };
+      if(s.tipo === 'pagina') pg.drawPage(s.obj, opts); else pg.drawImage(s.obj, opts);
+      pg.pushOperators(PL.popGraphicsState());
+    }
+    pg.drawPage(capas[i], { x:0, y:0, width:Wp, height:Hp });   // títulos, cotas, marcos y anillos encima
+  }
+  const partes = [];
+  if(cuenta.vector) partes.push(cuenta.vector + ' en vector');
+  if(cuenta.foto) partes.push(cuenta.foto + ' foto(s) a resolución original');
+  if(cuenta.previa) partes.push(cuenta.previa + ' con la imagen de la vista previa (vuelve a cargar el archivo para máxima calidad)');
+  return { bytes: await out.save(), resumen: partes.length ? 'Piezas: ' + partes.join(', ') + '.' : '' };
 }
 // Convierte cada página del PDF de prueba en un JPG (ppp reales en la cabecera) para impresoras donde el PDF pesado se atasca
-async function pdfAJpgs(doc, base, ppp, msg){
+async function pdfAJpgs(bytes, base, ppp, msg){
   if(!window.pdfjsLib) throw new Error('pdf.js no está cargado');
-  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(doc.output('arraybuffer')) }).promise;
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
   for(let i=1; i<=pdf.numPages; i++){
     msg.style.color = '#1e3a5f'; msg.textContent = `Convirtiendo hoja ${i} de ${pdf.numPages} a JPG CMYK…`;
     await new Promise(r=>setTimeout(r,20));
