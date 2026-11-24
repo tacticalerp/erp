@@ -433,7 +433,7 @@ async function agregarSobranteManual(){
 /* ======================= ACOMODO (láminas de poliestireno, corte guillotina) ======================= */
 // El área de acomodo es 2 separaciones más grande que la lámina: así caben piezas exactas (2 de 50 en 100 cm) y después,
 // al fijar posiciones, la separación del borde se reduce hasta 0 para que nada se salga de la lámina.
-function nuevoBin(W,H,tipo,ref){ const g = CFG.gap; return { tipo, ref, W, H, libres:[{x:0,y:0,w:W+2*g,h:H+2*g}], puestos:[] }; }
+function nuevoBin(W,H,tipo,ref,limH){ const g = CFG.gap; return { tipo, ref, W, H, limH:limH||0, libres:[{x:0,y:0,w:W+2*g,h:(limH||H)+2*g}], puestos:[] }; }
 function intentarUbicar(bin, w, h, soloNecesario, noGirar){            // w,h = medida real; usa la separación como relleno
   const g = CFG.gap, pw = w+g, ph = h+g;
   const buscar = opciones=>{ let best = null;
@@ -456,6 +456,7 @@ function colocar(bin, b, item, copia, pre){
 }
 function sobrantesDeBin(bin){
   let L = bin.libres.map(r=>({ x:r.x, y:r.y, w:Math.min(r.x+r.w, bin.W)-r.x, h:Math.min(r.y+r.h, bin.H)-r.y })).filter(r=>r.w>0.05 && r.h>0.05);
+  if(bin.limH && bin.limH < bin.H - 0.5) L.push({ x:0, y:bin.limH, w:bin.W, h:bin.H - bin.limH });      // la parte de la lámina que no se usó es sobrante de poli
   let cambio = true;
   while(cambio){ cambio = false;
     outer: for(let i=0;i<L.length;i++) for(let j=i+1;j<L.length;j++){ const a = L[i], b = L[j];
@@ -474,7 +475,9 @@ function empacar(piezas, est){
     for(const bin of bins){ const b = intentarUbicar(bin, p.w, p.h, est.soloNecesario, p.item.noGirar || !!est.mask); if(b){ colocar(bin, b, p.item, p.copia, p.pre); return; } }
     for(let i=0;i<remPool.length;i++){ const r = remPool[i]; const bin = nuevoBin(r.W, r.H, 'sobrante', r.id); const b = intentarUbicar(bin, p.w, p.h, est.soloNecesario, p.item.noGirar || !!est.mask);
       if(b){ remPool.splice(i,1); bins.push(bin); colocar(bin, b, p.item, p.copia, p.pre); return; } }
-    const bin = est.lamRot ? nuevoBin(CFG.polH, CFG.polW, 'lamina', null) : nuevoBin(CFG.polW, CFG.polH, 'lamina', null); const b = intentarUbicar(bin, p.w, p.h, est.soloNecesario, p.item.noGirar || !!est.mask);
+    const W0 = est.lamRot ? CFG.polH : CFG.polW, H0 = est.lamRot ? CFG.polW : CFG.polH, ng = p.item.noGirar || !!est.mask;
+    let bin = nuevoBin(W0, H0, 'lamina', null, est.lim ? H0*est.lim : 0), b = intentarUbicar(bin, p.w, p.h, est.soloNecesario, ng);
+    if(!b && est.lim){ bin = nuevoBin(W0, H0, 'lamina', null); b = intentarUbicar(bin, p.w, p.h, est.soloNecesario, ng); }      // si la pieza no cabe en la lámina 'corta', va en una completa
     if(!b){ noCaben.push(p); return; } bins.push(bin); colocar(bin, b, p.item, p.copia, p.pre);
   });
   return { bins, noCaben };
@@ -487,18 +490,86 @@ function puntaje(res, lay){
   const giradas = res.bins.reduce((a,b)=>a+b.puestos.filter(p=>p.rot).length, 0);
   // huecos dentro del rectángulo que ocupan las piezas de cada lámina (piezas separadas = más trabajo de pegado y vinilo perdido)
   const huecos = res.bins.reduce((a,b)=>{ if(!b.puestos.length) return a; const bw = Math.max(...b.puestos.map(p=>p.x+p.w)), bh = altoVinilo(b); return a + bw*bh - b.puestos.reduce((q,p)=>q+p.w*p.h,0); }, 0);
-  return [res.noCaben.length, lam, Math.round(lay.largo), Math.round(huecos/50), -mx, -suma, giradas, res.bins.length];
+  return [res.noCaben.length, Math.round(lay.largo), lam, Math.round(huecos/50), -mx, -suma, giradas, res.bins.length];   // 1º que quepan, 2º MENOS VINILO (largo del rollo), 3º menos láminas, y después sobrantes
 }
 function mejorQue(a, b){ for(let i=0;i<a.length;i++){ if(a[i] < b[i]-1e-9) return true; if(a[i] > b[i]+1e-9) return false; } return false; }
-function disponer(bins){          // diseño en el rollo: láminas una debajo de otra (1 mm), sobrantes en filas, guías en el vinilo libre
+function disponerRollo(bins){          // diseño en el rollo: láminas, sobrantes y guías empacados en 2D para gastar el MÍNIMO de vinilo (prioridad de Conde)
+  const rollW = CFG.rolloW, m = CFG.margen, sep = CFG.sepBloques, anchoUtil = CFG.anchoImp, xi = (rollW - CFG.anchoImp)/2;   // el plotter imprime 101 cm
+  const ancho = b=>b.puestos.length ? Math.max(...b.puestos.map(p=>p.x+p.w)) : 0;
+  // empacador de rectángulos libres (MaxRects): el ancho del rollo es fijo y el largo es lo que se minimiza
+  let libresR = [{ x:xi, y:m, w:anchoUtil, h:100000 }];
+  const mejorPos = (w, h)=>{ let best = null;
+    libresR.forEach(f=>{ if(w <= f.w+1e-6 && h <= f.h+1e-6){ const sc = f.y + h; if(!best || sc < best.sc-1e-9 || (Math.abs(sc-best.sc) < 1e-9 && f.x < best.x-1e-9)) best = { x:f.x, y:f.y, sc }; } });
+    return best; };
+  const ocupar = P=>{
+    const nuevos = [];
+    libresR.forEach(f=>{
+      if(P.x >= f.x+f.w-1e-9 || P.x+P.w <= f.x+1e-9 || P.y >= f.y+f.h-1e-9 || P.y+P.h <= f.y+1e-9){ nuevos.push(f); return; }
+      if(P.x > f.x+0.05) nuevos.push({ x:f.x, y:f.y, w:P.x-f.x, h:f.h });
+      if(P.x+P.w < f.x+f.w-0.05) nuevos.push({ x:P.x+P.w, y:f.y, w:f.x+f.w-(P.x+P.w), h:f.h });
+      if(P.y > f.y+0.05) nuevos.push({ x:f.x, y:f.y, w:f.w, h:P.y-f.y });
+      if(P.y+P.h < f.y+f.h-0.05) nuevos.push({ x:f.x, y:P.y+P.h, w:f.w, h:f.y+f.h-(P.y+P.h) });
+    });
+    libresR = nuevos.filter((a, i)=>!nuevos.some((b, j)=>j!==i && a.x >= b.x-1e-9 && a.y >= b.y-1e-9 && a.x+a.w <= b.x+b.w+1e-9 && a.y+a.h <= b.y+b.h+1e-9 && (j < i || !(a.x===b.x && a.y===b.y && a.w===b.w && a.h===b.h))));
+  };
+  let fin = m; const bloques = [];
+  // 1) los bloques (cada lámina o sobrante, solo hasta donde llegan los rompecabezas) se acomodan unos al lado de otros, el más alto primero
+  bins.map(b=>({ b, bw:ancho(b), vh:altoVinilo(b) })).filter(it=>it.bw > 0).sort((p, q)=>q.vh - p.vh || q.bw - p.bw).forEach(it=>{
+    const pos = mejorPos(it.bw+sep, it.vh+sep) || mejorPos(it.bw, it.vh); if(!pos) return;
+    bloques.push({ bin:it.b, x:pos.x, y:pos.y, vh:it.vh, bw:it.bw });
+    ocupar({ x:pos.x, y:pos.y, w:it.bw+sep, h:it.vh+sep });
+    fin = Math.max(fin, pos.y + it.vh);
+  });
+  // 2) guías de armado: primero en los huecos sin rompecabezas dentro de cada bloque, y luego en cualquier hueco libre del vinilo (pegadas entre sí, a 1 mm de las imágenes)
+  const guias = []; const lista = [];
+  ITEMS.forEach(it=>{ for(let c=0;c<Math.max(1,it.cant);c++){ if(it.guiaPl) lista.push({ tipo:'plantilla', item:it }); if(it.guia500) lista.push({ tipo:'500', item:it }); } });
+  const plW = PL.img ? PL.w : 12, plH = PL.img ? PL.h : 12;
+  let pend = lista.slice();
+  const cabeEn = (g, rw, rh)=>{ if(g.tipo==='plantilla') return (plW<=rw+1e-6 && plH<=rh+1e-6) ? { w:plW, h:plH } : null;
+    for(let L=CFG.guiaMax; L>=CFG.guiaMin-1e-6; L-=0.5) for(const rot of [false,true]){      // la guía 500+ no lleva logo: puede ir girada si así cabe
+      const a = rot ? g.item.h/g.item.w : g.item.w/g.item.h; const w = a>=1 ? L : L*a, h = a>=1 ? L/a : L; if(w<=rw+1e-6 && h<=rh+1e-6) return { w, h, rot }; }
+    return null; };
+  pend.sort((p, q)=>{ const ap = p.tipo==='500' ? 1 : 0, aq = q.tipo==='500' ? 1 : 0; return aq - ap; });
+  bloques.forEach(bl=>{
+    const regiones = [];
+    bl.bin.libres.forEach(r=>{ const x0 = Math.max(0, r.x), y0 = Math.max(0, r.y), x1 = Math.min(bl.bw, r.x + r.w), y1 = Math.min(bl.vh, r.y + r.h); if(x1-x0 > 5 && y1-y0 > 5) regiones.push({ x:bl.x + x0, y:bl.y + y0, w:x1-x0-0.1, h:y1-y0-0.1 }); });   // 1 mm de aire: las piezas se corren hasta 1 mm al fijar posiciones
+    regiones.forEach(rg=>{
+      let cx = rg.x, cy = rg.y, fila = 0;
+      for(let i=0;i<pend.length;){
+        const g = pend[i]; let d = cabeEn(g, rg.x + rg.w - cx, rg.y + rg.h - cy), nuevaFila = false;
+        if(!d || cx + (d?d.w:0) > rg.x + rg.w + 1e-6){ d = cabeEn(g, rg.w, rg.y + rg.h - (cy + fila)); nuevaFila = true; }
+        if(!d){ i++; continue; }
+        if(nuevaFila){ cy += fila; cx = rg.x; fila = 0; }
+        guias.push({ ...g, rot:!!d.rot, x:cx, y:cy, w:d.w, h:d.h }); cx += d.w; fila = Math.max(fila, d.h); pend.splice(i,1);
+      }
+    });
+  });
+  const opciones = g=>{ if(g.tipo==='plantilla') return [{ w:plW, h:plH }]; const out = [];
+    for(let L=CFG.guiaMax; L>=CFG.guiaMin-1e-6; L-=0.5) for(const rot of [false,true]){ const a = rot ? g.item.h/g.item.w : g.item.w/g.item.h; out.push({ w:a>=1 ? L : L*a, h:a>=1 ? L/a : L, rot }); }
+    return out; };
+  pend.forEach(g=>{
+    const ops = opciones(g); let eleg = null;
+    for(const d of ops){ const pos = mejorPos(d.w, d.h); if(pos && pos.y + d.h <= fin + 0.01){ eleg = { ...d, x:pos.x, y:pos.y }; break; } }          // la más grande que cabe sin alargar el rollo
+    if(!eleg){ let best = null;                                                                                                                        // si no, la que menos lo alargue
+      for(const d of ops){ const pos = mejorPos(d.w, d.h); if(pos){ const f2 = Math.max(fin, pos.y + d.h); if(!best || f2 < best.f2-1e-9 || (Math.abs(f2-best.f2) < 1e-9 && d.w*d.h > best.d.w*best.d.h)) best = { d, pos, f2 }; } }
+      if(best) eleg = { ...best.d, x:best.pos.x, y:best.pos.y }; }
+    if(!eleg) return;
+    guias.push({ ...g, rot:!!eleg.rot, x:eleg.x, y:eleg.y, w:eleg.w, h:eleg.h });
+    ocupar({ x:eleg.x, y:eleg.y, w:eleg.w, h:eleg.h });
+    fin = Math.max(fin, eleg.y + eleg.h);
+  });
+  return { bloques, guias, largo: Math.max(fin + m, m*2) };
+}
+// Se prueban las dos formas de acomodar en el rollo (bloques empacados en 2D, o láminas una debajo de otra) y se queda la que gasta menos vinilo
+function disponerApilado(bins){          // diseño en el rollo: láminas una debajo de otra (1 mm), sobrantes en filas, guías en el vinilo libre
   const rollW = CFG.rolloW, m = CFG.margen, sep = CFG.sepBloques, anchoUtil = CFG.anchoImp, xi = (rollW - CFG.anchoImp)/2, xf = rollW - xi;   // el plotter imprime 101 cm: lo que pasa de 100 cm solo lo usan las guías
   let y = m; const bloques = [];
   const ancho = b=>b.puestos.length ? Math.max(...b.puestos.map(p=>p.x+p.w)) : 0;
   let x = xi, filaH = 0;
   const cerrarFila = ()=>{ y += filaH + sep; x = xi; filaH = 0; };
-  bins.filter(b=>b.tipo==='sobrante').forEach(b=>{ const vh = altoVinilo(b); if(x + b.W > xi + CFG.polW + 1e-6 && filaH>0) cerrarFila(); bloques.push({ bin:b, x, y, vh }); x += ancho(b) + sep; filaH = Math.max(filaH, vh); });
+  bins.filter(b=>b.tipo==='sobrante').forEach(b=>{ const vh = altoVinilo(b); if(x + b.W > xi + CFG.polW + 1e-6 && filaH>0) cerrarFila(); bloques.push({ bin:b, x, y, vh, bw:b.W }); x += ancho(b) + sep; filaH = Math.max(filaH, vh); });
   if(filaH>0) cerrarFila();
-  bins.filter(b=>b.tipo==='lamina').forEach(b=>{ const vh = altoVinilo(b); bloques.push({ bin:b, x:xi, y, vh }); y += vh + sep; });
+  bins.filter(b=>b.tipo==='lamina').forEach(b=>{ const vh = altoVinilo(b); bloques.push({ bin:b, x:xi, y, vh, bw:b.W }); y += vh + sep; });
   const gap1mm = 0.1;
   const guias = []; const lista = [];
   ITEMS.forEach(it=>{ for(let c=0;c<Math.max(1,it.cant);c++){ if(it.guiaPl) lista.push({ tipo:'plantilla', item:it }); if(it.guia500) lista.push({ tipo:'500', item:it }); } });
@@ -516,7 +587,7 @@ function disponer(bins){          // diseño en el rollo: láminas una debajo de
   pend.sort((p,q)=>{ const ap = p.tipo==='500' ? 1 : 0, aq = q.tipo==='500' ? 1 : 0; return aq - ap; });
   bloques.forEach(bl=>{
     const regiones = [];
-    bl.bin.libres.forEach(r=>{ const x0 = Math.max(0, r.x), y0 = Math.max(0, r.y), x1 = Math.min(bl.bin.W, r.x + r.w), y1 = Math.min(bl.vh, r.y + r.h); if(x1-x0 > 5 && y1-y0 > 5) regiones.push({ x:bl.x + x0, y:bl.y + y0, w:x1-x0, h:y1-y0 }); });
+    bl.bin.libres.forEach(r=>{ const x0 = Math.max(0, r.x), y0 = Math.max(0, r.y), x1 = Math.min(bl.bin.W, r.x + r.w), y1 = Math.min(bl.vh, r.y + r.h); if(x1-x0 > 5 && y1-y0 > 5) regiones.push({ x:bl.x + x0, y:bl.y + y0, w:x1-x0-0.1, h:y1-y0-0.1 }); });   // 1 mm de aire: las piezas se corren hasta 1 mm al fijar posiciones
     const ex = bl.x + bl.bin.W + gap1mm; if(xf - ex > 5) regiones.push({ x:ex, y:bl.y, w:xf - ex, h:bl.vh });
     regiones.forEach(rg=>{
       let cx = rg.x, cy = rg.y, fila = 0;
@@ -539,6 +610,7 @@ function disponer(bins){          // diseño en el rollo: láminas una debajo de
   const fin = pend.length ? gy + gfila + m : y - sep + m;
   return { bloques, guias, largo: Math.max(fin, m*2) };
 }
+function disponer(bins){ const a = disponerRollo(bins), b = disponerApilado(bins); return a.largo <= b.largo + 1e-6 ? a : b; }
 function azar(sem){ let a = sem>>>0; return ()=>{ a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a>>>15, 1 | a); t = t + Math.imul(t ^ t>>>7, 61 | t) ^ t; return ((t ^ t>>>14) >>> 0) / 4294967296; }; }
 function planificar(profundo){
   const piezas = [];
@@ -546,24 +618,25 @@ function planificar(profundo){
   // se prueban muchas formas (horizontal/vertical/libre, con o sin giro, por lado o por área) y se elige la que menos láminas y menos vinilo gasta
   let mejor = null, mejorP = null;
   const clampBins = r=>r.bins.forEach(bin=>bin.puestos.forEach(p=>{ p.x = Math.max(0, Math.min(p.x, bin.W - p.w)); p.y = Math.max(0, Math.min(p.y, bin.H - p.h)); }));
-  [false, true].forEach(lamRot=>['', 'h', 'v'].forEach(orient=>[{orden:'lado',soloNecesario:true},{orden:'lado',soloNecesario:false},{orden:'area',soloNecesario:true},{orden:'area',soloNecesario:false}].forEach(est0=>{
-    const r = empacar(piezas, { ...est0, orient, lamRot }); clampBins(r);
+  const limites = piezas.length <= 8 ? [0, 0.5] : [0];
+  limites.forEach(lim=>[false, true].forEach(lamRot=>['', 'h', 'v'].forEach(orient=>[{orden:'lado',soloNecesario:true},{orden:'lado',soloNecesario:false},{orden:'area',soloNecesario:true},{orden:'area',soloNecesario:false}].forEach(est0=>{
+    const r = empacar(piezas, { ...est0, orient, lamRot, lim }); clampBins(r);
     const lay = disponer(r.bins); const pt = puntaje(r, lay);
-    if(!mejor || mejorQue(pt, mejorP)){ mejor = { ...r, lay }; mejorP = pt; } })));
+    if(!mejor || mejorQue(pt, mejorP)){ mejor = { ...r, lay }; mejorP = pt; } }))));
   // búsqueda fina: orientación de cada pieza por separado (todas las combinaciones si son pocas, si no una muestra)
   const n = piezas.length;
   if(n>1 && n<=60){
     const masks = []; if(n<=10){ for(let k=0;k<(1<<n);k++) masks.push(Array.from({length:n},(_,i)=>!!(k>>i&1))); } else { const az = azar(12345); for(let k=0;k<600;k++) masks.push(Array.from({length:n},()=>az()<0.5)); }   // semilla fija: el mismo pedido da siempre el mismo acomodo
-    [false, true].forEach(lamRot=>masks.forEach(mask=>['lado','area'].forEach(orden=>{
-      const r = empacar(piezas, { orden, soloNecesario:false, mask, lamRot }); clampBins(r);
+    limites.forEach(lim=>[false, true].forEach(lamRot=>masks.forEach(mask=>['lado','area'].forEach(orden=>{
+      const r = empacar(piezas, { orden, soloNecesario:false, mask, lamRot, lim }); clampBins(r);
       const lay = disponer(r.bins); const pt = puntaje(r, lay);
-      if(!mejor || mejorQue(pt, mejorP)){ mejor = { ...r, lay }; mejorP = pt; } })));
+      if(!mejor || mejorQue(pt, mejorP)){ mejor = { ...r, lay }; mejorP = pt; } }))));
   }
   if(profundo){      // "Reagrupar": búsqueda a fondo con orden y giro al azar durante unos segundos
     const az = azar(Date.now()), t0 = Date.now();
     while(Date.now() - t0 < 4000 && n>1){
       const mask = Array.from({length:n},()=>az()<0.5), rnd = Array.from({length:n},()=>0.6 + az()*0.8), lamRot = az()<0.5;
-      const r = empacar(piezas, { orden:'area', soloNecesario:false, mask, rnd, lamRot }); clampBins(r);
+      const r = empacar(piezas, { orden:'area', soloNecesario:false, mask, rnd, lamRot, lim: az()<0.4 ? 0.5 : 0 }); clampBins(r);
       const lay = disponer(r.bins); const pt = puntaje(r, lay);
       if(!mejor || mejorQue(pt, mejorP)){ mejor = { ...r, lay }; mejorP = pt; }
     }
@@ -630,11 +703,11 @@ function pintarRollo(cx, S, desdeCm, hastaCm, vista){
   cx.fillStyle = '#fff'; cx.fillRect(0, 0, CFG.rolloW*S, (hastaCm-desdeCm)*S);
   cx.save(); cx.translate(0, -desdeCm*S);
   PLAN.bloques.forEach(b=>{
-    if(b.y + b.bin.H < desdeCm || b.y > hastaCm) return;
+    if(b.y + b.vh < desdeCm || b.y > hastaCm) return;
     b.bin.puestos.forEach(p=>dibujarPuesto(cx, p, S, b.x, b.y, p.item));
-    if(vista){ cx.strokeStyle = b.bin.tipo==='lamina' ? '#1e3a5f' : '#b45309'; cx.setLineDash([S*1.5,S]); cx.lineWidth = Math.max(1,S*0.15); cx.strokeRect(b.x*S, b.y*S, b.bin.W*S, b.vh*S); cx.setLineDash([]);
+    if(vista){ cx.strokeStyle = b.bin.tipo==='lamina' ? '#1e3a5f' : '#b45309'; cx.setLineDash([S*1.5,S]); cx.lineWidth = Math.max(1,S*0.15); cx.strokeRect(b.x*S, b.y*S, b.bw*S, b.vh*S); cx.setLineDash([]);
       cx.fillStyle = '#1e3a5f'; cx.font = 'bold '+Math.max(9,S*2)+'px Arial'; cx.textAlign='left'; cx.fillText((b.bin.tipo==='lamina'?'Lámina ':'Sobrante ')+fmt(b.bin.W)+'x'+fmt(b.bin.H), b.x*S+4, b.y*S+Math.max(11,S*2.2));
-      cx.save(); cx.beginPath(); cx.rect(b.x*S, b.y*S, b.bin.W*S, b.vh*S); cx.clip();
+      cx.save(); cx.beginPath(); cx.rect(b.x*S, b.y*S, b.bw*S, b.vh*S); cx.clip();
       PLAN.nuevos.filter(s=>PLAN.bins[s.bi]===b.bin).forEach(s=>{ cx.fillStyle = 'rgba(26,125,63,.18)'; cx.fillRect((b.x+s.x)*S, (b.y+s.y)*S, s.ancho*S, s.alto*S); cx.strokeStyle='#1a7d3f'; cx.setLineDash([S,S*.7]); cx.strokeRect((b.x+s.x)*S, (b.y+s.y)*S, s.ancho*S, s.alto*S); cx.setLineDash([]);
         cx.fillStyle='#1a7d3f'; cx.font='bold '+Math.max(9,S*1.8)+'px Arial'; cx.fillText('POLI '+fmt(s.ancho)+'x'+fmt(s.alto), (b.x+s.x)*S+4, (b.y+s.y)*S+Math.max(11,S*2)); });
       cx.restore();
