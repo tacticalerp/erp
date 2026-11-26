@@ -514,7 +514,10 @@ function tacticalPdfPartirDescripcion(desc){
   const i = t.indexOf(':');
   if(i > 0 && i <= 70){ tit = t.slice(0, i); det = t.slice(i + 1).trim(); }
   else if(t.length > 70){
-    const coma = t.indexOf(',');       // sin dos puntos: el nombre llega hasta la primera coma (ej. '100 CUADERNOS tamaño 24 x 17 cms, tapa dura…')
+    // sin dos puntos: el nombre llega hasta la primera coma (ej. '100 CUADERNOS tamaño 24 x 17 cms, tapa dura…'). 2026-11-26: la coma
+    // decimal de una medida ('20,5 x 16,5 cm') NO cuenta -- antes partía el título en 'Rompecabezas de 12 fichas 20' / '5 x 16,5 cm…'.
+    const mComa = /(?<!\d),|,(?!\d)/.exec(t);
+    const coma = mComa ? mComa.index : -1;
     if(coma >= 15 && coma <= 70){ tit = t.slice(0, coma); det = t.slice(coma + 1).trim(); }
     else {
       const corte = t.lastIndexOf(' ', 60);
@@ -570,6 +573,117 @@ function tacticalPdfTablaProductosHtml(lineas, opts){
 function tacticalTituloCorto(auto, textoLargo){
   const largo = (textoLargo||'').trim();
   return (largo && largo !== auto) ? largo : auto;
+}
+
+/* ---- VISTA PREVIA CON ZOOM antes del PDF (Conde 2026-11-26: "en la previsualización del pdf de la cotización quiero un zoom para ver
+   de manera clara la descripción del producto"). La ventana de impresión de Chrome no admite zoom, así que primero se muestra la hoja
+   dentro del ERP (copia de #print-area, misma hoja carta) con − / + / Ajustar / 100%, Ctrl+rueda y clic para acercar donde se toca.
+   "Descargar PDF" abre la ventana de Chrome igual que antes. No se usa para Órdenes de Producción ni planos de corte (esos ya tienen su
+   propia vista o no la necesitan). ---- */
+function tacticalVistaPreviaDocumento(nombreArchivo, alDescargar){
+  const area = document.getElementById('print-area');
+  if(!area){ alDescargar(); return; }
+  const viejo = document.getElementById('tactical-vp-overlay'); if(viejo) viejo.remove();
+  if(!document.getElementById('tactical-vp-estilos')){
+    const st = document.createElement('style'); st.id = 'tactical-vp-estilos';
+    st.textContent = `
+      #tactical-vp-overlay{ position:fixed; inset:0; z-index:2147483000; background:#334155; display:flex; flex-direction:column; }
+      #tactical-vp-barra{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:8px 12px; background:#1e293b; color:#fff; font:14px -apple-system,Segoe UI,Roboto,Arial,sans-serif; }
+      #tactical-vp-barra .vp-titulo{ flex:1 1 180px; min-width:0; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      #tactical-vp-barra button{ min-width:40px; height:38px; padding:0 12px; border-radius:6px; border:1px solid #475569; background:#334155; color:#fff; font-size:15px; font-weight:600; cursor:pointer; }
+      #tactical-vp-barra button:hover{ background:#475569; }
+      #tactical-vp-barra button.vp-pdf{ background:#cc0000; border-color:#cc0000; }
+      #tactical-vp-barra button.vp-pdf:hover{ background:#a30000; }
+      #tactical-vp-barra .vp-pct{ min-width:52px; text-align:center; font-variant-numeric:tabular-nums; }
+      #tactical-vp-scroll{ flex:1; overflow:auto; padding:20px; -webkit-overflow-scrolling:touch; }
+      #tactical-vp-sizer{ overflow:hidden; box-shadow:0 10px 40px rgba(0,0,0,.45); }
+      #tactical-vp-hoja{ width:794px; box-sizing:border-box; margin:0; background:#fff; color:#1a202c; padding:20px;
+        font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; cursor:zoom-in; transform-origin:0 0; }
+      #tactical-vp-hoja.vp-cerca{ cursor:zoom-out; }
+      #tactical-vp-ayuda{ color:#cbd5e1; background:#1e293b; font:12px -apple-system,Segoe UI,Roboto,Arial,sans-serif; text-align:center; padding:0 8px 6px; }
+      @media print{ #tactical-vp-overlay{ display:none !important; } }
+    `;
+    document.head.appendChild(st);
+  }
+  const ov = document.createElement('div'); ov.id = 'tactical-vp-overlay';
+  ov.innerHTML = `<div id="tactical-vp-barra">
+      <span class="vp-titulo">Vista previa: ${String(nombreArchivo||'Cotización').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}</span>
+      <button type="button" data-ui="none" data-vp="menos" title="Alejar" aria-label="Alejar">−</button>
+      <span class="vp-pct" id="tactical-vp-pct">100%</span>
+      <button type="button" data-ui="none" data-vp="mas" title="Acercar" aria-label="Acercar">+</button>
+      <button type="button" data-ui="none" data-vp="ajustar" title="Ver la hoja completa a lo ancho">Ajustar</button>
+      <button type="button" data-ui="none" data-vp="cien" title="Tamaño real">100%</button>
+      <button type="button" data-ui="none" data-vp="pdf" class="vp-pdf">Descargar PDF</button>
+      <button type="button" data-ui="none" data-vp="cerrar" title="Cerrar (Esc)" aria-label="Cerrar">✕</button>
+    </div>
+    <div id="tactical-vp-ayuda">Toca o haz clic sobre la hoja para acercar esa parte (otro toque vuelve) · también con − / + o Ctrl + rueda del mouse</div>
+    <div id="tactical-vp-scroll"><div id="tactical-vp-sizer"><div id="tactical-vp-hoja"></div></div></div>`;
+  document.body.appendChild(ov);
+  const hoja = ov.querySelector('#tactical-vp-hoja'), sizer = ov.querySelector('#tactical-vp-sizer'), scroll = ov.querySelector('#tactical-vp-scroll');
+  hoja.innerHTML = area.innerHTML;
+  const ANCHO = 794;
+  let zoom = 1;
+  // celular con página de atrás más ancha que la pantalla: la capa se ajusta al ancho visible para no quedar cortada a la derecha
+  if(window.visualViewport && window.visualViewport.width + 1 < ov.clientWidth){ ov.style.right = 'auto'; ov.style.width = window.visualViewport.width + 'px'; }
+  // en celular se usa el ancho VISIBLE (visualViewport): si la página de atrás es más ancha que la pantalla, la capa fija también lo es
+  const anchoVisible = () => Math.min(scroll.clientWidth, (window.visualViewport && window.visualViewport.width) || Infinity, document.documentElement.clientWidth || Infinity);
+  const ajustado = () => Math.min(1.25, Math.max(0.3, (anchoVisible() - 40) / ANCHO));
+  function aplicar(z, fx, fy){
+    // fx/fy: punto (en px de la hoja sin zoom) que debe quedar en el mismo lugar de la pantalla
+    const antes = zoom; zoom = Math.min(4, Math.max(0.3, z));
+    hoja.style.transform = 'scale(' + zoom + ')';
+    sizer.style.width = (ANCHO * zoom) + 'px'; sizer.style.height = (hoja.offsetHeight * zoom) + 'px';
+    sizer.style.margin = '0 auto';
+    ov.querySelector('#tactical-vp-pct').textContent = Math.round(zoom * 100) + '%';
+    hoja.classList.toggle('vp-cerca', zoom > ajustado() + 0.05);
+    if(fx != null){
+      const r = scroll.getBoundingClientRect();
+      const offX = sizer.offsetLeft, offY = sizer.offsetTop;
+      scroll.scrollLeft = offX + fx * zoom - (fx * antes + offX - scroll.scrollLeft);
+      scroll.scrollTop = offY + fy * zoom - (fy * antes + offY - scroll.scrollTop);
+    }
+  }
+  function cerrar(){ ov.remove(); document.removeEventListener('keydown', teclas); area.style.display = 'none'; }
+  function teclas(e){
+    if(e.key === 'Escape') cerrar();
+    else if((e.key === '+' || e.key === '=') && !e.ctrlKey) aplicar(zoom * 1.25);
+    else if(e.key === '-' && !e.ctrlKey) aplicar(zoom / 1.25);
+  }
+  document.addEventListener('keydown', teclas);
+  ov.querySelector('#tactical-vp-barra').addEventListener('click', e => {
+    const b = e.target.closest('button'); if(!b) return;
+    const cx = scroll.scrollLeft + scroll.clientWidth / 2 - sizer.offsetLeft, cy = scroll.scrollTop + scroll.clientHeight / 2 - sizer.offsetTop;
+    const acc = b.dataset.vp;
+    if(acc === 'mas') aplicar(zoom * 1.25, cx / zoom, cy / zoom);
+    else if(acc === 'menos') aplicar(zoom / 1.25, cx / zoom, cy / zoom);
+    else if(acc === 'ajustar') aplicar(ajustado());
+    else if(acc === 'cien') aplicar(1, cx / zoom, cy / zoom);
+    else if(acc === 'cerrar') cerrar();
+    else if(acc === 'pdf'){ ov.remove(); document.removeEventListener('keydown', teclas); alDescargar(); }
+  });
+  hoja.addEventListener('click', e => {
+    if(e.target.closest('a')) return;
+    const r = hoja.getBoundingClientRect();
+    const fx = (e.clientX - r.left) / zoom, fy = (e.clientY - r.top) / zoom;
+    const fit = ajustado();
+    aplicar(zoom > fit + 0.05 ? fit : Math.max(2, fit * 2), fx, fy);
+  });
+  scroll.addEventListener('wheel', e => {
+    if(!e.ctrlKey) return;
+    e.preventDefault();
+    const r = hoja.getBoundingClientRect();
+    aplicar(zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15), (e.clientX - r.left) / zoom, (e.clientY - r.top) / zoom);
+  }, { passive: false });
+  // las imágenes (logo, fotos de producto) pueden tardar: al cargar se recalcula el alto
+  hoja.querySelectorAll('img').forEach(im => { if(!im.complete) im.addEventListener('load', () => aplicar(zoom), { once: true }); });
+  aplicar(ajustado());
+  setTimeout(() => aplicar(zoom), 60);   // por si las fuentes/estilos cambian el alto justo después de abrir
+}
+// Documentos que se muestran primero en la vista previa con zoom: todo lo que va al cliente (cotización, comparativa, cuenta de cobro,
+// notas). Se excluyen las Órdenes de Producción (" - OP") y los planos de corte.
+function tacticalUsaVistaPrevia(nombreArchivo){
+  const n = String(nombreArchivo || '');
+  return !/ - OP$/.test(n) && !/^Plan de corte/.test(n);
 }
 
 // Fototeca de Productos: foto fija de referencia por línea (o variante), subida una sola vez
