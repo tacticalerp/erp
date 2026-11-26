@@ -10962,7 +10962,23 @@
            clasificar) se asignan al producto cuya palabra aparece PRIMERO en la descripción ("Cuaderno argollado con bolsa" -> Cuadernos).
            Las calculadoras de producto (Cuadernos, Rompecabezas, Bolsas...) se respetan tal cual: un rompecabezas "empacado en bolsa" sigue
            siendo Rompecabezas. */
+        /* Conde 2026-11-26: el merchandising (bolígrafos, sombrillas, gorras...) se registra como Producto libre y no llegaba a Promocionales.
+           Cada familia agrupa sus palabras (sin tildes; "(?![a-z])" = palabra completa, para que "pin" no tome "pintura" ni "termo" tome
+           "termoformado"). Las familias también sirven para ver qué merchandising se vende más (Ventas por Producto > Promocionales). */
+        const PROMO_FAMILIAS = [
+          ['Bolígrafos',            ['boligrafo', 'lapicero', 'esfero']],
+          ['Sombrillas',            ['sombrilla', 'paraguas']],
+          ['Gorras',                ['gorra', 'cachucha']],
+          ['Textiles',              ['camiseta', 'polos?(?![a-z])', 'chaqueta', 'chaleco', 'delantal']],
+          ['Mugs y vasos',          ['mugs?(?![a-z])', 'pocillo', 'tazas?(?![a-z])', 'vasos?(?![a-z])']],
+          ['Termos y botellas',     ['termos?(?![a-z])', 'botilito', 'botella']],
+          ['Llaveros',              ['llavero']],
+          ['Tecnología',            ['usb(?![a-z])', 'memoria usb', 'power ?bank', 'cargador', 'mouse ?pad']],
+          ['Tulas, morrales y bolsos', ['tulas?(?![a-z])', 'morral', 'bolsos?(?![a-z])', 'maletin', 'canguro', 'cosmetiquera']],
+          ['Escarapelas y lanyards', ['lanyard', 'escarapela', 'pin(es)?(?![a-z])']],
+        ];
         const PALABRAS_CLAVE_PRODUCTO = [
+          ['promocionales', PROMO_FAMILIAS.flatMap(f => f[1])],
           ['cuadernos',    ['cuaderno', 'agenda', 'libreta']],
           ['rompecabezas', ['rompe ?-?cabeza', 'puzz?le']],   // también "rompe cabezas", "rompe-cabezas", "puzle"
           ['cubo_rubik',   ['rubik']],
@@ -10972,6 +10988,15 @@
           ['volantes',     ['volante', 'afiche', 'plegable', 'flyer']],
         ];
         const LINEAS_GENERICAS_PRODUCTO = ['universal', 'manual', 'otro', ''];
+        function familiaPromocional(desc){
+          const txt = String(desc || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          let mejor = 'Otros promocionales', pos = Infinity;
+          PROMO_FAMILIAS.forEach(([fam, pals]) => pals.forEach(p => {
+            const m = new RegExp('(^|[^a-z])' + p).exec(txt);
+            if(m && m.index < pos){ pos = m.index; mejor = fam; }
+          }));
+          return mejor;
+        }
         function lineaPorPalabraClave(linea, desc){
           const ln = linea || 'otro';
           if(!LINEAS_GENERICAS_PRODUCTO.includes(ln)) return ln;
@@ -10992,9 +11017,9 @@
             if(!conMonto) return [{ linea: 'multi', monto: g.monto || 0, desc: g.desc, origen: 'multi' }];
             const suma = g.lineas.reduce((s, l) => s + l.monto, 0);
             const total = g.monto || suma;
-            return g.lineas.map(l => ({ linea: lineaPorPalabraClave(l.linea, l.desc), origen: l.linea || 'otro', monto: suma ? total * l.monto / suma : 0, desc: l.desc }));
+            return g.lineas.map(l => ({ linea: lineaPorPalabraClave(l.linea, l.desc), origen: l.linea || 'otro', monto: suma ? total * l.monto / suma : 0, desc: l.desc, cantidad: Number(l.cantidad) || 0 }));
           }
-          return [{ linea: lineaPorPalabraClave(g.linea, g.desc), origen: g.linea || 'otro', monto: g.monto || 0, desc: g.desc }];
+          return [{ linea: lineaPorPalabraClave(g.linea, g.desc), origen: g.linea || 'otro', monto: g.monto || 0, desc: g.desc, cantidad: Number(g.cantidad) || 0 }];
         }
 
         /* ==========================================
@@ -12955,11 +12980,19 @@
                 const deOtra = pt.origen !== l && pt.origen !== 'multi' ? ` <span style="color:#7c3aed;">(hecha en ${resumenCotEsc(NOMBRES_LINEA_PRODUCTO[pt.origen]||pt.origen)})</span>` : '';
                 return `<div style="padding:2px 0; border-bottom:1px solid #edf2f7;">${f ? f.toLocaleDateString('es-CO') : '-'} — <strong>${resumenCotEsc(g.nombreCli||'-')}</strong>${g.ot?` (${resumenCotEsc(g.ot)})`:''}: ${resumenCotEsc(tacticalTruncar(pt.desc||'', 50))}${deOtra} — ${cotFormatoCop(Math.round(pt.monto))}</div>`;
               }).join('');
-              return `<div style="padding:4px 0; border-bottom:1px solid #edf2f7;">• ${nombreProd(l)}: <strong>${cotFormatoCop(Math.round(ventasPorProducto[l]))}</strong>
+              // Conde 2026-11-26: "así tener datos de los productos más vendidos" -- dentro de Promocionales, cuánto se vendió de cada familia.
+              let famHtml = '';
+              if(l === 'promocionales'){
+                const fams = {};
+                detallePorProducto[l].forEach(({pt}) => { const f = familiaPromocional(pt.desc); const o = fams[f] = fams[f] || {monto:0, und:0, n:0}; o.monto += pt.monto; o.und += pt.cantidad||0; o.n++; });
+                famHtml = '<div style="margin:3px 0 2px 14px; font-size:0.8rem; color:#4a5568; line-height:1.5;">' + Object.keys(fams).sort((a,b)=>fams[b].monto-fams[a].monto)
+                  .map(f => `${resumenCotEsc(f)}: <strong>${cotFormatoCop(Math.round(fams[f].monto))}</strong> <span style="color:#64748b;">(${fams[f].und ? fams[f].und.toLocaleString('es-CO')+' und · ' : ''}${fams[f].n} venta${fams[f].n===1?'':'s'})</span>`).join('<br>') + '</div>';
+              }
+              return `<div style="padding:4px 0; border-bottom:1px solid #edf2f7;">• ${nombreProd(l)}: <strong>${cotFormatoCop(Math.round(ventasPorProducto[l]))}</strong>${famHtml}
                 <span style="font-size:0.78rem; color:var(--primary); cursor:pointer; text-decoration:underline; margin-left:6px;" onclick="const d=this.nextElementSibling; const abrir=d.style.display==='none'; d.style.display=abrir?'block':'none'; this.textContent=abrir?'Ocultar ▴':'Ver ventas ▾';">Ver ventas ▾</span>
                 <div style="display:none; margin-top:4px; padding-left:12px; font-size:0.82rem; color:#4a5568; max-height:220px; overflow-y:auto;">${det}</div></div>`;
             }).join('');
-          if(htmlVentasProducto) htmlVentasProducto = '<div style="font-size:0.78rem; color:#64748b; margin-bottom:4px;">Lo cotizado en la Calculadora Universal o en Producto libre se cuenta en el producto que dice la descripción (cuaderno, agenda, rompecabezas, bolsa, caja, carpeta, volante, afiche...).</div>' + htmlVentasProducto;
+          if(htmlVentasProducto) htmlVentasProducto = '<div style="font-size:0.78rem; color:#64748b; margin-bottom:4px;">Lo cotizado en la Calculadora Universal o en Producto libre se cuenta en el producto que dice la descripción (cuaderno, agenda, rompecabezas, bolsa, caja, carpeta, volante, afiche; y merchandising: bolígrafo, sombrilla, gorra, camiseta, mug, termo, llavero, USB, tula...).</div>' + htmlVentasProducto;
           document.getElementById('rep-ventas-producto').innerHTML = htmlVentasProducto || '<span style="color:#64748b; font-style:italic;">Sin ventas ganadas en este período.</span>';
 
           // Producción: consumo de papel — detalle rico de Cuadernos (multi-línea)...
