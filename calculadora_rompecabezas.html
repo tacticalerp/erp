@@ -210,7 +210,7 @@
       <div class="fila" id="fila-marco" style="display:none;">
         <div class="checkbox-row">
           <input type="checkbox" id="in-marco">
-          <label for="in-marco" style="font-weight:normal;">Con marco perimetral (Troquel+3cm + base de marco en Cartón C14)</label>
+          <label for="in-marco" style="font-weight:normal;">Con marco perimetral (+3 cm más sobre el montaje normal: marco de 1 cm por lado + área para guías de troquelado; incluye base de marco en Cartulina C14)</label>
         </div>
       </div>
     </div>
@@ -390,7 +390,9 @@ const AYUDANTE_ARMADO_COP_POR_100 = 20000;
 const AYUDANTE_ARMADO_FICHAS_MINIMO = 70;      // línea Macro >=70 fichas
 const DESGASTE_CUCHILLA_COP = {baja:30000, media:60000, alta:120000, especial:200000};
 const MARCO_EXTRA_CM_SIN = 2;
-const MARCO_EXTRA_CM_CON = 3;
+// Conde 2026-11-26: el marco SUMA 3 cm a lo normal (troquel+2): 1 cm de marco por cada lado + área para guías de troquelado.
+// Ej. troquel 20,5x16,5 -> normal 22,5x18,5 -> con marco 25,5x21,5 (impresión, cartón y base).
+const MARCO_EXTRA_CM_CON = MARCO_EXTRA_CM_SIN + 3;
 const MARCO_BASE_SUSTRATO = "Cartulina C14";
 const MARCO_BASE_GRAMAJE = 225;
 const MARCO_BASE_MERMA_PCT = 0.02;
@@ -661,7 +663,7 @@ function cotizarRompecabezas(p){
   // 10x10cm se imprime y se colamina en material de 12x12cm) = +2cm total por dimensión —
   // pero SOLO aplica a la línea chica (<70 fichas). En línea Macro (>=70 fichas) NO se excede
   // nada, se usa el tamaño de listado tal cual (genera mucho desperdicio a esa escala). Con
-  // marco perimetral (cualquier troquel de línea chica) es +3cm en vez de +2cm. Este mismo tamaño
+  // marco perimetral (cualquier troquel de línea chica) es +5cm (los 2 normales + 3 del marco). Este mismo tamaño
   // de montaje se usa TANTO para el material impreso como para el backing del colaminado.
   const extraCm = esLineaMacro ? 0 : (conMarco ? MARCO_EXTRA_CM_CON : MARCO_EXTRA_CM_SIN);
   // Conde 2026-08-24: "si es un troquel nuevo no podemos partir de las medidas de los troqueles
@@ -742,7 +744,8 @@ function cotizarRompecabezas(p){
 
   let costoBaseMarco = 0, detalleBaseMarco = null;
   if(conMarco){
-    const anchoBase = anchoTroquelReal + 2, altoBase = altoTroquelReal + 2;
+    // Conde 2026-11-26: la base del marco va al mismo tamaño de montaje con marco (antes troquel+2).
+    const anchoBase = anchoMontaje, altoBase = altoMontaje;
     const piezasBase = Math.ceil(p.cantidad * (1+MARCO_BASE_MERMA_PCT));
     detalleBaseMarco = costoMaterialPliegos(anchoBase, altoBase, MARCO_BASE_SUSTRATO, MARCO_BASE_GRAMAJE, p.cantidad, piezasBase-p.cantidad);
     costoBaseMarco = detalleBaseMarco.costoTotal;
