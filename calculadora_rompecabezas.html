@@ -394,6 +394,9 @@ const MARCO_EXTRA_CM_CON = 3;
 const MARCO_BASE_SUSTRATO = "Cartulina C14";
 const MARCO_BASE_GRAMAJE = 225;
 const MARCO_BASE_MERMA_PCT = 0.02;
+// Conde 2026-11-26: el marco perimetral ya no es solo de ROMB-001 -- lo admite cualquier troquel de menos de 70 fichas
+// (línea chica), salvo los que ya traen marco de fábrica (ROMB-008).
+function admiteMarco(t){ return !!t && t.fichas < UMBRAL_FICHAS_LINEA_MACRO && !t.marcoFabrica; }
 
 // Merma absoluta por unidades fijas (no porcentual) — confirmada por Conde 2026-07-24.
 const MERMA_IMPRESION_OFFSET_UND = 100;   // litografía — igual para línea chica y Macro
@@ -653,12 +656,12 @@ function cotizarRompecabezas(p){
   if(!troquel) throw new Error("Troquel no encontrado: "+p.troquelId);
 
   const esLineaMacro = troquel.fichas>=UMBRAL_FICHAS_LINEA_MACRO;
-  const conMarco = !!(troquel.marcoOpcional && p.usarMarco);
+  const conMarco = !!(admiteMarco(troquel) && p.usarMarco);
   // Excedente de 1cm por cada lado del troquel (confirmado por Conde 2026-07-24: ej. troquel
   // 10x10cm se imprime y se colamina en material de 12x12cm) = +2cm total por dimensión —
   // pero SOLO aplica a la línea chica (<70 fichas). En línea Macro (>=70 fichas) NO se excede
   // nada, se usa el tamaño de listado tal cual (genera mucho desperdicio a esa escala). Con
-  // marco perimetral (solo ROMB-001, siempre chica) es +3cm en vez de +2cm. Este mismo tamaño
+  // marco perimetral (cualquier troquel de línea chica) es +3cm en vez de +2cm. Este mismo tamaño
   // de montaje se usa TANTO para el material impreso como para el backing del colaminado.
   const extraCm = esLineaMacro ? 0 : (conMarco ? MARCO_EXTRA_CM_CON : MARCO_EXTRA_CM_SIN);
   // Conde 2026-08-24: "si es un troquel nuevo no podemos partir de las medidas de los troqueles
@@ -847,7 +850,7 @@ function poblarTroqueles(){
     id: t.id,
     grupo: t.grupo===1 ? 'Barrio · menos de 70 fichas' : 'Campo · 70 fichas o más',
     nombre: `<b>Rompecabezas de ${t.fichas} fichas</b> <span style="color:#64748b; font-size:.82em;">${tacticalTroquelHV(t.ancho, t.alto)} cm</span>`,
-    tags: (t.marcoOpcional ? ['Admite marco'] : []).concat(t.marcoFabrica ? ['Marco de fábrica'] : []),
+    tags: (t.marcoFabrica ? ['Marco de fábrica'] : []),
     titulo: `${t.fichas} fichas, ${t.ancho}x${t.alto} cm`
   })));
   onCambioTroquel();
@@ -864,12 +867,12 @@ function onCambioTroquel(){
   if(typeof tacticalTroquelPickerSync === 'function') tacticalTroquelPickerSync('in-troquel');
   const id = document.getElementById("in-troquel").value;
   const t = TROQUELES_ROMPECABEZAS.find(x=>x.id===id);
-  document.getElementById("fila-marco").style.display = t.marcoOpcional ? "flex" : "none";
-  if(!t.marcoOpcional) document.getElementById("in-marco").checked = false;
+  document.getElementById("fila-marco").style.display = admiteMarco(t) ? "flex" : "none";
+  if(!admiteMarco(t)) document.getElementById("in-marco").checked = false;
   document.getElementById("in-sustrato").value = t.fichas<UMBRAL_FICHAS_LINEA_MACRO ? SUSTRATO_IMPRESO_FICHAS_MENOR : SUSTRATO_IMPRESO_FICHAS_MAYOR;
   const hint = document.getElementById("hint-troquel");
   let notas = [];
-  if(t.marcoOpcional) notas.push("admite marco perimetral opcional");
+  if(admiteMarco(t)) notas.push("admite marco perimetral opcional");
   if(t.marcoFabrica) notas.push("ya trae marco de fábrica incluido en la medida");
   if(t.fichas>=AYUDANTE_ARMADO_FICHAS_MINIMO) notas.push("línea Macro — aplica costo de ayudante de armado");
   notas.push(t.fichas<UMBRAL_FICHAS_LINEA_MACRO ? "sustrato sugerido: Cote 150gr, colaminado con Cartón 1.5mm" : "sustrato sugerido: Maule C20, colaminado con Maule C22");
