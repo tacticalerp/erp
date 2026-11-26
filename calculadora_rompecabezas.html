@@ -210,7 +210,7 @@
       <div class="fila" id="fila-marco" style="display:none;">
         <div class="checkbox-row">
           <input type="checkbox" id="in-marco">
-          <label for="in-marco" style="font-weight:normal;">Con marco perimetral (+3 cm más sobre el montaje normal: marco de 1 cm por lado + área para guías de troquelado; incluye base de marco en Cartulina C14)</label>
+          <label for="in-marco" style="font-weight:normal;">Con marco perimetral (+3 cm más sobre el montaje normal: marco de 1 cm por lado + área para guías de troquelado; incluye base de marco en Cartulina C14 y bolsa más grande, +$100 c/u)</label>
         </div>
       </div>
     </div>
@@ -396,6 +396,7 @@ const MARCO_EXTRA_CM_CON = MARCO_EXTRA_CM_SIN + 3;
 const MARCO_BASE_SUSTRATO = "Cartulina C14";
 const MARCO_BASE_GRAMAJE = 225;
 const MARCO_BASE_MERMA_PCT = 0.02;
+const MARCO_BOLSA_EXTRA_COP = 100; // Conde 2026-11-26: con marco la bolsa de empaque es más grande: +$100 por bolsa sobre la de la tabla
 // Conde 2026-11-26: el marco perimetral ya no es solo de ROMB-001 -- lo admite cualquier troquel de menos de 70 fichas
 // (línea chica), salvo los que ya traen marco de fábrica (ROMB-008).
 function admiteMarco(t){ return !!t && t.fichas < UMBRAL_FICHAS_LINEA_MACRO && !t.marcoFabrica; }
@@ -752,7 +753,8 @@ function cotizarRompecabezas(p){
   }
 
   const costoDespiece = troquel.despiece*p.cantidad;
-  const costoBolsa = troquel.bolsa*p.cantidad;
+  const precioBolsa = troquel.bolsa + (conMarco ? MARCO_BOLSA_EXTRA_COP : 0);
+  const costoBolsa = precioBolsa*p.cantidad;
   const esFichaChica = troquel.fichas<=UMBRAL_FICHAS_CHICO;
   // Conde 2026-07-24: en línea Macro se cobran varios "pasos" de troquelado (el troquel no corta
   // todo en una sola pasada) — 2 pasos (x2 la tarifa) para 70-499 fichas, 3 pasos (x3) para 500+.
@@ -788,7 +790,7 @@ function cotizarRompecabezas(p){
   const cColaminadoMO = avz.linea('col', 'Procesos', 'Colaminado: mano de obra + pegante', 1, 'trabajo', costoColaminadoManoObra);
   const cBaseMarco = conMarco ? avz.linea('mar', 'Insumos', 'Base para marco (Cartón C14)', detalleBaseMarco.nPliegos, 'pliego', detalleBaseMarco.precioPliego, costoBaseMarco) : 0;
   const cDespiece = avz.linea('des', 'Procesos', 'Despiece', p.cantidad, 'unidad', troquel.despiece);
-  const cBolsa = avz.linea('bol', 'Insumos', 'Bolsa / empaque individual', p.cantidad, 'unidad', troquel.bolsa);
+  const cBolsa = avz.linea('bol', 'Insumos', conMarco ? 'Bolsa / empaque individual (más grande por el marco)' : 'Bolsa / empaque individual', p.cantidad, 'unidad', precioBolsa);
   const cTroquelado = avz.linea('tro', 'Procesos', 'Troquelado (servicio de máquina)', 1, 'trabajo', costoTroqueladoServicio);
   const cUsoTroquel = avz.linea('uso', 'Procesos', `Uso del troquel (${p.troquelEsNuevo?'nuevo, manual':'desgaste cuchilla '+p.complejidadDesgaste})`, 1, 'troquel', costoUsoTroquel);
   const cAyudante = costoAyudante>0 ? avz.linea('ayu', 'Procesos', 'Ayudante de armado (línea Macro)', Math.ceil(p.cantidad/100), 'x 100 u', AYUDANTE_ARMADO_COP_POR_100) : 0;
