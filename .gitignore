@@ -62,3 +62,22 @@ _privado/
 
 # Programa Litoplan con bases de datos de clientes y cotizaciones: nunca subir al repositorio
 Litoplan ERP/
+
+# ---- Conde 2026-11-26: "de aquí en adelante todo debe ser privado" ----------------------------
+# El repo es PÚBLICO (GitHub Pages). Ningún archivo NUEVO con datos del negocio (clientes, ventas,
+# costos, precios, finanzas, respaldos, fotos) se sube. Los scripts SQL con datos van en _privado/;
+# en supabase/ solo se publican migraciones de estructura (tablas, permisos) sin datos.
+# (Los archivos que ya estaban publicados antes de esta fecha se dejaron como estaban, por decisión de Conde.)
+supabase/consulta_*.sql
+supabase/borrar_*.sql
+supabase/fix_*.sql
+supabase/*datos*.sql
+supabase/migracion_historico_*.sql
+*.xlsm
+*.csv
+*.zip
+*.gz
+*.pdf
+!cajas_laser/*.pdf
+tactical-fotos-*.zip
+*.json.gz
