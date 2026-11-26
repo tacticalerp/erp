@@ -47,7 +47,22 @@ const TABLAS: string[] = [
   "personal", "contadores", "ot_contadores",
   "precios_override", "precios_promo_override", "sustratos_custom", "acabados_custom",
   "fototeca_items", "b2c_pedidos", "b2c_pedido_items",
+  // Conde 2026-11-26: faltaban estas 13 (mismas que se agregaron al botón del Hub).
+  "notas_credito", "proyectos", "montajes_cuaderno", "plotter_montajes", "plotter_sobrantes", "plotter_config", "plotter_cola", "recomendaciones_override", "historico_financiero_anual", "historico_financiero_mensual", "historico_balance_anual", "historico_ventas_cliente", "bot_fotos",
 ];
+
+// Conde 2026-11-26: Supabase entrega máximo 1.000 filas por consulta -- se lee por páginas para no cortar tablas grandes.
+async function leerTablaCompleta(tabla: string): Promise<unknown[]> {
+  const PAG = 1000;
+  const filas: unknown[] = [];
+  for (let desde = 0; ; desde += PAG) {
+    const { data, error } = await supabase.from(tabla).select("*").range(desde, desde + PAG - 1);
+    if (error) throw error;
+    filas.push(...(data ?? []));
+    if (!data || data.length < PAG) break;
+  }
+  return filas;
+}
 
 async function comprimirGzip(texto: string): Promise<Uint8Array> {
   const bytes = new TextEncoder().encode(texto);
@@ -82,13 +97,12 @@ Deno.serve(async (_req: Request) => {
   const data: Record<string, unknown[]> = {};
   const errores: string[] = [];
   for (const tabla of TABLAS) {
-    const { data: filas, error } = await supabase.from(tabla).select("*");
-    if (error) {
+    try {
+      data[tabla] = await leerTablaCompleta(tabla);
+    } catch (error) {
       console.error(`Error respaldando tabla ${tabla}:`, error);
       errores.push(tabla);
-      continue;
     }
-    data[tabla] = filas ?? [];
   }
 
   const fecha = new Date().toISOString().slice(0, 10);

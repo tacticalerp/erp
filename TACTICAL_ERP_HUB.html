@@ -824,6 +824,8 @@
             <div id="hub-respaldo-box" style="margin: 15px 20px 0 20px; background: var(--light-gray); border: 1px solid #cbd5e0; border-radius: 6px; padding: 12px 15px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                 <span style="font-weight:bold; color:var(--dark);"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>Copia de Seguridad (descarga un respaldo de todos los datos reales guardados en Supabase):</span>
                 <button class="btn-action" onclick="contExportarRespaldo()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; flex-shrink:0; margin-right:4px;"><polyline points="6 9 12 15 18 9"></polyline></svg>Exportar todo (backup)</button>
+                <button class="btn-action" id="btn-respfotos" style="display:none;" onclick="respFotosAbrir()" title="Descarga en un .zip todas las fotos que usa el ERP (Kanban, cotizaciones, Fototeca)">Respaldar fotos (.zip)</button>
+                <button class="btn-action" id="btn-restaurar" style="display:none;" onclick="restaurarAbrir()" title="Vuelve a cargar un respaldo (.json / .json.gz de datos o .zip de fotos)">Restaurar desde respaldo</button>
                 <button class="btn-action" id="btn-medidor" style="display:none;" onclick="medidorAbrir()">Medir consumo de datos</button>
                 <button class="btn-action" id="btn-optfotos" style="display:none;" onclick="optFotosAbrir()">Optimizar fotos guardadas</button>
                 <span id="respaldo-nota" style="font-size:0.82rem; color:#5f6e84;"></span>
@@ -2864,6 +2866,7 @@
         function tacticalAplicarVisibilidadHub(){
             const rol = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol;
             { const bm = document.getElementById('btn-medidor'); if(bm) bm.style.display = (rol === 'administrador') ? '' : 'none'; }
+            ['btn-respfotos', 'btn-restaurar'].forEach(id => { const b = document.getElementById(id); if(b) b.style.display = (rol === 'administrador') ? '' : 'none'; });
             { const bo = document.getElementById('btn-optfotos'); if(bo) bo.style.display = (rol === 'administrador') ? '' : 'none'; }
             document.querySelectorAll('#view-hub .hub-card').forEach(card => {
                 const m = (card.getAttribute('onclick') || '').match(/showView\('([^']+)'\)/);
@@ -2908,10 +2911,9 @@
            independiente de lo que ya ofrezca el plan de Supabase (backups automáticos suelen ser
            de los planes pagos). No incluye auth.users (las cuentas de login se administran desde
            el panel de Supabase, no se restauran desde un JSON).
-           NO incluye una función de "restaurar" con un clic -- volver a insertar 32 tablas de
-           golpe, respetando el orden de padres/hijos, es una operación de riesgo real (podría
-           pisar información viva de todo el equipo). Si algún día hace falta restaurar de verdad,
-           se hace de forma guiada, tabla por tabla. */
+           Conde 2026-11-26: ya hay "Restaurar desde respaldo" (restaurarAbrir, solo administrador):
+           nunca borra, "solo lo que falta" por defecto, descarga antes un respaldo del estado actual
+           y reintenta las tablas hijas al final. Las fotos tienen su propio respaldo (.zip). */
         const TACTICAL_TABLAS_BACKUP = [
             // Conde 2026-08-28: 'cotizaciones_calculadoras' (las 7 calculadoras) y 'prefacturas'
             // faltaban acá -- se agregaron en fases posteriores del proyecto y esta lista nunca se
@@ -2928,7 +2930,265 @@
             'personal', 'contadores', 'ot_contadores',
             'precios_override', 'precios_promo_override', 'sustratos_custom', 'acabados_custom',
             'fototeca_items', 'b2c_pedidos', 'b2c_pedido_items',
+            // Conde 2026-11-26: "si se perdiera el ERP de la nube, ¿lo podría recuperar?" -- faltaban estas 13 (también en send-backup).
+            'notas_credito', 'proyectos', 'montajes_cuaderno', 'plotter_montajes', 'plotter_sobrantes', 'plotter_config', 'plotter_cola', 'recomendaciones_override', 'historico_financiero_anual', 'historico_financiero_mensual', 'historico_balance_anual', 'historico_ventas_cliente', 'bot_fotos',
         ];
+
+        /* Conde 2026-11-26: Supabase entrega máximo 1.000 filas por consulta -- antes una tabla grande (tareas ya iba en 866) se
+           habría cortado sin aviso en el respaldo. Ahora se lee por páginas de 1.000 hasta el final, en orden fijo por la 1ª columna. */
+        async function tacticalLeerTablaCompleta(tabla){
+            const PAG = 1000, filas = [];
+            for(let desde = 0; ; desde += PAG){
+                const { data, error } = await tacticalSupabase.from(tabla).select('*').range(desde, desde + PAG - 1);
+                if(error) throw error;
+                filas.push(...(data || []));
+                if(!data || data.length < PAG) break;
+            }
+            return filas;
+        }
+
+        /* ---------- capa flotante sencilla para respaldo de fotos y restaurar ---------- */
+        function respModal(html){
+            let ov = document.getElementById('resp-modal');
+            if(!ov){
+                ov = document.createElement('div'); ov.id = 'resp-modal';
+                ov.style.cssText = 'position:fixed; inset:0; z-index:100000; background:rgba(15,23,42,.6); display:flex; align-items:center; justify-content:center; padding:16px;';
+                ov.innerHTML = '<div id="resp-modal-caja" style="background:#fff; color:#1a202c; border-radius:10px; width:100%; max-width:620px; max-height:88vh; overflow:auto; padding:18px 20px; box-shadow:0 20px 50px rgba(0,0,0,.35); font-size:0.9rem; line-height:1.5;"></div>';
+                document.body.appendChild(ov);
+            }
+            document.getElementById('resp-modal-caja').innerHTML = html;
+        }
+        function respCerrar(){ const ov = document.getElementById('resp-modal'); if(ov) ov.remove(); }
+        function respEsc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+        function respMB(b){ return (b / 1048576).toLocaleString('es-CO', { maximumFractionDigits: 1 }) + ' MB'; }
+        function respBajar(blob, nombre){
+            const url = URL.createObjectURL(blob), a = document.createElement('a');
+            a.href = url; a.download = nombre; document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 4000);
+        }
+        let respJsZipPromesa = null;
+        function respCargarJsZip(){
+            if(window.JSZip) return Promise.resolve(window.JSZip);
+            if(!respJsZipPromesa) respJsZipPromesa = new Promise((ok, mal) => {
+                const s = document.createElement('script');
+                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+                s.onload = () => ok(window.JSZip); s.onerror = () => { respJsZipPromesa = null; mal(new Error('No se pudo cargar el compresor .zip (revisa la conexión).')); };
+                document.head.appendChild(s);
+            });
+            return respJsZipPromesa;
+        }
+
+        /* ===== RESPALDO DE FOTOS (Conde 2026-11-26) =====
+           Las fotos viven en el almacenamiento de Supabase (bucket tactical-fotos), fuera del respaldo de datos. Se buscan TODAS las fotos
+           que el ERP usa (cualquier enlace a tactical-fotos dentro de cualquier tabla: Kanban, cotizaciones, Fototeca, pedidos...) y se
+           descargan en un .zip con la misma carpeta/nombre que tienen en Supabase, así "Restaurar" las vuelve a subir al mismo lugar.
+           "Solo las nuevas" recuerda (en este navegador) cuáles ya se respaldaron, para no gastar tráfico de Supabase dos veces. */
+        const RESP_FOTOS_LS = 'tactical_fotos_respaldadas_v1';
+        const RESP_FOTOS_PARTE_MAX = 250 * 1048576;   // un .zip por cada ~250 MB (archivos más grandes se vuelven pesados para el navegador)
+        let respFotosLista = null;
+        function respFotosYaRespaldadas(){ try { return new Set(JSON.parse(localStorage.getItem(RESP_FOTOS_LS) || '[]')); } catch(e){ return new Set(); } }
+        async function respFotosAbrir(){
+            respModal('<h3 style="margin:0 0 6px;">Respaldar fotos</h3><p id="rf-estado">Buscando las fotos que usa el ERP…</p>');
+            try {
+                const rutas = new Set();
+                const re = /\/storage\/v1\/object\/public\/tactical-fotos\/([^"'\s)?#\\]+)/g;
+                for(const tabla of TACTICAL_TABLAS_BACKUP){
+                    const el = document.getElementById('rf-estado'); if(el) el.textContent = 'Revisando ' + tabla + '…';
+                    let filas; try { filas = await tacticalLeerTablaCompleta(tabla); } catch(e){ continue; }
+                    const txt = JSON.stringify(filas);
+                    let m; while((m = re.exec(txt))){ try { rutas.add(decodeURIComponent(m[1])); } catch(e){ rutas.add(m[1]); } }
+                }
+                respFotosLista = [...rutas].sort();
+                const ya = respFotosYaRespaldadas();
+                const nuevas = respFotosLista.filter(r => !ya.has(r)).length;
+                respModal(`<h3 style="margin:0 0 6px;">Respaldar fotos</h3>
+                    <p>El ERP usa <strong>${respFotosLista.length}</strong> fotos guardadas en Supabase${ya.size ? `; <strong>${nuevas}</strong> ${nuevas === 1 ? 'es nueva' : 'son nuevas'} desde el último respaldo de fotos hecho en este computador` : ''}.</p>
+                    <p style="font-size:0.82rem; color:#64748b;">Se descargan en un archivo .zip (si pesan mucho, en varias partes de ~250 MB). Guárdalo junto al respaldo de datos, en la carpeta BACKUP y fuera del computador (Drive o USB). Ojo: descargar fotos gasta del tráfico mensual de Supabase; "solo las nuevas" gasta mucho menos.</p>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
+                      ${ya.size ? `<button class="btn-action" data-ui="none" style="background:#16a34a; color:#fff;" onclick="respFotosDescargar(true)" ${nuevas ? '' : 'disabled'}>Solo las nuevas (${nuevas})</button>` : ''}
+                      <button class="btn-action" data-ui="none" style="background:#1e3a5f; color:#fff;" onclick="respFotosDescargar(false)">Todas (${respFotosLista.length})</button>
+                      <button class="btn-action" data-ui="none" onclick="respCerrar()">Cancelar</button>
+                    </div>`);
+            } catch(e){
+                respModal(`<h3 style="margin:0 0 6px;">Respaldar fotos</h3><p style="color:#b91c1c;">No se pudo revisar: ${respEsc(e.message)}</p><button class="btn-action" data-ui="none" onclick="respCerrar()">Cerrar</button>`);
+            }
+        }
+        async function respFotosDescargar(soloNuevas){
+            const ya = respFotosYaRespaldadas();
+            const lista = (respFotosLista || []).filter(r => !soloNuevas || !ya.has(r));
+            if(!lista.length) return;
+            respModal('<h3 style="margin:0 0 6px;">Respaldar fotos</h3><p id="rf-prog">Preparando…</p><p style="font-size:0.8rem; color:#64748b;">No cierres esta pestaña hasta que termine.</p>');
+            const prog = t => { const el = document.getElementById('rf-prog'); if(el) el.innerHTML = t; };
+            let JSZip; try { JSZip = await respCargarJsZip(); } catch(e){ prog('<span style="color:#b91c1c;">' + respEsc(e.message) + '</span>'); return; }
+            const fecha = new Date().toISOString().slice(0, 10);
+            let zip = new JSZip(), bytesParte = 0, parte = 1, hechas = 0, fallidas = [], total = 0, enParte = [];
+            const okRutas = [];
+            const cerrarParte = async (ultima) => {
+                if(!enParte.length) return;
+                zip.file('_indice_fotos.json', JSON.stringify({ exportadoEn: new Date().toISOString(), bucket: 'tactical-fotos', fotos: enParte }, null, 1));
+                const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
+                const nombre = 'tactical-fotos-' + fecha + (ultima && parte === 1 ? '' : '-parte' + parte) + '.zip';
+                respBajar(blob, nombre);
+                zip = new JSZip(); bytesParte = 0; enParte = []; parte++;
+            };
+            // el bucket es público en lectura (sin permiso de "listar/descargar" con sesión), por eso se baja por su enlace público
+            async function bajarUna(ruta){
+                try {
+                    const url = tacticalSupabase.storage.from(TACTICAL_STORAGE_BUCKET).getPublicUrl(ruta).data.publicUrl;
+                    const r = await fetch(url, { cache: 'no-store' });
+                    if(!r.ok) throw new Error('HTTP ' + r.status);
+                    const blob = await r.blob();
+                    zip.file(ruta, blob); bytesParte += blob.size; total += blob.size; enParte.push(ruta); okRutas.push(ruta);
+                } catch(e){ fallidas.push(ruta); }
+                hechas++;
+                prog(`Descargando fotos: <strong>${hechas}</strong> de ${lista.length} (${respMB(total)})${fallidas.length ? ` · <span style="color:#b91c1c;">${fallidas.length} no se encontraron</span>` : ''}`);
+            }
+            // de 4 en 4; cuando la parte pasa de ~250 MB se entrega ese .zip y se empieza otro (sin mezclar descargas en curso)
+            for(let i = 0; i < lista.length; i += 4){
+                await Promise.all(lista.slice(i, i + 4).map(bajarUna));
+                if(bytesParte >= RESP_FOTOS_PARTE_MAX && i + 4 < lista.length) await cerrarParte(false);
+            }
+            prog('Armando el archivo .zip…');
+            await cerrarParte(true);
+            try { const s = respFotosYaRespaldadas(); okRutas.forEach(r => s.add(r)); localStorage.setItem(RESP_FOTOS_LS, JSON.stringify([...s])); } catch(e){}
+            respModal(`<h3 style="margin:0 0 6px;">Respaldo de fotos listo</h3>
+                <p>Se descargaron <strong>${okRutas.length}</strong> fotos (${respMB(total)}) en ${parte - 1} archivo(s) .zip.</p>
+                ${fallidas.length ? `<p style="color:#b45309;">${fallidas.length} foto(s) ya no existen en Supabase (enlaces viejos o fotos borradas por la limpieza automática); no afecta el respaldo.</p>` : ''}
+                <p style="font-size:0.82rem; color:#64748b;">Busca el archivo en tu carpeta de Descargas y muévelo a la carpeta BACKUP y a Drive o USB.</p>
+                <button class="btn-action" data-ui="none" onclick="respCerrar()">Cerrar</button>`);
+        }
+
+        /* ===== RESTAURAR DESDE RESPALDO (Conde 2026-11-26) =====
+           Acepta el respaldo de datos (.json del botón "Exportar todo" o .json.gz del correo) o un .zip de fotos.
+           DATOS: nunca borra nada. Dos modos: "solo lo que falta" (agrega los registros que ya no están; lo que existe no se toca) o
+           "volver al respaldo" (además, los registros que existen con el mismo id quedan como estaban en el respaldo). Antes de escribir
+           se descarga automáticamente un respaldo de cómo está el ERP en este momento. Si una tabla depende de otra (ej. renglones de
+           un documento), se reintenta al final. Las cuentas de acceso (correo/contraseña) NO viajan en el respaldo: en un Supabase nuevo
+           hay que crear primero los usuarios en Authentication y luego restaurar.
+           FOTOS: sube cada foto del .zip a su mismo lugar en tactical-fotos; las que ya existen se dejan como están. */
+        let restaurarDatos = null;
+        function restaurarAbrir(){
+            respModal(`<h3 style="margin:0 0 6px;">Restaurar desde respaldo</h3>
+                <p>Elige el archivo de respaldo:</p>
+                <ul style="margin:4px 0 10px; padding-left:18px; font-size:0.85rem;">
+                  <li><strong>.json</strong> — el que baja el botón "Exportar todo (backup)"</li>
+                  <li><strong>.json.gz</strong> — el que llega por correo</li>
+                  <li><strong>.zip</strong> — un respaldo de fotos</li>
+                </ul>
+                <input type="file" id="rest-archivo" accept=".json,.gz,.zip,application/json,application/gzip,application/zip" onchange="restaurarLeerArchivo(this.files[0])">
+                <p id="rest-estado" style="font-size:0.85rem; color:#64748b;"></p>
+                <button class="btn-action" data-ui="none" onclick="respCerrar()">Cancelar</button>`);
+        }
+        async function restaurarLeerArchivo(archivo){
+            if(!archivo) return;
+            const est = document.getElementById('rest-estado');
+            const nombre = archivo.name.toLowerCase();
+            try {
+                if(nombre.endsWith('.zip')) return restaurarFotosPreparar(archivo);
+                est.textContent = 'Leyendo el archivo…';
+                let texto;
+                if(nombre.endsWith('.gz')){
+                    const ds = new DecompressionStream('gzip');
+                    texto = await new Response(archivo.stream().pipeThrough(ds)).text();
+                } else texto = await archivo.text();
+                const j = JSON.parse(texto);
+                if(!j || typeof j.data !== 'object') throw new Error('Este archivo no es un respaldo del ERP (no trae la sección de datos).');
+                restaurarDatos = j;
+                est.textContent = 'Comparando con lo que hay hoy en el ERP…';
+                const tablas = Object.keys(j.data).filter(tb => Array.isArray(j.data[tb]));
+                const filas = [];
+                for(const tb of tablas){
+                    const { count, error } = await tacticalSupabase.from(tb).select('*', { count: 'exact', head: true });
+                    filas.push({ tb, enArchivo: j.data[tb].length, hoy: error ? null : count });
+                }
+                const fechaR = j.exportadoEn ? new Date(j.exportadoEn).toLocaleString('es-CO') : 'sin fecha';
+                respModal(`<h3 style="margin:0 0 6px;">Restaurar datos</h3>
+                    <p>Respaldo del <strong>${respEsc(fechaR)}</strong> · ${tablas.length} tablas.</p>
+                    <div style="max-height:240px; overflow:auto; border:1px solid #e2e8f0; border-radius:6px;">
+                      <table style="width:100%; border-collapse:collapse; font-size:0.82rem; font-variant-numeric:tabular-nums;">
+                        <tr style="background:#f1f5f9;"><th style="text-align:left; padding:4px 8px;">Tabla</th><th style="text-align:right; padding:4px 8px;">En el respaldo</th><th style="text-align:right; padding:4px 8px;">Hoy en el ERP</th></tr>
+                        ${filas.map(f => `<tr style="border-top:1px solid #edf2f7;"><td style="padding:3px 8px;">${respEsc(f.tb)}</td><td style="text-align:right; padding:3px 8px;">${f.enArchivo.toLocaleString('es-CO')}</td><td style="text-align:right; padding:3px 8px;">${f.hoy == null ? '<span style="color:#b91c1c;">no existe</span>' : f.hoy.toLocaleString('es-CO')}</td></tr>`).join('')}
+                      </table>
+                    </div>
+                    <p style="margin:12px 0 4px; font-weight:700;">¿Cómo restaurar?</p>
+                    <label style="display:block; margin:4px 0;"><input type="radio" name="rest-modo" value="faltantes" checked> <strong>Solo lo que falta</strong> — agrega los registros que ya no están. Lo que existe hoy no se toca.</label>
+                    <label style="display:block; margin:4px 0;"><input type="radio" name="rest-modo" value="todo"> <strong>Volver al respaldo</strong> — además, los registros que existen quedan como estaban en el respaldo (se pierden los cambios hechos después en esos registros).</label>
+                    <p style="font-size:0.8rem; color:#64748b; margin:8px 0;">En ningún caso se borra nada. Antes de empezar se descarga un respaldo de cómo está el ERP ahora, por si hay que deshacer. Las cuentas de acceso (correo y contraseña) no van en el respaldo: si es un Supabase nuevo, crea primero los usuarios.</p>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                      <button class="btn-action" data-ui="none" style="background:#cc0000; color:#fff;" onclick="restaurarDatosEjecutar()">Restaurar</button>
+                      <button class="btn-action" data-ui="none" onclick="respCerrar()">Cancelar</button>
+                    </div>`);
+            } catch(e){
+                if(est) est.innerHTML = '<span style="color:#b91c1c;">' + respEsc(e.message) + '</span>';
+            }
+        }
+        async function restaurarDatosEjecutar(){
+            const j = restaurarDatos; if(!j) return;
+            const modo = (document.querySelector('input[name="rest-modo"]:checked') || {}).value || 'faltantes';
+            if(modo === 'todo'){
+                const r = prompt('Esto deja los registros como estaban en el respaldo y se pierden los cambios hechos después en ellos.\nEscribe RESTAURAR para continuar:');
+                if((r || '').trim().toUpperCase() !== 'RESTAURAR') return;
+            }
+            respModal('<h3 style="margin:0 0 6px;">Restaurando…</h3><p id="rest-prog">Primero se descarga un respaldo de cómo está el ERP ahora…</p><p style="font-size:0.8rem; color:#64748b;">No cierres esta pestaña.</p>');
+            const prog = t => { const el = document.getElementById('rest-prog'); if(el) el.innerHTML = t; };
+            try { await contExportarRespaldo(); } catch(e){ prog('<span style="color:#b91c1c;">No se pudo hacer el respaldo previo; no se restauró nada.</span>'); return; }
+            // orden: el de la lista de respaldo (padres primero) y luego cualquier otra tabla que traiga el archivo
+            const enArchivo = Object.keys(j.data).filter(tb => Array.isArray(j.data[tb]) && j.data[tb].length);
+            let pendientes = [...TACTICAL_TABLAS_BACKUP.filter(tb => enArchivo.includes(tb)), ...enArchivo.filter(tb => !TACTICAL_TABLAS_BACKUP.includes(tb))];
+            const resultado = {};
+            for(let vuelta = 1; vuelta <= 3 && pendientes.length; vuelta++){
+                const otraVez = [];
+                for(const tb of pendientes){
+                    const filas = j.data[tb]; let err = null;
+                    for(let i = 0; i < filas.length && !err; i += 500){
+                        prog(`Restaurando <strong>${respEsc(tb)}</strong>: ${Math.min(i + 500, filas.length)} de ${filas.length}${vuelta > 1 ? ' (segundo intento)' : ''}…`);
+                        const { error } = await tacticalSupabase.from(tb).upsert(filas.slice(i, i + 500), { ignoreDuplicates: modo === 'faltantes' });
+                        if(error) err = error;
+                    }
+                    if(err && err.code === '23503' && vuelta < 3) otraVez.push(tb);   // depende de otra tabla que aún no se restauró
+                    else resultado[tb] = err ? err.message : 'ok';
+                }
+                pendientes = otraVez;
+            }
+            const malas = Object.entries(resultado).filter(([, v]) => v !== 'ok');
+            respModal(`<h3 style="margin:0 0 6px;">Restauración terminada</h3>
+                <p><strong>${Object.keys(resultado).length - malas.length}</strong> de ${Object.keys(resultado).length} tablas restauradas sin problema (${modo === 'faltantes' ? 'solo se agregó lo que faltaba' : 'registros devueltos al estado del respaldo'}).</p>
+                ${malas.length ? `<p style="color:#b91c1c; margin-bottom:4px;">Con problemas:</p><ul style="font-size:0.82rem; color:#7f1d1d; padding-left:18px;">${malas.map(([tb, m]) => `<li><strong>${respEsc(tb)}</strong>: ${respEsc(m)}${/usuarios|borrador/.test(tb) ? ' — si es un Supabase nuevo, crea primero los usuarios en Authentication.' : ''}</li>`).join('')}</ul>` : ''}
+                <p style="font-size:0.82rem; color:#64748b;">Recarga la página (F5) para ver los datos restaurados.</p>
+                <button class="btn-action" data-ui="none" onclick="location.reload()">Recargar ahora</button> <button class="btn-action" data-ui="none" onclick="respCerrar()">Cerrar</button>`);
+        }
+        async function restaurarFotosPreparar(archivo){
+            const est = document.getElementById('rest-estado');
+            let JSZip; try { JSZip = await respCargarJsZip(); } catch(e){ est.innerHTML = '<span style="color:#b91c1c;">' + respEsc(e.message) + '</span>'; return; }
+            est.textContent = 'Abriendo el .zip…';
+            const zip = await JSZip.loadAsync(archivo);
+            const fotos = Object.values(zip.files).filter(f => !f.dir && f.name !== '_indice_fotos.json');
+            if(!fotos.length){ est.innerHTML = '<span style="color:#b91c1c;">Este .zip no trae fotos.</span>'; return; }
+            respModal(`<h3 style="margin:0 0 6px;">Restaurar fotos</h3>
+                <p>El archivo trae <strong>${fotos.length}</strong> fotos. Se suben a su mismo lugar en Supabase; las que ya existen se dejan como están.</p>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button class="btn-action" data-ui="none" style="background:#cc0000; color:#fff;" id="rest-fotos-ok">Subir fotos</button>
+                  <button class="btn-action" data-ui="none" onclick="respCerrar()">Cancelar</button>
+                </div>
+                <p id="rest-prog" style="font-size:0.85rem;"></p>`);
+            document.getElementById('rest-fotos-ok').onclick = async (ev) => {
+                ev.target.disabled = true;
+                const prog = t => { const el = document.getElementById('rest-prog'); if(el) el.innerHTML = t; };
+                const tipo = n => ({ jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', webp:'image/webp', gif:'image/gif', svg:'image/svg+xml', pdf:'application/pdf', mp4:'video/mp4' })[(n.split('.').pop() || '').toLowerCase()] || 'application/octet-stream';
+                let subidas = 0, existian = 0, fallaron = 0, n = 0;
+                const cola = fotos.slice();
+                await Promise.all(Array.from({ length: 4 }, async () => {
+                    while(cola.length){
+                        const f = cola.shift();
+                        const blob = await f.async('blob');
+                        const { error } = await tacticalSupabase.storage.from(TACTICAL_STORAGE_BUCKET).upload(f.name, new Blob([blob], { type: tipo(f.name) }), { upsert: false, contentType: tipo(f.name) });
+                        if(!error) subidas++; else if(/exist|duplicate/i.test(error.message || '') || String(error.statusCode) === '409') existian++; else fallaron++;
+                        n++; prog(`${n} de ${fotos.length} · subidas ${subidas} · ya estaban ${existian}${fallaron ? ' · <span style="color:#b91c1c;">fallaron ' + fallaron + '</span>' : ''}`);
+                    }
+                }));
+                prog(`<strong>Listo.</strong> Subidas ${subidas} · ya estaban ${existian}${fallaron ? ' · <span style="color:#b91c1c;">fallaron ' + fallaron + '</span>' : ''}.`);
+            };
+        }
 
         async function contExportarRespaldo(){
             const boton = document.querySelector('button[onclick="contExportarRespaldo()"]');
@@ -2938,9 +3198,9 @@
             const data = {};
             const errores = [];
             for(const tabla of TACTICAL_TABLAS_BACKUP){
-                const { data: filas, error } = await tacticalSupabase.from(tabla).select('*');
-                if(error){ console.error(`Error respaldando tabla ${tabla}:`, error); errores.push(tabla); continue; }
-                data[tabla] = filas;
+                if(nota) nota.innerText = `Descargando ${tabla}...`;
+                try { data[tabla] = await tacticalLeerTablaCompleta(tabla); }
+                catch(error){ console.error(`Error respaldando tabla ${tabla}:`, error); errores.push(tabla); }
             }
             const respaldo = { version: 2, exportadoEn: new Date().toISOString(), origen: 'supabase', data };
             const blob = new Blob([JSON.stringify(respaldo, null, 2)], {type: 'application/json'});
