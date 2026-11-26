@@ -10949,6 +10949,45 @@
           cajas:"Cajas Blandas", promocionales:"Promocionales (Merchandising)",
           manual:"Producto libre (fuera de catálogo)", otro:"Sin clasificar",
         };
+        /* Conde 2026-11-26: "en el informe de ventas por producto usa la palabra clave para filtrar el producto y no solo la calculadora donde
+           se hizo... toda cotización que diga cuadernos". Las cotizaciones hechas en calculadoras genéricas (Universal, Producto libre, sin
+           clasificar) se asignan al producto cuya palabra aparece PRIMERO en la descripción ("Cuaderno argollado con bolsa" -> Cuadernos).
+           Las calculadoras de producto (Cuadernos, Rompecabezas, Bolsas...) se respetan tal cual: un rompecabezas "empacado en bolsa" sigue
+           siendo Rompecabezas. */
+        const PALABRAS_CLAVE_PRODUCTO = [
+          ['cuadernos',    ['cuaderno', 'agenda', 'libreta']],
+          ['rompecabezas', ['rompecabeza', 'puzzle']],
+          ['cubo_rubik',   ['rubik']],
+          ['carpetas',     ['carpeta']],
+          ['bolsas',       ['bolsa']],
+          ['cajas',        ['caja']],
+          ['volantes',     ['volante', 'afiche', 'plegable', 'flyer']],
+        ];
+        const LINEAS_GENERICAS_PRODUCTO = ['universal', 'manual', 'otro', ''];
+        function lineaPorPalabraClave(linea, desc){
+          const ln = linea || 'otro';
+          if(!LINEAS_GENERICAS_PRODUCTO.includes(ln)) return ln;
+          const txt = String(desc || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          let mejor = null, pos = Infinity;
+          PALABRAS_CLAVE_PRODUCTO.forEach(([l, pals]) => pals.forEach(p => {
+            const m = new RegExp('(^|[^a-z])' + p).exec(txt);
+            if(m && m.index < pos){ pos = m.index; mejor = l; }
+          }));
+          return mejor || ln;
+        }
+        /* Partes de una venta por producto: un pedido multi-producto se reparte por lo que vale cada línea (si todas traen su monto, se
+           ajusta en proporción para que la suma dé exactamente el total del pedido); si alguna línea vieja no trae monto, el pedido queda
+           entero como "Multi-producto". */
+        function partesVentaPorProducto(g){
+          if(g.lineas && g.lineas.length){
+            const conMonto = g.lineas.every(l => typeof l.monto === 'number' && l.monto > 0);
+            if(!conMonto) return [{ linea: 'multi', monto: g.monto || 0, desc: g.desc, origen: 'multi' }];
+            const suma = g.lineas.reduce((s, l) => s + l.monto, 0);
+            const total = g.monto || suma;
+            return g.lineas.map(l => ({ linea: lineaPorPalabraClave(l.linea, l.desc), origen: l.linea || 'otro', monto: suma ? total * l.monto / suma : 0, desc: l.desc }));
+          }
+          return [{ linea: lineaPorPalabraClave(g.linea, g.desc), origen: g.linea || 'otro', monto: g.monto || 0, desc: g.desc }];
+        }
 
         /* ==========================================
            RADAR DE NEGOCIO -- Conde 2026-08-22: "programa recomendaciones... este cliente lo
@@ -12642,8 +12681,8 @@
         function repNavegar(dir){ repPeriodoOffset += dir; renderReportes(); }
         function ocurreEnLinea(c, linea){
           if(!linea) return true;
-          if(c.lineas && c.lineas.length) return c.lineas.some(l=>l.linea===linea);
-          return c.linea === linea;
+          if(c.lineas && c.lineas.length) return c.lineas.some(l=>lineaPorPalabraClave(l.linea, l.desc)===linea);
+          return lineaPorPalabraClave(c.linea, c.desc) === linea;
         }
         /* ---- RADAR Y REPORTES: filtros globales + resumen de ventas siempre visible + módulos plegables (Conde 2026-11-07) ----
            "radar y reportes me da toda la información de una, quiero que primero sea seleccionar el año y luego esté organizada por módulos y se
@@ -12850,9 +12889,9 @@
           const porLinea = {};
           todasCotizaciones.forEach(c=>{
             if(c.lineas && c.lineas.length){
-              c.lineas.forEach(l=>{ if(filtroLinea && l.linea!==filtroLinea) return; const ln=l.linea||'otro'; porLinea[ln]=(porLinea[ln]||0)+(l.cantidad||0); });
+              c.lineas.forEach(l=>{ const ln=lineaPorPalabraClave(l.linea, l.desc); if(filtroLinea && ln!==filtroLinea) return; porLinea[ln]=(porLinea[ln]||0)+(l.cantidad||0); });
             } else {
-              const l=c.linea||'otro'; porLinea[l]=(porLinea[l]||0)+(c.cantidad||0);
+              const l=lineaPorPalabraClave(c.linea, c.desc); porLinea[l]=(porLinea[l]||0)+(c.cantidad||0);
             }
           });
           document.getElementById('rep-lineas').innerHTML = Object.keys(porLinea).length ? Object.keys(porLinea).map(l=>`• ${NOMBRES_LINEA_PRODUCTO[l]||l}: <strong>${porLinea[l]} unidades</strong>`).join('<br>') : '<span style="color:#64748b; font-style:italic;">Sin cotizaciones en este período.</span>';
@@ -12890,17 +12929,29 @@
           // Ventas en $ por producto: un pedido multi-producto (lineas:[...]) solo trae UN monto total
           // para todo el pedido, no desglosado por cada línea que lo compone -- por eso se agrupa
           // aparte como "Multi-producto", en vez de inventar un reparto proporcional engañoso.
-          const ventasPorProducto = {};
-          let ventasMultiProducto = 0;
+          // Conde 2026-11-26: por palabra clave (ver lineaPorPalabraClave) y los pedidos multi-producto repartidos por línea.
+          const ventasPorProducto = {}, detallePorProducto = {};
           ganadas.forEach(g=>{
-            if(g.lineas && g.lineas.length){ ventasMultiProducto += (g.monto||0); return; }
-            const l = g.linea || 'otro';
-            ventasPorProducto[l] = (ventasPorProducto[l]||0) + (g.monto||0);
+            partesVentaPorProducto(g).forEach(pt=>{
+              if(filtroLinea && pt.linea!=='multi' && pt.linea!==filtroLinea) return;
+              ventasPorProducto[pt.linea] = (ventasPorProducto[pt.linea]||0) + pt.monto;
+              (detallePorProducto[pt.linea] = detallePorProducto[pt.linea] || []).push({ g, pt });
+            });
           });
+          const nombreProd = l => l==='multi' ? 'Multi-producto (pedidos viejos sin valor por línea)' : (NOMBRES_LINEA_PRODUCTO[l]||l);
           let htmlVentasProducto = Object.keys(ventasPorProducto)
             .sort((a,b)=>ventasPorProducto[b]-ventasPorProducto[a])
-            .map(l=>`• ${NOMBRES_LINEA_PRODUCTO[l]||l}: <strong>${cotFormatoCop(ventasPorProducto[l])}</strong>`).join('<br>');
-          if(ventasMultiProducto>0) htmlVentasProducto += `${htmlVentasProducto?'<br>':''}• Multi-producto (varias líneas en un pedido): <strong>${cotFormatoCop(ventasMultiProducto)}</strong>`;
+            .map(l=>{
+              const det = detallePorProducto[l].slice().sort((a,b)=>(fechaDeRegistro(b.g)||0)-(fechaDeRegistro(a.g)||0)).map(({g, pt})=>{
+                const f = fechaDeRegistro(g);
+                const deOtra = pt.origen !== l && pt.origen !== 'multi' ? ` <span style="color:#7c3aed;">(hecha en ${resumenCotEsc(NOMBRES_LINEA_PRODUCTO[pt.origen]||pt.origen)})</span>` : '';
+                return `<div style="padding:2px 0; border-bottom:1px solid #edf2f7;">${f ? f.toLocaleDateString('es-CO') : '-'} — <strong>${resumenCotEsc(g.nombreCli||'-')}</strong>${g.ot?` (${resumenCotEsc(g.ot)})`:''}: ${resumenCotEsc(tacticalTruncar(pt.desc||'', 50))}${deOtra} — ${cotFormatoCop(Math.round(pt.monto))}</div>`;
+              }).join('');
+              return `<div style="padding:4px 0; border-bottom:1px solid #edf2f7;">• ${nombreProd(l)}: <strong>${cotFormatoCop(Math.round(ventasPorProducto[l]))}</strong>
+                <span style="font-size:0.78rem; color:var(--primary); cursor:pointer; text-decoration:underline; margin-left:6px;" onclick="const d=this.nextElementSibling; const abrir=d.style.display==='none'; d.style.display=abrir?'block':'none'; this.textContent=abrir?'Ocultar ▴':'Ver ventas ▾';">Ver ventas ▾</span>
+                <div style="display:none; margin-top:4px; padding-left:12px; font-size:0.82rem; color:#4a5568; max-height:220px; overflow-y:auto;">${det}</div></div>`;
+            }).join('');
+          if(htmlVentasProducto) htmlVentasProducto = '<div style="font-size:0.78rem; color:#64748b; margin-bottom:4px;">Lo cotizado en la Calculadora Universal o en Producto libre se cuenta en el producto que dice la descripción (cuaderno, agenda, rompecabezas, bolsa, caja, carpeta, volante, afiche...).</div>' + htmlVentasProducto;
           document.getElementById('rep-ventas-producto').innerHTML = htmlVentasProducto || '<span style="color:#64748b; font-style:italic;">Sin ventas ganadas en este período.</span>';
 
           // Producción: consumo de papel — detalle rico de Cuadernos (multi-línea)...
@@ -14604,9 +14655,9 @@
             const ventasPorLinea = {};
             db_historial_cierres.filter(h=>h.estado==='ganado').forEach(h=>{
                 if(h.lineas && h.lineas.length){
-                    h.lineas.forEach(l=>{ const ln=l.linea||'otro'; ventasPorLinea[ln]=(ventasPorLinea[ln]||0)+(l.monto||0); });
+                    h.lineas.forEach(l=>{ const ln=lineaPorPalabraClave(l.linea, l.desc); ventasPorLinea[ln]=(ventasPorLinea[ln]||0)+(l.monto||0); });
                 } else {
-                    const ln = h.linea||'otro'; ventasPorLinea[ln]=(ventasPorLinea[ln]||0)+(h.monto||0);
+                    const ln = lineaPorPalabraClave(h.linea, h.desc); ventasPorLinea[ln]=(ventasPorLinea[ln]||0)+(h.monto||0);
                 }
             });
             let sumaVentasMix=0, sumaMargenMix=0;
