@@ -75,6 +75,7 @@ Cuando las 3 fuentes coinciden, el dato se da como sólido. Cuando difieren, se 
 - **Regla Oro:** merma +20% por registro (×1.20). Plastificado y colaminado **obligatorios**, sin opción de desactivar. [Docs, Cotizador4 — coinciden]
 - **Mínimo de venta: 50 unidades.** [Docs, Cotizador4 — coinciden]
 - **Marco perimetral (solo línea Micro):** Sin marco = Troquel+2cm; Con marco = Troquel+3cm + Base para Marco en Cartón C14 sin impresión (Troquel+2cm, merma 2%). [ERPMIS — único que lo detalla, tratar como borrador]
+  - **VIGENTE (Conde 2026-11-26, reemplaza lo anterior):** cualquier troquel de menos de 70 fichas (salvo ROMB-008, que trae marco de fábrica). Con marco = montaje normal +3 cm (Troquel+5cm: 1 cm de marco por lado + área para guías de troquelado) en impresión, cartón y base (Cartulina C14, merma 2%); la bolsa de empaque cuesta +$100 por unidad.
 
 ### ⚠️ Discrepancias sin resolver
 1. **Troquelado industrial:** "$60.000 mínimo o $80.000/millar" ([Docs] `dossier.txt`, y ERPMIS confirma que esto fue una CORRECCIÓN explícita del usuario reemplazando un $35.000/millar anterior) — parece ser el dato vigente. Cotizador4 no lo detalla (se corta antes).
