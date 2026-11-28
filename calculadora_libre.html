@@ -207,11 +207,29 @@
       <h2>2. Precio</h2>
       <div class="fila">
         <div class="campo chico">
-          <label for="in-precioVentaUnitario">Precio de venta SIN IVA (COP, por unidad):</label>
+          <label for="in-moneda">Moneda de la cotización:</label>
+          <select id="in-moneda" onchange="libreCambioMoneda()">
+            <option value="COP">Pesos colombianos (COP)</option>
+            <option value="USD">Dólares (USD)</option>
+          </select>
+        </div>
+        <div class="campo chico">
+          <label for="in-precioVentaUnitario" id="lbl-precioVentaUnitario">Precio de venta SIN IVA (COP, por unidad):</label>
           <input type="number" id="in-precioVentaUnitario" value="0" min="0">
         </div>
       </div>
       <div class="hint">Ingresa el precio ya negociado o cotizado con el cliente/proveedor, POR UNIDAD — esta calculadora lo multiplica por la cantidad y suma el IVA, no recalcula costos.</div>
+      <!-- Conde 2026-11-28: cotización en dólares; el precio del dólar es SOLO informativo (no sale en la cotización) -->
+      <div id="libre-trm-box" style="display:none; margin-top:10px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:6px; padding:8px 10px; font-size:0.85rem;">
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <strong>Dólar hoy (TRM):</strong>
+          <span>$</span><input type="number" id="in-trm" min="0" step="0.01" style="width:110px;" oninput="if(ultimoResultado) calcular()">
+          <span>COP por 1 USD</span>
+          <button type="button" class="btn-action" data-ui="none" onclick="libreCargarTrm(true)" style="padding:4px 10px;">Actualizar</button>
+        </div>
+        <div id="libre-trm-nota" style="color:#475569; font-size:0.78rem; margin-top:4px;"></div>
+        <div style="color:#475569; font-size:0.78rem;">Solo de referencia: <strong>no aparece en la cotización</strong> del cliente. Se usa para que el ERP guarde el valor aproximado en pesos en sus informes de ventas.</div>
+      </div>
       <div style="margin-top:10px; border-top:1px solid var(--borde); padding-top:8px;">
         <label style="font-weight:600; font-size:0.85rem;">Extra / Ajuste adicional (opcional -- algo puntual aparte del producto principal, con su propio precio):</label>
         <div class="fila" style="margin-top:6px;">
@@ -272,6 +290,39 @@
 <script src="tactical-ui.js?v=20261109d"></script>
 <script>
 function cop(n){ return "$" + Math.round(n).toLocaleString("es-CO"); }
+/* ===== Cotización en dólares (Conde 2026-11-28) ===== */
+function libreMoneda(){ const s = document.getElementById('in-moneda'); return (s && s.value === 'USD') ? 'USD' : 'COP'; }
+function usd(n){ return 'US$ ' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function dinero(n, moneda){ return (moneda || libreMoneda()) === 'USD' ? usd(n) : cop(n); }
+function redondearMoneda(n, moneda){ return (moneda || libreMoneda()) === 'USD' ? Math.round(n * 100) / 100 : Math.round(n); }
+function trmTxt(n){ return '$' + Number(n || 0).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function libreTrm(){ return parseFloat((document.getElementById('in-trm') || {}).value) || 0; }
+// TRM oficial publicada por la Superintendencia Financiera en datos.gov.co (gratis, sin clave). Si falla, se escribe a mano.
+async function libreCargarTrm(forzar){
+  const inp = document.getElementById('in-trm'), nota = document.getElementById('libre-trm-nota');
+  if(!inp || (!forzar && inp.value)) return;
+  if(nota) nota.textContent = 'Consultando el precio del dólar de hoy…';
+  try {
+    const r = await fetch('https://www.datos.gov.co/resource/32sa-8pi3.json?$order=vigenciadesde%20DESC&$limit=1', { cache: 'no-store' });
+    const d = (await r.json())[0];
+    if(!d || !d.valor) throw new Error('sin dato');
+    inp.value = Number(d.valor).toFixed(2);
+    const desde = new Date(d.vigenciadesde).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });
+    if(nota) nota.textContent = 'TRM oficial (Superintendencia Financiera) vigente desde el ' + desde + '. Puedes cambiarla si negociaste otra tasa.';
+  } catch(e){
+    if(nota) nota.textContent = 'No se pudo consultar la TRM en este momento: escríbela a mano (la del día está en el sitio del Banco de la República).';
+  }
+  if(ultimoResultado) calcular();
+}
+function libreCambioMoneda(){
+  const m = libreMoneda();
+  const lbl = document.getElementById('lbl-precioVentaUnitario');
+  if(lbl) lbl.textContent = 'Precio de venta SIN IVA (' + m + ', por unidad):';
+  const pr = document.getElementById('in-precioVentaUnitario'); if(pr) pr.step = m === 'USD' ? '0.01' : '1';
+  const box = document.getElementById('libre-trm-box'); if(box) box.style.display = m === 'USD' ? 'block' : 'none';
+  if(m === 'USD') libreCargarTrm(false);
+  if(ultimoResultado) calcular();
+}
 // Conde 2026-08-27: "negrilla con ** no esta funcionando en todas las calculadoras" -- esta
 // convención (escribir **así** en la Descripción para que salga en negrilla real en el PDF) solo
 // existía en Cuadernos (Hub). Misma función, copiada a las 8 calculadoras.
@@ -297,6 +348,7 @@ function cotizarLibre(p){
   const precioFinalTotal = precioVentaTotal+ivaTotal;
   return {
     descripcion:p.descripcion, cantidad:p.cantidad, precioVentaTotal, precioVentaUnitario, aplicaIva, ivaTotal, precioFinalTotal,
+    moneda: p.moneda || 'COP', trm: p.trm || 0,
     extraDescripcion: p.extraDescripcion||'', extraCantidad, extraValorUnitario, extraSubtotal,
   };
 }
@@ -312,6 +364,7 @@ function calcular(){
       extraDescripcion: document.getElementById("in-extraDesc").value.trim(),
       extraCantidad: parseFloat(document.getElementById("in-extraCantidad").value)||0,
       extraValorUnitario: parseFloat(document.getElementById("in-extraValorUnitario").value)||0,
+      moneda: libreMoneda(), trm: libreMoneda() === 'USD' ? libreTrm() : 0,
     };
     if(!p.descripcion){ throw new Error("Escribe una descripción del producto o servicio."); }
     if(p.precioVentaUnitario<=0){ throw new Error("Ingresa un precio de venta mayor a 0."); }
@@ -321,16 +374,21 @@ function calcular(){
     filas += `<tr><td colspan="2">${r.descripcion}</td></tr>`;
     filas += `<tr><td>Cantidad</td><td class="num">${r.cantidad}</td></tr>`;
     if(r.extraCantidad > 0){
-      filas += `<tr><td>${cotTextoConNegrilla(r.extraDescripcion||'Extra adicional')} (${r.extraCantidad} x ${cop(r.extraValorUnitario)})</td><td class="num">${cop(r.extraSubtotal)}</td></tr>`;
+      filas += `<tr><td>${cotTextoConNegrilla(r.extraDescripcion||'Extra adicional')} (${r.extraCantidad} x ${dinero(r.extraValorUnitario, r.moneda)})</td><td class="num">${dinero(r.extraSubtotal, r.moneda)}</td></tr>`;
     }
-    filas += `<tr><td>Precio de venta (total, sin IVA)</td><td class="num">${cop(r.precioVentaTotal)}</td></tr>`;
-    filas += `<tr style="font-weight:bold; color:var(--rojo); font-size:1.05rem; border-top:2px solid var(--rojo);"><td>Precio de venta UNITARIO</td><td class="num">${cop(r.precioVentaUnitario)}</td></tr>`;
+    filas += `<tr><td>Precio de venta (total, sin IVA)</td><td class="num">${dinero(r.precioVentaTotal, r.moneda)}</td></tr>`;
+    filas += `<tr style="font-weight:bold; color:var(--rojo); font-size:1.05rem; border-top:2px solid var(--rojo);"><td>Precio de venta UNITARIO</td><td class="num">${dinero(r.precioVentaUnitario, r.moneda)}</td></tr>`;
     if(r.aplicaIva){
-      filas += `<tr><td>IVA (19%)</td><td class="num">${cop(r.ivaTotal)}</td></tr>`;
-      filas += `<tr style="font-weight:bold;"><td>Precio final total (con IVA)</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
+      filas += `<tr><td>IVA (19%)</td><td class="num">${dinero(r.ivaTotal, r.moneda)}</td></tr>`;
+      filas += `<tr style="font-weight:bold;"><td>Precio final total (con IVA)</td><td class="num">${dinero(r.precioFinalTotal, r.moneda)}</td></tr>`;
     } else {
       filas += `<tr style="color:var(--texto-suave); font-size:12px;"><td colspan="2">Cliente Personalizado (Cuenta de Cobro): no se calcula IVA.</td></tr>`;
-      filas += `<tr style="font-weight:bold;"><td>Precio final total</td><td class="num">${cop(r.precioFinalTotal)}</td></tr>`;
+      filas += `<tr style="font-weight:bold;"><td>Precio final total</td><td class="num">${dinero(r.precioFinalTotal, r.moneda)}</td></tr>`;
+    }
+    if(r.moneda === 'USD'){
+      filas += r.trm > 0
+        ? `<tr style="color:var(--texto-suave); font-size:12px;"><td>Referencia en pesos (TRM ${trmTxt(r.trm)}) — no sale en la cotización</td><td class="num">≈ ${cop(r.precioFinalTotal * r.trm)}</td></tr>`
+        : `<tr style="color:#b45309; font-size:12px;"><td colspan="2">Falta el precio del dólar (TRM): escríbelo arriba para que el ERP guarde el valor en pesos en sus informes.</td></tr>`;
     }
     filas += `</table>`;
     cont.innerHTML = filas;
@@ -379,7 +437,7 @@ function libreAplicarPorcentaje(){
   if(libreDupPrecioBase == null) return;
   const pct = parseFloat(String(document.getElementById('dup-pct').value).replace(',', '.'));
   if(isNaN(pct)){ tacticalAviso('Escribe el porcentaje, por ejemplo 2 para subir 2% o -3 para bajar 3%.'); return; }
-  document.getElementById('in-precioVentaUnitario').value = Math.round(libreDupPrecioBase * (1 + pct / 100));
+  document.getElementById('in-precioVentaUnitario').value = redondearMoneda(libreDupPrecioBase * (1 + pct / 100));
   calcular();
 }
 async function libreCargarDuplicado(){
@@ -409,6 +467,7 @@ async function libreCargarDuplicado(){
   if(guardada && guardada.params){
     const p = guardada.params;
     set('in-descripcion', p.descripcion); set('in-cantidad', Math.round(p.cantidad || 1).toLocaleString('es-CO')); set('in-precioVentaUnitario', p.precioVentaUnitario);
+    if(p.moneda === 'USD'){ set('in-moneda', 'USD'); if(p.trm) set('in-trm', p.trm); libreCambioMoneda(); }
     set('in-extraDesc', p.extraDescripcion); set('in-extraCantidad', p.extraCantidad || ''); set('in-extraValorUnitario', p.extraValorUnitario || '');
     if(guardada.plazoEntrega) set('in-plazoEntrega', guardada.plazoEntrega);
     if(guardada.condicionesComerciales && guardada.condicionesComerciales.length) set('in-condicionesComerciales', guardada.condicionesComerciales.join('\n'));
@@ -464,7 +523,7 @@ function autocompletarCliente(origen){
   // siempre; el correo solo sirve de respaldo cuando NO se eligió un contacto puntual.
   const cli = db_clientes.find(c =>
     (nombreVal && c.empresa.toLowerCase() === empresaVal.toLowerCase() && (c.nombre||'').toLowerCase() === nombreVal.toLowerCase()) ||
-    (origen !== 'empresa' && !nombreVal && correoVal && c.correo && c.correo.toLowerCase() === correoVal.toLowerCase()) ||
+    (origen !== 'empresa' && !nombreVal && correoVal && c.correo && c.correo.toLowerCase() === correoVal.toLowerCase() && (!empresaVal || c.empresa.toLowerCase() === empresaVal.toLowerCase())) ||
     (origen !== 'correo' && !nombreVal && empresaVal && c.empresa.toLowerCase() === empresaVal.toLowerCase())
   );
   if(cli){
@@ -528,8 +587,8 @@ async function crearClienteClick(){
   const d = datosClienteForm();
   if(!d.empresa && !d.encargado){ tacticalAviso('Escribe al menos el Cliente o el Encargado.'); return; }
   const empresa = d.empresa || 'Cliente Particular', nombre = d.encargado || 'Sin contacto directo';
-  const existente = db_clientes.find(c => (d.correo && c.correo && c.correo.toLowerCase() === d.correo.toLowerCase()) ||
-    (c.empresa.toLowerCase() === empresa.toLowerCase() && (c.nombre || '').toLowerCase() === nombre.toLowerCase()));
+  const existente = db_clientes.find(c => c.empresa.toLowerCase() === empresa.toLowerCase() && ((d.correo && c.correo && c.correo.toLowerCase() === d.correo.toLowerCase()) ||
+    (c.nombre || '').toLowerCase() === nombre.toLowerCase()));
   if(existente){
     if(!confirm('Ya existe un cliente con ese correo o con ese nombre y contacto: «' + existente.empresa + (existente.nombre ? ' — ' + existente.nombre : '') + '».\n\n¿Quieres ACTUALIZAR sus datos en vez de crear otro?')) return;
     clienteEditandoId = existente.id; actualizarBotonesCliente();
@@ -613,7 +672,9 @@ function imprimirPDFCliente(datos){
   // deriva del monto total de la línea asumiendo el 19% plano que se usa en toda la cotización.
   // Conde 2026-11-07: la tabla de productos vive en UNA función compartida (precios_tactical.js): títulos de una línea, detalle a todo el ancho, foto conservada
   // y sin IVA por línea cuando el cliente es Personalizado (Cuenta de Cobro).
-  const tablaProductosHtml = tacticalPdfTablaProductosHtml(datos.lineas, { aplicaIva: datos.aplicaIva !== false, fmt: cop, negrilla: cotTextoConNegrilla });
+  const monedaPdf = datos.moneda === 'USD' ? 'USD' : 'COP';
+  const fmtPdf = n => dinero(n, monedaPdf);
+  const tablaProductosHtml = tacticalPdfTablaProductosHtml(datos.lineas, { aplicaIva: datos.aplicaIva !== false, fmt: fmtPdf, negrilla: cotTextoConNegrilla });
   // El desglose Subtotal/IVA se calcula siempre a partir del total (IVA plano del 19% en toda
   // la cotización) -- antes se saltaba en los pedidos multi-producto porque no se pasaba ivaTotal.
   // Conde 2026-09-02: si el cliente es Personalizado (Cuenta de Cobro) no se cobra IVA -- no
@@ -628,8 +689,8 @@ function imprimirPDFCliente(datos){
   const desgloseHtml = !mostrarTotal ? '' : !aplicaIva ? `<table class="doc-table" style="margin-top:6px;">
     <tr><td colspan="2" style="font-size:11px; color:#6b7280;">Cliente Cuenta de Cobro -- no se calcula IVA.</td></tr>
   </table>` : `<table class="doc-table" style="margin-top:6px;">
-    <tr><td>Subtotal (sin IVA)</td><td style="text-align:right;">${cop(subtotal)}</td></tr>
-    <tr><td>IVA (19%)</td><td style="text-align:right;">${cop(ivaTotal)}</td></tr>
+    <tr><td>Subtotal (sin IVA)</td><td style="text-align:right;">${fmtPdf(subtotal)}</td></tr>
+    <tr><td>IVA (19%)</td><td style="text-align:right;">${fmtPdf(ivaTotal)}</td></tr>
   </table>`;
   const html = `
     <div class="doc-header">
@@ -644,7 +705,7 @@ function imprimirPDFCliente(datos){
     <div class="doc-section-title">Productos Cotizados</div>
     ${tablaProductosHtml}
     ${desgloseHtml}
-    ${mostrarTotal ? `<div class="doc-total-box">TOTAL: ${cop(datos.total)} COP</div>` : ''}
+    ${mostrarTotal ? `<div class="doc-total-box">TOTAL: ${fmtPdf(datos.total)} ${monedaPdf}</div>` : ''}
     <div class="doc-cta">✅ <strong>Para aprobar esta cotización</strong>, responde confirmando el número <strong>${datos.ot||''}</strong> por WhatsApp al ${TACTICAL_INFO.telefono} o al correo ${TACTICAL_INFO.correo}. Iniciamos producción con anticipo y sherpas aprobadas.</div>
     <div class="doc-section-title">Condiciones Comerciales</div>
     <p style="font-size:0.85rem; margin:4px 0;"><strong>Plazo de entrega:</strong> ${leerPlazoEntrega()}</p>
@@ -787,8 +848,10 @@ async function guardarCotizacionClick(){
   const vendedor = document.getElementById('in-vendedor').value;
   if(!tacticalExigirVendedor('in-vendedor')) return;
   if(!empresa && !encargado){ tacticalAviso("Ingresa al menos el Cliente o el Encargado antes de guardar."); return; }
+  const enUsd = ultimoResultado.moneda === 'USD';
+  if(enUsd && !(ultimoResultado.trm > 0)){ tacticalAviso('Escribe el precio del dólar (TRM) antes de guardar: el ERP lo usa para llevar la venta en pesos en sus informes. No sale en la cotización.'); return; }
 
-  let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
+  let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase() && c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
   if(!cli){
     cli = { id: crypto.randomUUID(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo, identificacion };
     db_clientes.push(cli);
@@ -801,7 +864,11 @@ async function guardarCotizacionClick(){
   tacticalSyncClientes(db_clientes);
 
   if(!ultimoOT) ultimoOT = await siguienteOT();
-  const opp = { id: crypto.randomUUID(), ot: ultimoOT, idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc: ultimoResultado.descripcion, vendedor, monto: Math.round(ultimoResultado.precioFinalTotal), etapa: 'cot', linea: 'manual', cantidad: ultimoParams.cantidad, maquina: null, material: null, nPliegos: null, fotoUrl: fotoParaCotizacion(), videoUrl: videoParaCotizacion() };
+  // Conde 2026-11-28: en dólares, la cotización del cliente va en USD; el ERP guarda el valor en pesos (TRM del día) para que los
+  // informes de ventas sumen en una sola moneda, y deja escrito en la descripción interna que se cotizó en dólares.
+  const montoErp = enUsd ? Math.round(ultimoResultado.precioFinalTotal * ultimoResultado.trm) : Math.round(ultimoResultado.precioFinalTotal);
+  const descErp = enUsd ? `${ultimoResultado.descripcion} (cotizado en ${usd(ultimoResultado.precioFinalTotal)}, TRM ${trmTxt(ultimoResultado.trm)})` : ultimoResultado.descripcion;
+  const opp = { id: crypto.randomUUID(), ot: ultimoOT, idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc: descErp, vendedor, monto: montoErp, etapa: 'cot', linea: 'manual', cantidad: ultimoParams.cantidad, maquina: null, material: null, nPliegos: null, fotoUrl: fotoParaCotizacion(), videoUrl: videoParaCotizacion() };
   db_opps.push(opp);
   const oppGuardadoOk = await tacticalSyncOpps(db_opps);
   // Conde 2026-10-21: Libre ahora guarda su desglose (descripción, cantidad, precio, extra) para poder DUPLICAR la cotización exacta después.
@@ -818,17 +885,19 @@ async function guardarCotizacionClick(){
   nota.style.display = 'block';
   nota.innerText = `📋 Cotización guardada en el CRM como ${ultimoOT} — cliente: ${cli.empresa}.`;
   // Conde 2026-10-16: aviso de confirmación (solo si Supabase confirmó el guardado).
-  tacticalAnunciarCotizacionGuardada(oppGuardadoOk, ultimoOT, cli.empresa, ultimoResultado.precioFinalTotal, null);
+  tacticalAnunciarCotizacionGuardada(oppGuardadoOk, ultimoOT, cli.empresa, enUsd ? null : ultimoResultado.precioFinalTotal,
+    enUsd ? `Total al cliente: ${usd(ultimoResultado.precioFinalTotal)}\nEn los informes del ERP queda como ≈ ${cop(montoErp)} (TRM ${trmTxt(ultimoResultado.trm)}).` : null);
 
   // Conde 2026-09-25: si hay "Extra / Ajuste adicional", sale como su propia línea del PDF.
-  const lineasPdf = [{desc: ultimoResultado.descripcion, cantidad: ultimoParams.cantidad, monto: Math.round(ultimoResultado.precioVentaUnitario*ultimoParams.cantidad*(ultimoResultado.aplicaIva?1.19:1)), precioUnitario: ultimoResultado.precioVentaUnitario, fotoUrl: fotoParaCotizacion(), videoUrl: videoParaCotizacion()}];
+  const mon = ultimoResultado.moneda || 'COP';
+  const lineasPdf = [{desc: ultimoResultado.descripcion, cantidad: ultimoParams.cantidad, monto: redondearMoneda(ultimoResultado.precioVentaUnitario*ultimoParams.cantidad*(ultimoResultado.aplicaIva?1.19:1), mon), precioUnitario: ultimoResultado.precioVentaUnitario, fotoUrl: fotoParaCotizacion(), videoUrl: videoParaCotizacion()}];
   if(ultimoResultado.extraCantidad > 0){
-    lineasPdf.push({desc: ultimoResultado.extraDescripcion||'Extra adicional', cantidad: ultimoResultado.extraCantidad, monto: Math.round(ultimoResultado.extraSubtotal*(ultimoResultado.aplicaIva?1.19:1)), precioUnitario: ultimoResultado.extraValorUnitario});
+    lineasPdf.push({desc: ultimoResultado.extraDescripcion||'Extra adicional', cantidad: ultimoResultado.extraCantidad, monto: redondearMoneda(ultimoResultado.extraSubtotal*(ultimoResultado.aplicaIva?1.19:1), mon), precioUnitario: ultimoResultado.extraValorUnitario});
   }
   imprimirPDFCliente({
     ot: ultimoOT, fecha: new Date(), vendedor, cliente: {empresa: cli.empresa, encargado: cli.nombre, telefono: cli.wp, correo: cli.correo},
-    lineas: lineasPdf,
-    ivaTotal: ultimoResultado.ivaTotal, total: Math.round(ultimoResultado.precioFinalTotal), aplicaIva: ultimoResultado.aplicaIva,
+    lineas: lineasPdf, moneda: mon,
+    ivaTotal: ultimoResultado.ivaTotal, total: redondearMoneda(ultimoResultado.precioFinalTotal, mon), aplicaIva: ultimoResultado.aplicaIva,
   });
 }
 
@@ -914,6 +983,7 @@ function refrescarBannerPedido(){
 }
 async function iniciarOAgregarPedido(){
   if(!ultimoResultado){ tacticalAviso("Primero presiona 'Calcular'."); return; }
+  if(ultimoResultado.moneda === 'USD'){ tacticalAviso('Las cotizaciones en dólares se guardan una por una con "Guardar cotización" (el pedido de varios productos y la comparativa son solo en pesos).'); return; }
   const empresa = document.getElementById('in-cli-empresa').value.trim();
   const encargado = document.getElementById('in-cli-encargado').value.trim();
   const telefono = document.getElementById('in-cli-telefono').value.trim();
@@ -924,7 +994,7 @@ async function iniciarOAgregarPedido(){
   if(!tacticalExigirVendedor('in-vendedor')) return;
   if(!empresa && !encargado){ tacticalAviso("Ingresa al menos el Cliente o el Encargado antes de agregar al pedido."); return; }
 
-  let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
+  let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase() && c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
   if(!cli){
     cli = { id: crypto.randomUUID(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo, identificacion };
     db_clientes.push(cli);
@@ -1017,6 +1087,7 @@ function refrescarBannerComparacion(){
 }
 async function agregarOpcionComparacion(){
   if(!ultimoResultado){ tacticalAviso("Primero presiona 'Calcular'."); return; }
+  if(ultimoResultado.moneda === 'USD'){ tacticalAviso('Las cotizaciones en dólares se guardan una por una con "Guardar cotización" (el pedido de varios productos y la comparativa son solo en pesos).'); return; }
   const empresa = document.getElementById('in-cli-empresa').value.trim();
   const encargado = document.getElementById('in-cli-encargado').value.trim();
   const telefono = document.getElementById('in-cli-telefono').value.trim();
@@ -1027,7 +1098,7 @@ async function agregarOpcionComparacion(){
   if(!tacticalExigirVendedor('in-vendedor')) return;
   if(!empresa && !encargado){ tacticalAviso("Ingresa al menos el Cliente o el Encargado antes de agregar la opción."); return; }
 
-  let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
+  let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase() && c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
   if(!cli){
     cli = { id: crypto.randomUUID(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo, identificacion };
     db_clientes.push(cli);

@@ -4589,8 +4589,8 @@
             // puede tener varios contactos registrados por separado (ej. IP7 con Elizabeth y con Yanira),
             // y solo se bloquea si es realmente el mismo cliente (Conde 2026-08-14).
             const yaExiste = db_clientes.find(c =>
-                (correo && c.correo && c.correo.toUpperCase() === correo.toUpperCase()) ||
-                (c.empresa.toUpperCase() === empresaFinal && c.nombre.toUpperCase() === nombreFinal)
+                c.empresa.toUpperCase() === empresaFinal && ((correo && c.correo && c.correo.toUpperCase() === correo.toUpperCase()) ||
+                (c.nombre || '').toUpperCase() === nombreFinal)
             );
             if(yaExiste){
                 tacticalAviso(`Ya existe un cliente registrado como "${yaExiste.empresa} - ${yaExiste.nombre}". Use ese registro (búsquelo en el directorio) en vez de crear uno nuevo con los mismos datos.`);
@@ -10042,8 +10042,21 @@
             // -- una carátula es 1 sola pieza para el cliente (las 2 "hojas" internas son el frente
             // y la contratapa del mismo montaje); el resto de líneas sí necesitan el conteo.
             const hojasTxt = l.rol==='caratula' ? '' : ` ${l.hojasPorCuaderno} hoja${l.hojasPorCuaderno>1?'s':''}`;
-            txt += ` ${l.nombre || 'Línea'}:${hojasTxt}${papel}${tintas}${acab}.`;
+            // Conde 2026-11-28: decir si los insertos van seguidos o intercalados
+            const colocacion = l.rol==='inserto' ? (l.intercalado ? ', intercalados' : ', seguidos') : '';
+            txt += ` ${l.nombre || 'Línea'}:${hojasTxt}${papel}${tintas}${acab}${colocacion}.`;
           });
+          // Conde 2026-11-28: decir si lleva guardas (solo aplican en tapa dura)
+          if(p.tapaTipo === 'dura'){
+            const nG = p.guardasCantidad != null ? Number(p.guardasCantidad) : 0;
+            if(nG > 0){
+              const papelG = p.guardasSustrato && p.guardasSustrato.nombre ? ` en ${p.guardasSustrato.nombre} ${p.guardasSustrato.gramaje} g` : '';
+              const tintasG = p.guardasTintasTiro ? `, impresas a ${p.guardasTintasTiro} tinta${p.guardasTintasTiro>1?'s':''}` : ', sin impresión';
+              txt += ` Guardas: ${nG} hoja${nG>1?'s':''}${papelG}${tintasG}${p.guardasPlastificado ? ', plastificadas' : ''}.`;
+            } else {
+              txt += ' Sin guardas.';
+            }
+          }
           return txt;
         }
         window.tacticalCantCfg = {
@@ -10457,7 +10470,7 @@
           // correo solo sirve de respaldo cuando NO se eligió un contacto puntual.
           const cli = db_clientes.find(c =>
             (nombreVal && c.empresa.toLowerCase() === empresaVal.toLowerCase() && (c.nombre||'').toLowerCase() === nombreVal.toLowerCase()) ||
-            (origen !== 'empresa' && !nombreVal && correoVal && c.correo && c.correo.toLowerCase() === correoVal.toLowerCase()) ||
+            (origen !== 'empresa' && !nombreVal && correoVal && c.correo && c.correo.toLowerCase() === correoVal.toLowerCase() && (!empresaVal || c.empresa.toLowerCase() === empresaVal.toLowerCase())) ||
             (origen !== 'correo' && !nombreVal && empresaVal && c.empresa.toLowerCase() === empresaVal.toLowerCase())
           );
           if(cli){
@@ -10532,8 +10545,8 @@
           const d = cotDatosClienteForm();
           if(!d.empresa && !d.encargado){ tacticalAviso('Escribe al menos el Cliente o el Encargado.'); return; }
           const empresa = d.empresa || 'CLIENTE PARTICULAR', nombre = d.encargado || 'SIN CONTACTO DIRECTO';
-          const existente = db_clientes.find(c => (d.correo && c.correo && c.correo.toLowerCase() === d.correo.toLowerCase()) ||
-            (c.empresa.toUpperCase() === empresa && (c.nombre || '').toUpperCase() === nombre));
+          const existente = db_clientes.find(c => c.empresa.toUpperCase() === empresa.toUpperCase() && ((d.correo && c.correo && c.correo.toLowerCase() === d.correo.toLowerCase()) ||
+            (c.nombre || '').toUpperCase() === nombre.toUpperCase()));
           if(existente){
             if(!confirm('Ya existe un cliente con ese correo o con ese nombre y contacto: «' + existente.empresa + (existente.nombre ? ' — ' + existente.nombre : '') + '».\n\n¿Quieres ACTUALIZAR sus datos en vez de crear otro?')) return;
             cotClienteEditandoId = existente.id; cotActualizarBotonesCliente();
@@ -10773,7 +10786,7 @@
           if(!empresa && !encargado){ tacticalAviso("Ingresa al menos el Cliente o el Encargado antes de generar el PDF."); return; }
 
           // Buscar o crear cliente en el CRM
-          let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toUpperCase()===(empresa||'CLIENTE PARTICULAR') && c.nombre.toUpperCase()===(encargado||'SIN CONTACTO DIRECTO')));
+          let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase() && c.empresa.toUpperCase()===(empresa||'CLIENTE PARTICULAR')) || (c.empresa.toUpperCase()===(empresa||'CLIENTE PARTICULAR') && c.nombre.toUpperCase()===(encargado||'SIN CONTACTO DIRECTO')));
           if(!cli){
             cli = { id: crypto.randomUUID(), empresa: empresa || 'CLIENTE PARTICULAR', nombre: encargado || 'SIN CONTACTO DIRECTO', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo, identificacion };
             db_clientes.push(cli);
@@ -10936,7 +10949,7 @@
           if(!tacticalExigirVendedor('cot-vendedor')) return;
           if(!empresa && !encargado){ tacticalAviso("Ingresa al menos el Cliente o el Encargado antes de agregar al pedido."); return; }
 
-          let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toUpperCase()===(empresa||'CLIENTE PARTICULAR') && c.nombre.toUpperCase()===(encargado||'SIN CONTACTO DIRECTO')));
+          let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase() && c.empresa.toUpperCase()===(empresa||'CLIENTE PARTICULAR')) || (c.empresa.toUpperCase()===(empresa||'CLIENTE PARTICULAR') && c.nombre.toUpperCase()===(encargado||'SIN CONTACTO DIRECTO')));
           if(!cli){
             cli = { id: crypto.randomUUID(), empresa: empresa || 'CLIENTE PARTICULAR', nombre: encargado || 'SIN CONTACTO DIRECTO', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo, identificacion };
             db_clientes.push(cli);
@@ -11079,7 +11092,7 @@
           if(!tacticalExigirVendedor('cot-vendedor')) return;
           if(!empresa && !encargado){ tacticalAviso("Ingresa al menos el Cliente o el Encargado antes de agregar la opción."); return; }
 
-          let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toUpperCase()===(empresa||'CLIENTE PARTICULAR') && c.nombre.toUpperCase()===(encargado||'SIN CONTACTO DIRECTO')));
+          let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase() && c.empresa.toUpperCase()===(empresa||'CLIENTE PARTICULAR')) || (c.empresa.toUpperCase()===(empresa||'CLIENTE PARTICULAR') && c.nombre.toUpperCase()===(encargado||'SIN CONTACTO DIRECTO')));
           if(!cli){
             cli = { id: crypto.randomUUID(), empresa: empresa || 'CLIENTE PARTICULAR', nombre: encargado || 'SIN CONTACTO DIRECTO', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo, identificacion };
             db_clientes.push(cli);
@@ -11770,7 +11783,7 @@
           const lineas = p.lineasImpresion || [];
           if(p.tacoHojas) partes.push(`taco ${p.tacoHojas} hojas`);
           lineas.filter(l=>l.rol==='inserto').forEach(l=>{
-            partes.push(`inserto${l.nombre?' '+l.nombre:''} ${l.hojasPorCuaderno} hojas ${l.tintasTiro||0}/${l.tintasRetiro||0} tintas${l.intercalado?' intercalado':''}`);
+            partes.push(`inserto${l.nombre?' '+l.nombre:''} ${l.hojasPorCuaderno} hojas ${l.tintasTiro||0}/${l.tintasRetiro||0} tintas${l.intercalado?' intercalados':' seguidos'}`);
           });
           if(p.guardasCantidad>0) partes.push(`guardas ${p.guardasCantidad} (${p.guardasTintasTiro||0} tintas${p.guardasPlastificado?', plastificadas':''})`);
           (p.extras||[]).forEach(e => { if(e.desc) partes.push(e.desc); });

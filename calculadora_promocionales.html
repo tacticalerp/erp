@@ -619,7 +619,7 @@ function autocompletarCliente(origen){
   // siempre; el correo solo sirve de respaldo cuando NO se eligió un contacto puntual.
   const cli = db_clientes.find(c =>
     (nombreVal && c.empresa.toLowerCase() === empresaVal.toLowerCase() && (c.nombre||'').toLowerCase() === nombreVal.toLowerCase()) ||
-    (origen !== 'empresa' && !nombreVal && correoVal && c.correo && c.correo.toLowerCase() === correoVal.toLowerCase()) ||
+    (origen !== 'empresa' && !nombreVal && correoVal && c.correo && c.correo.toLowerCase() === correoVal.toLowerCase() && (!empresaVal || c.empresa.toLowerCase() === empresaVal.toLowerCase())) ||
     (origen !== 'correo' && !nombreVal && empresaVal && c.empresa.toLowerCase() === empresaVal.toLowerCase())
   );
   if(cli){
@@ -683,8 +683,8 @@ async function crearClienteClick(){
   const d = datosClienteForm();
   if(!d.empresa && !d.encargado){ tacticalAviso('Escribe al menos el Cliente o el Encargado.'); return; }
   const empresa = d.empresa || 'Cliente Particular', nombre = d.encargado || 'Sin contacto directo';
-  const existente = db_clientes.find(c => (d.correo && c.correo && c.correo.toLowerCase() === d.correo.toLowerCase()) ||
-    (c.empresa.toLowerCase() === empresa.toLowerCase() && (c.nombre || '').toLowerCase() === nombre.toLowerCase()));
+  const existente = db_clientes.find(c => c.empresa.toLowerCase() === empresa.toLowerCase() && ((d.correo && c.correo && c.correo.toLowerCase() === d.correo.toLowerCase()) ||
+    (c.nombre || '').toLowerCase() === nombre.toLowerCase()));
   if(existente){
     if(!confirm('Ya existe un cliente con ese correo o con ese nombre y contacto: «' + existente.empresa + (existente.nombre ? ' — ' + existente.nombre : '') + '».\n\n¿Quieres ACTUALIZAR sus datos en vez de crear otro?')) return;
     clienteEditandoId = existente.id; actualizarBotonesCliente();
@@ -882,7 +882,7 @@ async function guardarCotizacionClick(){
   if(!tacticalExigirVendedor('in-vendedor')) return;
   if(!empresa && !encargado){ tacticalAviso("Ingresa al menos el Cliente o el Encargado antes de guardar."); return; }
 
-  let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
+  let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase() && c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
   if(!cli){
     cli = { id: crypto.randomUUID(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo, identificacion };
     db_clientes.push(cli);
@@ -1114,7 +1114,7 @@ async function iniciarOAgregarPedido(){
   if(!tacticalExigirVendedor('in-vendedor')) return;
   if(!empresa && !encargado){ tacticalAviso("Ingresa al menos el Cliente o el Encargado antes de agregar al pedido."); return; }
 
-  let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
+  let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase() && c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
   if(!cli){
     cli = { id: crypto.randomUUID(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo, identificacion };
     db_clientes.push(cli);
@@ -1217,7 +1217,7 @@ async function agregarOpcionComparacion(){
   if(!tacticalExigirVendedor('in-vendedor')) return;
   if(!empresa && !encargado){ tacticalAviso("Ingresa al menos el Cliente o el Encargado antes de agregar la opción."); return; }
 
-  let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
+  let cli = db_clientes.find(c => (correo && c.correo && c.correo.toLowerCase()===correo.toLowerCase() && c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase()) || (c.empresa.toLowerCase()===(empresa||'Cliente Particular').toLowerCase() && c.nombre.toLowerCase()===(encargado||'Sin contacto directo').toLowerCase()));
   if(!cli){
     cli = { id: crypto.randomUUID(), empresa: empresa || 'Cliente Particular', nombre: encargado || 'Sin contacto directo', wp: telefono||'', correo: correo||'', clase: 'nuevo', ltv: 0, tipo, identificacion };
     db_clientes.push(cli);
