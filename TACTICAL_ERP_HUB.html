@@ -2361,6 +2361,7 @@
             <div style="padding:10px;">
 
                 <div id="kb-urgente-banner" style="display:none;"></div>
+                <div id="kb-separar-banner" style="display:none; background:#dbeafe; color:#1e3a5f; border:1px solid #93c5fd; padding:10px 14px; border-radius:8px; margin-bottom:12px; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;"></div>
 
                 <div class="kanban-toolbar">
                     <input type="text" id="kb-buscador" class="search-input" placeholder="🔍 Buscar por cliente, OT o producto..." style="flex:1 1 260px;" oninput="renderKanban()">
@@ -7705,7 +7706,96 @@
           if((f.titulo||'').toLowerCase().includes(t)) return true;
           return (f.lineas||[]).some(l => (l.desc||'').toLowerCase().includes(t));
         }
+        /* Conde 2026-11-28: "¿puedes separar las fichas ya aprobadas con más de 1 producto que estén en diseño o producción?"
+           Cada producto pasa a su propia ficha, en la MISMA columna y con la misma OT, cliente, comercial, fecha de entrega, urgente,
+           notas y "diseño aprobado". La ficha original se queda con el primer producto (conserva su historial). Las imágenes de
+           referencia se copian a cada ficha nueva (no se sabe a qué producto pertenecía cada una; la que no aplique se quita con la ×).
+           No toca las fichas de otras columnas ni los rompecabezas personalizados (B2C). Solo administrador. */
+        const KANBAN_COLS_SEPARAR = ['diseno', 'preparacion'];
+        function kanbanFichasParaSeparar(){
+          return db_kanban.filter(f => KANBAN_COLS_SEPARAR.includes(f.columna) && f.origen !== 'b2c' && (f.lineas || []).length > 1);
+        }
+        function kanbanPintarAvisoSeparar(){
+          const el = document.getElementById('kb-separar-banner'); if(!el) return;
+          const rol = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol;
+          const lista = rol === 'administrador' ? kanbanFichasParaSeparar() : [];
+          if(!lista.length){ el.style.display = 'none'; return; }
+          const nProd = lista.reduce((s, f) => s + f.lineas.length, 0);
+          el.style.display = 'flex';
+          el.innerHTML = `<span><strong>${lista.length} ficha${lista.length === 1 ? '' : 's'}</strong> en Diseño o En Producción ${lista.length === 1 ? 'tiene' : 'tienen'} varios productos juntos (${nProd} productos en total).</span>
+            <button type="button" class="btn-action" data-ui="none" style="background:#1e3a5f; color:#fff;" onclick="kanbanSepararFichasPreguntar()">Separar en una ficha por producto</button>`;
+        }
+        function kanbanSepararFichasPreguntar(){
+          const lista = kanbanFichasParaSeparar(); if(!lista.length) return;
+          const filas = lista.map(f => `<li style="margin-bottom:4px;"><strong>${kbEsc(f.nombreCli || '-')}</strong>${f.ot ? ' · ' + kbEsc(f.ot) : ''} · ${KANBAN_COLUMNA_NOMBRE[f.columna] || f.columna} — ${f.lineas.length} productos:<br><span style="color:#4a5568; font-size:0.82rem;">${f.lineas.map(l => kbEsc(tituloCortoLinea(l, 6))).join(' · ')}</span></li>`).join('');
+          let ov = document.getElementById('kb-separar-modal'); if(ov) ov.remove();
+          ov = document.createElement('div'); ov.id = 'kb-separar-modal';
+          ov.style.cssText = 'position:fixed; inset:0; z-index:100000; background:rgba(15,23,42,.6); display:flex; align-items:center; justify-content:center; padding:16px;';
+          ov.innerHTML = `<div style="background:#fff; color:#1a202c; border-radius:10px; width:100%; max-width:620px; max-height:88vh; overflow:auto; padding:18px 20px; font-size:0.9rem; line-height:1.5;">
+              <h3 style="margin:0 0 6px;">Separar fichas por producto</h3>
+              <p>Cada producto quedará en su propia ficha, en la misma columna y con la misma OT, cliente, comercial, fecha de entrega y notas. La ficha original se queda con el primer producto.</p>
+              <ul style="padding-left:18px; margin:8px 0;">${filas}</ul>
+              <p style="font-size:0.8rem; color:#64748b;">Las imágenes de referencia que tenga la ficha se copian a cada ficha nueva; si alguna no corresponde a ese producto, quítala con la ×.</p>
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button type="button" class="btn-action" data-ui="none" style="background:#1e3a5f; color:#fff;" id="kb-separar-ok">Separar ${lista.length} ficha${lista.length === 1 ? '' : 's'}</button>
+                <button type="button" class="btn-action" data-ui="none" onclick="document.getElementById('kb-separar-modal').remove()">Cancelar</button>
+              </div>
+              <p id="kb-separar-prog" style="font-size:0.85rem;"></p>
+            </div>`;
+          document.body.appendChild(ov);
+          document.getElementById('kb-separar-ok').onclick = async (ev) => { ev.target.disabled = true; await kanbanSepararFichasEjecutar(lista); };
+        }
+        async function kanbanSepararFichasEjecutar(lista){
+          const prog = s => { const p = document.getElementById('kb-separar-prog'); if(p) p.innerHTML = s; };
+          let creadas = 0, fallos = 0, hechas = 0;
+          for(const f of lista){
+            hechas++;
+            prog(`Separando ${hechas} de ${lista.length}: ${kbEsc(f.nombreCli || '')}…`);
+            const lineas = f.lineas.slice();
+            const base = new Date(f.fechaCreacion || Date.now()).getTime();
+            const fotosRef = (f.fotos || []).slice();
+            const columna = f.columna;
+            // 1) fichas nuevas (productos 2..n), en orden
+            const nuevas = [];
+            for(let i = 1; i < lineas.length; i++){
+              const l = lineas[i];
+              const nf = {
+                id: crypto.randomUUID(), ot: f.ot || null, idCli: f.idCli, nombreCli: f.nombreCli,
+                titulo: l.desc || f.titulo, columna, lineas: [l], checklist: [], urgente: !!f.urgente,
+                fechaEntrega: f.fechaEntrega || '', entrega: f.entrega || null, responsable: f.responsable || '',
+                origen: f.origen || 'automatica', disenoAprobado: !!f.disenoAprobado, vendedor: f.vendedor || '',
+                fechaCreacion: new Date(base + i).toISOString(), fotos: fotosRef.map(p => ({ ...p })),
+              };
+              const ok = await tacticalSyncFichaKanban(nf);
+              if(!ok){ fallos++; continue; }
+              // misma fecha de aprobación que la ficha original (+i ms para el orden "Producto i de n")
+              try { await tacticalSupabase.from('kanban_fichas').update({ created_at: nf.fechaCreacion }).eq('id', nf.id); } catch(e){}
+              for(const p of fotosRef){ try { await tacticalAgregarFotoFichaRemoto(nf.id, p); } catch(e){} }
+              nuevas.push(nf); creadas++;
+            }
+            // 2) la ficha original se queda solo con el primer producto (solo si se crearon todas las demás)
+            if(nuevas.length === lineas.length - 1){
+              f.lineas = [lineas[0]];
+              f.titulo = lineas[0].desc || f.titulo;
+              await tacticalSyncFichaKanban(f);
+            } else {
+              // no se pudo crear alguna: se deshacen las nuevas para no duplicar productos
+              for(const nf of nuevas){ try { await tacticalEliminarFichaKanbanRemoto(nf.id); } catch(e){} }
+              creadas -= nuevas.length; nuevas.length = 0;
+              continue;
+            }
+            // 3) las nuevas quedan justo debajo de la original en su columna
+            const pos = db_kanban.indexOf(f);
+            db_kanban.splice(pos + 1, 0, ...nuevas);
+            kanbanPersistirOrden(columna);
+          }
+          renderKanban();
+          prog(`<strong>Listo.</strong> Se crearon ${creadas} ficha${creadas === 1 ? '' : 's'} nueva${creadas === 1 ? '' : 's'}.${fallos ? ` <span style="color:#b91c1c;">${fallos} no se pudieron guardar (esas fichas quedaron como estaban); recarga y vuelve a intentar.</span>` : ''}`);
+          setTimeout(() => { const ov = document.getElementById('kb-separar-modal'); if(ov) ov.remove(); }, fallos ? 8000 : 2500);
+        }
+
         function renderKanban(){
+          try { kanbanPintarAvisoSeparar(); } catch(e){}
           // db_kanban ahora vive en memoria, cargado de Supabase al iniciar sesión y actualizado
           // en cada cambio local -- ya no se relee de localStorage aquí (2026-08-18).
           // Conde 2026-08-22: comentario viejo corregido -- modulo_montajes_rompecabezas.html (B2C)
