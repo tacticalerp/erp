@@ -198,6 +198,9 @@ const TACTICAL_MOTIVOS_PERDIDA = [
   { cat: 'Duplicada o de prueba', ayuda: 'se creó por error o era una prueba', ruido: true },
   { cat: 'Otra', ayuda: 'cualquier otra razón (escríbela)' },
 ];
+// Conde 2026-11-28: "no quiero formatos con muchas opciones, no se llenan" -> la ventana muestra solo 5 botones y se puede
+// confirmar SIN elegir (el análisis deduce la causa de los datos). Las demás categorías las asigna el sistema.
+const TACTICAL_MOTIVOS_PERDIDA_UI = ['Precio', 'No aprobaron / sin presupuesto', 'No respondió', 'Se hizo otra versión', 'Otra'];
 // Devuelve { cat, ruido } para un motivo guardado (nuevo o texto libre antiguo).
 function tacticalClasificarMotivoPerdida(motivo){
   const t = String(motivo || '').trim();
@@ -222,20 +225,20 @@ function tacticalPedirMotivoPerdidaFlotante(){
   return new Promise((resolve) => {
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed; inset:0; background:rgba(26,32,44,0.6); z-index:99999; display:flex; align-items:center; justify-content:center; padding:20px;';
-    const botones = TACTICAL_MOTIVOS_PERDIDA.map((m, i) => `
-      <button type="button" data-i="${i}" class="tactical-mp-op" style="text-align:left; padding:9px 12px; border:2px solid #e2e8f0; background:#fff; border-radius:8px; cursor:pointer; font-family:inherit;">
+    const botones = TACTICAL_MOTIVOS_PERDIDA.filter(m => TACTICAL_MOTIVOS_PERDIDA_UI.includes(m.cat)).map((m, i) => `
+      <button type="button" data-cat="${m.cat}" class="tactical-mp-op" style="text-align:left; padding:9px 12px; border:2px solid #e2e8f0; background:#fff; border-radius:8px; cursor:pointer; font-family:inherit;">
         <div style="font-weight:700; font-size:0.92rem; color:#1a202c;">${m.cat}</div>
         <div style="font-size:0.76rem; color:#718096;">${m.ayuda}</div>
       </button>`).join('');
     overlay.innerHTML = `
       <div style="background:#fff; border-radius:10px; padding:20px; max-width:420px; width:100%; max-height:92vh; overflow:auto; box-shadow:0 12px 40px rgba(0,0,0,0.35); font-family:'Segoe UI', Tahoma, sans-serif;">
         <div style="font-weight:800; font-size:1.05rem; color:#1a202c; margin-bottom:4px;">¿Por qué se perdió este negocio?</div>
-        <div style="font-size:0.8rem; color:#718096; margin-bottom:12px;">Elige la razón real (un toque). Si no estás seguro, elige la que más se parezca.</div>
+        <div style="font-size:0.8rem; color:#718096; margin-bottom:12px;">Un toque si la sabes; si no, confirma sin elegir (el sistema lo deduce de los datos).</div>
         <div style="display:grid; gap:6px;">${botones}</div>
         <input type="text" id="tactical-motivo-perdida-detalle" maxlength="120" placeholder="Detalle (opcional)" style="width:100%; box-sizing:border-box; padding:10px; border:2px solid #cbd5e0; border-radius:6px; margin:12px 0 6px; font-size:0.9rem;">
         <div style="display:flex; gap:8px; margin-top:6px;">
           <button type="button" id="tactical-motivo-perdida-cancelar" style="flex:1; padding:10px; border:1px solid #cbd5e0; background:#fff; color:#4a5568; border-radius:6px; font-weight:700; cursor:pointer;">Cancelar</button>
-          <button type="button" id="tactical-motivo-perdida-confirmar" disabled style="flex:1; padding:10px; border:none; background:#a0aec0; color:#fff; border-radius:6px; font-weight:700; cursor:not-allowed;">Confirmar Cierre Perdido</button>
+          <button type="button" id="tactical-motivo-perdida-confirmar" style="flex:1; padding:10px; border:none; background:#cc0000; color:#fff; border-radius:6px; font-weight:700; cursor:pointer;">Confirmar Cierre Perdido</button>
         </div>
       </div>`;
     document.body.appendChild(overlay);
@@ -244,18 +247,17 @@ function tacticalPedirMotivoPerdidaFlotante(){
     const detalle = overlay.querySelector('#tactical-motivo-perdida-detalle');
     overlay.querySelectorAll('.tactical-mp-op').forEach(b => {
       b.onclick = () => {
-        elegido = TACTICAL_MOTIVOS_PERDIDA[Number(b.dataset.i)].cat;
+        elegido = b.dataset.cat;
         overlay.querySelectorAll('.tactical-mp-op').forEach(x => { x.style.borderColor = '#e2e8f0'; x.style.background = '#fff'; });
         b.style.borderColor = '#cc0000'; b.style.background = '#fff5f5';
-        conf.disabled = false; conf.style.background = '#cc0000'; conf.style.cursor = 'pointer';
         if(elegido === 'Otra') detalle.placeholder = 'Escribe la razón…'; else detalle.placeholder = 'Detalle (opcional)';
       };
     });
     function cerrar(valor){ overlay.remove(); resolve(valor); }
     overlay.querySelector('#tactical-motivo-perdida-cancelar').onclick = () => cerrar(null);
     conf.onclick = () => {
-      if(!elegido) return;
       const det = detalle.value.trim().replace(/\s+/g, ' ');
+      if(!elegido) return cerrar(det ? `Sin motivo registrado — ${det}` : 'Sin motivo registrado');
       cerrar(det ? `${elegido} — ${det}` : elegido);
     };
   });
