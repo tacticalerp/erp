@@ -585,6 +585,17 @@
             thead { display: none !important; }
             tr { background: #ffffff !important; border: 1px solid #cbd5e0 !important; border-radius: 8px !important; padding: 12px !important; margin-bottom: 15px !important; position: relative !important; }
             td { padding: 4px 0 !important; border: none !important; display: block !important; text-align: left !important; }
+            /* Conde 2026-11-28: "para cuadernos en celular no se ve claramente la división de cada
+               insumo o servicio, se ve para otras calculadoras" -- la regla genérica de arriba
+               (pensada para tablas tipo Reprocesos/Personal) convierte CUALQUIER tr/td del Hub en
+               una tarjeta apilada y fuerza fondo blanco con !important, lo que tapaba la franja
+               alterna del desglose de costos (tactical-avz-tabla, compartida con las otras 8
+               calculadoras, que SÍ se ven bien porque esas páginas no traen esta regla genérica).
+               Aquí se deshace la tarjeta solo para esa tabla -- sin tocar background, para que la
+               franja de cada renglón (puesta por tactical-avanzado.js) se siga viendo. */
+            .tactical-avz-tabla tr { border: none !important; border-radius: 0 !important; padding: 0 !important; margin-bottom: 0 !important; position: static !important; }
+            .tactical-avz-tabla td { display: table-cell !important; padding: 4px 6px !important; border-bottom: 1px solid #e2e8f0 !important; text-align: left !important; }
+            .tactical-avz-tabla td.num { text-align: right !important; }
 
             input[type="text"], select, .task-emp, .status-select { font-size: 16px !important; padding: 10px !important; width: 100% !important; margin: 4px 0 !important; height: 44px !important; display: block !important; }
             .card-grid { grid-template-columns: 1fr; }
@@ -2733,7 +2744,7 @@
     <script src="tactical-supabase.js?v=20261109b"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
     <script src="precios_tactical.js?v=20261128b"></script>
-<script src="tactical-avanzado.js?v=20261123a"></script>
+<script src="tactical-avanzado.js?v=20261128a"></script>
 <script src="tactical-ui.js?v=20261109d"></script>
     <script src="troqueles_tactical.js?v=20261114a"></script>
     <script src="precios_promocionales.js?v=20260919a"></script>

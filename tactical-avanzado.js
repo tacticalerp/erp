@@ -134,15 +134,19 @@ function tacticalAvzTablaHtml(lineas, pro){
       grupo = null; return;
     }
     if(l.tipo==='fijo'){
-      const fondoFijo = (idxFila++ % 2) ? ' style="background:#f3f6f9;"' : '';
+      // Conde 2026-11-28: clase en vez de "style background" inline -- en el Hub hay una regla
+      // genérica "tr{background:#ffffff !important}" (pensada para otras tablas en celular) que le
+      // gana a un background puesto por inline style, pero no a una clase con más especificidad
+      // (ver la regla .tactical-avz-tabla tr.tactical-avz-zebra más abajo).
+      const fondoFijo = (idxFila++ % 2) ? ' class="tactical-avz-zebra"' : '';
       h += pro ? `<tr${fondoFijo}><td colspan="3">${E(l.concepto)}</td><td class="num">${C(l.valor)}</td><td colspan="2"></td></tr>`
                : `<tr${fondoFijo}><td>${E(l.concepto)}</td><td class="num">${C(l.valor)}</td></tr>`;
       return;
     }
     if(pro && l.grupo!==grupo){ grupo = l.grupo; h += `<tr class="detalle"><td colspan="${cols}" style="font-weight:600;">${E(grupo)}</td></tr>`; }
     const marca = l.ajustado ? ` <span style="color:#b45309; font-weight:600;">(ajustado)</span>` : '';
-    const zebra = (idxFila++ % 2) ? '#f3f6f9' : '';
-    const fondo = l.ajustado ? ' style="background:#fff7e6;"' : (zebra ? ` style="background:${zebra};"` : '');
+    const zebra = (idxFila++ % 2);
+    const fondo = l.ajustado ? ' class="tactical-avz-ajustada"' : (zebra ? ' class="tactical-avz-zebra"' : '');
     if(!pro){
       h += `<tr${fondo}><td>${tacticalAvzConceptoNegrilla(l.concepto)}${marca}</td><td class="num">${l.ajustado?`<s style="color:var(--texto-suave,#5a6472);">${C(l.base)}</s> `:''}<span class="tactical-avz-valor-cel">${C(l.valor)}</span></td></tr>`;
       return;
@@ -169,7 +173,7 @@ function tacticalAvzTablaHtml(lineas, pro){
       <td style="white-space:nowrap;">${l.ajustado?`<button type="button" data-ui="none" title="Volver al precio de lista" onclick="tacticalAvzRestablecer('${l.id}')" style="padding:2px 8px;">↺</button> <button type="button" data-ui="none" title="${notaAbierta?'Ocultar motivo':(notaTexto?'Editar motivo':'Agregar motivo')}" onclick="tacticalAvzToggleNota('${l.id}')" style="padding:2px 6px; font-size:11px;">✎</button>`:''}</td>
     </tr>`;
     if(l.ajustado && notaAbierta){
-      h += `<tr style="background:#fff7e6;"><td colspan="${cols}"><input type="text" style="width:100%; box-sizing:border-box; font-size:0.8rem;" placeholder="Motivo del ajuste (opcional, ej. tinta especial, descuento del proveedor)" value="${E(notaTexto)}" oninput="tacticalAvzNota('${l.id}',this.value)"></td></tr>`;
+      h += `<tr class="tactical-avz-ajustada"><td colspan="${cols}"><input type="text" style="width:100%; box-sizing:border-box; font-size:0.8rem;" placeholder="Motivo del ajuste (opcional, ej. tinta especial, descuento del proveedor)" value="${E(notaTexto)}" oninput="tacticalAvzNota('${l.id}',this.value)"></td></tr>`;
     }
   });
   h += `</table></div>`;
@@ -764,7 +768,15 @@ function tacticalAvzFichaTecnica(p, r, reglas){
     // calculadora (y de Cuadernos en el Hub), pero solo se muestra en celular: en pantalla
     // grande ya está "Guardar y Generar PDF Cliente" + el botón flotante genérico de WhatsApp.
     + '.tactical-wa-enviar-btn{ display:none; }'
-    + '@media (max-width: 680px){ .tactical-wa-enviar-btn{ display:flex; align-items:center; justify-content:center; } }';
+    + '@media (max-width: 680px){ .tactical-wa-enviar-btn{ display:flex; align-items:center; justify-content:center; } }'
+    // Conde 2026-11-28: "para cuadernos en celular no se ve claramente la división de cada insumo
+    // o servicio, se ve para otras calculadoras" -- en el Hub hay una regla genérica de celular
+    // ("tr{background:#ffffff !important}", pensada para otras tablas tipo Reprocesos/Personal)
+    // que le ganaba a un background puesto con "style" inline. Una CLASE con más especificidad sí
+    // le gana a esa regla aunque las dos usen !important -- por eso la franja ahora se pone con
+    // estas clases en vez de con "style" directo (ver tacticalAvzTablaHtml).
+    + '.tactical-avz-tabla tr.tactical-avz-zebra{ background:#f3f6f9 !important; }'
+    + '.tactical-avz-tabla tr.tactical-avz-ajustada{ background:#fff7e6 !important; }';
   (document.head || document.documentElement).appendChild(st);
 })();
 
