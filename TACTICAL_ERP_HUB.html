@@ -6456,11 +6456,12 @@
                 <div style="font-size:.74rem; color:#667781;">${bjEsc(g.desc)}</div>${causas}</div>`;
             }).join('');
             const pistas = r.pistas.length ? `<div style="background:#fff8c5; border:1px solid #f6e05e; border-radius:8px; padding:8px 10px; font-size:.83rem; margin-bottom:10px;">${r.pistas.map(x => '• ' + bjEsc(x)).join('<br>')}</div>` : '';
+            const perosH = (r.peros && r.peros.length) ? `<div style="border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px; font-size:.83rem; margin-bottom:10px;"><b>Peros que dijeron los clientes y cuántos terminaron comprando</b> <span style="color:#667781">(mide si el reencuadre del bot funciona)</span>${r.peros.map(x => `<div style="margin-top:3px;">${bjEsc(x.nombre)}: <b>${x.n}</b> chat(s) · compraron <b>${x.compraron}</b> (${x.pct}%)</div>`).join('')}</div>` : '';
             const o = r.porOrigen || {};
             const orig = o.anuncio ? `<p class="sub" style="margin-top:6px">Por origen: de los que llegaron por <b>anuncio</b> compraron ${o.anuncio.compraron} de ${o.anuncio.total}; llegando <b>directo</b>, ${(o.directo || {}).compraron || 0} de ${(o.directo || {}).total || 0}.</p>` : '';
             bjAbrirModal(`<h3>Por qué no compran</h3>
               <p class="sub">Chats de los últimos ${dias} días ya cerrados: <b>${r.compraron}</b> compraron (${r.tasa}%) y <b>${r.noCompraron}</b> no${r.activos ? ` · ${r.activos} aún activos (no se cuentan)` : ''}${r.excluidosBots ? ` · ${r.excluidosBots} posibles bots excluidos` : ''}. Se calcula solo con lo que ya registran los chats: nadie llena nada.</p>
-              <div style="margin-bottom:10px">${sel}</div>${pistas}${bloques}${orig}
+              <div style="margin-bottom:10px">${sel}</div>${pistas}${perosH}${bloques}${orig}
               <p class="sub" style="margin-top:8px">${r.iaPendientes ? `${r.iaPendientes} caso(s) dudosos sin revisar con IA. ` : ''}${r.ultimaRevisionIA ? 'Última revisión con IA: ' + new Date(r.ultimaRevisionIA).toLocaleDateString('es-CO') + '. ' : ''}Con pocos chats, tómalo como orientación, no como verdad.</p>
               <div class="acciones"><button class="bt g" id="btn-cau-ia" onclick="bjRevisarCausasIA(${dias})">🤖 Revisar dudosos con IA</button><button class="bt v" onclick="bjCerrarModal()">Cerrar</button></div>`);
           } catch(err){ bjAbrirModal(`<h3>Por qué no compran</h3><p class="sub">No se pudo calcular: ${bjEsc(err.message)}</p><div class="acciones"><button class="bt v" onclick="bjCerrarModal()">Cerrar</button></div>`); }
