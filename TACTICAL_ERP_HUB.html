@@ -5079,8 +5079,51 @@
         // (fuera de catálogo)" sin aportar nada, y que hacía que 2 productos distintos de la MISMA
         // categoría (ej. 2 cuadernos diferentes en una ficha) se vieran como si fueran el mismo ítem
         // repetido. Ahora se arma con las primeras palabras de la descripción real de ESE producto.
+        /* Conde 2026-11-28: "en el Kanban nunca debe ir precio, pues es un dato privado". El tablero no tiene campos de precio, pero
+           algunas descripciones traen el valor escrito (ej. "(cotizado en US$ 1,200.00, TRM $3.950)", "$85.000 c/u", "sin IVA").
+           Se limpia AL MOSTRAR (sirve también para las fichas viejas); el dato guardado no se toca porque Comercial y Contabilidad
+           enlazan los productos por su descripción. */
+        function kanbanSinPrecios(txt){
+          let s = String(txt == null ? '' : txt);
+          if(!/\$|\bIVA\b|\bTRM\b|\bUSD\b|\bCOP\b/i.test(s)) return s;
+          s = s.replace(/\(\s*cotizado en[^)]*\)/gi, '')
+               .replace(/\b(precio|valor|vr\.?|total|costo|subtotal)(\s+(unitario|total|c\/u|por unidad))?\s*:?\s*(?=(US)?\$)/gi, '')
+               .replace(/(US)?\$\s?\d[\d.,]*(\s*(USD|COP|pesos))?(\s*(c\/u|cada un[oa]|\/u(nd)?\.?|por unidad))?/gi, '')
+               .replace(/\bTRM\b\s*:?\s*[\d.,]*/gi, '')
+               .replace(/\b\d[\d.,]*\s*(USD|COP)\b/gi, '')
+               .replace(/\b(sin|m[aá]s|incluye|incluido|incluído)\s+(el\s+)?IVA\b|\bIVA\s+(incluido|incluído)\b|\+\s*IVA\b/gi, '')
+               .replace(/\(\s*[,;:—–-]?\s*\)/g, '')
+               .replace(/\s+([,.;:])/g, '$1')
+               .replace(/([,;:—–-])(\s*[,;:—–-])+/g, '$1')
+               .replace(/[\s,;:—–-]+$/g, '')
+               .replace(/\s{2,}/g, ' ').trim();
+          return s;
+        }
+        /* Conde 2026-11-28: "cuando uno de los productos aprobados sea diseño, pregunta si separar, pues el diseño no es otra ficha: no
+           se fabrica ni se imprime". Un ítem cuenta como diseño cuando viene de Producto libre / Universal (no de una calculadora de
+           producto) y su texto empieza por diseño, diagramación, arte final o vectorización. */
+        function kanbanEsLineaDiseno(l){
+          if(!l) return false;
+          if(!['manual', 'universal', 'otro', 'libre', ''].includes(l.linea || '')) return false;
+          const txt = String(l.desc || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/^[*\s]*\d[\d.,]*\s*(x\s+|u\.?\s+|und\.?\s+|unidad(es)?\s+)?/, '').trim();
+          return /^(servicios?\s+de\s+|ajustes?\s+(de|al|del)\s+|cambios?\s+(de|al|del)\s+)?(diseno|diagramacion|arte\s+final|vectoriza)/.test(txt);
+        }
+        // productos que sí se fabrican (sin los ítems de diseño); si todos son diseño, se devuelven todos
+        function kanbanLineasFisicas(lineas){
+          const ls = lineas || [];
+          const fis = ls.filter(l => !kanbanEsLineaDiseno(l));
+          return fis.length ? fis : ls;
+        }
+        // reparte los ítems de un pedido en fichas: cada producto la suya; el diseño junto al primer producto si juntarDiseno
+        function kanbanGruposDeLineas(lineas, juntarDiseno){
+          const ls = lineas || [];
+          const dis = ls.filter(kanbanEsLineaDiseno), fis = ls.filter(l => !kanbanEsLineaDiseno(l));
+          if(!juntarDiseno || !dis.length || !fis.length) return ls.map(l => [l]);
+          return fis.map((l, i) => i === 0 ? [l, ...dis] : [l]);
+        }
         function tituloCortoLinea(l, maxPalabras){
-          const palabras = (l.desc||'').trim().split(/\s+/).filter(Boolean);
+          const palabras = kanbanSinPrecios(l.desc||'').trim().split(/\s+/).filter(Boolean);
           return palabras.slice(0, maxPalabras).join(' ') || (NOMBRES_LINEA_PRODUCTO[l.linea]||l.linea);
         }
         // Conde 2026-10-09: "quiero que omitas toda esta información que no la estamos usando" (la lista de
@@ -5118,7 +5161,7 @@
         // descripcion (max 6 palabras)" -- antes la tarea llevaba el título completo de la ficha
         // (que en pedidos multi-producto puede ser larguísimo) y quedaba ilegible en Plan de Tareas.
         function resumenLineaParaTarea(l){
-          const palabras = (l.desc||'').trim().split(/\s+/).filter(Boolean);
+          const palabras = kanbanSinPrecios(l.desc||'').trim().split(/\s+/).filter(Boolean);
           const producto = palabras.slice(0,3).join(' ');
           const descripcion = palabras.slice(3,9).join(' ');
           const cant = l.cantidad ? `${l.cantidad} ` : '';
@@ -5149,14 +5192,28 @@
            pues cada producto tiene sus propias fotos y características". Cada ficha lleva la MISMA OT (así siguen funcionando el enlace con
            la cotización, la prefactura, el cambio de comercial y el borrado, que buscan por OT) y un solo producto; en la tarjeta se ve
            "Producto 1 de 3". Las cotizaciones de un solo producto siguen igual que antes. */
-        function crearFichaKanbanDesdeOpp(opp, cli, fechaEntrega){
+        async function crearFichaKanbanDesdeOpp(opp, cli, fechaEntrega){
           if(Array.isArray(opp.lineas) && opp.lineas.length > 1){
+            // Conde 2026-11-28: si el pedido trae diseño junto a productos, se pregunta si el diseño lleva ficha propia.
+            let juntarDiseno = false;
+            const disenos = opp.lineas.filter(kanbanEsLineaDiseno);
+            const fisicos = opp.lineas.filter(l => !kanbanEsLineaDiseno(l));
+            if(disenos.length && fisicos.length){
+              juntarDiseno = await tacticalConfirmarFlotante({
+                titulo: '¿El diseño va en ficha aparte?',
+                mensaje: 'Esta cotización trae diseño: <strong>' + disenos.map(l => kbEsc(tituloCortoLinea(l, 6))).join(', ') + '</strong>.<br><br>El diseño no se fabrica ni se imprime, por eso lo normal es dejarlo dentro de la ficha del producto'
+                  + (fisicos.length > 1 ? ' (la del primero: <strong>' + kbEsc(tituloCortoLinea(fisicos[0], 5)) + '</strong>)' : '') + '.',
+                color: '#1e3a5f', icono: 'palette', textoBoton: 'Dejarlo con el producto', textoBotonNo: 'Ficha aparte',
+              });
+            }
+            const grupos = kanbanGruposDeLineas(opp.lineas, juntarDiseno);
             const ahora = Date.now();
-            opp.lineas.forEach((l, i) => {
+            grupos.forEach((grupo, i) => {
+              const l = grupo[0];
               const ficha = {
                 id: crypto.randomUUID(), ot: opp.ot || null,
                 idCli: opp.idCli, nombreCli: opp.nombreCli, titulo: l.desc || opp.desc,
-                columna: 'aprobada', lineas: [l],
+                columna: 'aprobada', lineas: grupo,
                 checklist: generarChecklistParaFicha({ linea: l.linea || 'manual', lineas: null, desc: l.desc }), urgente: false, fechaEntrega: fechaEntrega || '',
                 // milisegundos distintos para que el orden "Producto 1, 2, 3" sea siempre el de la cotización
                 fechaCreacion: new Date(ahora + i).toISOString(), responsable: '', origen: 'automatica',
@@ -5165,6 +5222,8 @@
               db_kanban.push(ficha);
               tacticalSyncFichaKanban(ficha);
             });
+            const vk = document.getElementById('view-kanban');
+            if(vk && vk.classList.contains('active-view') && typeof renderKanban === 'function') renderKanban();
             return;
           }
           const ficha = {
@@ -5417,7 +5476,7 @@
                   </div>` : '';
                 return `
                   <div style="border:1px solid #d7dee5; border-radius:3px; padding:4px 9px; margin-bottom:6px; break-inside:avoid; font-size:${TACTICAL_OP_FONT_SIZE};">
-                    <div style="font-weight:bold;">${linea.desc||''} <span style="font-weight:normal; color:#5f6e84;">(${pFresco.cantidad||linea.cantidad||'-'} u.)</span></div>
+                    <div style="font-weight:bold;">${kanbanSinPrecios(linea.desc||'')} <span style="font-weight:normal; color:#5f6e84;">(${pFresco.cantidad||linea.cantidad||'-'} u.)</span></div>
                     <div style="color:#4a5568;">Tapa: <strong>${nombresTapaOP[pFresco.tapaTipo]||pFresco.tapaTipo||'-'}</strong> — Encuadernación: <strong>${pFresco.encuadernacionTipo||'-'}${pFresco.anilladoDosSecciones?' (2 secciones)':''}</strong></div>
                     ${tacticalAnilloBloqueOP(pFresco, TACTICAL_OP_FONT_SIZE)}
                     ${subBloques}
@@ -5448,7 +5507,7 @@
               <div style="border:1px solid #d7dee5; border-radius:3px; padding:4px 9px; margin-bottom:6px; break-inside:avoid; font-size:${TACTICAL_OP_FONT_SIZE};">
                 <div style="display:flex; gap:9px; align-items:center;">
                   <div style="flex:1; min-width:0;">
-                    <div style="font-weight:bold;">${linea.desc||''} <span style="font-weight:normal; color:#5f6e84;">(${linea.cantidad||'-'} u.)</span></div>
+                    <div style="font-weight:bold;">${kanbanSinPrecios(linea.desc||'')} <span style="font-weight:normal; color:#5f6e84;">(${linea.cantidad||'-'} u.)</span></div>
                     <div style="color:#4a5568;">${linea.maquina?`Máquina: <strong>${linea.maquina}</strong> — `:''}${linea.material?`Material: <strong>${linea.material}</strong> — `:''}${linea.nPliegos?`Pliegos: <strong>${linea.nPliegos}</strong>`:''}</div>
                   </div>
                   ${planosHtml || '<div style="color:#64748b;">Sin plano de corte guardado para esta línea (cotización anterior a esta función, o proviene de una comparativa).</div>'}
@@ -5536,7 +5595,7 @@
             // pedido B2C enlazado y, si se borra igual, limpia el enlace en vez de dejarlo huérfano.
             const pedidoLigado = f.origen==='b2c' ? db_b2cPedidos.find(p => p.idKanban===f.id) : null;
             const avisoB2C = pedidoLigado ? `\n\n⚠️ Esta ficha pertenece al pedido B2C de "${pedidoLigado.nombre}" -- al borrarla, ese pedido queda sin ficha de producción enlazada (dejará de verse en Comercial como pendiente/aprobado).` : '';
-            if(!confirm(`¿ELIMINAR la ficha "${f.titulo}"?\n\nEsta acción no se puede deshacer y no borra la cotización/negocio original en el CRM, solo esta tarjeta de producción.${avisoB2C}`)) return;
+            if(!confirm(`¿ELIMINAR la ficha "${kanbanSinPrecios(f.titulo)}"?\n\nEsta acción no se puede deshacer y no borra la cotización/negocio original en el CRM, solo esta tarjeta de producción.${avisoB2C}`)) return;
             tacticalEliminarFichaKanbanRemoto(id);
             db_kanban = db_kanban.filter(x=>x.id!==id);
             if(pedidoLigado){
@@ -7637,7 +7696,7 @@
         function kbEsc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
         // Rotula una línea. Rompecabezas: "2x Láser Rectangular 32x24cm (30f)" -> "32x24 cm · 30 fichas" / "2 unidades — Láser Rectangular".
         function kanbanRotuloLinea(l){
-          const d = String(l.desc || '');
+          const d = kanbanSinPrecios(String(l.desc || ''));
           const m = d.match(/^(\d+)x\s+(.*?)\s+(\d+(?:[.,]\d+)?x\d+(?:[.,]\d+)?)\s*cm\s*\((\d+)f\)/i);
           if(m) return { titulo: m[3] + ' cm · ' + m[4] + ' fichas', detalle: m[1] + (m[1] === '1' ? ' unidad' : ' unidades') + ' — ' + m[2] };
           return { titulo: d || (NOMBRES_LINEA_PRODUCTO[l.linea] || l.linea || 'Producto'), detalle: l.cantidad ? 'Cantidad: ' + l.cantidad : '' };
@@ -7646,14 +7705,14 @@
            para las fichas viejas): si el título no empieza ya con esa cantidad, se le antepone. Fichas viejas con varios productos de
            cantidades distintas no llevan un solo número (cada producto ya trae el suyo en su texto). */
         function kanbanCantidadFicha(f){
-          const ls = f.lineas || [];
+          const ls = kanbanLineasFisicas(f.lineas);
           if(ls.length === 1) return Number(ls[0].cantidad) || Number(f.cantidad) || null;
           if(!ls.length) return Number(f.cantidad) || null;
           const cs = [...new Set(ls.map(l => Number(l.cantidad) || 0))];
           return (cs.length === 1 && cs[0]) ? cs[0] : null;
         }
         function kanbanTituloConCantidad(f){
-          const tit = String((f && f.titulo) || '').trim();
+          const tit = kanbanSinPrecios(String((f && f.titulo) || '')).trim();
           const c = kanbanCantidadFicha(f || {});
           if(!c) return tit;
           const m = /^[*\s]*(\d[\d.,]*)/.exec(tit);
@@ -7892,7 +7951,7 @@
             <div style="margin-top:10px; border:1px solid #cbd5e0; border-radius:6px; padding:10px; background:#fbfcfd;">
               <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.03em; color:#64748b; font-weight:bold; margin-bottom:6px;">${ticon('edit')}Editar ficha</div>
               <div style="margin-bottom:6px;"><label style="font-size:0.72rem; color:#4a5568; display:block; margin-bottom:2px;">Título</label>
-                <input type="text" id="kb-edit-titulo-${f.id}" value="${(f.titulo||'').replace(/"/g,'&quot;')}" style="width:100%; box-sizing:border-box; font-size:0.85rem; padding:6px; border:1px solid #cbd5e0; border-radius:4px;"></div>
+                <input type="text" id="kb-edit-titulo-${f.id}" value="${kanbanSinPrecios(f.titulo||'').replace(/"/g,'&quot;')}" style="width:100%; box-sizing:border-box; font-size:0.85rem; padding:6px; border:1px solid #cbd5e0; border-radius:4px;"></div>
               <div style="margin-bottom:6px;"><label style="font-size:0.72rem; color:#4a5568; display:block; margin-bottom:2px;">Fecha de entrega</label>
                 <input type="date" id="kb-edit-fecha-${f.id}" value="${f.fechaEntrega||''}" style="width:100%; box-sizing:border-box; font-size:0.85rem; padding:6px; border:1px solid #cbd5e0; border-radius:4px;"></div>
               <div style="margin-bottom:6px;"><label style="font-size:0.72rem; color:#4a5568; display:block; margin-bottom:2px;">Entrega (ciudad / especificaciones)</label>
@@ -7963,21 +8022,66 @@
            No toca las fichas de otras columnas ni los rompecabezas personalizados (B2C). Solo administrador. */
         const KANBAN_COLS_SEPARAR = ['diseno', 'preparacion'];
         function kanbanFichasParaSeparar(){
-          return db_kanban.filter(f => KANBAN_COLS_SEPARAR.includes(f.columna) && f.origen !== 'b2c' && (f.lineas || []).length > 1);
+          // una ficha con UN producto + su diseño ya está bien (el diseño no lleva ficha propia)
+          return db_kanban.filter(f => KANBAN_COLS_SEPARAR.includes(f.columna) && f.origen !== 'b2c' && (f.lineas || []).filter(l => !kanbanEsLineaDiseno(l)).length > 1);
+        }
+        /* Fichas que quedaron SOLO con diseño (p. ej. separadas antes de esta regla) y cuyo pedido ya tiene la ficha del producto:
+           se ofrece unirlas a esa ficha. */
+        function kanbanFichaDestinoDiseno(f){
+          return db_kanban.filter(x => x !== f && x.ot && x.ot === f.ot && x.origen !== 'b2c' && x.columna !== 'postventa'
+              && (!x.idCli || !f.idCli || x.idCli === f.idCli) && (x.lineas || []).some(l => !kanbanEsLineaDiseno(l)))
+            .sort((a, b) => new Date(a.fechaCreacion || 0) - new Date(b.fechaCreacion || 0))[0] || null;
+        }
+        function kanbanFichasSoloDiseno(){
+          return db_kanban.filter(f => f.origen !== 'b2c' && f.columna !== 'postventa' && f.ot && (f.lineas || []).length
+            && f.lineas.every(kanbanEsLineaDiseno) && kanbanFichaDestinoDiseno(f));
+        }
+        async function kanbanUnirDisenoPreguntar(){
+          const lista = kanbanFichasSoloDiseno(); if(!lista.length) return;
+          const det = lista.map(f => { const d = kanbanFichaDestinoDiseno(f);
+            return '<div style="text-align:left; margin:4px 0;"><strong>' + kbEsc(f.nombreCli || '-') + '</strong> · ' + kbEsc(f.ot) + ': «' + kbEsc(tituloCortoLinea(f.lineas[0], 6)) + '» → ficha de «' + kbEsc(tituloCortoLinea(kanbanLineasFisicas(d.lineas)[0], 5)) + '»</div>'; }).join('');
+          const ok = await tacticalConfirmarFlotante({
+            titulo: 'Unir el diseño a la ficha del producto',
+            mensaje: det + '<div style="margin-top:8px;">Cada ficha de diseño pasa a ser parte de la ficha de su producto (con sus imágenes) y la ficha de diseño se quita del tablero.</div>',
+            color: '#1e3a5f', icono: 'palette', textoBoton: 'Unir ' + lista.length, textoBotonNo: 'Cancelar',
+          });
+          if(!ok) return;
+          let unidas = 0, fallos = 0;
+          for(const f of lista){
+            const d = kanbanFichaDestinoDiseno(f); if(!d) continue;
+            const lineasAntes = (d.lineas || []).slice();
+            d.lineas = [...lineasAntes, ...f.lineas];
+            const okSync = await tacticalSyncFichaKanban(d);
+            if(okSync === false){ d.lineas = lineasAntes; fallos++; continue; }
+            const yaEsta = new Set((d.fotos || []).map(p => p && p.url));
+            for(const p of (f.fotos || [])){
+              if(!p || !p.url || yaEsta.has(p.url)) continue;
+              try { await tacticalAgregarFotoFichaRemoto(d.id, p); d.fotos = [...(d.fotos || []), { ...p }]; } catch(e){}
+            }
+            try { await tacticalEliminarFichaKanbanRemoto(f.id); } catch(e){}
+            db_kanban = db_kanban.filter(x => x.id !== f.id);
+            unidas++;
+          }
+          renderKanban();
+          tacticalAviso(unidas + ' ficha' + (unidas === 1 ? '' : 's') + ' de diseño unida' + (unidas === 1 ? '' : 's') + ' a la ficha del producto.' + (fallos ? ' ' + fallos + ' no se pudieron guardar; recarga y vuelve a intentar.' : ''));
         }
         function kanbanPintarAvisoSeparar(){
           const el = document.getElementById('kb-separar-banner'); if(!el) return;
           const rol = window.tacticalUsuarioPerfil && window.tacticalUsuarioPerfil.rol;
           const lista = rol === 'administrador' ? kanbanFichasParaSeparar() : [];
-          if(!lista.length){ el.style.display = 'none'; return; }
+          const soloDis = rol === 'administrador' ? kanbanFichasSoloDiseno() : [];
+          if(!lista.length && !soloDis.length){ el.style.display = 'none'; return; }
           const nProd = lista.reduce((s, f) => s + f.lineas.length, 0);
           el.style.display = 'flex';
-          el.innerHTML = `<span><strong>${lista.length} ficha${lista.length === 1 ? '' : 's'}</strong> en Diseño o En Producción ${lista.length === 1 ? 'tiene' : 'tienen'} varios productos juntos (${nProd} productos en total).</span>
-            <button type="button" class="btn-action" data-ui="none" style="background:#1e3a5f; color:#fff;" onclick="kanbanSepararFichasPreguntar()">Separar en una ficha por producto</button>`;
+          el.innerHTML = (lista.length ? `<span><strong>${lista.length} ficha${lista.length === 1 ? '' : 's'}</strong> en Diseño o En Producción ${lista.length === 1 ? 'tiene' : 'tienen'} varios productos juntos (${nProd} productos en total).</span>
+            <button type="button" class="btn-action" data-ui="none" style="background:#1e3a5f; color:#fff;" onclick="kanbanSepararFichasPreguntar()">Separar en una ficha por producto</button>` : '')
+            + (soloDis.length ? `<span><strong>${soloDis.length} ficha${soloDis.length === 1 ? '' : 's'}</strong> ${soloDis.length === 1 ? 'es' : 'son'} solo diseño de un pedido que ya tiene la ficha del producto.</span>
+            <button type="button" class="btn-action" data-ui="none" style="background:#1e3a5f; color:#fff;" onclick="kanbanUnirDisenoPreguntar()">Unir el diseño al producto</button>` : '');
         }
         function kanbanSepararFichasPreguntar(){
           const lista = kanbanFichasParaSeparar(); if(!lista.length) return;
-          const filas = lista.map(f => `<li style="margin-bottom:4px;"><strong>${kbEsc(f.nombreCli || '-')}</strong>${f.ot ? ' · ' + kbEsc(f.ot) : ''} · ${KANBAN_COLUMNA_NOMBRE[f.columna] || f.columna} — ${f.lineas.length} productos:<br><span style="color:#4a5568; font-size:0.82rem;">${f.lineas.map(l => kbEsc(tituloCortoLinea(l, 6))).join(' · ')}</span></li>`).join('');
+          const filas = lista.map(f => `<li style="margin-bottom:4px;"><strong>${kbEsc(f.nombreCli || '-')}</strong>${f.ot ? ' · ' + kbEsc(f.ot) : ''} · ${KANBAN_COLUMNA_NOMBRE[f.columna] || f.columna} — ${f.lineas.length} productos:<br><span style="color:#4a5568; font-size:0.82rem;">${f.lineas.map(l => kbEsc(tituloCortoLinea(l, 6)) + (kanbanEsLineaDiseno(l) ? ' <em style="color:#6b46c1;">(diseño)</em>' : '')).join(' · ')}</span></li>`).join('');
+          const hayDiseno = lista.some(f => f.lineas.some(kanbanEsLineaDiseno));
           let ov = document.getElementById('kb-separar-modal'); if(ov) ov.remove();
           ov = document.createElement('div'); ov.id = 'kb-separar-modal';
           ov.style.cssText = 'position:fixed; inset:0; z-index:100000; background:rgba(15,23,42,.6); display:flex; align-items:center; justify-content:center; padding:16px;';
@@ -7985,6 +8089,7 @@
               <h3 style="margin:0 0 6px;">Separar fichas por producto</h3>
               <p>Cada producto quedará en su propia ficha, en la misma columna y con la misma OT, cliente, comercial, fecha de entrega y notas. La ficha original se queda con el primer producto.</p>
               <ul style="padding-left:18px; margin:8px 0;">${filas}</ul>
+              ${hayDiseno ? '<label style="display:flex; gap:8px; align-items:flex-start; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:6px; padding:8px 10px; margin:6px 0; cursor:pointer;"><input type="checkbox" id="kb-separar-juntar-diseno" checked style="margin-top:3px;"><span><strong>Dejar el diseño dentro de la ficha del producto</strong> (no se fabrica ni se imprime; va con el primer producto del pedido). Desmárcalo si quieres el diseño en ficha aparte.</span></label>' : ''}
               <p style="font-size:0.8rem; color:#64748b;">Las imágenes de referencia que tenga la ficha se copian a cada ficha nueva; si alguna no corresponde a ese producto, quítala con la ×.</p>
               <div style="display:flex; gap:8px; flex-wrap:wrap;">
                 <button type="button" class="btn-action" data-ui="none" style="background:#1e3a5f; color:#fff;" id="kb-separar-ok">Separar ${lista.length} ficha${lista.length === 1 ? '' : 's'}</button>
@@ -7993,25 +8098,30 @@
               <p id="kb-separar-prog" style="font-size:0.85rem;"></p>
             </div>`;
           document.body.appendChild(ov);
-          document.getElementById('kb-separar-ok').onclick = async (ev) => { ev.target.disabled = true; await kanbanSepararFichasEjecutar(lista); };
+          document.getElementById('kb-separar-ok').onclick = async (ev) => {
+            ev.target.disabled = true;
+            const chk = document.getElementById('kb-separar-juntar-diseno');
+            await kanbanSepararFichasEjecutar(lista, chk ? chk.checked : true);
+          };
         }
-        async function kanbanSepararFichasEjecutar(lista){
+        async function kanbanSepararFichasEjecutar(lista, juntarDiseno){
           const prog = s => { const p = document.getElementById('kb-separar-prog'); if(p) p.innerHTML = s; };
           let creadas = 0, fallos = 0, hechas = 0;
           for(const f of lista){
             hechas++;
             prog(`Separando ${hechas} de ${lista.length}: ${kbEsc(f.nombreCli || '')}…`);
-            const lineas = f.lineas.slice();
+            const grupos = kanbanGruposDeLineas(f.lineas.slice(), juntarDiseno !== false);
+            if(grupos.length < 2) continue;
             const base = new Date(f.fechaCreacion || Date.now()).getTime();
             const fotosRef = (f.fotos || []).slice();
             const columna = f.columna;
             // 1) fichas nuevas (productos 2..n), en orden
             const nuevas = [];
-            for(let i = 1; i < lineas.length; i++){
-              const l = lineas[i];
+            for(let i = 1; i < grupos.length; i++){
+              const l = grupos[i][0];
               const nf = {
                 id: crypto.randomUUID(), ot: f.ot || null, idCli: f.idCli, nombreCli: f.nombreCli,
-                titulo: l.desc || f.titulo, columna, lineas: [l], checklist: [], urgente: !!f.urgente,
+                titulo: l.desc || f.titulo, columna, lineas: grupos[i], checklist: [], urgente: !!f.urgente,
                 fechaEntrega: f.fechaEntrega || '', entrega: f.entrega || null, responsable: f.responsable || '',
                 origen: f.origen || 'automatica', disenoAprobado: !!f.disenoAprobado, vendedor: f.vendedor || '',
                 fechaCreacion: new Date(base + i).toISOString(), fotos: fotosRef.map(p => ({ ...p })),
@@ -8024,9 +8134,9 @@
               nuevas.push(nf); creadas++;
             }
             // 2) la ficha original se queda solo con el primer producto (solo si se crearon todas las demás)
-            if(nuevas.length === lineas.length - 1){
-              f.lineas = [lineas[0]];
-              f.titulo = lineas[0].desc || f.titulo;
+            if(nuevas.length === grupos.length - 1){
+              f.lineas = grupos[0];
+              f.titulo = grupos[0][0].desc || f.titulo;
               await tacticalSyncFichaKanban(f);
             } else {
               // no se pudo crear alguna: se deshacen las nuevas para no duplicar productos
