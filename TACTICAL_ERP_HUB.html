@@ -597,6 +597,19 @@
             .tactical-avz-tabla td { display: table-cell !important; padding: 4px 6px !important; border-bottom: 1px solid #e2e8f0 !important; text-align: left !important; }
             .tactical-avz-tabla td.num { text-align: right !important; }
 
+            /* Conde 2026-11-28: "en celular en Comercial distinguir entre una cotización y otra es
+               complicado, se mezclan -- aprobé una cotización en el celular y al revisar había
+               aprobado la que no era". Con la tarjeta apilada de arriba, un mismo cliente con varias
+               cotizaciones pendientes se ve como varias tarjetas casi iguales, y los botones ✓/✕/reloj
+               quedaban en círculos de 22px muy pegados -- fácil de tocar el de la tarjeta vecina por
+               error. Aquí (solo para la tabla de Comercial): el cliente queda más grande y en
+               negrilla como "título" de la tarjeta, la OT se nota más, y los 3 botones de acción
+               quedan grandes (44px, el mínimo recomendado para tocar con el dedo) y más separados. */
+            .tabla-comercial td:first-child { font-weight: 700; font-size: 1rem; }
+            .tabla-comercial .comercial-ot { font-size: 0.85rem; }
+            .cm-accion-btn { width: 44px !important; height: 44px !important; margin: 0 10px 0 0 !important; }
+            .cm-accion-btn svg { width: 20px !important; height: 20px !important; }
+
             input[type="text"], select, .task-emp, .status-select { font-size: 16px !important; padding: 10px !important; width: 100% !important; margin: 4px 0 !important; height: 44px !important; display: block !important; }
             .card-grid { grid-template-columns: 1fr; }
             .detail-row-grid { grid-template-columns: 1fr; gap: 8px; border: 1px dashed #cbd5e0; padding: 12px; border-radius: 6px; background: white; }
@@ -12615,9 +12628,9 @@
               ? `<input type="text" value="${(o.seguimiento||'').replace(/"/g,'&quot;')}" placeholder="Ej: llamé el 28, volver a llamar el 2 de sept." onchange="comercialGuardarSeguimiento('${o.id}',this.value)">`
               : `<span style="color:#5f6e84;">${resumenCotEsc(o.seguimiento || '')}</span>`;
             const celdaAcc = activa
-              ? `<button onclick="comercialAbrirSeguimientoFecha('${o.id}')" title="${comercialRelojInfo(o).titulo}" style="background:${comercialRelojInfo(o).color}; border:none; border-radius:50%; width:22px; height:22px; padding:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; margin-right:4px;">${ticon('clock',{color:'#fff',noMargin:true,size:13})}</button>
-                <button onclick="comercialConfirmarPerdido('${o.id}')" title="Marcar cancelada" style="background:#dc2626; border:none; border-radius:50%; width:22px; height:22px; padding:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; margin-right:4px;">${ticon('x',{color:'#fff',noMargin:true,size:13})}</button>
-                <button onclick="comercialConfirmarGanado('${o.id}')" title="Marcar aprobada" style="background:#16a34a; border:none; border-radius:50%; width:22px; height:22px; padding:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">${ticon('check',{color:'#fff',noMargin:true,size:13})}</button>`
+              ? `<button class="cm-accion-btn" onclick="comercialAbrirSeguimientoFecha('${o.id}')" title="${comercialRelojInfo(o).titulo}" style="background:${comercialRelojInfo(o).color}; border:none; border-radius:50%; width:22px; height:22px; padding:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; margin-right:4px;">${ticon('clock',{color:'#fff',noMargin:true,size:13})}</button>
+                <button class="cm-accion-btn" onclick="comercialConfirmarPerdido('${o.id}')" title="Marcar cancelada" style="background:#dc2626; border:none; border-radius:50%; width:22px; height:22px; padding:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; margin-right:4px;">${ticon('x',{color:'#fff',noMargin:true,size:13})}</button>
+                <button class="cm-accion-btn" onclick="comercialConfirmarGanado('${o.id}')" title="Marcar aprobada" style="background:#16a34a; border:none; border-radius:50%; width:22px; height:22px; padding:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">${ticon('check',{color:'#fff',noMargin:true,size:13})}</button>`
               : '';
             return `<tr class="cm-fila${i % 2 ? ' alt' : ''}" onclick="comercialToggleFila('${key}', event)">
               <td>${comercialChev(abierta)}${o.nombreCli}</td>
