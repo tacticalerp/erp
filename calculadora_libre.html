@@ -213,6 +213,10 @@
             <option value="USD">Dólares (USD)</option>
           </select>
         </div>
+        <!-- Conde 2026-11-28: "el IVA que tenga la opción de poner o quitar: clientes en el país se les cobra IVA, a los del extranjero se omite" -->
+        <div class="campo chico" style="display:flex; align-items:flex-end;">
+          <label style="display:flex; align-items:center; gap:6px; font-weight:normal; cursor:pointer;"><input type="checkbox" id="in-cobrarIva" checked onchange="if(ultimoResultado) calcular()"> Cobrar IVA (19%)</label>
+        </div>
         <div class="campo chico">
           <label for="in-precioVentaUnitario" id="lbl-precioVentaUnitario">Precio de venta SIN IVA (COP, por unidad):</label>
           <input type="number" id="in-precioVentaUnitario" value="0" min="0">
@@ -320,6 +324,7 @@ function libreCambioMoneda(){
   if(lbl) lbl.textContent = 'Precio de venta SIN IVA (' + m + ', por unidad):';
   const pr = document.getElementById('in-precioVentaUnitario'); if(pr) pr.step = m === 'USD' ? '0.01' : '1';
   const box = document.getElementById('libre-trm-box'); if(box) box.style.display = m === 'USD' ? 'block' : 'none';
+  const civa = document.getElementById('in-cobrarIva'); if(civa) civa.checked = m !== 'USD';
   if(m === 'USD') libreCargarTrm(false);
   if(ultimoResultado) calcular();
 }
@@ -343,12 +348,14 @@ function cotizarLibre(p){
   const precioVentaTotal = precioVentaProducto + extraSubtotal;
   // Conde 2026-09-02: cliente "Personalizado (Cuenta de Cobro)" no se le cobra ni se le
   // recibe IVA -- antes se calculaba siempre el 19% sin importar el tipo de cliente.
-  const aplicaIva = p.tipoCliente !== 'personalizado';
+  // Conde 2026-11-28: además, la casilla "Cobrar IVA" (cliente del exterior = sin IVA).
+  const aplicaIva = p.tipoCliente !== 'personalizado' && p.cobrarIva !== false;
+  const sinIvaTexto = aplicaIva ? '' : (p.tipoCliente === 'personalizado' ? 'Cliente Cuenta de Cobro -- no se calcula IVA.' : 'No aplica IVA.');
   const ivaTotal = aplicaIva ? precioVentaTotal*0.19 : 0;
   const precioFinalTotal = precioVentaTotal+ivaTotal;
   return {
     descripcion:p.descripcion, cantidad:p.cantidad, precioVentaTotal, precioVentaUnitario, aplicaIva, ivaTotal, precioFinalTotal,
-    moneda: p.moneda || 'COP', trm: p.trm || 0,
+    moneda: p.moneda || 'COP', trm: p.trm || 0, cobrarIva: p.cobrarIva !== false, sinIvaTexto,
     extraDescripcion: p.extraDescripcion||'', extraCantidad, extraValorUnitario, extraSubtotal,
   };
 }
@@ -365,6 +372,7 @@ function calcular(){
       extraCantidad: parseFloat(document.getElementById("in-extraCantidad").value)||0,
       extraValorUnitario: parseFloat(document.getElementById("in-extraValorUnitario").value)||0,
       moneda: libreMoneda(), trm: libreMoneda() === 'USD' ? libreTrm() : 0,
+      cobrarIva: (document.getElementById('in-cobrarIva') || {checked: true}).checked,
     };
     if(!p.descripcion){ throw new Error("Escribe una descripción del producto o servicio."); }
     if(p.precioVentaUnitario<=0){ throw new Error("Ingresa un precio de venta mayor a 0."); }
@@ -382,7 +390,7 @@ function calcular(){
       filas += `<tr><td>IVA (19%)</td><td class="num">${dinero(r.ivaTotal, r.moneda)}</td></tr>`;
       filas += `<tr style="font-weight:bold;"><td>Precio final total (con IVA)</td><td class="num">${dinero(r.precioFinalTotal, r.moneda)}</td></tr>`;
     } else {
-      filas += `<tr style="color:var(--texto-suave); font-size:12px;"><td colspan="2">Cliente Personalizado (Cuenta de Cobro): no se calcula IVA.</td></tr>`;
+      filas += `<tr style="color:var(--texto-suave); font-size:12px;"><td colspan="2">${r.sinIvaTexto || 'No aplica IVA.'}</td></tr>`;
       filas += `<tr style="font-weight:bold;"><td>Precio final total</td><td class="num">${dinero(r.precioFinalTotal, r.moneda)}</td></tr>`;
     }
     if(r.moneda === 'USD'){
@@ -468,6 +476,7 @@ async function libreCargarDuplicado(){
     const p = guardada.params;
     set('in-descripcion', p.descripcion); set('in-cantidad', Math.round(p.cantidad || 1).toLocaleString('es-CO')); set('in-precioVentaUnitario', p.precioVentaUnitario);
     if(p.moneda === 'USD'){ set('in-moneda', 'USD'); if(p.trm) set('in-trm', p.trm); libreCambioMoneda(); }
+    { const civa = document.getElementById('in-cobrarIva'); if(civa) civa.checked = p.cobrarIva !== false; }
     set('in-extraDesc', p.extraDescripcion); set('in-extraCantidad', p.extraCantidad || ''); set('in-extraValorUnitario', p.extraValorUnitario || '');
     if(guardada.plazoEntrega) set('in-plazoEntrega', guardada.plazoEntrega);
     if(guardada.condicionesComerciales && guardada.condicionesComerciales.length) set('in-condicionesComerciales', guardada.condicionesComerciales.join('\n'));
@@ -687,7 +696,7 @@ function imprimirPDFCliente(datos){
   const subtotal = aplicaIva ? datos.total/1.19 : datos.total;
   const ivaTotal = aplicaIva ? datos.total - subtotal : 0;
   const desgloseHtml = !mostrarTotal ? '' : !aplicaIva ? `<table class="doc-table" style="margin-top:6px;">
-    <tr><td colspan="2" style="font-size:11px; color:#6b7280;">Cliente Cuenta de Cobro -- no se calcula IVA.</td></tr>
+    <tr><td colspan="2" style="font-size:11px; color:#6b7280;">${datos.sinIvaTexto || 'Cliente Cuenta de Cobro -- no se calcula IVA.'}</td></tr>
   </table>` : `<table class="doc-table" style="margin-top:6px;">
     <tr><td>Subtotal (sin IVA)</td><td style="text-align:right;">${fmtPdf(subtotal)}</td></tr>
     <tr><td>IVA (19%)</td><td style="text-align:right;">${fmtPdf(ivaTotal)}</td></tr>
@@ -867,7 +876,8 @@ async function guardarCotizacionClick(){
   // Conde 2026-11-28: en dólares, la cotización del cliente va en USD; el ERP guarda el valor en pesos (TRM del día) para que los
   // informes de ventas sumen en una sola moneda, y deja escrito en la descripción interna que se cotizó en dólares.
   const montoErp = enUsd ? Math.round(ultimoResultado.precioFinalTotal * ultimoResultado.trm) : Math.round(ultimoResultado.precioFinalTotal);
-  const descErp = enUsd ? `${ultimoResultado.descripcion} (cotizado en ${usd(ultimoResultado.precioFinalTotal)}, TRM ${trmTxt(ultimoResultado.trm)})` : ultimoResultado.descripcion;
+  const sinIvaNota = (!ultimoResultado.aplicaIva && ultimoResultado.cobrarIva === false && ultimoParams.tipoCliente !== 'personalizado') ? ' — sin IVA' : '';
+  const descErp = (enUsd ? `${ultimoResultado.descripcion} (cotizado en ${usd(ultimoResultado.precioFinalTotal)}, TRM ${trmTxt(ultimoResultado.trm)})` : ultimoResultado.descripcion) + sinIvaNota;
   const opp = { id: crypto.randomUUID(), ot: ultimoOT, idCli: cli.id, nombreCli: tacticalNombreCliente(cli), desc: descErp, vendedor, monto: montoErp, etapa: 'cot', linea: 'manual', cantidad: ultimoParams.cantidad, maquina: null, material: null, nPliegos: null, fotoUrl: fotoParaCotizacion(), videoUrl: videoParaCotizacion() };
   db_opps.push(opp);
   const oppGuardadoOk = await tacticalSyncOpps(db_opps);
@@ -896,7 +906,7 @@ async function guardarCotizacionClick(){
   }
   imprimirPDFCliente({
     ot: ultimoOT, fecha: new Date(), vendedor, cliente: {empresa: cli.empresa, encargado: cli.nombre, telefono: cli.wp, correo: cli.correo},
-    lineas: lineasPdf, moneda: mon,
+    lineas: lineasPdf, moneda: mon, sinIvaTexto: ultimoResultado.sinIvaTexto,
     ivaTotal: ultimoResultado.ivaTotal, total: redondearMoneda(ultimoResultado.precioFinalTotal, mon), aplicaIva: ultimoResultado.aplicaIva,
   });
 }
