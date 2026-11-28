@@ -2699,7 +2699,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="tactical-supabase.js?v=20261109b"></script>
     <script src="tactical-bot.js?v=20260904a"></script>
-    <script src="precios_tactical.js?v=20261126a"></script>
+    <script src="precios_tactical.js?v=20261128a"></script>
 <script src="tactical-avanzado.js?v=20261123a"></script>
 <script src="tactical-ui.js?v=20261109d"></script>
     <script src="troqueles_tactical.js?v=20261114a"></script>
@@ -13294,6 +13294,37 @@
           if(!confirm(`¿Volver a mostrar los ${n} avisos que quitaste?`)) return;
           radarGuardarQuitados({}); renderRadar();
         }
+        // ---- Por qué se pierden los negocios (Conde 2026-11-28) ----
+        // Una pérdida es "ruido" si el motivo es de ese tipo (otra versión / duplicada / prueba), o si no tiene motivo útil y la misma OT
+        // (sin la letra de versión) tiene otra cotización posterior en el historial (se recotizó).
+        function repOtBase(ot){ return String(ot || '').replace(/-[A-Z]$/, '').trim(); }
+        function repEsRuidoPerdida(p, historial){
+          const c = tacticalClasificarMotivoPerdida(p.motivo);
+          if(c.ruido) return true;
+          if(c.cat !== 'Sin motivo registrado' && c.cat !== 'Otra') return false;
+          const base = repOtBase(p.ot); if(!base) return false;
+          return historial.some(o => o !== p && repOtBase(o.ot) === base && String(o.fecha || '') >= String(p.fecha || ''));
+        }
+        function repRenderMotivosPerdida(perdidas, historial){
+          if(!perdidas.length) return '';
+          const grupos = {}; let ruido = 0, valorRuido = 0;
+          perdidas.forEach(p => {
+            if(repEsRuidoPerdida(p, historial)){ ruido++; valorRuido += (p.monto||0); return; }
+            const c = tacticalClasificarMotivoPerdida(p.motivo).cat;
+            const g = grupos[c] = grupos[c] || { n: 0, valor: 0 };
+            g.n++; g.valor += (p.monto||0);
+          });
+          const reales = Object.entries(grupos).sort((a,b) => b[1].valor - a[1].valor);
+          const totalN = reales.reduce((s,[,g]) => s + g.n, 0), totalV = reales.reduce((s,[,g]) => s + g.valor, 0);
+          const filas = reales.map(([c, g]) => {
+            const pct = totalV ? Math.round(g.valor / totalV * 100) : 0;
+            return `<div style="margin-bottom:6px;"><div style="display:flex; justify-content:space-between; gap:8px;"><span>${c}</span><span><strong>${g.n}</strong> · ${cotFormatoCop(g.valor)} · ${pct}%</span></div><div style="background:#edf2f7; border-radius:4px; height:6px;"><div style="width:${pct}%; background:${c==='Sin motivo registrado'?'#a0aec0':'#e53e3e'}; height:6px; border-radius:4px;"></div></div></div>`;
+          }).join('');
+          const sinMotivo = (grupos['Sin motivo registrado'] || {}).n || 0;
+          return `<div style="font-size:0.78rem; color:#64748b; margin-bottom:8px;">Pérdidas reales: <strong>${totalN}</strong> por <strong>${cotFormatoCop(totalV)}</strong> (ordenadas por dinero).</div>${filas}
+            ${ruido ? `<div style="font-size:0.78rem; color:#94a3b8; margin-top:8px;">No cuentan: ${ruido} cotización(es) reemplazada(s), duplicada(s) o de prueba (${cotFormatoCop(valorRuido)}).</div>` : ''}
+            ${sinMotivo ? `<div style="font-size:0.78rem; color:#dd6b20; margin-top:4px;">${sinMotivo} sin motivo registrado: al marcar una cotización como perdida elige la razón real para que este análisis sirva.</div>` : ''}`;
+        }
         function renderReportes(){
           repActualizarControlesPeriodo();
           const {inicio, fin, etiqueta} = periodoRango(repPeriodoTipo, repPeriodoOffset);
@@ -13325,7 +13356,10 @@
           const totalCot = todasCotizaciones.length;
           const ganadas = historialF.filter(h=>h.estado==='ganado');
           const perdidas = historialF.filter(h=>h.estado==='perdido');
-          const totalCerrados = ganadas.length+perdidas.length;
+          // Conde 2026-11-28: las pérdidas "de mentiras" (cotización reemplazada por otra versión, duplicada o de prueba) NO cuentan
+          // en la tasa de cierre: una versión nueva también se marca perdida y bajaba el porcentaje sin ser una venta que se cayó.
+          const perdidasReales = perdidas.filter(p => !repEsRuidoPerdida(p, historialF));
+          const totalCerrados = ganadas.length+perdidasReales.length;
           const tasaCierre = totalCerrados===0?0:Math.round((ganadas.length/totalCerrados)*100);
           const valorGanado = ganadas.reduce((s,o)=>s+o.monto,0);
           const valorGanadoNeto = ganadas.reduce((s,o)=>s+montoNetoSinIva(o),0);
@@ -13356,9 +13390,7 @@
           });
           document.getElementById('rep-lineas').innerHTML = Object.keys(porLinea).length ? Object.keys(porLinea).map(l=>`• ${NOMBRES_LINEA_PRODUCTO[l]||l}: <strong>${porLinea[l]} unidades</strong>`).join('<br>') : '<span style="color:#64748b; font-style:italic;">Sin cotizaciones en este período.</span>';
 
-          const motivos = {};
-          perdidas.forEach(p=>{ motivos[p.motivo]=(motivos[p.motivo]||0)+1; });
-          document.getElementById('rep-motivos').innerHTML = Object.keys(motivos).length ? Object.keys(motivos).map(m=>`• ${m}: <strong>${motivos[m]}</strong>`).join('<br>') : '<span style="color:#64748b; font-style:italic;">Sin negocios perdidos en este período.</span>';
+          document.getElementById('rep-motivos').innerHTML = repRenderMotivosPerdida(perdidas, historialF) || '<span style="color:#64748b; font-style:italic;">Sin negocios perdidos en este período.</span>';
 
           // Conde 2026-08-20: "consolidado de ventas por cliente y por producto" -- a diferencia del
           // Top Clientes de arriba (que es LTV histórico, sin importar el período elegido), esto usa

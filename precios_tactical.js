@@ -180,36 +180,83 @@ function tacticalAplicarCodigoFechaSeguimiento(textoActual, fechaISO){
 // <div> fijo dentro de esa vista, no como ventana flotante). Se convierte al mismo patrón de
 // tacticalConfirmarFlotante -- ahora funciona igual sin importar en qué vista esté parado quien
 // lo llama. Devuelve el motivo (string) elegido, o null si canceló.
+// Conde 2026-11-28: el "Motivo de pérdida" casi no servía para analizar por qué no compran (de 28 pérdidas, 13 decían
+// "razón no especificada" y ~9 eran ruido: prueba, repetida, se recotizó). Ahora es una lista de UN toque con las razones reales
+// (sin opción preseleccionada: hay que elegir), con un detalle opcional. Lo que se guarda en `motivo` es la categoría
+// (+ " — detalle"); tacticalClasificarMotivoPerdida() lee tanto lo nuevo como los textos viejos. Las categorías marcadas
+// `ruido` (otra versión, duplicada o prueba) NO cuentan como pérdida comercial en la tasa de cierre.
+const TACTICAL_MOTIVOS_PERDIDA = [
+  { cat: 'Precio', ayuda: 'les pareció caro o la competencia fue más barata' },
+  { cat: 'No aprobaron / sin presupuesto', ayuda: 'no lo aprobaron, sin presupuesto o lo aplazaron' },
+  { cat: 'Tiempo de entrega', ayuda: 'nuestro plazo era muy largo para ellos' },
+  { cat: 'Tardamos en cotizar', ayuda: 'la cotización les llegó tarde' },
+  { cat: 'Compró en otro lado', ayuda: 'se fue con otro proveedor' },
+  { cat: 'Producto o medida que no manejamos', ayuda: 'pedían algo fuera de lo que hacemos' },
+  { cat: 'Cambió de idea', ayuda: 'ya no lo necesita o cambió el proyecto' },
+  { cat: 'No respondió', ayuda: 'cotizó y se quedó en silencio' },
+  { cat: 'Se hizo otra versión', ayuda: 'se recotizó: esta quedó reemplazada', ruido: true },
+  { cat: 'Duplicada o de prueba', ayuda: 'se creó por error o era una prueba', ruido: true },
+  { cat: 'Otra', ayuda: 'cualquier otra razón (escríbela)' },
+];
+// Devuelve { cat, ruido } para un motivo guardado (nuevo o texto libre antiguo).
+function tacticalClasificarMotivoPerdida(motivo){
+  const t = String(motivo || '').trim();
+  const base = t.split(' — ')[0].trim();
+  const exacta = TACTICAL_MOTIVOS_PERDIDA.find(m => m.cat.toLowerCase() === base.toLowerCase());
+  if(exacta) return { cat: exacta.cat, ruido: !!exacta.ruido };
+  const n = t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if(!n || /^razon no especificada$|^sin motivo|^otra razon/.test(n)) return { cat: 'Sin motivo registrado', ruido: false };
+  if(/prueba|repetid|duplic|transcrit|por error|doble/.test(n)) return { cat: 'Duplicada o de prueba', ruido: true };
+  if(/recotiz|nueva version|cambio la cantidad|la cambio|cambio otra vez|reemplaz|se hizo otra/.test(n)) return { cat: 'Se hizo otra versión', ruido: true };
+  if(/tiempo cotizacion|tardamos|cotizacion tardo/.test(n)) return { cat: 'Tardamos en cotizar', ruido: false };
+  if(/tiempo producto|tiempo de entrega|plazo|demora|urgen/.test(n)) return { cat: 'Tiempo de entrega', ruido: false };
+  if(/no respond|sin respuesta|no contest|silencio|no volvio/.test(n)) return { cat: 'No respondió', ruido: false };
+  if(/precio|caro|costos|barat|econom|competencia|descuento/.test(n)) return { cat: 'Precio', ruido: false };
+  if(/otro proveedor|otro lado|compro en|ya compro|le salio/.test(n)) return { cat: 'Compró en otro lado', ruido: false };
+  if(/aprob|presupuesto|aplaz|suspend|no la dio|no lo dio|no se dio/.test(n)) return { cat: 'No aprobaron / sin presupuesto', ruido: false };
+  if(/tamano|medida|no hacemos|no manej|fuera de|material|pad/.test(n)) return { cat: 'Producto o medida que no manejamos', ruido: false };
+  if(/ya no|cambio de idea|desist|cancel|no lo necesit|proyecto/.test(n)) return { cat: 'Cambió de idea', ruido: false };
+  return { cat: 'Otra', ruido: false };
+}
 function tacticalPedirMotivoPerdidaFlotante(){
   return new Promise((resolve) => {
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed; inset:0; background:rgba(26,32,44,0.6); z-index:99999; display:flex; align-items:center; justify-content:center; padding:20px;';
+    const botones = TACTICAL_MOTIVOS_PERDIDA.map((m, i) => `
+      <button type="button" data-i="${i}" class="tactical-mp-op" style="text-align:left; padding:9px 12px; border:2px solid #e2e8f0; background:#fff; border-radius:8px; cursor:pointer; font-family:inherit;">
+        <div style="font-weight:700; font-size:0.92rem; color:#1a202c;">${m.cat}</div>
+        <div style="font-size:0.76rem; color:#718096;">${m.ayuda}</div>
+      </button>`).join('');
     overlay.innerHTML = `
-      <div style="background:#fff; border-radius:10px; padding:24px; max-width:380px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,0.35); font-family:'Segoe UI', Tahoma, sans-serif;">
-        <div style="font-weight:800; font-size:1.05rem; color:#1a202c; margin-bottom:14px;">¿Por qué se perdió este negocio?</div>
-        <select id="tactical-motivo-perdida-select" style="width:100%; box-sizing:border-box; padding:10px; border:2px solid #cbd5e0; border-radius:6px; margin-bottom:10px; font-size:0.95rem;">
-          <option value="Precio">Por Precio (Competencia más barata)</option>
-          <option value="Tiempo Cotización">Tiempo de entrega de cotización tardó mucho</option>
-          <option value="Tiempo Producto">Tiempo de entrega del producto muy largo</option>
-          <option value="Cliente no respondió">El cliente cotizó y no respondió</option>
-          <option value="Otra">Otra razón...</option>
-        </select>
-        <input type="text" id="tactical-motivo-perdida-otra" placeholder="Escriba la razón..." style="display:none; width:100%; box-sizing:border-box; padding:10px; border:2px solid #cbd5e0; border-radius:6px; margin-bottom:10px; font-size:0.95rem;">
+      <div style="background:#fff; border-radius:10px; padding:20px; max-width:420px; width:100%; max-height:92vh; overflow:auto; box-shadow:0 12px 40px rgba(0,0,0,0.35); font-family:'Segoe UI', Tahoma, sans-serif;">
+        <div style="font-weight:800; font-size:1.05rem; color:#1a202c; margin-bottom:4px;">¿Por qué se perdió este negocio?</div>
+        <div style="font-size:0.8rem; color:#718096; margin-bottom:12px;">Elige la razón real (un toque). Si no estás seguro, elige la que más se parezca.</div>
+        <div style="display:grid; gap:6px;">${botones}</div>
+        <input type="text" id="tactical-motivo-perdida-detalle" maxlength="120" placeholder="Detalle (opcional)" style="width:100%; box-sizing:border-box; padding:10px; border:2px solid #cbd5e0; border-radius:6px; margin:12px 0 6px; font-size:0.9rem;">
         <div style="display:flex; gap:8px; margin-top:6px;">
           <button type="button" id="tactical-motivo-perdida-cancelar" style="flex:1; padding:10px; border:1px solid #cbd5e0; background:#fff; color:#4a5568; border-radius:6px; font-weight:700; cursor:pointer;">Cancelar</button>
-          <button type="button" id="tactical-motivo-perdida-confirmar" style="flex:1; padding:10px; border:none; background:#cc0000; color:#fff; border-radius:6px; font-weight:700; cursor:pointer;">Confirmar Cierre Perdido</button>
+          <button type="button" id="tactical-motivo-perdida-confirmar" disabled style="flex:1; padding:10px; border:none; background:#a0aec0; color:#fff; border-radius:6px; font-weight:700; cursor:not-allowed;">Confirmar Cierre Perdido</button>
         </div>
       </div>`;
     document.body.appendChild(overlay);
-    const sel = overlay.querySelector('#tactical-motivo-perdida-select');
-    const otra = overlay.querySelector('#tactical-motivo-perdida-otra');
-    sel.onchange = () => { otra.style.display = sel.value === 'Otra' ? 'block' : 'none'; };
+    let elegido = null;
+    const conf = overlay.querySelector('#tactical-motivo-perdida-confirmar');
+    const detalle = overlay.querySelector('#tactical-motivo-perdida-detalle');
+    overlay.querySelectorAll('.tactical-mp-op').forEach(b => {
+      b.onclick = () => {
+        elegido = TACTICAL_MOTIVOS_PERDIDA[Number(b.dataset.i)].cat;
+        overlay.querySelectorAll('.tactical-mp-op').forEach(x => { x.style.borderColor = '#e2e8f0'; x.style.background = '#fff'; });
+        b.style.borderColor = '#cc0000'; b.style.background = '#fff5f5';
+        conf.disabled = false; conf.style.background = '#cc0000'; conf.style.cursor = 'pointer';
+        if(elegido === 'Otra') detalle.placeholder = 'Escribe la razón…'; else detalle.placeholder = 'Detalle (opcional)';
+      };
+    });
     function cerrar(valor){ overlay.remove(); resolve(valor); }
     overlay.querySelector('#tactical-motivo-perdida-cancelar').onclick = () => cerrar(null);
-    overlay.querySelector('#tactical-motivo-perdida-confirmar').onclick = () => {
-      let motivo = sel.value;
-      if(motivo === 'Otra') motivo = otra.value.trim() || 'Razón no especificada';
-      cerrar(motivo);
+    conf.onclick = () => {
+      if(!elegido) return;
+      const det = detalle.value.trim().replace(/\s+/g, ' ');
+      cerrar(det ? `${elegido} — ${det}` : elegido);
     };
   });
 }
