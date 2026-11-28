@@ -5951,7 +5951,7 @@
             bjRoot.innerHTML = `<style>${BJ_CSS}</style>
               <div class="app" id="app">
                 <aside class="lista">
-                  <div class="lh"><b>Chats</b><span class="ic" style="cursor:pointer"><span id="campana" onclick="bjToggleSonido()" title="Sonido de aviso">🔔</span> <span id="btn-alm" onclick="bjAbrirAlmacenamiento()" title="Almacenamiento (solo administrador)" style="display:none">💾</span> <span onclick="bjTick()" title="Actualizar">⟳</span></span></div>
+                  <div class="lh"><b>Chats</b><span class="ic" style="cursor:pointer"><span id="campana" onclick="bjToggleSonido()" title="Sonido de aviso">🔔</span> <span id="btn-emb" onclick="bjAbrirEmbudo()" title="Embudo: en qué paso se detienen los clientes">📊</span> <span id="btn-alm" onclick="bjAbrirAlmacenamiento()" title="Almacenamiento (solo administrador)" style="display:none">💾</span> <span onclick="bjTick()" title="Actualizar">⟳</span></span></div>
                   <div class="bus"><input id="bus" placeholder="Buscar por nombre o número" oninput="bjPintar()"></div>
                   <div class="chips" id="chips"></div>
                   <div class="fpanel" id="fpanel"></div>
@@ -6374,6 +6374,30 @@
           } catch(e){ bjAbrirModal(`<h3>Almacenamiento</h3><p class="sub">No se pudo consultar: ${bjEsc(e.message)}</p><div class="acciones"><button class="bt v" onclick="bjCerrarModal()">Cerrar</button></div>`); }
         }
 
+        // ---------- Embudo del bot: en qué paso se detienen los clientes (parte objetiva del "por qué no compran") ----------
+        async function bjAbrirEmbudo(dias){
+          dias = dias || 30;
+          bjAbrirModal('<h3>Embudo del bot</h3><p class="sub">Calculando…</p>');
+          try {
+            const e = await bjApi('/api/embudo?dias=' + dias);
+            const sel = [7, 30, 90].map(d => `<span class="chip ${d === dias ? 'on' : ''}" onclick="bjAbrirEmbudo(${d})">${d} días</span>`).join(' ');
+            const filas = e.etapas.map((et, i) => {
+              const det = et.seDetuvieron;
+              const perdidos = det.total - det.activos;
+              return `<div style="margin-bottom:9px;">
+                <div style="display:flex; justify-content:space-between; gap:8px; font-size:.86rem;"><span><b>${i + 1}. ${bjEsc(et.nombre)}</b></span><span><b>${et.n}</b> · ${et.pctTotal}% del total${i ? ` · pasó el ${et.pctAnterior}% del paso anterior` : ''}</span></div>
+                <div style="background:#e9edef; border-radius:5px; height:9px; margin:3px 0;"><div style="width:${et.pctTotal}%; background:${i === e.etapas.length - 1 ? '#1fa855' : '#2b6cb0'}; height:9px; border-radius:5px;"></div></div>
+                ${perdidos > 0 ? `<div style="font-size:.74rem; color:#c53030;">Se detuvieron aquí: ${perdidos}${det.silencio ? ` (${det.silencio} en silencio tras nuestro último mensaje)` : ''}${det.activos ? ` · ${det.activos} aún activos` : ''}</div>` : ''}
+              </div>`;
+            }).join('');
+            const fuga = e.fuga ? `<div style="background:#fff8c5; border:1px solid #f6e05e; border-radius:8px; padding:8px 10px; font-size:.84rem; margin-top:6px;"><b>Mayor fuga:</b> después de «${bjEsc(e.fuga.etapa)}» (${e.fuga.perdidos} conversaciones). ${bjEsc(e.fuga.pista)}.</div>` : '';
+            bjAbrirModal(`<h3>Embudo del bot</h3>
+              <p class="sub">Conversaciones que empezaron en los últimos ${dias} días: <b>${e.total}</b>${e.excluidosBots ? ` (se excluyen ${e.excluidosBots} posibles bots)` : ''}${e.escalados ? ` · ${e.escalados} pasaron a un asesor` : ''}.</p>
+              <div style="margin-bottom:10px">${sel}</div>${filas}${fuga}
+              <p class="sub" style="margin-top:10px">El paso donde se detienen es la mejor pista de la razón. Con pocas conversaciones, tómalo solo como orientación.</p>
+              <div class="acciones"><button class="bt v" onclick="bjCerrarModal()">Cerrar</button></div>`);
+          } catch(err){ bjAbrirModal(`<h3>Embudo del bot</h3><p class="sub">No se pudo calcular: ${bjEsc(err.message)}</p><div class="acciones"><button class="bt v" onclick="bjCerrarModal()">Cerrar</button></div>`); }
+        }
         async function bjHacerRespaldo(){
           const b = bjQ('btn-rb'); if(b){ b.disabled = true; b.textContent = 'Guardando…'; }
           try { const r = await bjApi('/api/respaldos', {method:'POST'}); tacticalAviso(`Respaldo guardado: ${r.chats} chat(s) y ${r.pedidos} pedido(s)/lead(s) (${bjMB(r.bytes)}).`); }
