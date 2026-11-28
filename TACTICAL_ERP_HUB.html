@@ -5111,7 +5111,28 @@
           renderKanban();
           if(document.getElementById('view-comercial') && document.getElementById('view-comercial').classList.contains('active-view')) renderComercial();
         }
+        /* Conde 2026-11-28: "muy importante: cuando aprueban una cotización con varios productos, crea una ficha nueva por cada producto,
+           pues cada producto tiene sus propias fotos y características". Cada ficha lleva la MISMA OT (así siguen funcionando el enlace con
+           la cotización, la prefactura, el cambio de comercial y el borrado, que buscan por OT) y un solo producto; en la tarjeta se ve
+           "Producto 1 de 3". Las cotizaciones de un solo producto siguen igual que antes. */
         function crearFichaKanbanDesdeOpp(opp, cli, fechaEntrega){
+          if(Array.isArray(opp.lineas) && opp.lineas.length > 1){
+            const ahora = Date.now();
+            opp.lineas.forEach((l, i) => {
+              const ficha = {
+                id: crypto.randomUUID(), ot: opp.ot || null,
+                idCli: opp.idCli, nombreCli: opp.nombreCli, titulo: l.desc || opp.desc,
+                columna: 'aprobada', lineas: [l],
+                checklist: generarChecklistParaFicha({ linea: l.linea || 'manual', lineas: null, desc: l.desc }), urgente: false, fechaEntrega: fechaEntrega || '',
+                // milisegundos distintos para que el orden "Producto 1, 2, 3" sea siempre el de la cotización
+                fechaCreacion: new Date(ahora + i).toISOString(), responsable: '', origen: 'automatica',
+                vendedor: opp.vendedor || '',
+              };
+              db_kanban.push(ficha);
+              tacticalSyncFichaKanban(ficha);
+            });
+            return;
+          }
           const ficha = {
             id: crypto.randomUUID(), ot: opp.ot || null,
             idCli: opp.idCli, nombreCli: opp.nombreCli, titulo: opp.desc,
@@ -7155,7 +7176,9 @@
           // Conde 2026-10-19: los rompecabezas personalizados (origen b2c) NO crean esta tarea -- Comercial siempre se entera
           // porque debe enviarle la foto del producto al cliente, así que la tarea "Facturar" sobraba.
           if(columnaAnterior==='terminados' && columnaNueva==='entregar' && f.origen !== 'b2c'){
-            crearTareaAutomatica('administrativo', `Facturar a "${f.nombreCli}" "${f.titulo}"`); // Conde 2026-10-21: antes caía en Comercial
+            // Conde 2026-11-28: con una ficha por producto, la tarea dice qué producto es y de qué OT (puede facturarse por entregas parciales).
+            const pp = kanbanParteDePedido(f);
+            crearTareaAutomatica('administrativo', `Facturar a "${f.nombreCli}" "${kanbanTituloConCantidad(f)}"${f.ot ? ` (${f.ot}${pp ? `, producto ${pp.i} de ${pp.n}` : ''})` : ''}`); // Conde 2026-10-21: antes caía en Comercial
           }
           // Conde 2026-08-27: "que el urgente se borre automaticamente al quedar en la columna para
           // entregar" -- ya cumplió su propósito de alertar a producción; de ahí en adelante
@@ -7368,6 +7391,39 @@
           if(m) return { titulo: m[3] + ' cm · ' + m[4] + ' fichas', detalle: m[1] + (m[1] === '1' ? ' unidad' : ' unidades') + ' — ' + m[2] };
           return { titulo: d || (NOMBRES_LINEA_PRODUCTO[l.linea] || l.linea || 'Producto'), detalle: l.cantidad ? 'Cantidad: ' + l.cantidad : '' };
         }
+        /* Conde 2026-11-28: "siempre y es siempre ubica la cantidad y la colocas iniciando la ficha". Se calcula al mostrar (sirve también
+           para las fichas viejas): si el título no empieza ya con esa cantidad, se le antepone. Fichas viejas con varios productos de
+           cantidades distintas no llevan un solo número (cada producto ya trae el suyo en su texto). */
+        function kanbanCantidadFicha(f){
+          const ls = f.lineas || [];
+          if(ls.length === 1) return Number(ls[0].cantidad) || Number(f.cantidad) || null;
+          if(!ls.length) return Number(f.cantidad) || null;
+          const cs = [...new Set(ls.map(l => Number(l.cantidad) || 0))];
+          return (cs.length === 1 && cs[0]) ? cs[0] : null;
+        }
+        function kanbanTituloConCantidad(f){
+          const tit = String((f && f.titulo) || '').trim();
+          const c = kanbanCantidadFicha(f || {});
+          if(!c) return tit;
+          const m = /^[*\s]*(\d[\d.,]*)/.exec(tit);
+          if(m && Number(m[1].replace(/[.,]/g, '')) === c) return tit;
+          return c.toLocaleString('es-CO') + ' ' + tit;
+        }
+        // fichas que salieron de la misma cotización (misma OT y cliente): "Producto 2 de 3"
+        function kanbanParteDePedido(f){
+          if(!f || !f.ot) return null;
+          const hermanas = db_kanban.filter(x => x.ot === f.ot && x.origen !== 'b2c' && (!x.idCli || !f.idCli || x.idCli === f.idCli));
+          if(hermanas.length < 2) return null;
+          hermanas.sort((a, b) => new Date(a.fechaCreacion || 0) - new Date(b.fechaCreacion || 0));
+          return { i: hermanas.indexOf(f) + 1, n: hermanas.length };
+        }
+        // todas las fotos distintas de la ficha (las de cada producto + las de "Imágenes de referencia")
+        function kanbanTotalFotos(f){
+          const urls = new Set();
+          (f.lineas || []).forEach(l => { if(l.fotoUrl) urls.add(l.fotoUrl); });
+          (f.fotos || []).forEach(p => { if(p && p.url) urls.add(p.url); });
+          return urls.size;
+        }
         function kanbanFotosLineas(f){
           return (f.lineas || []).map((l, idxLinea) => ({ l, idxLinea })).filter(x => x.l.fotoUrl)
             .map(x => ({ url: x.l.fotoUrl, idxLinea: x.idxLinea, ...kanbanRotuloLinea(x.l) }));
@@ -7472,7 +7528,7 @@
           // Título recortado a ~40 caracteres (no CSS ellipsis -- con tarjetas angostas de 300px el
           // ellipsis por ancho fallaba en textos muy largos) con clic para ver el texto completo,
           // guardando ambas versiones ya en el DOM para no depender de re-escapar el texto (Conde 2026-08-13).
-          const tituloTexto = f.titulo || '';
+          const tituloTexto = kanbanTituloConCantidad(f);
           const tituloCorto = tituloTexto.length > 40 ? tituloTexto.slice(0,40).trim() + '…' : tituloTexto;
           const tituloEsLargo = tituloTexto.length > 40;
           const tituloHtml = tituloEsLargo
@@ -7496,7 +7552,9 @@
           // título más corto (igual se puede tocar la tarjeta entera para ver el resto), sin la
           // etiqueta "Descripción", sin notas/entrega/aprobación -- y la fecha de entrega en una
           // pastilla corta ("📅 4d" en vez de la fecha completa) para que no se vaya a 2 líneas.
-          const fotoCompactaHtml = fotosLin.length>=2 ? `<div style="position:relative; float:left; width:56px; height:56px; margin:0 8px 4px 0; cursor:zoom-in;" title="Toca para ver las ${fotosLin.length} fotos, cada una con su medida y fichas" onclick="event.stopPropagation(); kanbanAbrirCarrusel('${f.id}')"><img src="${fotosLin[Math.min(kanbanCarruselIdx[f.id]||0, fotosLin.length-1)].url}" alt="${f.nombreCli}" style="width:56px; height:56px; object-fit:cover; border-radius:6px; border:1px solid #e2e8f0; display:block;"><span class="kb-carr-badge">${fotosLin.length} fotos</span></div>` : primeraFoto ? `<img src="${primeraFoto}" alt="${f.nombreCli}" title="Toca para ver completa" style="width:56px; height:56px; object-fit:cover; border-radius:6px; float:left; margin:0 8px 4px 0; border:1px solid #e2e8f0; cursor:zoom-in;" onclick="event.stopPropagation(); tacticalAmpliarImagen('${primeraFoto}','${f.nombreCli}')">` : '';
+          // Conde 2026-11-28: foto 30% más grande (56 -> 73 px) y "N fotos" SIEMPRE que la ficha tenga más de una (contando las de referencia).
+          const totalFotos = kanbanTotalFotos(f);
+          const fotoCompactaHtml = fotosLin.length>=2 ? `<div style="position:relative; float:left; width:73px; height:73px; margin:0 8px 4px 0; cursor:zoom-in;" title="Toca para ver las ${fotosLin.length} fotos, cada una con su medida y fichas" onclick="event.stopPropagation(); kanbanAbrirCarrusel('${f.id}')"><img src="${fotosLin[Math.min(kanbanCarruselIdx[f.id]||0, fotosLin.length-1)].url}" alt="${f.nombreCli}" style="width:73px; height:73px; object-fit:cover; border-radius:6px; border:1px solid #e2e8f0; display:block;"><span class="kb-carr-badge">${Math.max(totalFotos, fotosLin.length)} fotos</span></div>` : primeraFoto ? `<div style="position:relative; float:left; width:73px; height:73px; margin:0 8px 4px 0;"><img src="${primeraFoto}" alt="${f.nombreCli}" title="${totalFotos > 1 ? 'Esta ficha tiene ' + totalFotos + ' fotos: ábrela (Ver detalle) para verlas todas' : 'Toca para ver completa'}" style="width:73px; height:73px; object-fit:cover; border-radius:6px; border:1px solid #e2e8f0; cursor:zoom-in; display:block;" onclick="event.stopPropagation(); tacticalAmpliarImagen('${primeraFoto}','${f.nombreCli}')">${totalFotos > 1 ? `<span class="kb-carr-badge">${totalFotos} fotos</span>` : ''}</div>` : '';
           // Conde 2026-09-18: "que el texto tenga unos 15 o 20 caracteres mas" -- subido de 26 a 45.
           const tituloCortoCompacto = cotTextoConNegrilla(tituloTexto.length > 45 ? tituloTexto.slice(0,45).trim() + '…' : tituloTexto);
           let dueCompactoHtml;
@@ -7524,6 +7582,7 @@
             ${f.urgente?'<div style="font-size:0.68rem; font-weight:900; color:#fff; background:var(--peligro); padding:2px 6px; border-radius:4px; margin-bottom:3px; display:inline-block;">🚨 URGENTE</div>':''}
             <div class="kanban-card-title kb-tit-click ${kanbanTitulosAbiertos.has(f.id)?'kb-titulo-abierto':''}" style="font-size:0.85rem; margin-bottom:2px;" title="Toca para ver todo el texto del producto" onclick="event.stopPropagation(); kanbanToggleTitulo('${f.id}')">${dotsHtml}<span class="kb-tit-corto">${tituloCortoCompacto}</span><span class="kb-tit-par">${kanbanTituloParrafosHtml(tituloTexto)}</span></div>
             ${productosCompactoHtml}
+            ${(() => { const pp = kanbanParteDePedido(f); return pp ? `<div style="margin-bottom:3px;"><span style="font-size:0.68rem; font-weight:700; color:#1e3a5f; background:#dbeafe; border-radius:3px; padding:1px 6px;" title="Esta cotización se aprobó con ${pp.n} productos: cada uno tiene su propia ficha (misma OT ${f.ot})">Producto ${pp.i} de ${pp.n}</span></div>` : ''; })()}
             <div class="kanban-card-meta" style="margin-bottom:3px;">${ticon('user')}${kanbanClienteYComercialHtml(f)}</div>
             ${dueCompactoHtml}
             <div style="clear:both;"></div>`;
@@ -12021,10 +12080,15 @@
           if(contApr) contApr.innerHTML = aprobados.length ? aprobados.map((f, i) => {
             const quote = comercialCotizacionDeFicha(f);
             const key = 'a:' + f.id, abierta = comercialFilasAbiertas.has(key);
-            const valor = quote ? quote.monto : f.monto;
+            let valor = quote ? quote.monto : f.monto;
+            // Conde 2026-11-28: con una ficha por producto, el valor es el de ESE producto en la cotización (no el total del pedido).
+            if(quote && Array.isArray(quote.lineas) && quote.lineas.length > 1 && (f.lineas || []).length === 1){
+              const lq = quote.lineas.find(l => l.desc === f.lineas[0].desc);
+              if(lq && lq.monto != null) valor = lq.monto;
+            }
             return `<tr class="cm-fila${i % 2 ? ' alt' : ''}" onclick="comercialToggleFila('${key}', event)">
             <td>${comercialChev(abierta)}${f.nombreCli}</td>
-            <td>${tacticalTruncarPalabraCompleta(f.titulo, 40)}${f.ot ? `<div class="comercial-ot">${f.ot}</div>` : ""}</td>
+            <td>${tacticalTruncarPalabraCompleta(kanbanTituloConCantidad(f), 40)}${f.ot ? `<div class="comercial-ot">${f.ot}</div>` : ""}</td>
             <td class="cm-val">${valor != null ? cotFormatoCop(valor) : '—'}</td>
             <td>${f.fechaEntrega ? kanbanFormatearFecha(f.fechaEntrega) : '-'}</td>
             <td><input type="text" value="${(f.responsable||'').replace(/"/g,'&quot;')}" onchange="comercialGuardarNotaFicha('${f.id}',this.value)"></td>
