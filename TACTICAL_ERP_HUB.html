@@ -5951,7 +5951,7 @@
             bjRoot.innerHTML = `<style>${BJ_CSS}</style>
               <div class="app" id="app">
                 <aside class="lista">
-                  <div class="lh"><b>Chats</b><span class="ic" style="cursor:pointer"><span id="campana" onclick="bjToggleSonido()" title="Sonido de aviso">🔔</span> <span id="btn-emb" onclick="bjAbrirEmbudo()" title="Embudo: en qué paso se detienen los clientes">📊</span> <span id="btn-alm" onclick="bjAbrirAlmacenamiento()" title="Almacenamiento (solo administrador)" style="display:none">💾</span> <span onclick="bjTick()" title="Actualizar">⟳</span></span></div>
+                  <div class="lh"><b>Chats</b><span class="ic" style="cursor:pointer"><span id="campana" onclick="bjToggleSonido()" title="Sonido de aviso">🔔</span> <span id="btn-emb" onclick="bjAbrirEmbudo()" title="Embudo: en qué paso se detienen los clientes">📊</span> <span id="btn-cau" onclick="bjAbrirCausas()" title="Por qué no compran (se calcula solo, sin formularios)">🔍</span> <span id="btn-alm" onclick="bjAbrirAlmacenamiento()" title="Almacenamiento (solo administrador)" style="display:none">💾</span> <span onclick="bjTick()" title="Actualizar">⟳</span></span></div>
                   <div class="bus"><input id="bus" placeholder="Buscar por nombre o número" oninput="bjPintar()"></div>
                   <div class="chips" id="chips"></div>
                   <div class="fpanel" id="fpanel"></div>
@@ -6397,6 +6397,46 @@
               <p class="sub" style="margin-top:10px">El paso donde se detienen es la mejor pista de la razón. Con pocas conversaciones, tómalo solo como orientación.</p>
               <div class="acciones"><button class="bt v" onclick="bjCerrarModal()">Cerrar</button></div>`);
           } catch(err){ bjAbrirModal(`<h3>Embudo del bot</h3><p class="sub">No se pudo calcular: ${bjEsc(err.message)}</p><div class="acciones"><button class="bt v" onclick="bjCerrarModal()">Cerrar</button></div>`); }
+        }
+        // ---------- Por qué no compran: cada chat sin compra se asigna solo a bot / asesor / nosotros / cliente (sin formularios) ----------
+        const BJ_RESP_COLOR = { bot:'#6b46c1', asesor:'#dd6b20', nosotros:'#2b6cb0', cliente:'#718096' };
+        async function bjAbrirCausas(dias){
+          dias = dias || 30;
+          bjAbrirModal('<h3>Por qué no compran</h3><p class="sub">Calculando…</p>');
+          try {
+            const r = await bjApi('/api/causas?dias=' + dias);
+            const sel = [7, 30, 90].map(d => `<span class="chip ${d === dias ? 'on' : ''}" onclick="bjAbrirCausas(${d})">${d} días</span>`).join(' ');
+            if(!r.noCompraron){
+              bjAbrirModal(`<h3>Por qué no compran</h3><div style="margin-bottom:8px">${sel}</div><p class="sub">Todavía no hay conversaciones cerradas sin compra en este período${r.activos ? ` (${r.activos} aún activas)` : ''}.</p><div class="acciones"><button class="bt v" onclick="bjCerrarModal()">Cerrar</button></div>`);
+              return;
+            }
+            const bloques = r.porResponsable.filter(g => g.n > 0).map(g => {
+              const col = BJ_RESP_COLOR[g.resp] || '#718096';
+              const causas = g.causas.map(c => `<div style="margin:7px 0 0 10px; padding-left:8px; border-left:3px solid ${col}33;">
+                <div style="font-size:.84rem"><b>${c.n}</b> · ${bjEsc(c.nombre)}</div>
+                <div style="font-size:.76rem; color:#667781;">👉 ${bjEsc(c.accion)}</div>
+                ${c.ejemplos.map(e => `<div style="font-size:.76rem; margin-top:2px;"><a href="#" style="color:#2b6cb0;" onclick="bjCerrarModal(); bjAbrir('${bjEsc(e.phone)}'); return false;">${bjEsc(e.nombre)}</a>${e.horas ? ` · ${e.horas} h` : ''}${e.cita ? ` — <i>«${bjEsc(e.cita)}»</i>` : ''}</div>`).join('')}
+              </div>`).join('');
+              return `<div style="margin-bottom:12px;">
+                <div style="display:flex; justify-content:space-between; font-size:.9rem;"><b style="color:${col}">${bjEsc(g.nombre)}</b><span><b>${g.n}</b> · ${g.pct}%</span></div>
+                <div style="background:#e9edef; border-radius:5px; height:9px; margin:3px 0;"><div style="width:${g.pct}%; background:${col}; height:9px; border-radius:5px;"></div></div>
+                <div style="font-size:.74rem; color:#667781;">${bjEsc(g.desc)}</div>${causas}</div>`;
+            }).join('');
+            const pistas = r.pistas.length ? `<div style="background:#fff8c5; border:1px solid #f6e05e; border-radius:8px; padding:8px 10px; font-size:.83rem; margin-bottom:10px;">${r.pistas.map(x => '• ' + bjEsc(x)).join('<br>')}</div>` : '';
+            const o = r.porOrigen || {};
+            const orig = o.anuncio ? `<p class="sub" style="margin-top:6px">Por origen: de los que llegaron por <b>anuncio</b> compraron ${o.anuncio.compraron} de ${o.anuncio.total}; llegando <b>directo</b>, ${(o.directo || {}).compraron || 0} de ${(o.directo || {}).total || 0}.</p>` : '';
+            bjAbrirModal(`<h3>Por qué no compran</h3>
+              <p class="sub">Chats de los últimos ${dias} días ya cerrados: <b>${r.compraron}</b> compraron (${r.tasa}%) y <b>${r.noCompraron}</b> no${r.activos ? ` · ${r.activos} aún activos (no se cuentan)` : ''}${r.excluidosBots ? ` · ${r.excluidosBots} posibles bots excluidos` : ''}. Se calcula solo con lo que ya registran los chats: nadie llena nada.</p>
+              <div style="margin-bottom:10px">${sel}</div>${pistas}${bloques}${orig}
+              <p class="sub" style="margin-top:8px">${r.iaPendientes ? `${r.iaPendientes} caso(s) dudosos sin revisar con IA. ` : ''}${r.ultimaRevisionIA ? 'Última revisión con IA: ' + new Date(r.ultimaRevisionIA).toLocaleDateString('es-CO') + '. ' : ''}Con pocos chats, tómalo como orientación, no como verdad.</p>
+              <div class="acciones"><button class="bt g" id="btn-cau-ia" onclick="bjRevisarCausasIA(${dias})">🤖 Revisar dudosos con IA</button><button class="bt v" onclick="bjCerrarModal()">Cerrar</button></div>`);
+          } catch(err){ bjAbrirModal(`<h3>Por qué no compran</h3><p class="sub">No se pudo calcular: ${bjEsc(err.message)}</p><div class="acciones"><button class="bt v" onclick="bjCerrarModal()">Cerrar</button></div>`); }
+        }
+        async function bjRevisarCausasIA(dias){
+          const b = bjQ('btn-cau-ia'); if(b){ b.disabled = true; b.textContent = 'Revisando…'; }
+          try { const r = await bjApi('/api/causas/revisar-ia?dias=' + dias, {method:'POST'}); tacticalAviso(`Revisión con IA: ${r.revisados} chat(s) leídos (cuesta centavos; el resultado queda guardado).`); }
+          catch(e){ tacticalAviso('No se pudo revisar con IA: ' + e.message); }
+          bjAbrirCausas(dias);
         }
         async function bjHacerRespaldo(){
           const b = bjQ('btn-rb'); if(b){ b.disabled = true; b.textContent = 'Guardando…'; }
